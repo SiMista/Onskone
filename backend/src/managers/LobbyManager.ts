@@ -1,7 +1,7 @@
 import { Lobby } from "../models/Lobby";
 import { IPlayer } from "../types/IPlayer";
-import { generateLobbyCode } from '../utils/helpers'; 
 import { GameManager } from './GameManager';
+import { generateLobbyCode } from '../utils/helpers'; 
 
 export class LobbyManager {
     private lobbies: Map<string, Lobby>;
@@ -37,15 +37,24 @@ export class LobbyManager {
         }
     }
 
-    startGame(lobbyCode: string) : void {
+    startGame(lobbyCode: string) : boolean {
         const lobby = this.lobbies.get(lobbyCode);
-        if (lobby) {
-            lobby.startGame();
-            this.gameManager.createGame(lobbyCode, lobby.hostPlayer, lobby.players); // Create a new game with the host player
-            console.log(`Game started with code: ${lobbyCode}`);
-        }
-        else {
+        if (!lobby) {
             console.log('Lobby does not exist');
+            return false;
+        }
+        if (lobby.gameStarted) {
+            console.log('Game already started for this lobby.');
+            return false;
+        }
+        try {
+            lobby.startGame();
+            this.gameManager.createGame(lobby); // Create a game with the Game Manager
+            console.log(`Game started with code: ${lobbyCode}`);
+            return true;
+        } catch (error) {
+            console.error('Error starting game:', error);
+            return false;
         }
     }
 }
