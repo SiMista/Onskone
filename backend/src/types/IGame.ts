@@ -2,7 +2,7 @@ import { IPlayer } from './IPlayer';
 import { IRound } from './IRound';
 
 export interface IGame {
-  gameCode: string;                
+  lobbyCode: string;                
   hostPlayer: IPlayer;              
   players: IPlayer[];               
   currentRound: IRound | null;      
