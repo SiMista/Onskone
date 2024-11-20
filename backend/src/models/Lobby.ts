@@ -3,14 +3,12 @@ import { IPlayer } from '../types/IPlayer';
 
 export class Lobby implements ILobby {
   lobbyCode: string;
-  hostPlayer: IPlayer;
   players: IPlayer[];
   gameStarted: boolean;
 
-  constructor(lobbyCode: string, hostPlayer: IPlayer) {
+  constructor(lobbyCode: string) {
     this.lobbyCode = lobbyCode;
-    this.hostPlayer = hostPlayer;
-    this.players = [hostPlayer];
+    this.players = [];
     this.gameStarted = false;
   }
 

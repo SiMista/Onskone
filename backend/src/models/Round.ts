@@ -1,34 +1,26 @@
-import { IRound } from "../types/IRound";
+import { IRound } from '../types/IRound';
+import { IPlayer } from '../types/IPlayer';
 
-export class Round implements IRound{
+export class Round implements IRound {
     roundNumber: number;
-    questions: string[];
-    answers: string[];
-    scores: Record<string, number>;
-    currentQuestionIndex: number;
+    leader: IPlayer;        // Le joueur qui est le chef
+    questions: string[];    // Les 3 questions du round
+    answers: Record<string, string>; // Réponses des joueurs (clé = ID du joueur)
+    scores: Record<string, number>;  // Scores des joueurs pour ce round
 
-    constructor(roundNumber: number, questions: string[], answers: string[]){
+    constructor(roundNumber: number, leader: IPlayer, questions: string[]) {
         this.roundNumber = roundNumber;
+        this.leader = leader;
         this.questions = questions;
-        this.answers = answers;
+        this.answers = {};
         this.scores = {};
-        this.currentQuestionIndex = 0;
     }
 
-    nextQuestion(): void {
-        this.currentQuestionIndex++;
+    addAnswer(playerId: string, answer: string): void {
+        this.answers[playerId] = answer;
     }
 
     calculateScores(): void {
-        this.scores = {};
-        this.answers.forEach((answer, index) => {
-            if(answer === this.questions[index]){
-                if(this.scores[answer]){
-                    this.scores[answer]++;
-                } else {
-                    this.scores[answer] = 1;
-                }
-            }
-        });
+        // Logique de calcul des scores
     }
 }
