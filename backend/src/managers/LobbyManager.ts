@@ -12,9 +12,9 @@ export class LobbyManager {
         this.gameManager = gameManager;
     }
 
-    createLobby(hostPlayer: IPlayer) : void {
+    createLobby() : void {
         const lobbyCode = generateLobbyCode();
-        this.lobbies.set(lobbyCode, new Lobby(lobbyCode, hostPlayer));
+        this.lobbies.set(lobbyCode, new Lobby(lobbyCode));
     }
 
     addPlayerToLobby(lobbyCode: string, player: IPlayer) : void {

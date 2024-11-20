@@ -1,10 +1,11 @@
+import { IPlayer } from "./IPlayer";
+
 export interface IRound {
-    roundNumber: number;  
+    roundNumber: number;
+    leader: IPlayer;
     questions: string[];            
-    answers: string[];              
+    answers: Record<string, string>;              
     scores: Record<string, number>; // Scores des joueurs pour ce round (clé = ID du joueur, valeur = score)
-    currentQuestionIndex: number;   // L'index de la question actuelle
-    nextQuestion(): void;        
     calculateScores(): void;    
   }
   
