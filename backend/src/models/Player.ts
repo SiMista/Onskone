@@ -6,7 +6,7 @@ export class Player implements IPlayer {
   isHost: boolean;
   score: number;
 
-  constructor(id: string, name: string, isHost: boolean = false) {
+  constructor(id: string, name: string, isHost: boolean = false) { // isHost is false by default
     this.id = id;
     this.name = name;
     this.isHost = isHost;

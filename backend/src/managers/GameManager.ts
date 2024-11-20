@@ -5,7 +5,7 @@ export class GameManager {
     private games: Map<string, Game>;
     private questionsPool: string[][];
 
-    constructor(questionsFilePath: string) {
+    constructor(questionsFilePath: string = '../data/questions.json') {
         this.games = new Map();
         this.questionsPool = this.loadQuestions(questionsFilePath);
     }
