@@ -28,8 +28,7 @@ export class Game implements IGame {
 
   nextRound(): void {
     if (this.status !== 'inProgress') {
-        console.log("The game hasn't started or is already finished.");
-        return;
+      throw new Error("The game hasn't started or is already finished. Status: " + this.status);
     }
     const roundNumber = this.currentRound ? this.currentRound.roundNumber + 1 : 1;
     const leaderIndex = roundNumber % this.players.length;

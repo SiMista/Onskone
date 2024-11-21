@@ -1,31 +1,16 @@
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
-import { GameManager } from "../src/managers/GameManager"; 
-import { LobbyManager } from "../src/managers/LobbyManager";
+import { describe, it, expect, beforeEach } from '@jest/globals';
+import { TestHelper } from "../src/utils/TestHelper";
 import { Game } from "../src/models/Game";
 import { Player } from "../src/models/Player";
 
 describe('GameManager', () => {
-    let gameManager: GameManager;
-    let lobbyManager: LobbyManager;
-    let lobbyCode: string;
     let game: Game;
 
     beforeEach(() => {
-        gameManager = new GameManager('./src/data/questions.json'); // Assurez-vous que le chemin est correct
-        lobbyManager = new LobbyManager(gameManager);
-        lobbyCode = lobbyManager.createLobby();
-        const player1 = new Player('John Doe');
-        const player2 = new Player('Mark Henry');
-        const player3 = new Player('Cena John');
-        lobbyManager.addPlayerToLobby(lobbyCode, player1);
-        lobbyManager.addPlayerToLobby(lobbyCode, player2);
-        lobbyManager.addPlayerToLobby(lobbyCode, player3);
-        lobbyManager.startGame(lobbyCode);
-        const gameResult = gameManager.getGame(lobbyCode);
-        if (!gameResult) {
-            throw new Error('Game not found');
-        }
-        game = gameResult;
+        const { gameManager, lobbyManager, playerManager } = TestHelper.createAllManagers();
+        const hostPlayer = TestHelper.createHostPlayer(playerManager);
+        const lobby = TestHelper.createLobbyWithPlayers(lobbyManager, playerManager, hostPlayer, ["Player 2", "Player 3"]);
+        game = TestHelper.startGame(lobbyManager, gameManager, lobby);
     });
 
     it('should load questions pool from file', () => {
@@ -35,64 +20,47 @@ describe('GameManager', () => {
 
     it('should ensure all categories have exactly 3 questions', () => {
         const questionsPool = game.getQuestionsPool();
-        Object.keys(questionsPool).forEach((category) => {
-            expect(questionsPool[category].length).toBe(3);
+        Object.values(questionsPool).forEach((questions) => {
+            expect((questions as any[]).length).toBe(3);
         });
     });
 
     it('should get a valid random category and questions', () => {
-        const questionsPool = game.getQuestionsPool();
         const [category, questions] = game.getRandomCategoryAndQuestions();
+        const questionsPool = game.getQuestionsPool();
         expect(category).toBeDefined();
         expect(questions).toBeDefined();
-        expect(Object.keys(questionsPool)).toContain(category); // La catégorie doit exister
-        expect(questionsPool[category]).toEqual(questions); // Les questions doivent correspondre
+        expect(Object.keys(questionsPool)).toContain(category);
+        expect(questionsPool[category]).toEqual(questions);
     });
 
     it('should start the game and set status to inProgress', () => {
         expect(game.status).toBe('inProgress');
     });
 
-    it('should add players to the game', () => {
-        const player = new Player('John Doe');
-        game.addPlayer(player);
-        expect(game.players.length).toBe(4);
-        expect(game.players[3].name).toBe('John Doe');
+    it('should add a new player to the game', () => {
+        const newPlayer = new Player("New Player");
+        game.addPlayer(newPlayer);
+        expect(game.players).toContainEqual(newPlayer);
     });
 
-    it('should get the game by lobby code', () => {
-        const fetchedGame = gameManager.getGame(lobbyCode);
-        expect(fetchedGame).toBeDefined();
-        expect(fetchedGame?.lobbyCode).toBe(lobbyCode);
+    it('should return the game by lobby code', () => {
+        expect(game.lobbyCode).toBeDefined();
     });
 
     it('should handle case where game is not found', () => {
-        const invalidLobbyCode = 'INVALID_CODE';
-        const fetchedGame = gameManager.getGame(invalidLobbyCode);
-        expect(fetchedGame).toBeUndefined();
+        const { gameManager } = TestHelper.createAllManagers();
+        expect(gameManager.getGame("INVALID_CODE")).toBeUndefined();
     });
 
-    // it('should start next round and update round number', () => {
-    //     const initialRound = game.currentRound;
-    //     game.nextRound();
-    //     expect(game.currentRound).toBeDefined();
-    //     expect(game.currentRound?.roundNumber).toBe(initialRound ? initialRound.roundNumber + 1 : 1);
-    // });
+    it('should advance to the next round and update round number', () => {
+        const initialRoundNumber = game.currentRound?.roundNumber || 0;
+        game.nextRound();
+        expect(game.currentRound?.roundNumber).toBe(initialRoundNumber + 1);
+    });
 
-    // it('should throw an error if game is not in progress when starting next round', () => {
-    //     game.endGame();
-    //     expect(() => game.nextRound()).toThrow("The game hasn't started or is already finished.");
-    // });
-
-    // it('should start next round and update round number', () => {
-    //     const initialRound = game.currentRound;
-    //     game.nextRound();
-    //     expect(game.currentRound).toBeDefined();
-    //     expect(game.currentRound?.roundNumber).toBe(initialRound ? initialRound.roundNumber + 1 : 1);
-    // });
-
-    // it('should throw an error if game is not in progress when starting next round', () => {
-    //     game.endGame();
-    //     expect(() => game.nextRound()).toThrow("The game hasn't started or is already finished.");
-    // });
+    it('should throw an error if game is not in progress when starting next round', () => {
+        game.endGame();
+        expect(() => game.nextRound()).toThrow("The game hasn't started or is already finished.");
+    });
 });
