@@ -12,10 +12,15 @@ export class LobbyManager {
         this.gameManager = gameManager;
     }
 
-    // Create a lobby, add it to the lobbies map and return lobby code
-    createLobby(): string {
+    // Create a lobby using a player and add it to the lobbies map and return lobby code
+    createLobby(player: IPlayer) : string {
+        if (!player.isHost) {  // Vérifie si le joueur a le statut "host"
+            throw new Error("Player is not authorized to create a lobby.");
+        }
         const lobbyCode = generateLobbyCode();
-        this.lobbies.set(lobbyCode, new Lobby(lobbyCode));
+        const lobby = new Lobby(lobbyCode);
+        lobby.addPlayer(player);
+        this.lobbies.set(lobbyCode, lobby);
         return lobbyCode;
     }
     

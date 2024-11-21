@@ -7,13 +7,15 @@ export class PlayerManager {
         this.players = new Map();
     }
 
-    createPlayer(id: string, name: string): void {
-        const player = new Player(id, name);
-        this.players.set(id, player);
+    createPlayer(name: string): Player {
+        const player = new Player(name);
+        this.players.set(player.id, player);
+        return player;
     }
 
-    createHostPlayer(id: string, name: string): void {
-        const player = new Player(id, name, true); // isHost = true
-        this.players.set(id, player);
+    createHostPlayer(name: string): Player {
+        const player = new Player(name, true); // isHost = true
+        this.players.set(player.id, player);
+        return player;
     }
 }
