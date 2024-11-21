@@ -30,10 +30,10 @@ export class LobbyManager {
         }
     }
 
-    removePlayerFromLobby(lobbyCode: string, playerId: string) : void {
+    removePlayerFromLobby(lobbyCode: string, player: IPlayer) : void {
         const lobby = this.lobbies.get(lobbyCode);
         if (lobby) {
-            lobby.removePlayer(playerId);
+            lobby.removePlayer(player);
         }
         else {
             console.log('Lobby does not exist');
