@@ -14,6 +14,12 @@ describe('GameManager', () => {
         gameManager = new GameManager('./src/data/questions.json'); // Assurez-vous que le chemin est correct
         lobbyManager = new LobbyManager(gameManager);
         lobbyCode = lobbyManager.createLobby();
+        const player1 = new Player('John Doe');
+        const player2 = new Player('Mark Henry');
+        const player3 = new Player('Cena John');
+        lobbyManager.addPlayerToLobby(lobbyCode, player1);
+        lobbyManager.addPlayerToLobby(lobbyCode, player2);
+        lobbyManager.addPlayerToLobby(lobbyCode, player3);
         lobbyManager.startGame(lobbyCode);
         const gameResult = gameManager.getGame(lobbyCode);
         if (!gameResult) {
@@ -50,8 +56,8 @@ describe('GameManager', () => {
     it('should add players to the game', () => {
         const player = new Player('John Doe');
         game.addPlayer(player);
-        expect(game.players.length).toBe(1);
-        expect(game.players[0].name).toBe('John Doe');
+        expect(game.players.length).toBe(4);
+        expect(game.players[3].name).toBe('John Doe');
     });
 
     it('should get the game by lobby code', () => {
