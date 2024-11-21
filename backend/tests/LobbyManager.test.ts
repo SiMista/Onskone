@@ -52,9 +52,13 @@ describe('LobbyManager', () => {
     });
 
     it('should start a game if not already started', () => {
-        const player = new Player('John Doe');
+        const player1 = new Player('John Doe');
+        const player2 = new Player('Mark Henry');
+        const player3 = new Player('Cena John');
         const lobbyCode = lobbyManager.createLobby();
-        lobbyManager.addPlayerToLobby(lobbyCode, player);
+        lobbyManager.addPlayerToLobby(lobbyCode, player1);
+        lobbyManager.addPlayerToLobby(lobbyCode, player2);
+        lobbyManager.addPlayerToLobby(lobbyCode, player3);
 
         const startResult = lobbyManager.startGame(lobbyCode);
         const lobby = lobbyManager.getLobby(lobbyCode);
@@ -62,10 +66,25 @@ describe('LobbyManager', () => {
         expect(lobby?.gameStarted).toBe(true);
     });
 
-    it('should not start a game if it has already started', () => {
+    
+    it('should return false if there are not enough players to start the game', () => {
         const player = new Player('John Doe');
+        const player2 = new Player('Mark Henry');
         const lobbyCode = lobbyManager.createLobby();
         lobbyManager.addPlayerToLobby(lobbyCode, player);
+        const startResult = lobbyManager.startGame(lobbyCode);
+
+        expect(startResult).toBe(false); // Not enough players to start the game
+    });
+
+    it('should not start a game if it has already started', () => {
+        const player1 = new Player('John Doe');
+        const player2 = new Player('Mark Henry');
+        const player3 = new Player('Cena John');
+        const lobbyCode = lobbyManager.createLobby();
+        lobbyManager.addPlayerToLobby(lobbyCode, player1);
+        lobbyManager.addPlayerToLobby(lobbyCode, player2);
+        lobbyManager.addPlayerToLobby(lobbyCode, player3);
         lobbyManager.startGame(lobbyCode); // First start
         const startResult = lobbyManager.startGame(lobbyCode); // Try to start again
 

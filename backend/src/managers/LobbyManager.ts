@@ -50,6 +50,10 @@ export class LobbyManager {
             console.log('Game already started for this lobby.');
             return false;
         }
+        if (lobby.players.length <= 2) {
+            console.log('Not enough players to start the game.');
+            return false;
+        }
         try {
             lobby.startGame();
             this.gameManager.createGame(lobby); // Create a game with the Game Manager
