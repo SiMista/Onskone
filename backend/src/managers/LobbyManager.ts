@@ -12,10 +12,13 @@ export class LobbyManager {
         this.gameManager = gameManager;
     }
 
-    createLobby() : void {
+    // Create a lobby, add it to the lobbies map and return lobby code
+    createLobby(): string {
         const lobbyCode = generateLobbyCode();
         this.lobbies.set(lobbyCode, new Lobby(lobbyCode));
+        return lobbyCode;
     }
+    
 
     addPlayerToLobby(lobbyCode: string, player: IPlayer) : void {
         const lobby = this.lobbies.get(lobbyCode);
@@ -56,5 +59,9 @@ export class LobbyManager {
             console.error('Error starting game:', error);
             return false;
         }
+    }
+
+    getLobby(lobbyCode: string): Lobby | undefined {
+        return this.lobbies.get(lobbyCode);
     }
 }

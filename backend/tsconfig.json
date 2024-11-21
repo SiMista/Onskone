@@ -6,11 +6,11 @@
     "rootDir": "./src",
     "esModuleInterop": true,
     "strict": true,
-    "types": ["jest"],
+    "types": ["jest", "node"],
     "typeRoots": ["./node_modules/@types"]
   },
   "include": [
     "src/**/*.ts",
-    "../tests/**/*.ts"
+    "../tests/**/*.ts"    
   ]
 }

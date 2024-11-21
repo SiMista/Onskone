@@ -3,65 +3,71 @@ import { LobbyManager } from "../src/managers/LobbyManager";
 import { GameManager } from "../src/managers/GameManager";
 import { Player } from "../src/models/Player";
 import { Lobby } from "../src/models/Lobby";
-
-// Mocking generateLobbyCode function
-jest.mock('../src/utils/helpers', () => ({
-    generateLobbyCode: jest.fn(() => 'TESTCODE123')
-}));
+import { describe, it, expect, beforeEach } from '@jest/globals';
 
 describe('LobbyManager', () => {
     let gameManager: GameManager;
     let lobbyManager: LobbyManager;
 
     beforeEach(() => {
-        gameManager = new GameManager();
+        gameManager = new GameManager('./src/data/questions.json');
         lobbyManager = new LobbyManager(gameManager);
     });
 
-    it('should create a lobby successfully', () => {
-        lobbyManager.createLobby();
-        const lobby = lobbyManager['lobbies'].get('TESTCODE123'); // Accès à la Map privée
-        expect(lobby).toBeDefined();
-        expect(lobby?.lobbyCode).toBe('TESTCODE123');
+    it('should create a lobby successfully and generate well lobbyCode', () => {
+        const lobbyCode = lobbyManager.createLobby();
+        const lobby = lobbyManager.getLobby(lobbyCode);
+        if (lobby) {
+            expect(lobby.lobbyCode).toMatch(/^[A-Z0-9]{6}$/);
+        } else {
+            expect(lobby).toBeDefined();
+        }
+    });
+
+    it('should return a lobby when getting a lobby', () => {
+        const lobbyCode = lobbyManager.createLobby();
+        const lobby = lobbyManager.getLobby(lobbyCode);
+
+        expect(lobby).toBeInstanceOf(Lobby);
     });
 
     it('should add a player to the lobby', () => {
         const player = new Player('player1', 'Player 1');
-        lobbyManager.createLobby();
-        lobbyManager.addPlayerToLobby('TESTCODE123', player);
-        
-        const lobby = lobbyManager['lobbies'].get('TESTCODE123');
+        const lobbyCode = lobbyManager.createLobby();
+        const lobby = lobbyManager.getLobby(lobbyCode);
+        lobbyManager.addPlayerToLobby(lobbyCode, player);
+
         expect(lobby?.players.length).toBe(1);
         expect(lobby?.players[0].id).toBe('player1');
     });
 
     it('should remove a player from the lobby', () => {
         const player = new Player('player1', 'Player 1');
-        lobbyManager.createLobby();
-        lobbyManager.addPlayerToLobby('TESTCODE123', player);
-        lobbyManager.removePlayerFromLobby('TESTCODE123', 'player1');
-        
-        const lobby = lobbyManager['lobbies'].get('TESTCODE123');
+        const lobbyCode = lobbyManager.createLobby();
+        lobbyManager.addPlayerToLobby(lobbyCode, player);
+        lobbyManager.removePlayerFromLobby(lobbyCode, 'player1');
+        const lobby = lobbyManager.getLobby(lobbyCode);
+
         expect(lobby?.players.length).toBe(0);
     });
 
     it('should start a game if not already started', () => {
         const player = new Player('player1', 'Player 1');
-        lobbyManager.createLobby();
-        lobbyManager.addPlayerToLobby('TESTCODE123', player);
+        const lobbyCode = lobbyManager.createLobby();
+        lobbyManager.addPlayerToLobby(lobbyCode, player);
 
-        const startResult = lobbyManager.startGame('TESTCODE123');
-        const lobby = lobbyManager['lobbies'].get('TESTCODE123');
+        const startResult = lobbyManager.startGame(lobbyCode);
+        const lobby = lobbyManager.getLobby(lobbyCode);
         expect(startResult).toBe(true);
         expect(lobby?.gameStarted).toBe(true);
     });
 
     it('should not start a game if it has already started', () => {
         const player = new Player('player1', 'Player 1');
-        lobbyManager.createLobby();
-        lobbyManager.addPlayerToLobby('TESTCODE123', player);
-        lobbyManager.startGame('TESTCODE123'); // First start
-        const startResult = lobbyManager.startGame('TESTCODE123'); // Try to start again
+        const lobbyCode = lobbyManager.createLobby();
+        lobbyManager.addPlayerToLobby(lobbyCode, player);
+        lobbyManager.startGame(lobbyCode); // First start
+        const startResult = lobbyManager.startGame(lobbyCode); // Try to start again
 
         expect(startResult).toBe(false); // Should not start again
     });
