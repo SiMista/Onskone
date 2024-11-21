@@ -5,6 +5,6 @@ export interface ILobby {
   players: IPlayer[];              
   gameStarted: boolean;           
   addPlayer(player: IPlayer): void; 
-  removePlayer(playerId: string): void; 
+  removePlayer(player: IPlayer): void; 
   startGame(): void;             
 }

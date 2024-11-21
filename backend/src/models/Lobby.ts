@@ -16,8 +16,8 @@ export class Lobby implements ILobby {
     this.players.push(player);
   }
 
-  removePlayer(playerId: string): void {
-    this.players = this.players.filter(player => player.id !== playerId);
+  removePlayer(player: IPlayer): void {
+    this.players = this.players.filter(p => p.id !== player.id);
   }
 
   startGame(): void {

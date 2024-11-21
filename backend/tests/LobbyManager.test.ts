@@ -32,27 +32,27 @@ describe('LobbyManager', () => {
     });
 
     it('should add a player to the lobby', () => {
-        const player = new Player('player1', 'Player 1');
+        const player = new Player('John Doe');
         const lobbyCode = lobbyManager.createLobby();
         const lobby = lobbyManager.getLobby(lobbyCode);
         lobbyManager.addPlayerToLobby(lobbyCode, player);
 
         expect(lobby?.players.length).toBe(1);
-        expect(lobby?.players[0].id).toBe('player1');
+        expect(lobby?.players[0].name).toBe('John Doe');
     });
 
     it('should remove a player from the lobby', () => {
-        const player = new Player('player1', 'Player 1');
+        const player = new Player('John Doe');
         const lobbyCode = lobbyManager.createLobby();
         lobbyManager.addPlayerToLobby(lobbyCode, player);
-        lobbyManager.removePlayerFromLobby(lobbyCode, 'player1');
+        lobbyManager.removePlayerFromLobby(lobbyCode, player);
         const lobby = lobbyManager.getLobby(lobbyCode);
 
         expect(lobby?.players.length).toBe(0);
     });
 
     it('should start a game if not already started', () => {
-        const player = new Player('player1', 'Player 1');
+        const player = new Player('John Doe');
         const lobbyCode = lobbyManager.createLobby();
         lobbyManager.addPlayerToLobby(lobbyCode, player);
 
@@ -63,7 +63,7 @@ describe('LobbyManager', () => {
     });
 
     it('should not start a game if it has already started', () => {
-        const player = new Player('player1', 'Player 1');
+        const player = new Player('John Doe');
         const lobbyCode = lobbyManager.createLobby();
         lobbyManager.addPlayerToLobby(lobbyCode, player);
         lobbyManager.startGame(lobbyCode); // First start

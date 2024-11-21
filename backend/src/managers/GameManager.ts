@@ -19,22 +19,14 @@ export class GameManager {
 
     // Create a game with players, from lobby
     createGame(lobby: ILobby) : void {
-        const game = new Game(lobby.lobbyCode ,lobby.players, []); 
+        const game = new Game(lobby.lobbyCode ,lobby.players, this.questionsPool); 
         lobby.players.forEach(player => game.addPlayer(player));
         this.games.set(lobby.lobbyCode, game);
         game.startGame();
     }
 
-    // Get random category and questions
-    getRandomCategoryAndQuestions() : [string, string[]] {
-        const categories = Object.keys(this.questionsPool);
-        const randomIndex = Math.floor(Math.random() * categories.length);
-        const category = categories[randomIndex];
-        console.log(category, this.questionsPool[category]);
-        return [category, this.questionsPool[category]];
-    }
-
-    getQuestionsPool() : Record<string, string[]> {
-        return this.questionsPool;
+    // Get game by lobby code
+    getGame(lobbyCode: string) : Game | undefined {
+        return this.games.get(lobbyCode);
     }
 }
