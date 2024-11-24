@@ -8,11 +8,11 @@ export class Game implements IGame {
   players: IPlayer[];
   currentRound: IRound | null;
   status: 'waiting' | 'inProgress' | 'finished';
-  private questionsPool: Record<string, string[]>; // 3 questions per round
+  private questionsPool: Record<string, string[]>;
 
-  constructor(lobbyCode: string, players: IPlayer[], questionsPool: Record<string, string[]>) {
+  constructor(lobbyCode: string, questionsPool: Record<string, string[]>) {
     this.lobbyCode = lobbyCode;
-    this.players = [];
+    this.players = new Array<IPlayer>();
     this.currentRound = null;
     this.status = 'waiting';
     this.questionsPool = questionsPool;

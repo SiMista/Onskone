@@ -49,7 +49,7 @@ describe('LobbyManager', () => {
         lobbyManager.addPlayerToLobby(lobbyCode, player);
 
         expect(lobby?.players.length).toBe(2);
-        expect(lobby?.players[1].name).toBe('John Doe');
+        expect(lobby?.players).toContainEqual(player);
     });
 
     // TODO : Peut-être supprimer le lobby dès que y'a personne dedans ? 

@@ -18,11 +18,12 @@ export class GameManager {
     }
 
     // Create a game with players, from lobby
-    createGame(lobby: ILobby) : void {
-        const game = new Game(lobby.lobbyCode ,lobby.players, this.questionsPool); 
+    createGame(lobby: ILobby) : Game {
+        const game = new Game(lobby.lobbyCode, this.questionsPool); 
         lobby.players.forEach(player => game.addPlayer(player));
         this.games.set(lobby.lobbyCode, game);
         game.startGame();
+        return game;
     }
 
     // Get game by lobby code
