@@ -31,14 +31,21 @@ export class LobbyManager {
             lobby.addPlayer(player);
         }
         else {
-            console.log('Lobby does not exist');
+            throw new Error("Lobby doesn't exist");
         }
     }
 
     removePlayerFromLobby(lobbyCode: string, player: IPlayer) : void {
         const lobby = this.lobbies.get(lobbyCode);
         if (lobby) {
-            lobby.removePlayer(player);
+            if (lobby.players.length === 1) { // Remove lobby if last player leaves
+                this.lobbies.delete(lobbyCode);
+                return;
+            }
+            if (player.isHost) { // Change host if host leaves
+                lobby.removePlayer(player);
+                lobby.players[0].isHost = true;
+            }
         }
         else {
             console.log('Lobby does not exist');
@@ -60,8 +67,9 @@ export class LobbyManager {
             return false;
         }
         try {
-            lobby.startGame();
-            this.gameManager.createGame(lobby); // Create a game with the Game Manager
+            lobby.startGame(); 
+            const game = this.gameManager.createGame(lobby);
+            lobby.game = game;
             console.log(`Game started with code: ${lobbyCode}`);
             return true;
         } catch (error) {

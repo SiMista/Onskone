@@ -3,11 +3,11 @@ import { IPlayer } from '../types/IPlayer';
 
 export class Round implements IRound {
     roundNumber: number;
-    leader: IPlayer;        // Le joueur qui est le chef
-    category: string;       // La catégorie du round
-    questions: string[];    // Les 3 questions du round
+    leader: IPlayer;        
+    category: string;       
+    questions: string[];    
     answers: Record<string, string>; // Réponses des joueurs (clé = ID du joueur)
-    scores: Record<string, number>;  // Scores des joueurs pour ce round
+    scores: Record<string, number>;  // Pas sûr de mettre un système de score
 
     constructor(roundNumber: number, leader: IPlayer, [category, questions]: [string, string[]]) {
         this.roundNumber = roundNumber;
