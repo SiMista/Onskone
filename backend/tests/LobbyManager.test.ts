@@ -52,13 +52,21 @@ describe('LobbyManager', () => {
         expect(lobby?.players).toContainEqual(player);
     });
 
-    // TODO : Peut-être supprimer le lobby dès que y'a personne dedans ? 
-    it('should remove a player from the lobby', () => {
+    it('should remove the lobby, if the last player leaves', () => {
         const lobbyCode = lobbyManager.createLobby(hostPlayer);
         lobbyManager.removePlayerFromLobby(lobbyCode, hostPlayer);
-        const lobby = lobbyManager.getLobby(lobbyCode);
 
-        expect(lobby?.players.length).toBe(0);
+        expect(lobbyManager.getLobby(lobbyCode)).toBeUndefined();
+    });
+    
+    it('should change the host if the host leaves', () => {
+        const lobbyCode = lobbyManager.createLobby(hostPlayer);
+        const player = playerManager.createPlayer('John Doe');
+        const lobby = lobbyManager.getLobby(lobbyCode);
+        lobbyManager.addPlayerToLobby(lobbyCode, player);
+        lobbyManager.removePlayerFromLobby(lobbyCode, hostPlayer);
+
+        expect(lobby?.players[0].isHost).toBe(true);
     });
 
     it('should start a game if not already started', () => {
