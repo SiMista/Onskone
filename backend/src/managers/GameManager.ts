@@ -1,33 +1,29 @@
 import { Game } from "../models/Game";
 import { ILobby } from "../types/ILobby";
 
-export class GameManager {
-    private games: Map<string, Game>;
-    private questionsPool: Record<string, string[]>;
-
-    constructor(questionsFilePath: string = '../data/questions.json') {
-        this.games = new Map();
-        this.questionsPool = this.loadQuestions(questionsFilePath);
-    }
+export namespace GameManager {
+    const games: Map<string, Game> = new Map();
 
     // Load questions from JSON file
-    loadQuestions(questionsFilePath: string) : Record<string, string[]> {
+    const loadQuestions = (questionsFilePath: string) : Record<string, string[]> => {
         const fs = require('fs');
         const questions = fs.readFileSync(questionsFilePath);
         return JSON.parse(questions);
     }
 
+    let questionsPool: Record<string, string[]> = loadQuestions('./src/data/questions.json'); // Carré vu que c'est syncrhone, S/o Philippe
+
     // Create a game with players, from lobby
-    createGame(lobby: ILobby) : Game {
-        const game = new Game(lobby.lobbyCode, this.questionsPool); 
+    export const createGame = (lobby: ILobby) : Game => {
+        const game = new Game(lobby.lobbyCode, questionsPool); 
         lobby.players.forEach(player => game.addPlayer(player));
-        this.games.set(lobby.lobbyCode, game);
+        games.set(lobby.lobbyCode, game);
         game.startGame();
         return game;
     }
 
     // Get game by lobby code
-    getGame(lobbyCode: string) : Game | undefined {
-        return this.games.get(lobbyCode);
+    export const getGame = (lobbyCode: string) : Game | undefined => {
+        return games.get(lobbyCode);
     }
 }

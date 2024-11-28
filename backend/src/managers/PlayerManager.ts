@@ -1,21 +1,29 @@
 import { Player } from '../models/Player';
 
-export class PlayerManager {
-    private players: Map<string, Player>;
+export namespace PlayerManager {
+    const players: Map<string, Player> = new Map();
 
-    constructor() {
-        this.players = new Map();
+    export const getPlayers = (): Player[] => {
+        return Array.from(players.values());
     }
 
-    createPlayer(name: string): Player {
+    export const getPlayer = (id: string): Player | undefined => {
+        return players.get(id);
+    }
+
+    export const deletePlayer = (id: string): void => {
+        players.delete(id);
+    }
+
+    export  const createPlayer = (name: string): Player => {
         const player = new Player(name);
-        this.players.set(player.id, player);
+        players.set(player.id, player);
         return player;
     }
 
-    createHostPlayer(name: string): Player {
+    export const createHostPlayer = (name: string): Player => {
         const player = new Player(name, true); // isHost = true
-        this.players.set(player.id, player);
+        players.set(player.id, player);
         return player;
     }
 }
