@@ -2,17 +2,26 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PlayerManager = void 0;
 const Player_1 = require("../models/Player");
-class PlayerManager {
-    constructor() {
-        this.players = new Map();
-    }
-    createPlayer(id, name) {
-        const player = new Player_1.Player(id, name);
-        this.players.set(id, player);
-    }
-    createHostPlayer(id, name) {
-        const player = new Player_1.Player(id, name, true); // isHost = true
-        this.players.set(id, player);
-    }
-}
-exports.PlayerManager = PlayerManager;
+var PlayerManager;
+(function (PlayerManager) {
+    const players = new Map();
+    PlayerManager.getPlayers = () => {
+        return Array.from(players.values());
+    };
+    PlayerManager.getPlayer = (id) => {
+        return players.get(id);
+    };
+    PlayerManager.deletePlayer = (id) => {
+        players.delete(id);
+    };
+    PlayerManager.createPlayer = (name) => {
+        const player = new Player_1.Player(name);
+        players.set(player.id, player);
+        return player;
+    };
+    PlayerManager.createHostPlayer = (name) => {
+        const player = new Player_1.Player(name, true); // isHost = true
+        players.set(player.id, player);
+        return player;
+    };
+})(PlayerManager || (exports.PlayerManager = PlayerManager = {}));

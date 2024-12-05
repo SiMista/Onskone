@@ -2,36 +2,47 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LobbyManager = void 0;
 const Lobby_1 = require("../models/Lobby");
+const GameManager_1 = require("./GameManager");
 const helpers_1 = require("../utils/helpers");
-class LobbyManager {
-    constructor(gameManager) {
-        this.lobbies = new Map();
-        this.gameManager = gameManager;
-    }
-    createLobby() {
+var LobbyManager;
+(function (LobbyManager) {
+    const lobbies = new Map();
+    // Create a lobby using a player and add it to the lobbies map and return lobby code
+    LobbyManager.createLobby = (player) => {
+        if (!player.isHost) { // Vérifie si le joueur a le statut "host"
+            throw new Error("Player is not authorized to create a lobby.");
+        }
         const lobbyCode = (0, helpers_1.generateLobbyCode)();
-        this.lobbies.set(lobbyCode, new Lobby_1.Lobby(lobbyCode));
-    }
-    addPlayerToLobby(lobbyCode, player) {
-        const lobby = this.lobbies.get(lobbyCode);
+        const lobby = new Lobby_1.Lobby(lobbyCode);
+        lobby.addPlayer(player);
+        lobbies.set(lobbyCode, lobby);
+        return lobbyCode;
+    };
+    LobbyManager.addPlayerToLobby = (lobbyCode, player) => {
+        const lobby = lobbies.get(lobbyCode);
+        if (!lobby) {
+            throw new Error("Lobby does not exist.");
+        }
+        lobby.addPlayer(player);
+    };
+    LobbyManager.removePlayerFromLobby = (lobbyCode, player) => {
+        const lobby = lobbies.get(lobbyCode);
         if (lobby) {
-            lobby.addPlayer(player);
+            if (lobby.players.length === 1) { // Remove lobby if last player leaves
+                lobbies.delete(lobbyCode);
+                return;
+            }
+            if (player.isHost) { // Change host if host leaves
+                lobby.removePlayer(player);
+                lobby.players[0].isHost = true;
+            }
         }
         else {
             console.log('Lobby does not exist');
         }
-    }
-    removePlayerFromLobby(lobbyCode, playerId) {
-        const lobby = this.lobbies.get(lobbyCode);
-        if (lobby) {
-            lobby.removePlayer(playerId);
-        }
-        else {
-            console.log('Lobby does not exist');
-        }
-    }
-    startGame(lobbyCode) {
-        const lobby = this.lobbies.get(lobbyCode);
+    };
+    LobbyManager.startGame = (lobbyCode) => {
+        const lobby = lobbies.get(lobbyCode);
         if (!lobby) {
             console.log('Lobby does not exist');
             return false;
@@ -40,9 +51,14 @@ class LobbyManager {
             console.log('Game already started for this lobby.');
             return false;
         }
+        if (lobby.players.length <= 2) {
+            console.log('Not enough players to start the game.');
+            return false;
+        }
         try {
             lobby.startGame();
-            this.gameManager.createGame(lobby); // Create a game with the Game Manager
+            const game = GameManager_1.GameManager.createGame(lobby);
+            lobby.game = game;
             console.log(`Game started with code: ${lobbyCode}`);
             return true;
         }
@@ -50,6 +66,8 @@ class LobbyManager {
             console.error('Error starting game:', error);
             return false;
         }
-    }
-}
-exports.LobbyManager = LobbyManager;
+    };
+    LobbyManager.getLobby = (lobbyCode) => {
+        return lobbies.get(lobbyCode);
+    };
+})(LobbyManager || (exports.LobbyManager = LobbyManager = {}));
