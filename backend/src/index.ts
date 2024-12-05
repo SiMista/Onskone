@@ -1,24 +1,27 @@
 import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
-import { GameManager } from './managers/GameManager';
+import { SocketHandler } from './sockets/SocketHandler'; // Import de la classe qui gère les événements des sockets
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
 
+// Crée une instance de Server (socket.io)
+const io = new Server(server, {
+  cors: {
+    origin: "http://localhost:3000", // Remplace par l'URL de ton frontend si nécessaire
+    methods: ["GET", "POST"],
+  },
+});
+
+// Instancier le gestionnaire de sockets avec l'instance 'io'
+new SocketHandler(io);
 
 app.get('/', (req, res) => {
   res.send('Hello World');
 });
 
-io.on('connection', (socket) => {
-  console.log('A user connected' + socket.id);
-  socket.on('disconnect', () => {
-    console.log('User disconnected');
-  });
-});
-
+// Lancer le serveur HTTP sur le port 5000
 server.listen(5000, () => {
   console.log('Server running on http://localhost:5000');
 });

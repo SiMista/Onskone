@@ -2,21 +2,26 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GameManager = void 0;
 const Game_1 = require("../models/Game");
-class GameManager {
-    constructor(questionsFilePath) {
-        this.games = new Map();
-        this.questionsPool = this.loadQuestions(questionsFilePath);
-    }
+var GameManager;
+(function (GameManager) {
+    const games = new Map();
     // Load questions from JSON file
-    loadQuestions(questionsFilePath) {
-        return [];
-    }
-    // Create a game with the host player and other players, from LobbyManager
-    createGame(lobby) {
-        const game = new Game_1.Game(lobby.lobbyCode, lobby.players, []);
+    const loadQuestions = (questionsFilePath) => {
+        const fs = require('fs');
+        const questions = fs.readFileSync(questionsFilePath);
+        return JSON.parse(questions);
+    };
+    let questionsPool = loadQuestions('./src/data/questions.json'); // Carré vu que c'est syncrhone, S/o Philippe
+    // Create a game with players, from lobby
+    GameManager.createGame = (lobby) => {
+        const game = new Game_1.Game(lobby.lobbyCode, questionsPool);
         lobby.players.forEach(player => game.addPlayer(player));
-        this.games.set(lobby.lobbyCode, game);
+        games.set(lobby.lobbyCode, game);
         game.startGame();
-    }
-}
-exports.GameManager = GameManager;
+        return game;
+    };
+    // Get game by lobby code
+    GameManager.getGame = (lobbyCode) => {
+        return games.get(lobbyCode);
+    };
+})(GameManager || (exports.GameManager = GameManager = {}));

@@ -6,12 +6,13 @@ class Lobby {
         this.lobbyCode = lobbyCode;
         this.players = [];
         this.gameStarted = false;
+        this.game = null;
     }
     addPlayer(player) {
         this.players.push(player);
     }
-    removePlayer(playerId) {
-        this.players = this.players.filter(player => player.id !== playerId);
+    removePlayer(player) {
+        this.players = this.players.filter(p => p.id !== player.id);
     }
     startGame() {
         this.gameStarted = true;
