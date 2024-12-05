@@ -12,13 +12,13 @@ class SocketHandler {
     setupSocketEvents() {
         this.io.on('connection', (socket) => {
             console.log(`User connected: ${socket.id}`);
-            // Event: Create Lobby
+            // Event: Create Lobby with player name as host
             socket.on('createLobby', (data) => {
                 try {
-                    const newPlayer = PlayerManager_1.PlayerManager.createHostPlayer(data.player);
+                    const newPlayer = PlayerManager_1.PlayerManager.createHostPlayer(data.playerName);
                     const lobbyCode = LobbyManager_1.LobbyManager.createLobby(newPlayer);
                     socket.join(lobbyCode);
-                    this.io.to(lobbyCode).emit('lobbyCreated', { lobbyCode });
+                    socket.emit('lobbyCreated', { lobbyCode, playerName: data.playerName });
                     console.log(`Lobby created: ${lobbyCode}`);
                 }
                 catch (error) {
@@ -26,22 +26,41 @@ class SocketHandler {
                     socket.emit('error', { message: error.message });
                 }
             });
-            // Event: Join Lobby
+            // Event: Join Lobby with player name
             socket.on('joinLobby', (data) => {
                 try {
                     const lobby = LobbyManager_1.LobbyManager.getLobby(data.lobbyCode);
                     if (lobby) {
-                        const player = LobbyManager_1.LobbyManager.addPlayerToLobby(data.lobbyCode, data.player);
-                        socket.join(data.lobbyCode);
-                        this.io.to(data.lobbyCode).emit('playerJoined', { player, players: lobby.players });
-                        console.log(`Player joined lobby ${data.lobbyCode}: ${data.player.name}`);
+                        const newPlayer = PlayerManager_1.PlayerManager.createPlayer(data.playerName);
+                        LobbyManager_1.LobbyManager.addPlayerToLobby(lobby.lobbyCode, newPlayer);
+                        socket.join(lobby.lobbyCode); // Ajouter le socket au lobby
+                        // Diffuser à tous les joueurs du lobby que quelqu'un vient de rejoindre
+                        this.io.to(lobby.lobbyCode).emit('playerJoined', { players: lobby.players });
+                        console.log(`${data.playerName} a rejoint le lobby ${lobby.lobbyCode}`);
+                    }
+                    else {
+                        socket.emit('error', { message: 'Lobby not found' }); // Émettre l'erreur au client
+                    }
+                }
+                catch (error) {
+                    console.error('Error joining lobby:', error);
+                    socket.emit('error', { message: error.message }); // Émettre l'erreur au client en cas d'exception
+                }
+            });
+            // Event: Get Lobby Players
+            socket.on('getLobbyPlayers', (data) => {
+                try {
+                    const lobby = LobbyManager_1.LobbyManager.getLobby(data.lobbyCode);
+                    console.log('getLobbyPlayers', lobby === null || lobby === void 0 ? void 0 : lobby.players);
+                    if (lobby) {
+                        this.io.to(lobby.lobbyCode).emit('playerJoined', { players: lobby.players });
                     }
                     else {
                         socket.emit('error', { message: 'Lobby not found' });
                     }
                 }
                 catch (error) {
-                    console.error('Error joining lobby:', error);
+                    console.error('Error getting lobby players:', error);
                     socket.emit('error', { message: error.message });
                 }
             });

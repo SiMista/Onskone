@@ -73,4 +73,8 @@ export namespace LobbyManager {
     export const getLobby = (lobbyCode: string) : Lobby | undefined => {
         return lobbies.get(lobbyCode);
     }
+
+    export const getLobbies = () : Map<string, Lobby> => {
+        return lobbies;
+    }
 }
