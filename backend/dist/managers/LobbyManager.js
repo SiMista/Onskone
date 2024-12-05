@@ -70,4 +70,7 @@ var LobbyManager;
     LobbyManager.getLobby = (lobbyCode) => {
         return lobbies.get(lobbyCode);
     };
+    LobbyManager.getLobbies = () => {
+        return lobbies;
+    };
 })(LobbyManager || (exports.LobbyManager = LobbyManager = {}));

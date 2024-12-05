@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import socket from '../utils/socket';
 
 const Home = () => {
+  const navigate = useNavigate();
   const [playerName, setPlayerName] = useState('');
   const [lobbyCode, setLobbyCode] = useState('');
   const [showJoinLobby, setShowJoinLobby] = useState(false);
@@ -12,10 +14,11 @@ const Home = () => {
       return;
     }
 
-    socket.emit('createLobby', { player: { name: playerName } });
+    socket.emit('createLobby', { playerName: playerName });
     socket.on('lobbyCreated', (data) => {
-      console.log(`Salon créé avec le code : ${data.lobbyCode}`);
-      // Logique pour rediriger vers la page du lobby
+        console.log(`Salon créé avec le code : ${data.lobbyCode}`);
+        console.log(`Joueur ajouté au salon : ${data.playerName}`);
+        navigate(`/lobby/${data.lobbyCode}`);
     });
   };
 
@@ -28,11 +31,17 @@ const Home = () => {
       alert('Veuillez entrer un code de lobby valide.');
       return;
     }
+    socket.emit('joinLobby', { lobbyCode, playerName });
 
-    socket.emit('joinLobby', { lobbyCode, player: { name: playerName } });
     socket.on('playerJoined', (data) => {
       console.log(`Joueur ajouté au salon : ${data.players.map((p: { name: any; }) => p.name).join(', ')}`);
-      // Logique pour rediriger vers la page du lobby
+      navigate(`/lobby/${lobbyCode}`);
+    });
+
+    // Écoute des erreurs du serveur
+    socket.on('error', (data) => {
+        console.error('Error from server:', data.message);
+        alert('Error joining lobby: ' + data.message);  
     });
   };
 
