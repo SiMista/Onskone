@@ -24,7 +24,7 @@ export class Game implements IGame {
 
   startGame(): void {
     this.status = 'inProgress';
-  }  
+  }
 
   nextRound(): void {
     if (this.status !== 'inProgress') {
@@ -40,7 +40,7 @@ export class Game implements IGame {
   }
 
   // Get random category and questions
-  getRandomCategoryAndQuestions() : [string, string[]] {
+  getRandomCategoryAndQuestions(): [string, string[]] {
     const categories = Object.keys(this.questionsPool);
     const randomIndex = Math.floor(Math.random() * categories.length);
     const category = categories[randomIndex];
@@ -48,7 +48,7 @@ export class Game implements IGame {
     return [category, this.questionsPool[category]];
   }
 
-  getQuestionsPool() : Record<string, string[]> {
+  getQuestionsPool(): Record<string, string[]> {
     return this.questionsPool;
   }
 

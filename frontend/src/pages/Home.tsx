@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import socket from '../utils/socket';
 
 const Home = () => {
-  const navigate = useNavigate();
   const [playerName, setPlayerName] = useState('');
-  const [lobbyCode, setLobbyCode] = useState('');
-  const [showJoinLobby, setShowJoinLobby] = useState(false);
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+
+  const lobbyCode = searchParams.get('lobbyCode'); // Vérifie si un code est passé dans l'URL
 
   const createLobby = () => {
     if (!playerName.trim()) {
@@ -16,9 +17,9 @@ const Home = () => {
 
     socket.emit('createLobby', { playerName: playerName });
     socket.on('lobbyCreated', (data) => {
-        console.log(`Salon créé avec le code : ${data.lobbyCode}`);
-        console.log(`Joueur ajouté au salon : ${data.playerName}`);
-        navigate(`/lobby/${data.lobbyCode}`);
+      console.log(`Salon créé avec le code : ${data.lobbyCode}`);
+      console.log(`Joueur ajouté au salon : ${data.playerName}`);
+      navigate(`/lobby/${data.lobbyCode}`);
     });
   };
 
@@ -27,10 +28,7 @@ const Home = () => {
       alert('Veuillez entrer un nom avant de rejoindre un salon.');
       return;
     }
-    if (!lobbyCode.trim()) {
-      alert('Veuillez entrer un code de lobby valide.');
-      return;
-    }
+
     socket.emit('joinLobby', { lobbyCode, playerName });
 
     socket.on('playerJoined', (data) => {
@@ -40,8 +38,8 @@ const Home = () => {
 
     // Écoute des erreurs du serveur
     socket.on('error', (data) => {
-        console.error('Error from server:', data.message);
-        alert('Error joining lobby: ' + data.message);  
+      console.error('Error from server:', data.message);
+      alert('Error joining lobby: ' + data.message);
     });
   };
 
@@ -59,24 +57,15 @@ const Home = () => {
         />
       </div>
 
-      <button onClick={createLobby} style={{ margin: '10px' }}>
-        Créer un salon
-      </button>
 
-      <button onClick={() => setShowJoinLobby(!showJoinLobby)} style={{ margin: '10px' }}>
-        Rejoindre un salon
-      </button>
 
-      {showJoinLobby && (
-        <div style={{ marginTop: '20px' }}>
-          <label htmlFor="lobbyCode">Code du salon : </label>
-          <input
-            id="lobbyCode"
-            type="text"
-            placeholder="Entrez le code du salon"
-            value={lobbyCode}
-            onChange={(e) => setLobbyCode(e.target.value)}
-          />
+      {!lobbyCode ? (
+        <button onClick={createLobby} style={{ margin: '10px' }}>
+          Créer un salon
+        </button>
+      ) : (
+        <div>
+          <p>Vous êtes invité à rejoindre le salon {lobbyCode}</p>
           <button onClick={joinLobby} style={{ marginLeft: '10px' }}>
             Rejoindre
           </button>

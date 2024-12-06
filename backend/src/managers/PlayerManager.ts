@@ -15,7 +15,7 @@ export namespace PlayerManager {
         players.delete(id);
     }
 
-    export  const createPlayer = (name: string): Player => {
+    export const createPlayer = (name: string): Player => {
         const player = new Player(name);
         players.set(player.id, player);
         return player;
