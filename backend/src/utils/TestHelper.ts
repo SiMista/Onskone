@@ -23,7 +23,7 @@ export class TestHelper {
     static createPlayers(playerNames: string[]): Player[] {
         return playerNames.map((name) => PlayerManager.createPlayer(name));
     }
-    
+
 
     static startGameWithPlayers(playerNames: string[]): Game {
         const lobby = this.createLobbyWithPlayers(playerNames);

@@ -48,8 +48,6 @@ export class SocketHandler {
                     socket.emit('error', { message: (error as Error).message });  // Émettre l'erreur au client en cas d'exception
                 }
             });
-            
-            
 
             // Event: Get Lobby Players
             socket.on('getLobbyPlayers', (data) => {
