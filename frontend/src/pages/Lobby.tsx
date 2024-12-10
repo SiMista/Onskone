@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import socket from '../utils/socket'; // Ton instance de socket.io
 
 const Lobby = () => {
   const { lobbyCode } = useParams();
+  const navigate = useNavigate();
   const [players, setPlayers] = useState<{
     id: string; name: string; isHost: boolean; score: number
   }[]
@@ -13,11 +14,19 @@ const Lobby = () => {
     const link = `${window.location.origin}/?lobbyCode=${lobbyCode}`;
     navigator.clipboard.writeText(link) // Copie le lien dans le presse-papiers
       .then(() => {
-        alert('Lien d\'invitation copié dans le presse-papiers : ' + link);
+        console.log('Lien copié dans le presse-papiers :', link);
       })
       .catch((error) => {
         console.error('Erreur lors de la copie du lien :', error);
       });
+  }
+
+  const leaveLobby = () => {
+    const playerId = localStorage.getItem('currentPlayerId');
+    console.log(playerId);
+    socket.emit('leaveLobby', { lobbyCode, playerId });
+    localStorage.removeItem('currentPlayerId');
+    navigate('/');
   }
 
   useEffect(() => {
@@ -25,13 +34,25 @@ const Lobby = () => {
     socket.emit('getLobbyPlayers', { lobbyCode });
 
     // Écouter l'événement de mise à jour des joueurs (lorsqu'un joueur rejoint)
-    socket.on('playerJoined', (data: { players: { id: string; name: string; isHost: boolean; score: number }[] }) => {
-      setPlayers(data.players); // Mettre à jour la liste des joueurs
+    socket.on('playerJoined', (data) => {
+      setPlayers(data.players);
+    });
+
+    socket.on('playerLeft', (data) => {
+      setPlayers(data.players);
+    });
+
+    socket.on('joinedLobby', (data) => {
+      localStorage.setItem('currentPlayerId', data.playerId)
+      const playerId = localStorage.getItem('currentPlayerId');
+
+      console.log(playerId);
     });
 
     // Nettoyer les écouteurs pour éviter les doublons
     return () => {
       socket.off('playerJoined');
+      socket.off('playerLeft');
     };
   }, [lobbyCode]); // Ce useEffect se déclenche à chaque changement de lobbyCode
 
@@ -42,13 +63,19 @@ const Lobby = () => {
       <h2>Bienvenue dans le salon {lobbyCode}</h2>
       <h3>Joueurs dans le salon :</h3>
       <ul>
-        {players.map((player) => (
-          <li key={player.id}>
-            {player.name} {player.isHost && '(Hôte)'}
-          </li>
-        ))}
+        {players.map((player) => {
+          const currentPlayerId = localStorage.getItem('currentPlayerId');
+          const isCurrentPlayer = currentPlayerId === player.id;
+
+          return (
+            <li key={player.id} style={{ color: isCurrentPlayer ? 'red' : 'black' }}>
+              {player.name} {player.isHost && '(Hôte)'}
+            </li>
+          );
+        })}
       </ul>
       <button onClick={generateLink}>Lien d'invitation</button>
+      <button onClick={leaveLobby}>Quitter le salon</button>
     </div>
   );
 };
