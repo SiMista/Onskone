@@ -35,7 +35,8 @@ class SocketHandler {
                         LobbyManager_1.LobbyManager.addPlayerToLobby(lobby.lobbyCode, newPlayer);
                         socket.join(lobby.lobbyCode); // Ajouter le socket au lobby
                         // Diffuser à tous les joueurs du lobby que quelqu'un vient de rejoindre
-                        this.io.to(lobby.lobbyCode).emit('playerJoined', { players: lobby.players });
+                        this.io.to(lobby.lobbyCode).emit('playerJoined', { players: lobby.players, playerId: newPlayer.id });
+                        socket.emit('joinedLobby', { playerId: newPlayer.id });
                         console.log(`${data.playerName} a rejoint le lobby ${lobby.lobbyCode}`);
                     }
                     else {
@@ -45,6 +46,30 @@ class SocketHandler {
                 catch (error) {
                     console.error('Error joining lobby:', error);
                     socket.emit('error', { message: error.message }); // Émettre l'erreur au client en cas d'exception
+                }
+            });
+            socket.on('leaveLobby', (data) => {
+                try {
+                    const lobby = LobbyManager_1.LobbyManager.getLobby(data.lobbyCode);
+                    if (lobby) {
+                        const player = PlayerManager_1.PlayerManager.getPlayer(data.playerId);
+                        if (player) {
+                            LobbyManager_1.LobbyManager.removePlayerFromLobby(lobby.lobbyCode, player);
+                            socket.leave(lobby.lobbyCode);
+                            this.io.to(lobby.lobbyCode).emit('playerLeft', { players: lobby.players });
+                            console.log(`${player.name} a quitté le lobby ${lobby.lobbyCode}`);
+                        }
+                        else {
+                            socket.emit('error', { message: 'Player not found' });
+                        }
+                    }
+                    else {
+                        socket.emit('error', { message: 'Lobby not found' });
+                    }
+                }
+                catch (error) {
+                    console.error('Error leaving lobby:', error);
+                    socket.emit('error', { message: error.message });
                 }
             });
             // Event: Get Lobby Players

@@ -38,6 +38,9 @@ export namespace LobbyManager {
                 lobby.removePlayer(player);
                 lobby.players[0].isHost = true;
             }
+            else {
+                lobby.removePlayer(player);
+            }
         }
         else {
             console.log('Lobby does not exist');
