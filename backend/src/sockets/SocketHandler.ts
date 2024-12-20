@@ -1,7 +1,7 @@
-import { Server, Socket } from 'socket.io';
-import { LobbyManager } from '../managers/LobbyManager';
-import { GameManager } from '../managers/GameManager';
-import { PlayerManager } from '../managers/PlayerManager';
+import {Server, Socket} from 'socket.io';
+import {LobbyManager} from '../managers/LobbyManager';
+import {GameManager} from '../managers/GameManager';
+import {Player} from "../models/Player";
 
 export class SocketHandler {
     private io: Server;
@@ -18,15 +18,16 @@ export class SocketHandler {
             // Event: Create Lobby with player name as host
             socket.on('createLobby', (data) => {
                 try {
-                    const newPlayer = PlayerManager.createHostPlayer(data.playerName);
-                    const lobbyCode = LobbyManager.createLobby(newPlayer);
+                    // const hostPlayer = new Player(data.playerName, true);
+
+                    const lobbyCode = LobbyManager.create();
                     socket.join(lobbyCode);
-                    socket.emit('lobbyCreated', { lobbyCode, playerName: data.playerName });
-                    socket.emit('joinedLobby', { playerId: newPlayer.id });
+                    socket.emit('lobbyCreated', {lobbyCode});
+                    // socket.emit('joinedLobby', {player: hostPlayer});
                     console.log(`Lobby created: ${lobbyCode}`);
                 } catch (error) {
                     console.error('Error creating lobby:', error);
-                    socket.emit('error', { message: (error as Error).message });
+                    socket.emit('error', {message: (error as Error).message});
                 }
             });
 
@@ -34,43 +35,56 @@ export class SocketHandler {
             socket.on('joinLobby', (data) => {
                 try {
                     const lobby = LobbyManager.getLobby(data.lobbyCode);
-                    if (lobby) {
-                        const newPlayer = PlayerManager.createPlayer(data.playerName);
-                        LobbyManager.addPlayerToLobby(lobby.lobbyCode, newPlayer);
-                        socket.join(lobby.lobbyCode);  // Ajouter le socket au lobby
-                        // Diffuser à tous les joueurs du lobby que quelqu'un vient de rejoindre
-                        this.io.to(lobby.lobbyCode).emit('updatePlayersList', { players: lobby.players });
-                        socket.emit('joinedLobby', { playerId: newPlayer.id });
-                        console.log(`${data.playerName} a rejoint le lobby ${lobby.lobbyCode}`);
-                    } else {
-                        socket.emit('error', { message: 'Lobby not found' });  // Émettre l'erreur au client
+
+                    if (!lobby) {
+                        socket.emit('error', {message: 'Lobby not found'});
+                        return;
                     }
+
+                    const newPlayer = new Player(data.playerName);
+
+                    LobbyManager.addPlayer(lobby, newPlayer);
+                    // Diffuser à tous les joueurs du lobby que quelqu'un vient de rejoindre
+                    socket.join(lobby.code);
+                    console.log(`Sending ${lobby.players.map(p => p.id)} to ${socket.id}`);
+                    this.io.to(lobby.code).emit('updatePlayersList', {players: lobby.players});
+                    socket.emit('joinedLobby', { player: newPlayer });
+                    console.log(`${data.playerName} a rejoint le lobby ${lobby.code}`);
+
                 } catch (error) {
                     console.error('Error joining lobby:', error);
-                    socket.emit('error', { message: (error as Error).message });  // Émettre l'erreur au client en cas d'exception
+                    socket.emit('error', {message: (error as Error).message});
                 }
             });
 
             socket.on('leaveLobby', (data: { lobbyCode: string; currentPlayerId: string; }) => {
                 try {
                     const lobby = LobbyManager.getLobby(data.lobbyCode);
-                    if (lobby) {
-                        console.log('leaveLobby', data.currentPlayerId, data.lobbyCode);
-                        const player = PlayerManager.getPlayer(data.currentPlayerId);
-                        if (player) {
-                            LobbyManager.removePlayerFromLobby(lobby.lobbyCode, player);
-                            socket.leave(lobby.lobbyCode);
-                            this.io.to(lobby.lobbyCode).emit('updatePlayersList', { players: lobby.players });
-                            console.log(`${player.name} a quitté le lobby ${lobby.lobbyCode}`);
-                        } else {
-                            socket.emit('error', { message: 'Player not found' });
-                        }
-                    } else {
-                        socket.emit('error', { message: 'Lobby not found' });
+                    if (!lobby) {
+                        socket.emit('error', {message: 'Lobby not found'});
+                        return;
                     }
+
+                    console.log('leaveLobby', data.currentPlayerId, data.lobbyCode);
+                    const player = lobby.getPlayer(data.currentPlayerId);
+
+                    if (!player) {
+                        socket.emit('error', {message: 'Player not found'});
+                        return;
+                    }
+                    const isLobbyRemoved = LobbyManager.removePlayer(lobby, player);
+
+                    this.io.to(lobby.code).emit('updatePlayersList', {players: lobby.players});
+                    console.log(`${player.name} a quitté le lobby ${lobby.code}`);
+
+                    if (isLobbyRemoved) {
+                        socket.leave(lobby.code);
+                        console.log(`Lobby ${lobby.code} removed`);
+                    }
+
                 } catch (error) {
                     console.error('Error leaving lobby:', error);
-                    socket.emit('error', { message: (error as Error).message });
+                    socket.emit('error', {message: (error as Error).message});
                 }
             });
 
@@ -79,14 +93,17 @@ export class SocketHandler {
                 try {
                     const lobby = LobbyManager.getLobby(data.lobbyCode);
                     console.log('getLobbyPlayers', lobby?.players);
-                    if (lobby) {
-                        this.io.to(lobby.lobbyCode).emit('updatePlayersList', { players: lobby.players });
-                    } else {
-                        socket.emit('error', { message: 'Lobby not found' });
+
+                    if (!lobby) {
+                        socket.emit('error', {message: 'Lobby not found'});
+                        return;
                     }
+
+                    this.io.to(lobby.code).emit('updatePlayersList', {players: lobby.players});
+
                 } catch (error) {
                     console.error('Error getting lobby players:', error);
-                    socket.emit('error', { message: (error as Error).message });
+                    socket.emit('error', {message: (error as Error).message});
                 }
             });
 
@@ -94,56 +111,67 @@ export class SocketHandler {
             socket.on('startGame', (data) => {
                 try {
                     const lobby = LobbyManager.getLobby(data.lobbyCode);
-                    if (lobby) {
-                        const game = GameManager.createGame(lobby);
-                        this.io.to(data.lobbyCode).emit('gameStarted', { game });
-                    } else {
-                        socket.emit('error', { message: 'Lobby not found' });
+                    if (!lobby) {
+                        socket.emit('error', {message: 'Lobby not found'});
+                        return;
                     }
+
+                    const game = GameManager.createGame(lobby);
+                    this.io.to(data.lobbyCode).emit('gameStarted', {game});
+
                     console.log(`Game started in lobby ${data.lobbyCode}`);
                 } catch (error) {
                     console.error('Error starting game:', error);
-                    socket.emit('error', { message: (error as Error).message });
+                    socket.emit('error', {message: (error as Error).message});
                 }
             });
 
             // Event: Next Round
             socket.on('nextRound', (data) => {
                 try {
-                    const game = GameManager.getGame(data.lobbyCode);
-                    if (game) {
-                        game.nextRound();
-                        this.io.to(data.lobbyCode).emit('roundStarted', { round: game.currentRound });
-                        console.log(`Round ${game.currentRound?.roundNumber} started in lobby ${data.lobbyCode}`);
-                    } else {
-                        socket.emit('error', { message: 'Game not found' });
+                    const lobby = LobbyManager.getLobby(data.lobbyCode);
+                    const game = lobby?.game;
+                    if (!game) {
+                        socket.emit('error', {message: 'Game not found'});
+                        return;
                     }
+
+                    game.nextRound();
+                    this.io.to(data.lobbyCode).emit('roundStarted', {round: game.currentRound});
+
+                    console.log(`Round ${game.currentRound?.roundNumber} started in lobby ${data.lobbyCode}`);
                 } catch (error) {
                     console.error('Error starting next round:', error);
-                    socket.emit('error', { message: (error as Error).message });
+                    socket.emit('error', {message: (error as Error).message});
                 }
             });
 
             // Event: Submit Answer
             socket.on('submitAnswer', (data) => {
                 try {
-                    const game = GameManager.getGame(data.lobbyCode);
-                    if (game && game.currentRound) {
-                        game.currentRound.addAnswer(data.playerId, data.answer);
-                        this.io.to(data.lobbyCode).emit('answerSubmitted', { playerId: data.playerId });
-                        console.log(`Answer submitted by player ${data.playerId} in lobby ${data.lobbyCode}`);
-                    } else {
-                        socket.emit('error', { message: 'Game or round not found' });
+                    const lobby = LobbyManager.getLobby(data.lobbyCode);
+                    const game = lobby?.game;
+                    if (!game) {
+                        socket.emit('error', {message: 'Game not found'});
+                        return;
                     }
+                    if (!game.currentRound) {
+                        socket.emit('error', {message: 'Round not found'});
+                        return;
+                    }
+                    const player = lobby.getPlayer(data.playerId);
+                    if (!player) {
+                        socket.emit('error', {message: 'Player not found'});
+                        return;
+                    }
+                    game.currentRound.addAnswer(data.playerId, data.answer);
+                    this.io.to(data.lobbyCode).emit('answerSubmitted', {playerId: data.playerId});
+
+                    console.log(`Answer submitted by player ${data.playerId} in lobby ${data.lobbyCode}`);
                 } catch (error) {
                     console.error('Error submitting answer:', error);
-                    socket.emit('error', { message: (error as Error).message });
+                    socket.emit('error', {message: (error as Error).message});
                 }
-            });
-
-            // Event: Disconnect
-            socket.on('disconnect', () => {
-                console.log(`User disconnected: ${socket.id}`);
             });
         });
     }

@@ -1,9 +1,10 @@
 import { IPlayer } from "./IPlayer";
+import {GameCard} from "../managers/GameManager";
 
 export interface IRound {
   roundNumber: number;
   leader: IPlayer;
-  questions: string[];
+  gameCard: GameCard;
   answers: Record<string, string>;
   scores: Record<string, number>; // Scores des joueurs pour ce round (clé = ID du joueur, valeur = score)
   calculateScores(): void;

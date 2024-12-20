@@ -1,7 +1,7 @@
 @echo off
 :: Démarrage du backend
 echo Starting backend server...
-start cmd /k "cd backend && npx tsc && node dist/index.js"
+start cmd /k "cd backend && npm start"
 
 :: Démarrage du frontend
 echo Starting frontend server...
