@@ -22,6 +22,7 @@ export class SocketHandler {
                     const lobbyCode = LobbyManager.createLobby(newPlayer);
                     socket.join(lobbyCode);
                     socket.emit('lobbyCreated', { lobbyCode, playerName: data.playerName });
+                    socket.emit('joinedLobby', { playerId: newPlayer.id });
                     console.log(`Lobby created: ${lobbyCode}`);
                 } catch (error) {
                     console.error('Error creating lobby:', error);
@@ -38,7 +39,7 @@ export class SocketHandler {
                         LobbyManager.addPlayerToLobby(lobby.lobbyCode, newPlayer);
                         socket.join(lobby.lobbyCode);  // Ajouter le socket au lobby
                         // Diffuser à tous les joueurs du lobby que quelqu'un vient de rejoindre
-                        this.io.to(lobby.lobbyCode).emit('playerJoined', { players: lobby.players, playerId: newPlayer.id });
+                        this.io.to(lobby.lobbyCode).emit('updatePlayersList', { players: lobby.players });
                         socket.emit('joinedLobby', { playerId: newPlayer.id });
                         console.log(`${data.playerName} a rejoint le lobby ${lobby.lobbyCode}`);
                     } else {
@@ -50,15 +51,16 @@ export class SocketHandler {
                 }
             });
 
-            socket.on('leaveLobby', (data: { lobbyCode: string; playerId: string; }) => {
+            socket.on('leaveLobby', (data: { lobbyCode: string; currentPlayerId: string; }) => {
                 try {
                     const lobby = LobbyManager.getLobby(data.lobbyCode);
                     if (lobby) {
-                        const player = PlayerManager.getPlayer(data.playerId);
+                        console.log('leaveLobby', data.currentPlayerId, data.lobbyCode);
+                        const player = PlayerManager.getPlayer(data.currentPlayerId);
                         if (player) {
                             LobbyManager.removePlayerFromLobby(lobby.lobbyCode, player);
                             socket.leave(lobby.lobbyCode);
-                            this.io.to(lobby.lobbyCode).emit('playerLeft', { players: lobby.players });
+                            this.io.to(lobby.lobbyCode).emit('updatePlayersList', { players: lobby.players });
                             console.log(`${player.name} a quitté le lobby ${lobby.lobbyCode}`);
                         } else {
                             socket.emit('error', { message: 'Player not found' });
@@ -78,7 +80,7 @@ export class SocketHandler {
                     const lobby = LobbyManager.getLobby(data.lobbyCode);
                     console.log('getLobbyPlayers', lobby?.players);
                     if (lobby) {
-                        this.io.to(lobby.lobbyCode).emit('playerJoined', { players: lobby.players });
+                        this.io.to(lobby.lobbyCode).emit('updatePlayersList', { players: lobby.players });
                     } else {
                         socket.emit('error', { message: 'Lobby not found' });
                     }

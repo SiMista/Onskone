@@ -3,7 +3,10 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import socket from '../utils/socket';
 
 const Home = () => {
-  const [playerName, setPlayerName] = useState('');
+  const [playerName, setPlayerName] = useState<string>(() => {
+    const randomName = `Joueur${Math.floor(Math.random() * 1000)}`; // TODO ONLY FOR DEVMODE !
+    return randomName;
+  });
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
@@ -31,8 +34,7 @@ const Home = () => {
 
     socket.emit('joinLobby', { lobbyCode, playerName });
 
-    socket.on('playerJoined', (data) => {
-      console.log(`Joueur ajouté au salon : ${data.players.map((p: { name: any; }) => p.name).join(', ')}`);
+    socket.on('updatePlayersList', () => {
       navigate(`/lobby/${lobbyCode}`);
     });
 
