@@ -1,29 +1,27 @@
-import { ILobby } from '../types/ILobby';
-import { IPlayer } from '../types/IPlayer';
-import { IGame } from '../types/IGame';
+import {ILobby} from '../types/ILobby';
+import {IPlayer} from '../types/IPlayer';
+import {IGame} from '../types/IGame';
 
 export class Lobby implements ILobby {
-  lobbyCode: string;
-  players: IPlayer[];
-  gameStarted: boolean;
-  game: IGame | null;
+    code: string;
+    players: IPlayer[];
+    game: IGame | null;
 
-  constructor(lobbyCode: string) {
-    this.lobbyCode = lobbyCode;
-    this.players = [];
-    this.gameStarted = false;
-    this.game = null;
-  }
+    constructor(lobbyCode: string) {
+        this.code = lobbyCode;
+        this.players = [];
+        this.game = null;
+    }
 
-  addPlayer(player: IPlayer): void {
-    this.players.push(player);
-  }
+    addPlayer(player: IPlayer): void {
+        this.players.push(player);
+    }
 
-  removePlayer(player: IPlayer): void {
-    this.players = this.players.filter(p => p.id !== player.id);
-  }
+    removePlayer(player: IPlayer): void {
+        this.players = this.players.filter(p => p.id !== player.id);
+    }
 
-  startGame(): void {
-    this.gameStarted = true;
-  }
+    getPlayer(playerId: string): IPlayer | undefined {
+        return this.players.find(p => p.id === playerId);
+    }
 }

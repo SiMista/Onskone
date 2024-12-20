@@ -1,11 +1,13 @@
-import { IPlayer } from './IPlayer';
 import { IRound } from './IRound';
+import {GameStatus} from "../models/Game";
+import {ILobby} from "./ILobby";
 
 export interface IGame {
-  lobbyCode: string;
-  players: IPlayer[];
+  lobby: ILobby;
+  rounds: IRound[];
   currentRound: IRound | null;
-  status: 'waiting' | 'inProgress' | 'finished';
-  startGame(): void;
-  endGame(): void;
+  nextRound(): void;
+  status: GameStatus;
+  start(): void;
+  end(): void;
 }

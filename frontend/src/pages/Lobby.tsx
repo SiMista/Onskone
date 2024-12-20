@@ -1,89 +1,100 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import React, {useEffect, useState} from 'react';
+import {useNavigate, useParams} from 'react-router-dom';
 import socket from '../utils/socket'; // Ton instance de socket.io
 
+export interface IPlayer {
+    id: string;
+    name: string;
+    isHost: boolean;
+    score?: number;
+}
+
 const Lobby = () => {
-  const { lobbyCode } = useParams();
-  const navigate = useNavigate();
-  const [players, setPlayers] = useState<{
-    id: string; name: string; isHost: boolean; score: number
-  }[]
-  >([]);
+    const {lobbyCode} = useParams();
 
-  const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
-
-  const generateLink = () => {
-    const link = `${window.location.origin}/?lobbyCode=${lobbyCode}`;
-    navigator.clipboard.writeText(link) // Copie le lien dans le presse-papiers
-      .then(() => {
-        console.log('Lien copié dans le presse-papiers :', link);
-      })
-      .catch((error) => {
-        console.error('Erreur lors de la copie du lien :', error);
-      });
-  }
-
-  const leaveLobby = () => {
-    console.log('Quitter le salon', currentPlayerId);
-    socket.emit('leaveLobby', { lobbyCode, currentPlayerId });
-    navigate('/');
-  }
-
-  useEffect(() => {
-    socket.on("disconnect", () => {
-      console.log("Socket disconnected");
-      socket.emit('leaveLobby', { lobbyCode, currentPlayerId });
-    });
-  }, []);
-
-  useEffect(() => {
-    // Charger les joueurs existants au début
-    socket.emit('getLobbyPlayers', { lobbyCode });
-
-    // Écouter l'événement de mise à jour des joueurs
-    socket.on('updatePlayersList', (data) => {
-      setPlayers(data.players);
+    const [playerName] = useState<string>(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('playerName') || '';
     });
 
-    socket.on('joinedLobby', (data) => {
-      setCurrentPlayerId(data.playerId);
-      localStorage.setItem('currentPlayerId', data.playerId);
-    });
-  
-    // Ajouter l'événement avant de quitter la page
-    //window.addEventListener('beforeunload', handleBeforeUnload);
+    const navigate = useNavigate();
+    const [players, setPlayers] = useState<IPlayer[]>([]);
 
+    const [currentPlayer, setCurrentPlayer] = useState<IPlayer>();
 
-    // Nettoyer les écouteurs pour éviter les doublons
-    return () => {
-      socket.off('joinedLobby');
-      socket.off('updatePlayersList');
-      // window.removeEventListener('beforeunload', handleBeforeUnload);
-      // localStorage.removeItem('currentPlayerId');
+    const generateLink = () => {
+        const link = `${window.location.origin}/?lobbyCode=${lobbyCode}`;
+        navigator.clipboard.writeText(link) // Copie le lien dans le presse-papiers
+            .then(() => {
+                console.log('Lien copié dans le presse-papiers :', link);
+            })
+            .catch((error) => {
+                console.error('Erreur lors de la copie du lien :', error);
+            });
+    }
+
+    const leaveLobby = () => {
+        console.log('Quitter le salon', currentPlayer?.id);
+        socket.emit('leaveLobby', {lobbyCode, currentPlayerId: currentPlayer?.id});
+        navigate('/');
+    }
+
+    window.onbeforeunload = () => {
+        console.log('Quitter le salon', currentPlayer?.id);
+        socket.emit('leaveLobby', {lobbyCode, currentPlayerId: currentPlayer?.id});
     };
-  }, [lobbyCode]); // Ce useEffect se déclenche à chaque changement de lobbyCode
+
+    useEffect(() => {
+        socket.emit('joinLobby', {lobbyCode, playerName});
+
+        socket.on('updatePlayersList', (data) => {
+            console.log('updatePlayersList', data.players);
+            setPlayers(data.players);
+        });
+        socket.on('joinedLobby', (data) => {
+            setCurrentPlayer(data.player);
+        });
+
+        socket.on('error', (data) => {
+            switch (data.message) {
+                case 'Lobby not found':
+                    navigate('/');
+                    break;
+                case 'Player not found':
+                    navigate('/');
+                    break;
+                default:
+                    console.error('Error:', data.message);
+            }
+        });
+
+        return () => {
+            socket.off('updatePlayersList');
+            socket.off('joinedLobby');
+        }
+    }, []);
 
 
-  return (
-    <div>
-      <h1>Salon</h1>
-      <h2>Bienvenue dans le salon {lobbyCode}</h2>
-      <h3>Joueurs dans le salon :</h3>
-      <p>Vous êtes {currentPlayerId}</p>
-      <ul>
-        {players.map((player) => {
-          const isCurrentPlayer = currentPlayerId === player.id;
-          return (
-            <li key={player.id} style={{ color: isCurrentPlayer ? 'red' : 'black' }}>
-              {player.name} {player.isHost && '(Hôte)'}
-            </li>
-          );
-        })}
-      </ul>
-      <button onClick={generateLink}>Lien d'invitation</button>
-      <button onClick={leaveLobby}>Quitter le salon</button>
-    </div>
-  );
+    return (
+        <div>
+            <h1>Salon</h1>
+            <h2>Bienvenue dans le salon {lobbyCode}</h2>
+            <h3>Joueurs dans le salon :</h3>
+            <p>Vous êtes {currentPlayer?.id}</p>
+            <ul>
+                {players.map((player) => {
+                    const isCurrentPlayer = currentPlayer?.id === player.id;
+                    return (
+                        <li key={player.id} style={{color: isCurrentPlayer ? 'red' : 'black'}}>
+                            {player.name} {player.isHost && '(Hôte)'} {currentPlayer?.id}
+                        </li>
+                    );
+                })}
+            </ul>
+            <button onClick={generateLink}>Lien d'invitation</button>
+            <button onClick={leaveLobby}>Quitter le salon</button>
+        </div>
+    );
 };
 
 export default Lobby;

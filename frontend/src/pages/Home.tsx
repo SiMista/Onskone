@@ -10,7 +10,7 @@ const Home = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const lobbyCode = searchParams.get('lobbyCode'); // Vérifie si un code est passé dans l'URL
+  const lobbyCode = searchParams.get('lobbyCode');
 
   const createLobby = () => {
     if (!playerName.trim()) {
@@ -18,11 +18,11 @@ const Home = () => {
       return;
     }
 
-    socket.emit('createLobby', { playerName: playerName });
+    socket.emit('createLobby');
     socket.on('lobbyCreated', (data) => {
       console.log(`Salon créé avec le code : ${data.lobbyCode}`);
       console.log(`Joueur ajouté au salon : ${data.playerName}`);
-      navigate(`/lobby/${data.lobbyCode}`);
+      navigate(`/lobby/${data.lobbyCode}?playerName=${playerName}`);
     });
   };
 
@@ -32,17 +32,8 @@ const Home = () => {
       return;
     }
 
-    socket.emit('joinLobby', { lobbyCode, playerName });
+    navigate(`/lobby/${lobbyCode}?playerName=${playerName}`);
 
-    socket.on('updatePlayersList', () => {
-      navigate(`/lobby/${lobbyCode}`);
-    });
-
-    // Écoute des erreurs du serveur
-    socket.on('error', (data) => {
-      console.error('Error from server:', data.message);
-      alert('Error joining lobby: ' + data.message);
-    });
   };
 
   return (
@@ -58,9 +49,6 @@ const Home = () => {
           onChange={(e) => setPlayerName(e.target.value)}
         />
       </div>
-
-
-
       {!lobbyCode ? (
         <button onClick={createLobby} style={{ margin: '10px' }}>
           Créer un salon

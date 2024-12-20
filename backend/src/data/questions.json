@@ -1,113 +1,178 @@
-{
-    "Achat": [
+[
+  {
+    "category": "Achat",
+    "questions": [
       "Si tu gagnais à la loterie, ton premier achat ?",
       "La dernière chose que tu as acheté ?",
       "Ton attraction de parc d'attractions préférée dans le monde ?"
-    ],
-    "Amis": [
+    ]
+  },
+  {
+    "category": "Amis",
+    "questions": [
       "La qualité que tu valorises le plus chez un ami ?",
       "Ton rituel ou moment préféré avec tes amis ?",
       "Le nom de ton meilleur ami(e) / Best friend’s name ?"
-    ],
-    "Amour": [
+    ]
+  },
+  {
+    "category": "Amour",
+    "questions": [
       "La qualité que tu apprécies le plus chez un partenaire ?",
       "Le conseil amoureux que tu donnerais à ton 'moi' plus jeune ?",
       "Un geste d'amour qui t'a marqué ?"
-    ],
-    "Animal": [
+    ]
+  },
+  {
+    "category": "Animal",
+    "questions": [
       "L’animal que tu aimerais rencontrer dans la nature ?",
       "Ton animal préféré ?",
       "Ton premier animal de compagnie ?"
-    ],
-    "Année": [
+    ]
+  },
+  {
+    "category": "Année",
+    "questions": [
       "Ton meilleur souvenir de 2024 ?",
       "Ta meilleure soirée de 2024 ?",
       "Ta plus grande réussite de cette année ?"
-    ],
-    "Boisson": [
+    ]
+  },
+  {
+    "category": "Boisson",
+    "questions": [
       "Ta boisson chaude préférée ?",
       "Ton soda préféré ?",
       "Ta boisson ou cocktail préféré(e) ?"
-    ],
-    "Bruit": [
+    ]
+  },
+  {
+    "category": "Bruit",
+    "questions": [
       "Le bruit que tu détestes ?",
       "Le bruit que tu préfères ?",
       "Le bruit que tu fais souvent ?"
-    ],
-    "Cadeau": [
+    ]
+  },
+  {
+    "category": "Cadeau",
+    "questions": [
       "Le plus beau cadeau que tu aies offert ?",
       "Le meilleur cadeau reçu ?",
       "Le cadeau que tu voudrais recevoir pour tes 50 ans ?"
-    ],
-    "Célébrité": [
+    ]
+  },
+  {
+    "category": "Célébrité",
+    "questions": [
       "Ta célébrité favorite?",
       "Si tu pouvais rencontrer un personnage fictif, qui choisirais-tu ?",
       "Si tu pouvais être n’importe quelle célébrité pendant une journée, qui serais-tu ?"
-    ],
-    "Chanson": [
+    ]
+  },
+  {
+    "category": "Chanson",
+    "questions": [
       "Quelle est la chanson qui décrit le mieux ta personnalité ?",
       "La meilleure musique all-time ?",
       "La chanson que je choisis au karaoké ?"
-    ],
-    "Choix de vie": [
+    ]
+  },
+  {
+    "category": "Choix de vie",
+    "questions": [
       "Le nombre d’enfants que tu aimerais avoir ?",
       "Une chose que tu souhaites accomplir avant 50 ans ?",
       "Ton rêve dans la vie / Your biggest dream ?"
-    ],
-    "Cinéma": [
+    ]
+  },
+  {
+    "category": "Cinéma",
+    "questions": [
       "Le meilleur film que tu as vu ?",
       "Le meilleur film que tu as vu au cinéma ?",
       "Le type de film que tu préfères ?"
-    ],
-    "Compétence": [
+    ]
+  },
+  {
+    "category": "Compétence",
+    "questions": [
       "Une compétence que tu aimerais acquérir d’ici 10 ans ?",
       "Un talent que tu admires chez les autres mais que tu ne possèdes pas ?",
       "Ton talent caché ou inusité ?"
-    ],
-    "Conseils": [
+    ]
+  },
+  {
+    "category": "Conseils",
+    "questions": [
       "Le meilleur conseil que quelqu'un t'a donné ?",
       "Le modèle dans ta vie / Your life role model ?",
       "Quelle citation ou phrase te motive le plus ?"
-    ],
-    "Cuisine": [
+    ]
+  },
+  {
+    "category": "Cuisine",
+    "questions": [
       "Un plat que tu pourrais manger tous les jours ?",
       "Cuisine préférée / Favorite cuisine ?",
       "Ton fruit préféré"
-    ],
-    "Défauts": [
+    ]
+  },
+  {
+    "category": "Défauts",
+    "questions": [
       "Ton talent que peu de gens connaissent ?",
       "La partie du corps ou tu complexes ?",
       "La caractéristique plus belle partie de ton corps dont tu es le plus fier ?"
-    ],
-    "Enfance": [
+    ]
+  },
+  {
+    "category": "Enfance",
+    "questions": [
       "Ton pire souvenir d'école ?",
       "Premier souvenir marquant ?",
       "Ce qui te manque le plus de ton enfance ?"
-    ],
-    "Expérience": [
+    ]
+  },
+  {
+    "category": "Expérience",
+    "questions": [
       "Meilleur concert ou spectacle auquel tu as assisté ?",
       "Une aventure ou expérience incroyable vécue ?",
       "Une expérience que tu ferais pour une journée prochainement ?"
-    ],
-    "Famille": [
+    ]
+  },
+  {
+    "category": "Famille",
+    "questions": [
       "Le surnom donné par ta famille ?",
       "Un souvenir marquant avec un membre de ta famille ?",
       "La personne qui vous ressemble le + physiquement ?"
-    ],
-    "Fete": [
+    ]
+  },
+  {
+    "category": "Fete",
+    "questions": [
       "La fête ou célébration la plus drôle pour toi ?",
       "Si tu pouvais créer une fête nationale, elle s’appellerait comment ?",
       "Un souvenir de Noël marquant ?"
-    ],
-    "Fierté": [
+    ]
+  },
+  {
+    "category": "Fierté",
+    "questions": [
       "Le plus gros défi que tu as relevé ?",
       "La chose la plus courageuse que tu aies faite ?",
       "La personne dont tu es la plus fière"
-    ],
-    "Film": [
+    ]
+  },
+  {
+    "category": "Film",
+    "questions": [
       "Si tu pouvais être dans un film, lequel ?",
       "Ta scène de film préférée ?",
       "Le dernier film qui t’a fait pleurer ?"
     ]
   }
-  
+]

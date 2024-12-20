@@ -1,58 +1,56 @@
-import { IGame } from '../types/IGame';
-import { IPlayer } from '../types/IPlayer';
-import { IRound } from '../types/IRound';
-import { Round } from './Round';
+import {IGame} from '../types/IGame';
+import {IPlayer} from '../types/IPlayer';
+import {IRound} from '../types/IRound';
+import {Round} from './Round';
+import {GameCard} from "../managers/GameManager";
+import {Lobby} from "./Lobby";
+import {ILobby} from "../types/ILobby";
+
+export enum GameStatus {
+    WAITING,
+    IN_PROGRESS,
+    FINISHED
+}
 
 export class Game implements IGame {
-  lobbyCode: string;
-  players: IPlayer[];
-  currentRound: IRound | null;
-  status: 'waiting' | 'inProgress' | 'finished';
-  private questionsPool: Record<string, string[]>;
+    lobby: ILobby;
+    rounds: IRound[] = [];
+    currentRound: IRound | null;
+    status: GameStatus;
+    readonly cards: GameCard[];
 
-  constructor(lobbyCode: string, questionsPool: Record<string, string[]>) {
-    this.lobbyCode = lobbyCode;
-    this.players = new Array<IPlayer>();
-    this.currentRound = null;
-    this.status = 'waiting';
-    this.questionsPool = questionsPool;
-  }
-
-  addPlayer(player: IPlayer): void {
-    this.players.push(player);
-  }
-
-  startGame(): void {
-    this.status = 'inProgress';
-  }
-
-  nextRound(): void {
-    if (this.status !== 'inProgress') {
-      throw new Error("The game hasn't started or is already finished. Status: " + this.status);
+    constructor(lobby: ILobby, questionsPool: GameCard[]) {
+        this.lobby = lobby;
+        this.currentRound = null;
+        this.status = GameStatus.WAITING;
+        this.cards = questionsPool;
     }
-    const roundNumber = this.currentRound ? this.currentRound.roundNumber + 1 : 1;
-    const leaderIndex = roundNumber % this.players.length;
-    const leader = this.players[leaderIndex];
-    const [category, questions] = this.getRandomCategoryAndQuestions();
 
-    this.currentRound = new Round(roundNumber, leader, [category, questions]);
-    console.log(`Round ${roundNumber} started with leader: ${leader.name}`);
-  }
+    nextRound(): void {
+        if (this.status !== GameStatus.IN_PROGRESS) {
+            throw new Error("The game hasn't started or is already finished. Status: " + this.status);
+        }
+        const roundNumber = this.currentRound ? this.currentRound.roundNumber + 1 : 1;
+        const leaderIndex = roundNumber % this.lobby.players.length;
+        const leader = this.lobby.players[leaderIndex];
+        const gameCard = this.getRandomGameCard();
 
-  // Get random category and questions
-  getRandomCategoryAndQuestions(): [string, string[]] {
-    const categories = Object.keys(this.questionsPool);
-    const randomIndex = Math.floor(Math.random() * categories.length);
-    const category = categories[randomIndex];
-    console.log(category, this.questionsPool[category]);
-    return [category, this.questionsPool[category]];
-  }
+        this.currentRound = new Round(roundNumber, leader, gameCard);
+        this.rounds.push(this.currentRound);
 
-  getQuestionsPool(): Record<string, string[]> {
-    return this.questionsPool;
-  }
+        console.log(`Round ${roundNumber} started with leader: ${leader.name}`);
+    }
 
-  endGame(): void {
-    this.status = 'finished';
-  }
+    getRandomGameCard(): GameCard {
+        const items = Array.from(this.cards);
+        return items[Math.floor(Math.random() * items.length)];
+    }
+
+    start(): void {
+        this.status = GameStatus.IN_PROGRESS
+    }
+
+    end(): void {
+        this.status = GameStatus.FINISHED;
+    }
 }
