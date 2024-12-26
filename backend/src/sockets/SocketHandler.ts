@@ -13,14 +13,13 @@ export class SocketHandler {
 
     private setupSocketEvents(): void {
         this.io.on('connection', (socket: Socket) => {
-            console.log(`User connected: ${socket.id}`);
-
             // Event: Create Lobby with player name as host
             socket.on('createLobby', (data) => {
                 try {
-                    // const hostPlayer = new Player(data.playerName, true);
-
                     const lobbyCode = LobbyManager.create();
+                    const lobby = LobbyManager.getLobby(lobbyCode);
+                    const hostPlayer = new Player(data.playerName);
+                    lobby?.addPlayer(hostPlayer);
                     socket.join(lobbyCode);
                     socket.emit('lobbyCreated', {lobbyCode});
                     // socket.emit('joinedLobby', {player: hostPlayer});
@@ -35,16 +34,23 @@ export class SocketHandler {
             socket.on('joinLobby', (data) => {
                 try {
                     const lobby = LobbyManager.getLobby(data.lobbyCode);
-
                     if (!lobby) {
                         socket.emit('error', {message: 'Lobby not found'});
                         return;
                     }
+                    
+                    // After create lobby, host is already added
+                    let newPlayer: Player;
+                    if (lobby.players.find(p => p.name === data.playerName)) {
+                        newPlayer = lobby.players.find(p => p.name === data.playerName) as Player;
+                        lobby.setHost(data.playerName);
+                        console.log("Setting host", data.playerName);
+                    } else {
+                        newPlayer = new Player(data.playerName);
+                        LobbyManager.addPlayer(lobby, newPlayer);
+                    }
 
-                    const newPlayer = new Player(data.playerName);
-
-                    LobbyManager.addPlayer(lobby, newPlayer);
-                    // Diffuser à tous les joueurs du lobby que quelqu'un vient de rejoindre
+                    // Other players
                     socket.join(lobby.code);
                     console.log(`Sending ${lobby.players.map(p => p.id)} to ${socket.id}`);
                     this.io.to(lobby.code).emit('updatePlayersList', {players: lobby.players});
@@ -57,6 +63,24 @@ export class SocketHandler {
                 }
             });
 
+            socket.on('checkPlayerName', (data) => {
+                try {
+                    const lobby = LobbyManager.getLobby(data.lobbyCode);
+                    if (!lobby) {
+                        socket.emit('error', {message: 'Lobby not found'});
+                        return;
+                    }
+                    if (lobby.players.find(p => p.name === data.playerName)) {
+                        socket.emit('playerNameExists', {playerName: data.playerName});
+                    } else {
+                        socket.emit('playerNameValid');
+                    }
+                } catch (error) {
+                    console.error('Error checking player name:', error);
+                    socket.emit('error', {message: (error as Error).message});
+                }
+            });
+
             socket.on('leaveLobby', (data: { lobbyCode: string; currentPlayerId: string; }) => {
                 try {
                     const lobby = LobbyManager.getLobby(data.lobbyCode);
@@ -64,19 +88,15 @@ export class SocketHandler {
                         socket.emit('error', {message: 'Lobby not found'});
                         return;
                     }
-
                     console.log('leaveLobby', data.currentPlayerId, data.lobbyCode);
                     const player = lobby.getPlayer(data.currentPlayerId);
-
                     if (!player) {
                         socket.emit('error', {message: 'Player not found'});
                         return;
                     }
                     const isLobbyRemoved = LobbyManager.removePlayer(lobby, player);
-
                     this.io.to(lobby.code).emit('updatePlayersList', {players: lobby.players});
                     console.log(`${player.name} a quitté le lobby ${lobby.code}`);
-
                     if (isLobbyRemoved) {
                         socket.leave(lobby.code);
                         console.log(`Lobby ${lobby.code} removed`);
@@ -93,14 +113,11 @@ export class SocketHandler {
                 try {
                     const lobby = LobbyManager.getLobby(data.lobbyCode);
                     console.log('getLobbyPlayers', lobby?.players);
-
                     if (!lobby) {
                         socket.emit('error', {message: 'Lobby not found'});
                         return;
                     }
-
                     this.io.to(lobby.code).emit('updatePlayersList', {players: lobby.players});
-
                 } catch (error) {
                     console.error('Error getting lobby players:', error);
                     socket.emit('error', {message: (error as Error).message});
@@ -115,10 +132,8 @@ export class SocketHandler {
                         socket.emit('error', {message: 'Lobby not found'});
                         return;
                     }
-
                     const game = GameManager.createGame(lobby);
                     this.io.to(data.lobbyCode).emit('gameStarted', {game});
-
                     console.log(`Game started in lobby ${data.lobbyCode}`);
                 } catch (error) {
                     console.error('Error starting game:', error);
@@ -135,10 +150,8 @@ export class SocketHandler {
                         socket.emit('error', {message: 'Game not found'});
                         return;
                     }
-
                     game.nextRound();
                     this.io.to(data.lobbyCode).emit('roundStarted', {round: game.currentRound});
-
                     console.log(`Round ${game.currentRound?.roundNumber} started in lobby ${data.lobbyCode}`);
                 } catch (error) {
                     console.error('Error starting next round:', error);
@@ -166,7 +179,6 @@ export class SocketHandler {
                     }
                     game.currentRound.addAnswer(data.playerId, data.answer);
                     this.io.to(data.lobbyCode).emit('answerSubmitted', {playerId: data.playerId});
-
                     console.log(`Answer submitted by player ${data.playerId} in lobby ${data.lobbyCode}`);
                 } catch (error) {
                     console.error('Error submitting answer:', error);
