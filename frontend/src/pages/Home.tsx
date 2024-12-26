@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import socket from '../utils/socket';
 
@@ -17,13 +17,7 @@ const Home = () => {
       alert('Veuillez entrer un nom avant de créer un salon.');
       return;
     }
-
-    socket.emit('createLobby');
-    socket.on('lobbyCreated', (data) => {
-      console.log(`Salon créé avec le code : ${data.lobbyCode}`);
-      console.log(`Joueur ajouté au salon : ${data.playerName}`);
-      navigate(`/lobby/${data.lobbyCode}?playerName=${playerName}`);
-    });
+    socket.emit('createLobby', { playerName });
   };
 
   const joinLobby = () => {
@@ -31,10 +25,36 @@ const Home = () => {
       alert('Veuillez entrer un nom avant de rejoindre un salon.');
       return;
     }
-
-    navigate(`/lobby/${lobbyCode}?playerName=${playerName}`);
-
+    socket.emit('checkPlayerName', { lobbyCode, playerName });
   };
+
+  useEffect(() => {
+    socket.on('lobbyCreated', (data) => {
+      console.log(`Salon créé avec le code : ${data.lobbyCode}`);
+      console.log(`Joueur ajouté au salon : ${data.playerName}`);
+      navigate(`/lobby/${data.lobbyCode}?playerName=${playerName}`);
+    });
+
+    socket.on('playerNameExists', (data) => {
+      console.log(`Le nom "${data.playerName}" est déjà utilisé dans le salon. Veuillez choisir un autre nom.`);
+      alert(`Le nom "${data.playerName}" est déjà utilisé dans le salon. Veuillez choisir un autre nom.`);
+    });
+
+    socket.on('playerNameValid', () => {
+      console.log(`Le nom "${playerName}" est valide.`);
+      navigate(`/lobby/${lobbyCode}?playerName=${playerName}`);
+    });
+
+    socket.on('error', (data) => {
+      console.error('Erreur:', data.message);
+      alert(`Erreur: ${data.message}`);
+    });
+
+    return () => {
+      socket.off('playerNameExists');
+      socket.off('playerNameValid');
+    };
+  }, []);
 
   return (
     <div style={{ textAlign: 'center', padding: '20px' }}>

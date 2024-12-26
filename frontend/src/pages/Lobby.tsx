@@ -11,15 +11,12 @@ export interface IPlayer {
 
 const Lobby = () => {
     const {lobbyCode} = useParams();
-
     const [playerName] = useState<string>(() => {
         const urlParams = new URLSearchParams(window.location.search);
         return urlParams.get('playerName') || '';
     });
-
     const navigate = useNavigate();
     const [players, setPlayers] = useState<IPlayer[]>([]);
-
     const [currentPlayer, setCurrentPlayer] = useState<IPlayer>();
 
     const generateLink = () => {
@@ -51,6 +48,7 @@ const Lobby = () => {
             console.log('updatePlayersList', data.players);
             setPlayers(data.players);
         });
+
         socket.on('joinedLobby', (data) => {
             setCurrentPlayer(data.player);
         });
@@ -74,19 +72,18 @@ const Lobby = () => {
         }
     }, []);
 
-
     return (
         <div>
             <h1>Salon</h1>
             <h2>Bienvenue dans le salon {lobbyCode}</h2>
             <h3>Joueurs dans le salon :</h3>
-            <p>Vous êtes {currentPlayer?.id}</p>
+            <p>Vous êtes {currentPlayer?.name}</p>
             <ul>
                 {players.map((player) => {
                     const isCurrentPlayer = currentPlayer?.id === player.id;
                     return (
                         <li key={player.id} style={{color: isCurrentPlayer ? 'red' : 'black'}}>
-                            {player.name} {player.isHost && '(Hôte)'} {currentPlayer?.id}
+                            {player.name} {player.isHost ? '(hôte)' : ''}
                         </li>
                     );
                 })}
