@@ -4,6 +4,7 @@ import socket from '../utils/socket'; // Ton instance de socket.io
 
 export interface IPlayer {
     id: string;
+    socketId: string;
     name: string;
     isHost: boolean;
     score?: number;
@@ -47,6 +48,13 @@ const Lobby = () => {
         socket.on('updatePlayersList', (data) => {
             console.log('updatePlayersList', data.players);
             setPlayers(data.players);
+            const potentialCurrentPlayer = data.players.find((p: IPlayer) => p.socketId === socket.id);
+            if (potentialCurrentPlayer) {
+                console.log('Recovered current player:', potentialCurrentPlayer);
+                setCurrentPlayer(potentialCurrentPlayer);
+            } else {
+                console.warn('Could not find current player in the players list');
+            }
         });
 
         socket.on('joinedLobby', (data) => {
@@ -90,6 +98,9 @@ const Lobby = () => {
             </ul>
             <button onClick={generateLink}>Lien d'invitation</button>
             <button onClick={leaveLobby}>Quitter le salon</button>
+            {currentPlayer?.isHost && (
+                <button onClick={() => console.log('Lancer le jeu')}>Lancer le jeu</button>
+            )}
         </div>
     );
 };
