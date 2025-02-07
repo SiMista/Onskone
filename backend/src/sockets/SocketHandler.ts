@@ -13,12 +13,13 @@ export class SocketHandler {
 
     private setupSocketEvents(): void {
         this.io.on('connection', (socket: Socket) => {
+            console.log(`User connected: ${socket.id}`);
             // Event: Create Lobby with player name as host
             socket.on('createLobby', (data) => {
                 try {
                     const lobbyCode = LobbyManager.create();
                     const lobby = LobbyManager.getLobby(lobbyCode);
-                    const hostPlayer = new Player(data.playerName);
+                    const hostPlayer = new Player(data.playerName, socket.id, true);
                     lobby?.addPlayer(hostPlayer);
                     socket.join(lobbyCode);
                     socket.emit('lobbyCreated', {lobbyCode});
@@ -43,16 +44,12 @@ export class SocketHandler {
                     let newPlayer: Player;
                     if (lobby.players.find(p => p.name === data.playerName)) {
                         newPlayer = lobby.players.find(p => p.name === data.playerName) as Player;
-                        lobby.setHost(data.playerName);
-                        console.log("Setting host", data.playerName);
                     } else {
-                        newPlayer = new Player(data.playerName);
+                        newPlayer = new Player(data.playerName, socket.id);
                         LobbyManager.addPlayer(lobby, newPlayer);
                     }
 
-                    // Other players
                     socket.join(lobby.code);
-                    console.log(`Sending ${lobby.players.map(p => p.id)} to ${socket.id}`);
                     this.io.to(lobby.code).emit('updatePlayersList', {players: lobby.players});
                     socket.emit('joinedLobby', { player: newPlayer });
                     console.log(`${data.playerName} a rejoint le lobby ${lobby.code}`);
@@ -104,22 +101,6 @@ export class SocketHandler {
 
                 } catch (error) {
                     console.error('Error leaving lobby:', error);
-                    socket.emit('error', {message: (error as Error).message});
-                }
-            });
-
-            // Event: Get Lobby Players
-            socket.on('getLobbyPlayers', (data) => {
-                try {
-                    const lobby = LobbyManager.getLobby(data.lobbyCode);
-                    console.log('getLobbyPlayers', lobby?.players);
-                    if (!lobby) {
-                        socket.emit('error', {message: 'Lobby not found'});
-                        return;
-                    }
-                    this.io.to(lobby.code).emit('updatePlayersList', {players: lobby.players});
-                } catch (error) {
-                    console.error('Error getting lobby players:', error);
                     socket.emit('error', {message: (error as Error).message});
                 }
             });
