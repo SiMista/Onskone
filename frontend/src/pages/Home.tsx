@@ -57,9 +57,9 @@ const Home = () => {
   }, []);
 
   return (
-    <div style={{ textAlign: 'center', padding: '20px' }}>
+    <div>
       <h1>Bienvenue sur le Jeu</h1>
-      <div style={{ marginBottom: '20px' }}>
+      <div>
         <label htmlFor="playerName">Votre nom : </label>
         <input
           id="playerName"
@@ -70,13 +70,15 @@ const Home = () => {
         />
       </div>
       {!lobbyCode ? (
-        <button onClick={createLobby} style={{ margin: '10px' }}>
-          Créer un salon
-        </button>
+        <div>
+          <button onClick={createLobby}>
+            Créer un salon
+          </button>
+        </div>
       ) : (
         <div>
           <p>Vous êtes invité à rejoindre le salon {lobbyCode}</p>
-          <button onClick={joinLobby} style={{ marginLeft: '10px' }}>
+          <button onClick={joinLobby}>
             Rejoindre
           </button>
         </div>

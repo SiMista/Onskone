@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach } from '@jest/globals';
 import { GameManager } from "../src/managers/GameManager";
 import { TestHelper } from "../src/utils/TestHelper";
 import { Game } from "../src/models/Game";
-// import { PlayerManager } from "../src/managers/PlayerManager";
 
 describe('GameManager', () => {
     let game: Game;

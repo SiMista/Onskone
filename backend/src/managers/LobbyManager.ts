@@ -30,11 +30,12 @@ export namespace LobbyManager {
      * @returns boolean - true if lobby is empty and removed, false otherwise
      */
     export const removePlayer = (lobby: Lobby, player: IPlayer): boolean => {
-        if (lobby.players.length === 1) {
+        lobby.removePlayer(player);
+
+        if (lobby.players.length === 0) {
             lobbies.delete(lobby.code);
             return true;
         }
-        lobby.removePlayer(player);
 
         if (player.isHost) {
             lobby.players[0].isHost = true;
