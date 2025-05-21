@@ -37,6 +37,16 @@ const Lobby = () => {
         navigate('/');
     }
 
+    const kickPlayer = (playerId : string) => {
+        console.log('Kick player: ', playerId);
+        socket.emit('kickPlayer', {lobbyCode, playerId});
+    }
+
+    const promotePlayer = (playerId : string) => {
+        console.log('Promote player: ', playerId);
+        socket.emit('promotePlayer', {lobbyCode, playerId});
+    }
+
     window.onbeforeunload = () => {
         console.log('Quitter le salon', currentPlayer?.id);
         socket.emit('leaveLobby', {lobbyCode, currentPlayerId: currentPlayer?.id});
@@ -61,6 +71,12 @@ const Lobby = () => {
             setCurrentPlayer(data.player);
         });
 
+        socket.on('kickedFromLobby', (data) => {
+            console.log('Kicked from lobby:', data);
+            alert('Vous avez été expulsé du salon.');
+            navigate('/');
+        });
+        
         socket.on('error', (data) => {
             switch (data.message) {
                 case 'Lobby not found':
@@ -84,15 +100,23 @@ const Lobby = () => {
         <div>
             <h1>Salon</h1>
             <h2>Bienvenue dans le salon {lobbyCode}</h2>
-            <h3>Joueurs dans le salon :</h3>
+            <h3>Joueurs dans le salon {players.length}/20</h3>
             <p>Vous êtes {currentPlayer?.name}</p>
             <ul>
                 {players.map((player) => {
                     const isCurrentPlayer = currentPlayer?.id === player.id;
                     return (
-                        <li key={player.id} style={{color: isCurrentPlayer ? 'red' : 'black'}}>
-                            {player.name} {player.isHost ? '(hôte)' : ''}
-                        </li>
+                        <div>
+                            <li key={player.id} style={{color: isCurrentPlayer ? 'red' : 'black'}}>
+                                {player.name} {player.isHost ? '(hôte)' : ''}
+                            </li>
+                            {currentPlayer?.isHost && !isCurrentPlayer && (
+                                <div>
+                                    <button onClick={() => kickPlayer(player.id)}>Kick</button>
+                                    <button onClick={() => promotePlayer(player.id)}>Promote</button>
+                                </div>
+                            )}
+                        </div>
                     );
                 })}
             </ul>

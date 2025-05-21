@@ -30,36 +30,48 @@ export class SocketHandler {
                     socket.emit('error', {message: (error as Error).message});
                 }
             });
-
             // Event: Join Lobby with player name
             socket.on('joinLobby', (data) => {
                 try {
                     const lobby = LobbyManager.getLobby(data.lobbyCode);
                     if (!lobby) {
-                        socket.emit('error', {message: 'Lobby not found'});
+                        socket.emit('error', { message: 'Lobby not found' });
                         return;
                     }
-                    
-                    // After create lobby, host is already added
-                    let newPlayer: Player;
-                    if (lobby.players.find(p => p.name === data.playerName)) {
-                        newPlayer = lobby.players.find(p => p.name === data.playerName) as Player;
-                    } else {
-                        newPlayer = new Player(data.playerName, socket.id);
-                        LobbyManager.addPlayer(lobby, newPlayer);
+
+                    // Vérifie si le joueur avec ce socket.id est déjà dans le lobby
+                    const existingPlayer = lobby.players.find(p => p.socketId === socket.id);
+                    if (existingPlayer) {
+                        console.log(`Player ${existingPlayer.name} est déjà dans le lobby ${lobby.code} avec le même socket.`);
+                        socket.join(lobby.code);
+                        socket.emit('joinedLobby', { player: existingPlayer });
+                        this.io.to(lobby.code).emit('updatePlayersList', { players: lobby.players });
+                        return;
                     }
 
+                    // Vérifie si le nom est déjà utilisé (autre joueur)
+                    if (lobby.players.find(p => p.name === data.playerName)) {
+                        socket.emit('error', { message: `Le nom "${data.playerName}" est déjà utilisé dans le salon.` });
+                        return;
+                    }
+
+                    // Nouveau joueur
+                    const newPlayer = new Player(data.playerName, socket.id);
+                    LobbyManager.addPlayer(lobby, newPlayer);
+
                     socket.join(lobby.code);
-                    this.io.to(lobby.code).emit('updatePlayersList', {players: lobby.players});
                     socket.emit('joinedLobby', { player: newPlayer });
-                    console.log(`${data.playerName} a rejoint le lobby ${lobby.code}`);
+                    this.io.to(lobby.code).emit('updatePlayersList', { players: lobby.players });
+                    console.log(`${data.playerName} a rejoint le lobby ${lobby.code} (${lobby.players.length} joueurs)`);
 
                 } catch (error) {
                     console.error('Error joining lobby:', error);
-                    socket.emit('error', {message: (error as Error).message});
+                    socket.emit('error', { message: (error as Error).message });
                 }
             });
 
+
+            // Check player name before joining lobby
             socket.on('checkPlayerName', (data) => {
                 try {
                     const lobby = LobbyManager.getLobby(data.lobbyCode);
@@ -78,6 +90,7 @@ export class SocketHandler {
                 }
             });
 
+            // Leave Lobby
             socket.on('leaveLobby', (data: { lobbyCode: string; currentPlayerId: string; }) => {
                 try {
                     const lobby = LobbyManager.getLobby(data.lobbyCode);
@@ -105,7 +118,45 @@ export class SocketHandler {
                 }
             });
 
-            // Event: Start Game
+            // Kick Player from Lobby 
+            socket.on('kickPlayer', ({ lobbyCode, playerId }) => {
+                const lobby = LobbyManager.getLobby(lobbyCode);
+                if (!lobby) {
+                    socket.emit('error', { message: 'Lobby not found' });
+                    return;
+                }
+                const kickedPlayer = lobby?.getPlayer(playerId);
+                if (!kickedPlayer) {
+                    socket.emit('error', { message: 'Lobby not found' });
+                    return;
+                }
+                // Remove player from lobby
+                lobby.removePlayer(kickedPlayer);
+                this.io.to(lobbyCode).emit('updatePlayersList', { players: lobby.players });
+                console.log(`Player ${kickedPlayer.name} kicked from lobby ${lobbyCode}`);
+                // Notify kicked player
+                this.io.to(kickedPlayer.socketId).emit('kickedFromLobby');
+            });       
+            
+            // Promote Player to Host
+            socket.on('promotePlayer', ({ lobbyCode, playerId }) => {
+                const lobby = LobbyManager.getLobby(lobbyCode);
+                if (!lobby) {
+                    socket.emit('error', { message: 'Lobby not found' });
+                    return;
+                }
+                const playerToPromote = lobby?.getPlayer(playerId);
+                if (!playerToPromote) {
+                    socket.emit('error', { message: 'Player not found' });
+                    return;
+                }
+                // Promote player to host
+                lobby.setHost(playerToPromote);
+                this.io.to(lobbyCode).emit('updatePlayersList', { players: lobby.players });
+                console.log(`Player ${playerToPromote.name} promoted to host in lobby ${lobbyCode}`);
+            });
+
+            // Start Game
             socket.on('startGame', (data) => {
                 try {
                     const lobby = LobbyManager.getLobby(data.lobbyCode);
@@ -122,7 +173,7 @@ export class SocketHandler {
                 }
             });
 
-            // Event: Next Round
+            // Next Round
             socket.on('nextRound', (data) => {
                 try {
                     const lobby = LobbyManager.getLobby(data.lobbyCode);
@@ -166,6 +217,7 @@ export class SocketHandler {
                     socket.emit('error', {message: (error as Error).message});
                 }
             });
+            
         });
     }
 }

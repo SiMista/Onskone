@@ -17,9 +17,9 @@ export class Lobby implements ILobby {
         this.players.push(player);
     }
 
-    setHost(playerName: string): void {
+    setHost(player: IPlayer): void {
         this.players.forEach(p => {
-            if (p.name === playerName) {
+            if (p.name === player.name) {
                 p.isHost = true;
             } else {
                 p.isHost = false;
