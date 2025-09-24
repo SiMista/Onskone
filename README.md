@@ -1,30 +1,34 @@
-# Onksone Game
+# Onksoné? 🎭
 
-Bienvenue dans le projet **Onksone Game** : un jeu en ligne où plusieurs joueurs peuvent se rejoindre et participer à des parties en temps réel !
+**Onksoné?** est un jeu multijoueur en ligne simple, amusant et intuitif, conçu pour apprendre à mieux connaître les autres joueurs de manière ludique et surprenante.
 
-## Structure du projet
+Le but du jeu est d’apprendre à mieux connaître les autres joueurs de manière ludique et surprenante. Chaque joueur partage une partie de lui-même en répondant à des questions personnelles, comme ses goûts, ses habitudes ou ses défauts. Le chef de la partie, qui doit deviner quelle réponse correspond à quel joueur, explore ses capacités de déduction et son intuition tout en essayant de comprendre la personnalité des autres, tout en s'amusant avec les surprises et les erreurs de déduction du chef.
 
-Le projet est divisé en deux parties principales :
 
-1. **Frontend** (React) : L'interface utilisateur où les joueurs peuvent rejoindre ou créer des parties.
-2. **Backend** (Node.js avec TypeScript) : Gère la logique du jeu, les connexions des joueurs, et la communication en temps réel via WebSockets.
+## 🧠 Concept du jeu
 
-## Prérequis
+Le but du jeu est d’apprendre à mieux connaître les autres joueurs en utilisant son intuition, son sens de l'observation ou ses souvenirs !
 
-Assurez-vous d'avoir installé [Node.js](https://nodejs.org/) sur votre machine.
+À chaque manche :
+- Un joueur est désigné comme **chef de la partie** (ou "leader").
+- Ce chef reçoit une **carte** contenant un thème (ex : goûts, habitudes, défauts...) et **3 questions personnelles**.
+- Il choisit **une question à poser à tous les joueurs** (lui y compris).
+- Les réponses sont **envoyées anonymement**.
+- Le chef doit ensuite **deviner quelle réponse appartient à quel joueur**.
 
-### Dépendances
 
-Le projet utilise :
-- **Backend** : Node.js, Express, Socket.io, TypeScript
-- **Frontend** : React, Socket.io-client, TypeScript
+## ⚙️ Fonctionnement
 
-## Installation
+### 🧰 Technologies utilisées
 
-### 1. Cloner le projet
+- **Frontend** : React + TypeScript + Socket.IO-client
+- **Backend** : Node.js + TypeScript + Express + Socket.IO
 
-Clonez le repository depuis GitHub :
+### 🚀 Fonctionnalités principales
 
-```bash
-git clone https://github.com/ton-utilisateur/onksone-game.git
-cd onksone-game
+- Création et partage facile de **salons** via un code d'invitation
+- Gestion des **joueurs** avec rôle d'**hôte**
+- Sélection aléatoire de **cartes de jeu avec 3 questions**
+- Réponses anonymes et système de **déduction**
+- Communication en temps réel via **WebSockets**
+- Interface simple et responsive
