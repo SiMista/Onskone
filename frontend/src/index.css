@@ -1,5 +1,25 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap');
+
+html, body {
+  height: 100%;
+}
+
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
-  background-color: #cde0f7;
+  font-family: 'Nunito', sans-serif;
+  background: linear-gradient(#25689F, #1997C9);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700; /* bold */
+}
+
+button {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700; /* bold */
+}
+
+
+p {
+  font-weight: 400; /* regular */
 }
