@@ -26,7 +26,7 @@ const Frame: React.FC<FrameProps> = ({
         flexDirection: 'column',   // <- empile verticalement
         alignItems: 'center',      // <- centre horizontalement
         textAlign: textAlign,       // <- centre le texte à l'intérieur
-        gap: '15px',               // <- espace entre les éléments
+        gap: '20px',               // <- espace entre les éléments
       }}
     > {children} </div>
   );

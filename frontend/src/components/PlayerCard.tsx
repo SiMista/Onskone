@@ -28,11 +28,11 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        padding: "10px 15px",
+        padding: "6px 15px",
         margin: "8px 0",
         borderRadius: "10px",
         border: "2px solid #ddd",
-        backgroundColor: "white",
+        backgroundColor: "rgb(249, 245, 242)",
         boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
         width: "95%",
       }}
@@ -40,9 +40,9 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
       {/* Partie gauche → Avatar + nom */}
       <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
         <img
-          src={`https://api.dicebear.com/9.x/big-ears-neutral/svg?seed=${name}`} // avatar auto
+          src={`https://api.dicebear.com/9.x/adventurer/svg?scale=130&seed=${name}`} // avatar auto
           alt={name}
-          style={{ width: "40px", height: "40px", borderRadius: "50%" }}
+          style={{ width: "40px", height: "40px", border: "solid 1px grey", borderRadius: "50%" }}
         />
         <span style={{ fontWeight: isCurrentPlayer ? "bold" : "normal" }}>
           {name} {isCurrentPlayer && "(vous)"}
@@ -52,7 +52,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
       {/* Partie droite → couronne ou menu */}
       <div style={{ position: "relative" }}>
         {isHost ? (
-          FaCrown({ color: "fcad11", size: 35 }) as JSX.Element
+          FaCrown({ color: "fcad11", size: 30 }) as JSX.Element
         ) : currentPlayerIsHost ? (
           <>
             {FaEllipsisV({
