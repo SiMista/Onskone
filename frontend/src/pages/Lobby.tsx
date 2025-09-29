@@ -36,6 +36,9 @@ const Lobby = () => {
             .catch((error) => {
                 console.error('Erreur lors de la copie du lien :', error);
             });
+        setTimeout(() => {
+            document.getElementById("inviteLinkMessage")!.style.visibility = "hidden";
+        }, 2000);
     }
 
     const leaveLobby = () => {
@@ -117,8 +120,8 @@ const Lobby = () => {
                         </span>
                         <span>Quitter</span>
                     </div>
-                    <h3>Nombre de joueurs {players.length}/20</h3>
-                    <ul style={{ listStyle: "none", width: "100%", padding: 0 }}>
+                    <h3 style={{ margin: 0 }}>Nombre de joueurs {players.length}/20</h3>
+                    <ul style={{ listStyle: "none", width: "100%", margin: 0, padding: 0 }}>
                         {players.map((player) => (
                             <li key={player.id}>
                                 <PlayerCard
@@ -133,11 +136,23 @@ const Lobby = () => {
                             </li>
                         ))}
                     </ul>
-
                     <div style={{ display: 'flex', gap: '100px', alignItems: 'center' }}>
-                        {currentPlayer?.isHost && (
-                            <Button text="Lancer le jeu" backgroundColor="#30c94d" rotateEffect="true" onClick={() => console.log('Lancer le jeu')} />
-                        )}
+                        {currentPlayer?.isHost && (players.length >= 3 ? (
+                            <Button
+                                text="Lancer le jeu"
+                                backgroundColor="#30c94d"
+                                rotateEffect="true"
+                                onClick={() => console.log('Lancer le jeu')}
+                            />
+                        ) : (
+                            <Button
+                                text="Lancer le jeu"
+                                backgroundColor="#30c94d"
+                                rotateEffect="true"
+                                state='disabled'
+                                onClick={() => console.log('Lancer le jeu')}
+                            />
+                        ))}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             <small>
                                 Code du salon : <b>{lobbyCode}</b>
