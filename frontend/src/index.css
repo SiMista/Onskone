@@ -10,16 +10,10 @@ body {
   background: linear-gradient(#25689F, #1997C9);
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-weight: 700; /* bold */
+h1, h2, h3, h4, h5, h6, p {
+  margin: 10px 0px;
 }
 
 button {
   font-family: 'Nunito', sans-serif;
-  font-weight: 700; /* bold */
-}
-
-
-p {
-  font-weight: 400; /* regular */
 }

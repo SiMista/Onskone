@@ -5,6 +5,7 @@ import Logo from '../components/Logo';
 import Frame from '../components/Frame';
 import Button from '../components/Button';
 import InputText from '../components/InputText';
+import Footer from '../components/Footer';
 
 const Home = () => {
   const [playerName, setPlayerName] = useState<string>(() => {
@@ -66,15 +67,16 @@ const Home = () => {
         <Logo size="large" />
       </div>
       <div className="col-1"></div>
-      <div className="col-4">
+      <div className="col-4" >
         <Frame>
-          <h3>CREE TA PROPRE PARTIE !</h3>
+          <h3>JOUE MAINTENANT !</h3>
           <div>
             <InputText
               value={playerName}
               onChange={(e) => setPlayerName(e.target.value)}
               placeholder="Ton pseudo"
               borderColor="#1AAFDA"
+              maxlength="20"
             />
           </div>
           {!lobbyCode ? (
@@ -83,23 +85,23 @@ const Home = () => {
             </div>
           ) : (
             <div>
-              <p>Vous êtes invité à rejoindre le salon {lobbyCode}</p>
-              <button onClick={joinLobby}>
-                Rejoindre
-              </button>
+              <small style={{ display: 'block', marginBottom: '7px' }}>Vous êtes invité à rejoindre le salon <b>{lobbyCode}</b></small>
+              <Button text="Rejoindre" backgroundColor="#FFC700" onClick={joinLobby} />
             </div>
           )}
         </Frame>
       </div>
       <div className="col-6">
-        <Frame>
-          <h3>🎯 Comment jouer ?</h3>
-          <p>1. Un chef est choisi au hasard et sélectionne une question parmi trois propositions.</p>
-          <p>2. Les joueurs répondent anonymement, et le chef tente de deviner qui a écrit quoi.</p>
+        <Frame textAlign="left">
+          <h2>🎯 Comment jouer ?</h2>
+          <p>1. Un <b>chef</b> est choisi au hasard et sélectionne une question parmi trois propositions.</p>
+          <p>2. Les joueurs répondent <b>anonymement</b>, et le chef tente de deviner qui a écrit quoi.</p>
           <p>3. À la fin, les prénoms sont révélés et le chef marque des points selon ses bonnes réponses.</p>
-          <p>Alors, on se connaît ?</p>
+          <h3>Alors, on se connaît ?</h3>
         </Frame>
       </div>
+      <div className="col-1"></div>
+      <Footer />
     </div>
   );
 };

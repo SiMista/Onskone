@@ -7,6 +7,7 @@
   display: grid;
   grid-template-columns: repeat(12, 1fr); /* 12 colonnes */
   gap: 20px; /* espace entre les colonnes */
+  box-sizing: border-box;
 }
 
 /* Classes utilitaires */
@@ -23,6 +24,20 @@
 .col-2  { grid-column: span 2; }
 .col-1  { grid-column: span 1; }
 
+/* Décalage de colonnes */
+.start-2 { grid-column-start: 2; }
+.start-3 { grid-column-start: 3; }
+.start-4 { grid-column-start: 4; }
+.start-5 { grid-column-start: 5; }
+.start-6 { grid-column-start: 6; }
+.start-7 { grid-column-start: 7; }
+.start-8 { grid-column-start: 8; }
+.start-9 { grid-column-start: 9; }
+.start-10 { grid-column-start: 10; }
+.start-11 { grid-column-start: 11; }
+.start-12 { grid-column-start: 12; }
+
+
 @media (max-width: 768px) {
   .container {
     grid-template-columns: repeat(1, 1fr);
@@ -31,3 +46,4 @@
     grid-column: span 1;
   }
 }
+
