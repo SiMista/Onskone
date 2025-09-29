@@ -4,9 +4,14 @@ import React from 'react';
 interface FrameProps {
   width?: string;   // ex: "300px" ou "80%"
   children: React.ReactNode;
+  textAlign?: 'left' | 'center' | 'right';
 }
 
-const Frame: React.FC<FrameProps> = ({ width = '100%', children }) => {
+const Frame: React.FC<FrameProps> = ({
+  width = '100%',
+  children,
+  textAlign = "center"
+}) => {
   return (
     <div
       style={{
@@ -20,7 +25,7 @@ const Frame: React.FC<FrameProps> = ({ width = '100%', children }) => {
         display: 'flex',           // <- active Flexbox
         flexDirection: 'column',   // <- empile verticalement
         alignItems: 'center',      // <- centre horizontalement
-        textAlign: 'center',       // <- centre le texte à l'intérieur
+        textAlign: textAlign,       // <- centre le texte à l'intérieur
         gap: '15px',               // <- espace entre les éléments
       }}
     > {children} </div>
