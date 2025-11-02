@@ -1,4 +1,4 @@
-import {IGame} from '../types/IGame';
+import {IGame, LeaderboardEntry} from '../types/IGame';
 import {IPlayer} from '../types/IPlayer';
 import {IRound} from '../types/IRound';
 import {Round} from './Round';
@@ -31,7 +31,7 @@ export class Game implements IGame {
             throw new Error("The game hasn't started or is already finished. Status: " + this.status);
         }
         const roundNumber = this.currentRound ? this.currentRound.roundNumber + 1 : 1;
-        const leaderIndex = roundNumber % this.lobby.players.length;
+        const leaderIndex = (roundNumber - 1) % this.lobby.players.length;
         const leader = this.lobby.players[leaderIndex];
         const gameCard = this.getRandomGameCard();
 
@@ -52,5 +52,42 @@ export class Game implements IGame {
 
     end(): void {
         this.status = GameStatus.FINISHED;
+    }
+
+    getMaxRounds(): number {
+        // Chaque joueur doit passer chef une fois
+        return this.lobby.players.length;
+    }
+
+    isGameOver(): boolean {
+        // La partie est terminée quand on a fait autant de rounds que de joueurs
+        return this.rounds.length >= this.getMaxRounds();
+    }
+
+    getLeaderboard(): LeaderboardEntry[] {
+        // Calculer le score total de chaque joueur à travers tous les rounds
+        const playerScores: Record<string, number> = {};
+
+        // Initialiser tous les joueurs avec un score de 0
+        for (const player of this.lobby.players) {
+            playerScores[player.id] = 0;
+        }
+
+        // Additionner les scores de chaque round
+        for (const round of this.rounds) {
+            for (const [playerId, score] of Object.entries(round.scores)) {
+                if (playerScores[playerId] !== undefined) {
+                    playerScores[playerId] += score;
+                }
+            }
+        }
+
+        // Créer le leaderboard et trier par score décroissant
+        const leaderboard: LeaderboardEntry[] = this.lobby.players.map(player => ({
+            player,
+            score: playerScores[player.id] || 0
+        }));
+
+        return leaderboard.sort((a, b) => b.score - a.score);
     }
 }

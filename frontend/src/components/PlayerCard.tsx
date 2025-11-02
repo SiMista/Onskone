@@ -40,7 +40,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
       {/* Partie gauche → Avatar + nom */}
       <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
         <img
-          src={`https://api.dicebear.com/9.x/adventurer/svg?scale=130&seed=${name}`} // avatar auto
+          src={`https://api.dicebear.com/9.x/micah/svg?scale=150&seed=${name}`} // avatar auto
           alt={name}
           style={{ width: "40px", height: "40px", border: "solid 1px grey", borderRadius: "50%" }}
         />

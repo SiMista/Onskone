@@ -3,3 +3,7 @@
 /frontend/node_modules/
 /.idea/
 /frontend/node_modules/bin
+/node_modules/
+nul
+package-lock.json
+.claude/

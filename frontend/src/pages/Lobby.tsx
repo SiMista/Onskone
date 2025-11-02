@@ -19,8 +19,26 @@ export interface IPlayer {
 const Lobby = () => {
     const { lobbyCode } = useParams();
     const [playerName] = useState<string>(() => {
+        // D'abord vérifier l'URL
         const urlParams = new URLSearchParams(window.location.search);
-        return urlParams.get('playerName') || '';
+        const urlPlayerName = urlParams.get('playerName');
+
+        // Si trouvé dans l'URL, le sauvegarder
+        if (urlPlayerName) {
+            localStorage.setItem(`playerName_${lobbyCode}`, urlPlayerName);
+            return urlPlayerName;
+        }
+
+        // Sinon, récupérer depuis localStorage
+        const savedPlayerName = localStorage.getItem(`playerName_${lobbyCode}`);
+        if (savedPlayerName) {
+            return savedPlayerName;
+        }
+
+        // Dernier recours: générer un nom aléatoire
+        const randomName = `Joueur${Math.floor(Math.random() * 1000)}`;
+        localStorage.setItem(`playerName_${lobbyCode}`, randomName);
+        return randomName;
     });
     const navigate = useNavigate();
     const [players, setPlayers] = useState<IPlayer[]>([]);
@@ -63,9 +81,15 @@ const Lobby = () => {
     };
 
     useEffect(() => {
+        // Flag pour éviter les navigations parasites pendant le montage
+        let justJoined = true;
+        setTimeout(() => { justJoined = false; }, 1000);
+
+        // Rejoindre le lobby une seule fois au montage du composant
         socket.emit('joinLobby', { lobbyCode, playerName });
 
-        socket.on('updatePlayersList', (data) => {
+        // Écouter les événements socket
+        const handleUpdatePlayersList = (data: { players: IPlayer[] }) => {
             console.log('updatePlayersList', data.players);
             setPlayers(data.players);
             const potentialCurrentPlayer = data.players.find((p: IPlayer) => p.socketId === socket.id);
@@ -75,19 +99,28 @@ const Lobby = () => {
             } else {
                 console.warn('Could not find current player in the players list');
             }
-        });
+        };
 
-        socket.on('joinedLobby', (data) => {
+        const handleJoinedLobby = (data: { player: IPlayer }) => {
+            console.log('joinedLobby', data.player);
             setCurrentPlayer(data.player);
-        });
+            // Demander la liste complète des joueurs
+            // (elle sera envoyée via updatePlayersList par le serveur)
+        };
 
-        socket.on('kickedFromLobby', (data) => {
-            console.log('Kicked from lobby:', data);
+        const handleKickedFromLobby = () => {
+            console.log('Kicked from lobby');
             alert('Vous avez été expulsé du salon.');
             navigate('/');
-        });
+        };
 
-        socket.on('error', (data) => {
+        const handleError = (data: { message: string }) => {
+            // Ignorer les erreurs "Lobby not found" pendant la première seconde (React StrictMode)
+            if (justJoined && data.message === 'Lobby not found') {
+                console.log('Ignoring "Lobby not found" error during mount');
+                return;
+            }
+
             switch (data.message) {
                 case 'Lobby not found':
                     navigate('/');
@@ -98,13 +131,35 @@ const Lobby = () => {
                 default:
                     console.error('Error:', data.message);
             }
-        });
+        };
+
+        const handleGameStarted = (data: any) => {
+            console.log('Game started, navigating to game page');
+            // Sauvegarder le joueur actuel dans localStorage
+            // On utilise les données les plus récentes du serveur
+            setCurrentPlayer(prev => {
+                if (prev) {
+                    localStorage.setItem('currentPlayer', JSON.stringify(prev));
+                }
+                return prev;
+            });
+            navigate(`/game/${lobbyCode}`);
+        };
+
+        socket.on('updatePlayersList', handleUpdatePlayersList);
+        socket.on('joinedLobby', handleJoinedLobby);
+        socket.on('kickedFromLobby', handleKickedFromLobby);
+        socket.on('error', handleError);
+        socket.on('gameStarted', handleGameStarted);
 
         return () => {
-            socket.off('updatePlayersList');
-            socket.off('joinedLobby');
-        }
-    }, []);
+            socket.off('updatePlayersList', handleUpdatePlayersList);
+            socket.off('joinedLobby', handleJoinedLobby);
+            socket.off('kickedFromLobby', handleKickedFromLobby);
+            socket.off('error', handleError);
+            socket.off('gameStarted', handleGameStarted);
+        };
+    }, [lobbyCode, playerName, navigate]);
 
     return (
         <div className="container">
@@ -142,7 +197,7 @@ const Lobby = () => {
                                 text="Lancer le jeu"
                                 backgroundColor="#30c94d"
                                 rotateEffect="true"
-                                onClick={() => console.log('Lancer le jeu')}
+                                onClick={() => socket.emit('startGame', { lobbyCode })}
                             />
                         ) : (
                             <Button
@@ -150,7 +205,7 @@ const Lobby = () => {
                                 backgroundColor="#30c94d"
                                 rotateEffect="true"
                                 state='disabled'
-                                onClick={() => console.log('Lancer le jeu')}
+                                onClick={() => {}}
                             />
                         ))}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -164,7 +219,9 @@ const Lobby = () => {
                 </Frame>
             </div>
             <div className='col-3'></div>
-            <Footer />
+            <div className="col-12">
+                <Footer />
+            </div>  
         </div>
     );
 };

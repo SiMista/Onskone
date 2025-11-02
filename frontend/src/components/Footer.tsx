@@ -1,18 +1,17 @@
 // src/components/Footer.tsx
 import React from 'react';
-import { text } from 'stream/consumers';
 
 const Footer: React.FC = () => {
     const styles = {
         width: '100%',
         padding: '20px 0',
         textAlign: 'center' as const,
-        position: 'fixed' as const,
         bottom: 0,
         left: 0,
         color: 'white',
         fontSize: '12px',
-
+        // Unselectable text
+        userSelect: 'none' as const,
     };
 
     const linkStyles = {
