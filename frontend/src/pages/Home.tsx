@@ -56,10 +56,12 @@ const Home = () => {
     });
 
     return () => {
+      socket.off('lobbyCreated');
       socket.off('playerNameExists');
       socket.off('playerNameValid');
+      socket.off('error');
     };
-  }, []);
+  }, [navigate, playerName, lobbyCode]);
 
   return (
     <div className="container">
@@ -94,14 +96,16 @@ const Home = () => {
       <div className="col-6">
         <Frame textAlign="left">
           <h2>🎯 Comment jouer ?</h2>
-          <p>1. Un <b>chef</b> est choisi au hasard et sélectionne une question parmi trois propositions.</p>
-          <p>2. Les joueurs répondent <b>anonymement</b>, et le chef tente de deviner qui a écrit quoi.</p>
-          <p>3. À la fin, les prénoms sont révélés et le chef marque des points selon ses bonnes réponses.</p>
+          <p>1. Un <b>chef</b> est choisi au hasard et sélectionne une question parmi trois propositions.<br /><br />
+            2. Les joueurs répondent <b>anonymement</b>, et le chef tente de deviner qui a écrit quoi.<br /><br />
+            3. À la fin, les prénoms sont révélés et le chef marque des points selon ses bonnes réponses.</p>
           <h3>Alors, on se connaît ?</h3>
         </Frame>
       </div>
       <div className="col-1"></div>
-      <Footer />
+      <div className="col-12">
+        <Footer />
+      </div>
     </div>
   );
 };

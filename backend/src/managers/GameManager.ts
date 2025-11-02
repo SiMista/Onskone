@@ -3,7 +3,7 @@ import {ILobby} from "../types/ILobby";
 
 export type GameCard = {
     category: string;
-    question: string[];
+    questions: string[];
 }
 
 export namespace GameManager {
@@ -19,6 +19,21 @@ export namespace GameManager {
         const game = new Game(lobby, questionsPool);
         game.start();
         return game;
+    }
+
+    export const getRandomQuestions = (count: number): GameCard[] => {
+        // Créer une copie du pool pour ne pas modifier l'original
+        const poolCopy = [...questionsPool];
+        const selectedQuestions: GameCard[] = [];
+
+        // Sélectionner 'count' questions aléatoires
+        for (let i = 0; i < Math.min(count, poolCopy.length); i++) {
+            const randomIndex = Math.floor(Math.random() * poolCopy.length);
+            selectedQuestions.push(poolCopy[randomIndex]);
+            poolCopy.splice(randomIndex, 1); // Éviter les doublons
+        }
+
+        return selectedQuestions;
     }
 
 }

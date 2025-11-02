@@ -21,7 +21,7 @@ const Frame: React.FC<FrameProps> = ({
         boxSizing: 'border-box',
         borderRadius: '8px',
         boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
-        margin: '20px auto',
+        margin: '0',
         display: 'flex',           // <- active Flexbox
         flexDirection: 'column',   // <- empile verticalement
         alignItems: 'center',      // <- centre horizontalement
