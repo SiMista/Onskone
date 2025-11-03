@@ -1,22 +1,9 @@
 import React, { useState } from 'react';
-
-interface Player {
-  id: string;
-  name: string;
-}
-
-interface RoundData {
-  roundNumber: number;
-  leader: Player;
-  selectedQuestion: string;
-  answers: Record<string, string>; // playerId -> answer
-  guesses: Record<string, string>; // answerId -> playerId
-  scores: Record<string, number>; // playerId -> score for this round
-}
+import { IPlayer, IRound } from '@onskone/shared';
 
 interface RoundHistoryProps {
-  rounds: RoundData[];
-  players: Player[];
+  rounds: IRound[];
+  players: IPlayer[];
   isOpen: boolean;
   onClose: () => void;
 }
@@ -30,7 +17,7 @@ const RoundHistory: React.FC<RoundHistoryProps> = ({ rounds, players, isOpen, on
     return players.find(p => p.id === playerId)?.name || 'Inconnu';
   };
 
-  const getRoundResults = (round: RoundData) => {
+  const getRoundResults = (round: IRound) => {
     const results = Object.entries(round.answers).map(([playerId, answer]) => {
       const guessedPlayerId = round.guesses[playerId];
       const correct = guessedPlayerId === playerId;

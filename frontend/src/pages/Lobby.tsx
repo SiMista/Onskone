@@ -1,165 +1,168 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import socket from '../utils/socket'; // Ton instance de socket.io
+import socket from '../utils/socket';
 import Logo from '../components/Logo';
 import Frame from '../components/Frame';
 import Button from '../components/Button';
 import Footer from '../components/Footer';
 import { BsFillCaretLeftFill } from "react-icons/bs";
 import PlayerCard from '../components/PlayerCard';
-
-export interface IPlayer {
-    id: string;
-    socketId: string;
-    name: string;
-    isHost: boolean;
-    score?: number;
-}
+import { IPlayer } from '@onskone/shared';
+import { useSocketEvent, useQueryParams, useLeavePrompt } from '../hooks';
+import { GAME_CONFIG } from '../constants/game';
 
 const Lobby = () => {
-    const { lobbyCode } = useParams();
+    const { lobbyCode } = useParams<{ lobbyCode: string }>();
+    const queryParams = useQueryParams();
+    const navigate = useNavigate();
+
+    // Redirect if no lobby code
+    useEffect(() => {
+        if (!lobbyCode) {
+            navigate('/');
+        }
+    }, [lobbyCode, navigate]);
+
+    const [players, setPlayers] = useState<IPlayer[]>([]);
+    const [currentPlayer, setCurrentPlayer] = useState<IPlayer | null>(null);
+    const [showCopiedMessage, setShowCopiedMessage] = useState(false);
     const [playerName] = useState<string>(() => {
         // D'abord vérifier l'URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const urlPlayerName = urlParams.get('playerName');
+        const urlPlayerName = queryParams.get('playerName');
 
         // Si trouvé dans l'URL, le sauvegarder
         if (urlPlayerName) {
-            localStorage.setItem(`playerName_${lobbyCode}`, urlPlayerName);
+            try {
+                localStorage.setItem(`playerName_${lobbyCode}`, urlPlayerName);
+            } catch (error) {
+                console.error('Failed to save player name:', error);
+            }
             return urlPlayerName;
         }
 
         // Sinon, récupérer depuis localStorage
-        const savedPlayerName = localStorage.getItem(`playerName_${lobbyCode}`);
-        if (savedPlayerName) {
-            return savedPlayerName;
+        try {
+            const savedPlayerName = localStorage.getItem(`playerName_${lobbyCode}`);
+            if (savedPlayerName) {
+                return savedPlayerName;
+            }
+        } catch (error) {
+            console.error('Failed to load player name:', error);
         }
 
         // Dernier recours: générer un nom aléatoire
         const randomName = `Joueur${Math.floor(Math.random() * 1000)}`;
-        localStorage.setItem(`playerName_${lobbyCode}`, randomName);
+        try {
+            localStorage.setItem(`playerName_${lobbyCode}`, randomName);
+        } catch (error) {
+            console.error('Failed to save generated player name:', error);
+        }
         return randomName;
     });
-    const navigate = useNavigate();
-    const [players, setPlayers] = useState<IPlayer[]>([]);
-    const [currentPlayer, setCurrentPlayer] = useState<IPlayer>();
 
-    const generateLink = () => {
-        const link = `${window.location.origin}/?lobbyCode=${lobbyCode}`;
-        document.getElementById("inviteLinkMessage")!.style.visibility = "visible";
-        navigator.clipboard.writeText(link) // Copie le lien dans le presse-papiers
+    // Warn user before leaving
+    useLeavePrompt(
+        () => {
+            if (currentPlayer && lobbyCode) {
+                socket.emit('leaveLobby', { lobbyCode: lobbyCode!, currentPlayerId: currentPlayer.id });
+            }
+        },
+        !!currentPlayer
+    );
+
+    const generateLink = useCallback(() => {
+        const link = `${window.location.origin}/?lobbyCode=${lobbyCode!}`;
+        navigator.clipboard.writeText(link)
             .then(() => {
-                console.log('Lien copié dans le presse-papiers :', link);
+                setShowCopiedMessage(true);
+                setTimeout(() => setShowCopiedMessage(false), GAME_CONFIG.COPIED_MESSAGE_DURATION);
             })
             .catch((error) => {
                 console.error('Erreur lors de la copie du lien :', error);
             });
-        setTimeout(() => {
-            document.getElementById("inviteLinkMessage")!.style.visibility = "hidden";
-        }, 2000);
-    }
+    }, [lobbyCode]);
 
-    const leaveLobby = () => {
-        console.log('Quitter le salon', currentPlayer?.id);
-        socket.emit('leaveLobby', { lobbyCode, currentPlayerId: currentPlayer?.id });
+    const leaveLobby = useCallback(() => {
+        if (currentPlayer && lobbyCode) {
+            socket.emit('leaveLobby', { lobbyCode: lobbyCode!, currentPlayerId: currentPlayer.id });
+        }
         navigate('/');
-    }
+    }, [currentPlayer, lobbyCode, navigate]);
 
-    const kickPlayer = (playerId: string) => {
-        console.log('Kick player: ', playerId);
-        socket.emit('kickPlayer', { lobbyCode, playerId });
-    }
+    const kickPlayer = useCallback((playerId: string) => {
+        if (lobbyCode) {
+            socket.emit('kickPlayer', { lobbyCode: lobbyCode!, playerId });
+        }
+    }, [lobbyCode]);
 
-    const promotePlayer = (playerId: string) => {
-        console.log('Promote player: ', playerId);
-        socket.emit('promotePlayer', { lobbyCode, playerId });
-    }
+    const promotePlayer = useCallback((playerId: string) => {
+        if (lobbyCode) {
+            socket.emit('promotePlayer', { lobbyCode: lobbyCode!, playerId });
+        }
+    }, [lobbyCode]);
 
-    window.onbeforeunload = () => {
-        console.log('Quitter le salon', currentPlayer?.id);
-        socket.emit('leaveLobby', { lobbyCode, currentPlayerId: currentPlayer?.id });
-    };
+    const startGame = useCallback(() => {
+        if (lobbyCode) {
+            socket.emit('startGame', { lobbyCode: lobbyCode! });
+        }
+    }, [lobbyCode]);
 
+    // Join lobby on mount
     useEffect(() => {
-        // Flag pour éviter les navigations parasites pendant le montage
-        let justJoined = true;
-        setTimeout(() => { justJoined = false; }, 1000);
+        if (lobbyCode && playerName) {
+            socket.emit('joinLobby', { lobbyCode: lobbyCode!, playerName });
+        }
+    }, [lobbyCode, playerName]);
 
-        // Rejoindre le lobby une seule fois au montage du composant
-        socket.emit('joinLobby', { lobbyCode, playerName });
+    // Socket event handlers
+    const handleUpdatePlayersList = useCallback((data: { players: IPlayer[] }) => {
+        setPlayers(data.players);
+        const potentialCurrentPlayer = data.players.find((p: IPlayer) => p.socketId === socket.id);
+        if (potentialCurrentPlayer) {
+            setCurrentPlayer(potentialCurrentPlayer);
+        }
+    }, []);
 
-        // Écouter les événements socket
-        const handleUpdatePlayersList = (data: { players: IPlayer[] }) => {
-            console.log('updatePlayersList', data.players);
-            setPlayers(data.players);
-            const potentialCurrentPlayer = data.players.find((p: IPlayer) => p.socketId === socket.id);
-            if (potentialCurrentPlayer) {
-                console.log('Recovered current player:', potentialCurrentPlayer);
-                setCurrentPlayer(potentialCurrentPlayer);
-            } else {
-                console.warn('Could not find current player in the players list');
+    const handleJoinedLobby = useCallback((data: { player: IPlayer }) => {
+        setCurrentPlayer(data.player);
+    }, []);
+
+    const handleKickedFromLobby = useCallback(() => {
+        alert('Vous avez été expulsé du salon.');
+        navigate('/');
+    }, [navigate]);
+
+    const handleError = useCallback((data: { message: string }) => {
+        switch (data.message) {
+            case 'Lobby not found':
+            case 'Player not found':
+                navigate('/');
+                break;
+            default:
+                console.error('Error:', data.message);
+        }
+    }, [navigate]);
+
+    const handleGameStarted = useCallback(() => {
+        // Save current player to localStorage
+        if (currentPlayer) {
+            try {
+                localStorage.setItem('currentPlayer', JSON.stringify(currentPlayer));
+            } catch (error) {
+                console.error('Failed to save current player:', error);
             }
-        };
+        }
+        navigate(`/game/${lobbyCode}`);
+    }, [currentPlayer, lobbyCode, navigate]);
 
-        const handleJoinedLobby = (data: { player: IPlayer }) => {
-            console.log('joinedLobby', data.player);
-            setCurrentPlayer(data.player);
-            // Demander la liste complète des joueurs
-            // (elle sera envoyée via updatePlayersList par le serveur)
-        };
+    // Use custom socket hooks
+    useSocketEvent('updatePlayersList', handleUpdatePlayersList, [handleUpdatePlayersList]);
+    useSocketEvent('joinedLobby', handleJoinedLobby, [handleJoinedLobby]);
+    useSocketEvent('kickedFromLobby', handleKickedFromLobby, [handleKickedFromLobby]);
+    useSocketEvent('error', handleError, [handleError]);
+    useSocketEvent('gameStarted', handleGameStarted, [handleGameStarted]);
 
-        const handleKickedFromLobby = () => {
-            console.log('Kicked from lobby');
-            alert('Vous avez été expulsé du salon.');
-            navigate('/');
-        };
-
-        const handleError = (data: { message: string }) => {
-            // Ignorer les erreurs "Lobby not found" pendant la première seconde (React StrictMode)
-            if (justJoined && data.message === 'Lobby not found') {
-                console.log('Ignoring "Lobby not found" error during mount');
-                return;
-            }
-
-            switch (data.message) {
-                case 'Lobby not found':
-                    navigate('/');
-                    break;
-                case 'Player not found':
-                    navigate('/');
-                    break;
-                default:
-                    console.error('Error:', data.message);
-            }
-        };
-
-        const handleGameStarted = (data: any) => {
-            console.log('Game started, navigating to game page');
-            // Sauvegarder le joueur actuel dans localStorage
-            // On utilise les données les plus récentes du serveur
-            setCurrentPlayer(prev => {
-                if (prev) {
-                    localStorage.setItem('currentPlayer', JSON.stringify(prev));
-                }
-                return prev;
-            });
-            navigate(`/game/${lobbyCode}`);
-        };
-
-        socket.on('updatePlayersList', handleUpdatePlayersList);
-        socket.on('joinedLobby', handleJoinedLobby);
-        socket.on('kickedFromLobby', handleKickedFromLobby);
-        socket.on('error', handleError);
-        socket.on('gameStarted', handleGameStarted);
-
-        return () => {
-            socket.off('updatePlayersList', handleUpdatePlayersList);
-            socket.off('joinedLobby', handleJoinedLobby);
-            socket.off('kickedFromLobby', handleKickedFromLobby);
-            socket.off('error', handleError);
-            socket.off('gameStarted', handleGameStarted);
-        };
-    }, [lobbyCode, playerName, navigate]);
+    const canStartGame = players.length >= GAME_CONFIG.MIN_PLAYERS;
 
     return (
         <div className="container">
@@ -169,14 +172,14 @@ const Lobby = () => {
             <div className='col-3'></div>
             <div className="col-6">
                 <Frame>
-                    <div style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', alignSelf: 'flex-start' }} onClick={leaveLobby}>
-                        <span style={{ display: 'flex', alignItems: 'center', marginRight: 6 }}>
-                            {BsFillCaretLeftFill({ size: 15 }) as JSX.Element}
+                    <div className="flex items-center cursor-pointer self-start" onClick={leaveLobby}>
+                        <span className="flex items-center mr-1.5">
+                            <BsFillCaretLeftFill size={15} />
                         </span>
                         <span>Quitter</span>
                     </div>
-                    <h3 style={{ margin: 0 }}>Nombre de joueurs {players.length}/20</h3>
-                    <ul style={{ listStyle: "none", width: "100%", margin: 0, padding: 0 }}>
+                    <h3 className="m-0">Nombre de joueurs {players.length}/{GAME_CONFIG.MAX_PLAYERS}</h3>
+                    <ul className="list-none w-full m-0 p-0">
                         {players.map((player) => (
                             <li key={player.id}>
                                 <PlayerCard
@@ -185,35 +188,30 @@ const Lobby = () => {
                                     isHost={player.isHost}
                                     isCurrentPlayer={currentPlayer?.id === player.id}
                                     currentPlayerIsHost={!!currentPlayer?.isHost}
-                                    onKick={(id) => kickPlayer(id)}
-                                    onPromote={(id) => promotePlayer(id)}
+                                    onKick={kickPlayer}
+                                    onPromote={promotePlayer}
                                 />
                             </li>
                         ))}
                     </ul>
-                    <div style={{ display: 'flex', gap: '100px', alignItems: 'center' }}>
-                        {currentPlayer?.isHost && (players.length >= 3 ? (
+                    <div className="flex gap-[100px] items-center">
+                        {currentPlayer?.isHost && (
                             <Button
                                 text="Lancer le jeu"
                                 backgroundColor="#30c94d"
-                                rotateEffect="true"
-                                onClick={() => socket.emit('startGame', { lobbyCode })}
+                                rotateEffect={true}
+                                state={canStartGame ? 'default' : 'disabled'}
+                                onClick={startGame}
                             />
-                        ) : (
-                            <Button
-                                text="Lancer le jeu"
-                                backgroundColor="#30c94d"
-                                rotateEffect="true"
-                                state='disabled'
-                                onClick={() => {}}
-                            />
-                        ))}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        )}
+                        <div className="flex flex-col gap-1">
                             <small>
                                 Code du salon : <b>{lobbyCode}</b>
                             </small>
                             <Button text="Lien d'invitation" backgroundColor="#FFC700" onClick={generateLink} />
-                            <small id="inviteLinkMessage" style={{ visibility: 'hidden', color: 'grey' }}><i>Lien copié !</i></small>
+                            <small className={`text-gray-500 ${showCopiedMessage ? 'visible' : 'invisible'}`}>
+                                <i>Lien copié !</i>
+                            </small>
                         </div>
                     </div>
                 </Frame>
@@ -221,7 +219,7 @@ const Lobby = () => {
             <div className='col-3'></div>
             <div className="col-12">
                 <Footer />
-            </div>  
+            </div>
         </div>
     );
 };

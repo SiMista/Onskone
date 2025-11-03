@@ -1,6 +1,5 @@
-import {ILobby} from '../types/ILobby';
-import {IPlayer} from '../types/IPlayer';
-import {IGame} from '../types/IGame';
+import { ILobby, IPlayer } from '@onskone/shared';
+import { IGame } from '../types/IGame';
 
 export class Lobby implements ILobby {
     code: string;

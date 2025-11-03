@@ -1,8 +1,7 @@
 import {Lobby} from "../models/Lobby";
-import {IPlayer} from "../types/IPlayer";
+import { IPlayer, GameStatus } from '@onskone/shared';
 import {GameManager} from './GameManager';
 import {generateLobbyCode} from '../utils/helpers';
-import {GameStatus} from "../models/Game";
 
 export namespace LobbyManager {
     const lobbies: Map<string, Lobby> = new Map();

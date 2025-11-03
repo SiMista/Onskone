@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
+import { useTimer } from '../hooks/useTimer';
 
 interface TimerProps {
   duration: number; // Durée en secondes
@@ -6,30 +7,7 @@ interface TimerProps {
 }
 
 const Timer: React.FC<TimerProps> = ({ duration, onExpire }) => {
-  const [timeLeft, setTimeLeft] = useState(duration);
-
-  useEffect(() => {
-    setTimeLeft(duration);
-  }, [duration]);
-
-  useEffect(() => {
-    if (timeLeft <= 0) {
-      onExpire?.();
-      return;
-    }
-
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [timeLeft, onExpire]);
+  const { timeLeft } = useTimer(duration, { onExpire, autoStart: true });
 
   const progress = (timeLeft / duration) * 100;
   const isUrgent = timeLeft <= 10;

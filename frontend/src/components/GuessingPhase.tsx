@@ -1,15 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import socket from '../utils/socket';
 import Timer from './Timer';
+import { IPlayer } from '@onskone/shared';
 
 interface Answer {
   id: string; // playerId de l'auteur
   text: string;
-}
-
-interface Player {
-  id: string;
-  name: string;
 }
 
 interface GuessingPhaseProps {
@@ -20,7 +16,7 @@ interface GuessingPhaseProps {
 
 const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, leaderName }) => {
   const [answers, setAnswers] = useState<Answer[]>([]);
-  const [players, setPlayers] = useState<Player[]>([]);
+  const [players, setPlayers] = useState<IPlayer[]>([]);
   const [guesses, setGuesses] = useState<Record<string, string>>({}); // answerId -> playerId
   const [draggedAnswerId, setDraggedAnswerId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -31,7 +27,7 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
       socket.emit('startTimer', { lobbyCode, duration: 90 }); // 90 secondes pour deviner
     }
 
-    socket.on('shuffledAnswersReceived', (data: { answers: Answer[]; players: Player[] }) => {
+    socket.on('shuffledAnswersReceived', (data: { answers: Answer[]; players: IPlayer[] }) => {
       setAnswers(data.answers);
       setPlayers(data.players);
       setLoading(false);

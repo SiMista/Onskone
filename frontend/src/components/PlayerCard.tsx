@@ -23,73 +23,36 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "6px 15px",
-        margin: "8px 0",
-        borderRadius: "10px",
-        border: "2px solid #ddd",
-        backgroundColor: "rgb(249, 245, 242)",
-        boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
-        width: "95%",
-      }}
-    >
+    <div className="flex items-center justify-between py-1.5 px-[15px] my-2 rounded-[10px] border-2 border-[#ddd] bg-[rgb(249,245,242)] shadow-[0_2px_6px_rgba(0,0,0,0.1)] w-[95%]">
       {/* Partie gauche → Avatar + nom */}
-      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+      <div className="flex items-center gap-2.5">
         <img
-          src={`https://api.dicebear.com/9.x/micah/svg?scale=150&seed=${name}`} // avatar auto
+          src={`https://api.dicebear.com/9.x/micah/svg?scale=150&seed=${name}`}
           alt={name}
-          style={{ width: "40px", height: "40px", border: "solid 1px grey", borderRadius: "50%" }}
+          className="w-10 h-10 border border-gray-500 rounded-full"
         />
-        <span style={{ fontWeight: isCurrentPlayer ? "bold" : "normal" }}>
+        <span className={isCurrentPlayer ? "font-bold" : "font-normal"}>
           {name} {isCurrentPlayer && "(vous)"}
         </span>
       </div>
 
       {/* Partie droite → couronne ou menu */}
-      <div style={{ position: "relative" }}>
+      <div className="relative">
         {isHost ? (
-          FaCrown({ color: "fcad11", size: 30 }) as JSX.Element
+          <FaCrown color="#fcad11" size={30} />
         ) : currentPlayerIsHost ? (
           <>
-            {FaEllipsisV({
-              size: 20,
-              style: { cursor: "pointer" },
-              onClick: () => setIsOpen(!isOpen),
-            }) as JSX.Element}
+            <FaEllipsisV
+              size={20}
+              className="cursor-pointer"
+              onClick={() => setIsOpen(!isOpen)}
+            />
             {isOpen && (
-              <div
-                style={{
-                  position: "absolute",
-                  top: "100%",
-                  right: 0,
-                  background: "#ffffff",           // blanc
-                  border: "2px dashed #b0b0b0",   // gris clair
-                  borderRadius: "16px",
-                  boxShadow: "0 6px 16px rgba(0,0,0,0.15)",
-                  zIndex: 10,
-                  textAlign: "right",
-                  minWidth: "160px",
-                  overflow: "hidden",
-                  transform: "scale(1)",
-                  transition: "transform 0.2s ease-out",
-                }}
-              >
+              <div className="absolute top-full right-0 bg-white border-2 border-dashed border-[#b0b0b0] rounded-2xl shadow-[0_6px_16px_rgba(0,0,0,0.15)] z-10 text-right min-w-[160px] overflow-hidden scale-100 transition-transform duration-200 ease-out">
                 <div
-                  style={{
-                    padding: "12px 16px",
-                    cursor: "pointer",
-                    fontSize: "15px",
-                    fontWeight: 600,
-                    color: "#333333",              // gris très foncé
-                    borderBottom: "1px solid #d0d0d0", // gris clair
-                    transition: "background 0.2s, transform 0.2s",
-                  }}
+                  className="py-3 px-4 cursor-pointer text-[15px] font-semibold text-[#333333] border-b border-[#d0d0d0] transition-[background,transform] duration-200"
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = "#fff8e1"; // jaune clair
+                    e.currentTarget.style.background = "#fff8e1";
                     e.currentTarget.style.transform = "scale(1.05)";
                   }}
                   onMouseLeave={(e) => {
@@ -101,16 +64,9 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                   Promouvoir hôte
                 </div>
                 <div
-                  style={{
-                    padding: "12px 16px",
-                    cursor: "pointer",
-                    fontSize: "15px",
-                    fontWeight: 600,
-                    color: "#d32f2f",              // rouge
-                    transition: "background 0.2s, transform 0.2s",
-                  }}
+                  className="py-3 px-4 cursor-pointer text-[15px] font-semibold text-[#d32f2f] transition-[background,transform] duration-200"
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = "#fce4e4"; // rouge très clair au hover
+                    e.currentTarget.style.background = "#fce4e4";
                     e.currentTarget.style.transform = "scale(1.05)";
                   }}
                   onMouseLeave={(e) => {
@@ -122,12 +78,10 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                   Expulser
                 </div>
               </div>
-
             )}
           </>
         ) : null}
       </div>
-
     </div>
   );
 };

@@ -1,67 +1,65 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import socket from '../utils/socket';
 import Logo from '../components/Logo';
 import Frame from '../components/Frame';
 import Button from '../components/Button';
 import InputText from '../components/InputText';
 import Footer from '../components/Footer';
+import { useSocketEvent, useQueryParams } from '../hooks';
+import { GAME_CONFIG } from '../constants/game';
 
 const Home = () => {
   const [playerName, setPlayerName] = useState<string>(() => {
     const randomName = `Joueur${Math.floor(Math.random() * 1000)}`; // TODO ONLY FOR DEVMODE !
     return randomName;
   });
-  const [searchParams] = useSearchParams();
+  const queryParams = useQueryParams();
   const navigate = useNavigate();
 
-  const lobbyCode = searchParams.get('lobbyCode');
+  const lobbyCode = queryParams.get('lobbyCode');
 
-  const createLobby = () => {
+  const createLobby = useCallback(() => {
     if (!playerName.trim()) {
       alert('Veuillez entrer un nom avant de créer un salon.');
       return;
     }
     socket.emit('createLobby', { playerName });
-  };
+  }, [playerName]);
 
-  const joinLobby = () => {
+  const joinLobby = useCallback(() => {
     if (!playerName.trim()) {
       alert('Veuillez entrer un nom avant de rejoindre un salon.');
       return;
     }
+    if (!lobbyCode) {
+      alert('Code de salon invalide.');
+      return;
+    }
     socket.emit('checkPlayerName', { lobbyCode, playerName });
-  };
+  }, [lobbyCode, playerName]);
 
-  useEffect(() => {
-    socket.on('lobbyCreated', (data) => {
-      console.log(`Salon créé avec le code : ${data.lobbyCode}`);
-      console.log(`Joueur ajouté au salon : ${data.playerName}`);
-      navigate(`/lobby/${data.lobbyCode}?playerName=${playerName}`);
-    });
+  const handleLobbyCreated = useCallback((data: { lobbyCode: string }) => {
+    navigate(`/lobby/${data.lobbyCode}?playerName=${playerName}`);
+  }, [navigate, playerName]);
 
-    socket.on('playerNameExists', (data) => {
-      console.log(`Le nom "${data.playerName}" est déjà utilisé dans le salon. Veuillez choisir un autre nom.`);
-      alert(`Le nom "${data.playerName}" est déjà utilisé dans le salon. Veuillez choisir un autre nom.`);
-    });
+  const handlePlayerNameExists = useCallback((data: { playerName: string }) => {
+    alert(`Le nom "${data.playerName}" est déjà utilisé dans le salon. Veuillez choisir un autre nom.`);
+  }, []);
 
-    socket.on('playerNameValid', () => {
-      console.log(`Le nom "${playerName}" est valide.`);
-      navigate(`/lobby/${lobbyCode}?playerName=${playerName}`);
-    });
+  const handlePlayerNameValid = useCallback(() => {
+    navigate(`/lobby/${lobbyCode}?playerName=${playerName}`);
+  }, [navigate, lobbyCode, playerName]);
 
-    socket.on('error', (data) => {
-      console.error('Erreur:', data.message);
-      alert(`Erreur: ${data.message}`);
-    });
+  const handleError = useCallback((data: { message: string }) => {
+    console.error('Erreur:', data.message);
+    alert(`Erreur: ${data.message}`);
+  }, []);
 
-    return () => {
-      socket.off('lobbyCreated');
-      socket.off('playerNameExists');
-      socket.off('playerNameValid');
-      socket.off('error');
-    };
-  }, [navigate, playerName, lobbyCode]);
+  useSocketEvent('lobbyCreated', handleLobbyCreated, [handleLobbyCreated]);
+  useSocketEvent('playerNameExists', handlePlayerNameExists, [handlePlayerNameExists]);
+  useSocketEvent('playerNameValid', handlePlayerNameValid, [handlePlayerNameValid]);
+  useSocketEvent('error', handleError, [handleError]);
 
   return (
     <div className="container">
@@ -78,7 +76,7 @@ const Home = () => {
               onChange={(e) => setPlayerName(e.target.value)}
               placeholder="Ton pseudo"
               borderColor="#1AAFDA"
-              maxlength="20"
+              maxLength={GAME_CONFIG.MAX_NAME_LENGTH}
             />
           </div>
           {!lobbyCode ? (
@@ -87,7 +85,7 @@ const Home = () => {
             </div>
           ) : (
             <div>
-              <small style={{ display: 'block', marginBottom: '7px' }}>Vous êtes invité à rejoindre le salon <b>{lobbyCode}</b></small>
+              <small className="block mb-[7px]">Vous êtes invité à rejoindre le salon <b>{lobbyCode}</b></small>
               <Button text="Rejoindre" backgroundColor="#FFC700" onClick={joinLobby} />
             </div>
           )}

@@ -1,16 +1,7 @@
 import {IGame, LeaderboardEntry} from '../types/IGame';
-import {IPlayer} from '../types/IPlayer';
 import {IRound} from '../types/IRound';
 import {Round} from './Round';
-import {GameCard} from "../managers/GameManager";
-import {Lobby} from "./Lobby";
-import {ILobby} from "../types/ILobby";
-
-export enum GameStatus {
-    WAITING,
-    IN_PROGRESS,
-    FINISHED
-}
+import { GameCard, ILobby, GameStatus } from '@onskone/shared';
 
 export class Game implements IGame {
     lobby: ILobby;

@@ -1,9 +1,45 @@
-/backend/node_modules/
-/backend/dist/
-/frontend/node_modules/
-/.idea/
-/frontend/node_modules/bin
-/node_modules/
-nul
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build output
+dist/
+build/
+**/dist/
+**/build/
+
+# pnpm
+.pnpm-debug.log*
+pnpm-lock.yaml
+
+# npm (si mélange)
 package-lock.json
+npm-debug.log*
+
+# TypeScript
+*.tsbuildinfo
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env files
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+
+# Claude
 .claude/
+
+# Misc
+nul

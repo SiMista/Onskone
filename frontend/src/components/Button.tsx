@@ -4,7 +4,7 @@ type CustomButtonProps = {
   text: string;
   backgroundColor?: string;
   textColor?: string;
-  rotateEffect?: "true" | "false";
+  rotateEffect?: boolean;
   state?: "default" | "disabled";
   onClick?: () => void;
 };
@@ -13,29 +13,24 @@ const CustomButton: React.FC<CustomButtonProps> = ({
   text = "default text",
   backgroundColor = "yellow",
   textColor = "black",
-  rotateEffect = "false",
+  rotateEffect = false,
   state = "default",
   onClick,
 }) => {
-  const baseStyle: React.CSSProperties = {
-    border: "black 3px solid",
-    borderRadius: "8px",
-    padding: "5px 24px",
-    fontSize: "16px",
-    fontWeight: "bold",
-    backgroundColor,
-    color: textColor,
-    boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
-    transition: "transform 0.3s ease, background-color 0.3s ease",
-    cursor: state === "disabled" ? "default" : "pointer",
-    opacity: state === "disabled" ? 0.6 : 1,
-  };
-
   return (
     <button
       onClick={state === "disabled" ? undefined : onClick}
       disabled={state === "disabled"}
-      style={baseStyle}
+      className={`
+        border-black border-[3px] rounded-lg px-6 py-1.5 text-base font-bold
+        shadow-[0_2px_10px_rgba(0,0,0,0.2)]
+        transition-[transform,background-color] duration-300 ease-in-out
+        ${state === "disabled" ? "cursor-default opacity-60" : "cursor-pointer"}
+      `}
+      style={{
+        backgroundColor,
+        color: textColor,
+      }}
       onMouseOver={(e) => {
         if (state === "disabled") return;
         const target = e.currentTarget as HTMLButtonElement;
@@ -47,7 +42,7 @@ const CustomButton: React.FC<CustomButtonProps> = ({
               : backgroundColor === "#30c94d"
                 ? "#25b841"
                 : backgroundColor;
-        if (rotateEffect === "true") {
+        if (rotateEffect) {
           target.style.transform = "scale(1.08) rotate(-1deg)";
         }
       }}
@@ -55,7 +50,7 @@ const CustomButton: React.FC<CustomButtonProps> = ({
         if (state === "disabled") return;
         const target = e.currentTarget as HTMLButtonElement;
         target.style.backgroundColor = backgroundColor;
-        if (rotateEffect === "true") {
+        if (rotateEffect) {
           target.style.transform = "scale(1) rotate(0deg)";
         }
       }}

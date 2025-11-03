@@ -1,22 +1,24 @@
 import { IRound } from './IRound';
-import {GameStatus} from "../models/Game";
-import {ILobby} from "./ILobby";
-import {IPlayer} from "./IPlayer";
+import {
+  GameStatus,
+  ILobby,
+  IPlayer,
+  LeaderboardEntry,
+  IGame as IGameData
+} from '@onskone/shared';
 
-export interface LeaderboardEntry {
-  player: IPlayer;
-  score: number;
-}
-
-export interface IGame {
-  lobby: ILobby;
+// Interface pour la classe Game (avec méthodes métier)
+// Étend l'interface de données du shared mais redéfinit les types avec méthodes
+export interface IGame extends Omit<IGameData, 'rounds' | 'currentRound'> {
   rounds: IRound[];
   currentRound: IRound | null;
   nextRound(): void;
-  status: GameStatus;
   start(): void;
   end(): void;
   isGameOver(): boolean;
   getLeaderboard(): LeaderboardEntry[];
   getMaxRounds(): number;
 }
+
+// Re-export pour compatibilité
+export { LeaderboardEntry, ILobby, IPlayer, GameStatus, IRound };

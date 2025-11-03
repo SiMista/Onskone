@@ -2,18 +2,19 @@ import {Server, Socket} from 'socket.io';
 import {LobbyManager} from '../managers/LobbyManager';
 import {GameManager} from '../managers/GameManager';
 import {Player} from "../models/Player";
+import type { ServerToClientEvents, ClientToServerEvents } from '@onskone/shared';
 
 export class SocketHandler {
-    private io: Server;
+    private io: Server<ClientToServerEvents, ServerToClientEvents>;
 
-    constructor(io: Server) {
+    constructor(io: Server<ClientToServerEvents, ServerToClientEvents>) {
         this.io = io;
         this.setupSocketEvents();
     }
 
     private setupSocketEvents(): void {
-        this.io.on('connection', (socket: Socket) => {
-            console.log(`User connected: ${socket.id}`);
+        this.io.on('connection', (socket: Socket<ClientToServerEvents, ServerToClientEvents>) => {
+            console.log(`✅ User connected: ${socket.id}`);
             // Event: Create Lobby with player name as host
             socket.on('createLobby', (data) => {
                 try {
@@ -178,6 +179,10 @@ export class SocketHandler {
 
                     // Créer un objet sérialisable sans référence circulaire
                     const gameData = {
+                        lobby: {
+                            code: lobby.code,
+                            players: lobby.players
+                        },
                         currentRound: game.currentRound,
                         status: game.status,
                         rounds: game.rounds
@@ -185,7 +190,9 @@ export class SocketHandler {
 
                     // Envoyer les événements aux clients
                     this.io.to(data.lobbyCode).emit('gameStarted', {game: gameData});
-                    this.io.to(data.lobbyCode).emit('roundStarted', {round: game.currentRound});
+                    if (game.currentRound) {
+                        this.io.to(data.lobbyCode).emit('roundStarted', {round: game.currentRound});
+                    }
                     console.log(`Game started in lobby ${data.lobbyCode} - Round 1 started with leader: ${game.currentRound?.leader.name}`);
                 } catch (error) {
                     console.error('Error starting game:', error);
@@ -274,7 +281,9 @@ export class SocketHandler {
 
                     // Sinon, passer au round suivant
                     game.nextRound();
-                    this.io.to(data.lobbyCode).emit('roundStarted', {round: game.currentRound});
+                    if (game.currentRound) {
+                        this.io.to(data.lobbyCode).emit('roundStarted', {round: game.currentRound});
+                    }
                     console.log(`Round ${game.currentRound?.roundNumber} started in lobby ${data.lobbyCode}`);
                 } catch (error) {
                     console.error('Error starting next round:', error);
@@ -314,6 +323,10 @@ export class SocketHandler {
 
                     // Créer un objet sérialisable sans référence circulaire
                     const gameData = {
+                        lobby: {
+                            code: lobby.code,
+                            players: lobby.players
+                        },
                         currentRound: game.currentRound,
                         status: game.status,
                         rounds: game.rounds
@@ -488,10 +501,10 @@ export class SocketHandler {
 
                         return {
                             playerId,
-                            playerName: player?.name,
+                            playerName: player?.name || 'Unknown',
                             answer,
-                            guessedPlayerId,
-                            guessedPlayerName: guessedPlayer?.name,
+                            guessedPlayerId: guessedPlayerId || '',
+                            guessedPlayerName: guessedPlayer?.name || 'Personne',
                             correct: guessedPlayerId === playerId
                         };
                     });
@@ -504,7 +517,7 @@ export class SocketHandler {
                         leaderboard: game.getLeaderboard()
                     });
 
-                    console.log(`Guesses submitted in lobby ${data.lobbyCode}. Leader scored: ${game.currentRound.scores[game.currentRound.leader.id] || 0}`);
+                    console.log(`Guesses submitted in lobby ${data.lobbyCode}. Leader scored: ${game.currentRound.scores[game.currentRound.leader.id] || 0}, Results: ${results.length}`);
                 } catch (error) {
                     console.error('Error submitting guesses:', error);
                     socket.emit('error', {message: (error as Error).message});
@@ -530,7 +543,7 @@ export class SocketHandler {
                     this.io.to(data.lobbyCode).emit('timerStarted', {
                         phase: game.currentRound.phase,
                         duration: timerDuration,
-                        timerEnd: timerEnd.toISOString()
+                        startedAt: Date.now()
                     });
 
                     console.log(`Timer started for ${timerDuration}s in lobby ${data.lobbyCode} (phase: ${game.currentRound.phase})`);
@@ -561,7 +574,7 @@ export class SocketHandler {
                                 game.currentRound.setSelectedQuestion(game.currentRound.gameCard.questions[0]);
                                 game.currentRound.nextPhase();
                                 this.io.to(data.lobbyCode).emit('questionSelected', {
-                                    question: game.currentRound.selectedQuestion,
+                                    question: game.currentRound.selectedQuestion || game.currentRound.gameCard.questions[0],
                                     phase: game.currentRound.phase,
                                     auto: true
                                 });
@@ -591,10 +604,10 @@ export class SocketHandler {
 
                                 return {
                                     playerId,
-                                    playerName: player?.name,
+                                    playerName: player?.name || 'Unknown',
                                     answer,
-                                    guessedPlayerId,
-                                    guessedPlayerName: guessedPlayer?.name,
+                                    guessedPlayerId: guessedPlayerId || '',
+                                    guessedPlayerName: guessedPlayer?.name || 'Unknown',
                                     correct: guessedPlayerId === playerId
                                 };
                             });
@@ -616,6 +629,34 @@ export class SocketHandler {
                     console.error('Error handling timer expiration:', error);
                     socket.emit('error', {message: (error as Error).message});
                 }
+            });
+
+            // ===== DISCONNECT HANDLING =====
+            // Cleanup automatique quand un joueur se déconnecte
+            socket.on('disconnect', (reason) => {
+                console.log(`❌ User disconnected: ${socket.id} (reason: ${reason})`);
+
+                // Parcourir tous les lobbies pour trouver le joueur déconnecté
+                const lobbies = LobbyManager.getLobbies();
+
+                lobbies.forEach((lobby) => {
+                    const disconnectedPlayer = lobby.players.find(p => p.socketId === socket.id);
+
+                    if (disconnectedPlayer) {
+                        console.log(`🧹 Cleaning up player ${disconnectedPlayer.name} from lobby ${lobby.code}`);
+
+                        // Retirer le joueur du lobby
+                        const isLobbyRemoved = LobbyManager.removePlayer(lobby, disconnectedPlayer);
+
+                        if (isLobbyRemoved) {
+                            console.log(`🗑️  Lobby ${lobby.code} was empty and has been removed`);
+                        } else {
+                            // Notifier les autres joueurs de la mise à jour
+                            this.io.to(lobby.code).emit('updatePlayersList', { players: lobby.players });
+                            console.log(`📢 Updated players list in lobby ${lobby.code} (${lobby.players.length} remaining)`);
+                        }
+                    }
+                });
             });
 
         });

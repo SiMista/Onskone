@@ -1,4 +1,4 @@
-import {IPlayer} from '../types/IPlayer';
+import { IPlayer } from '@onskone/shared';
 import {v4 as uuidv4} from 'uuid';
 
 export class Player implements IPlayer {

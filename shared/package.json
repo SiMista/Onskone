@@ -1,0 +1,23 @@
+{
+  "name": "@onskone/shared",
+  "version": "1.0.0",
+  "description": "Types et interfaces partagés entre frontend et backend",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "clean": "rm -rf dist node_modules"
+  },
+  "keywords": ["onskone", "types", "shared"],
+  "author": "",
+  "license": "ISC"
+}

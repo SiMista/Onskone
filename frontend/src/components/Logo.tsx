@@ -9,13 +9,13 @@ interface LogoProps {
 const Logo: React.FC<LogoProps> = ({
   size = 'small'
 }) => {
-  const styles = {
-    display: 'block',
-    margin: '20px auto 5px auto',
-    width: size === 'large' ? '30%' : '20%',
-    height: 'auto',
-  };
-  return <img src={logoSloganImg} alt="Logo" style={styles} />;
+  return (
+    <img
+      src={logoSloganImg}
+      alt="Logo"
+      className={`block mt-5 mb-1.5 mx-auto h-auto ${size === 'large' ? 'w-[30%]' : 'w-[20%]'}`}
+    />
+  );
 };
 
 export default Logo;

@@ -7,52 +7,28 @@ import GuessingPhase from '../components/GuessingPhase';
 import RevealPhase from '../components/RevealPhase';
 import Leaderboard from '../components/Leaderboard';
 import RoundHistory from '../components/RoundHistory';
-
-// Types
-enum RoundPhase {
-  QUESTION_SELECTION = 'QUESTION_SELECTION',
-  ANSWERING = 'ANSWERING',
-  GUESSING = 'GUESSING',
-  REVEAL = 'REVEAL'
-}
-
-interface Player {
-  id: string;
-  name: string;
-  socketId: string;
-  isHost: boolean;
-  score: number;
-}
-
-interface Round {
-  roundNumber: number;
-  leader: Player;
-  phase: RoundPhase;
-  selectedQuestion: string | null;
-}
-
-interface Game {
-  currentRound: Round | null;
-  status: string;
-  rounds: any[];
-}
-
-interface LeaderboardEntry {
-  player: Player;
-  score: number;
-}
+import { IPlayer, IRound, IGame, LeaderboardEntry, RoundPhase, GameStatus } from '@onskone/shared';
 
 const GamePage: React.FC = () => {
   const { lobbyCode } = useParams<{ lobbyCode: string }>();
   const navigate = useNavigate();
 
-  const [game, setGame] = useState<Game | null>(null);
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null);
+  // Redirect if no lobby code
+  useEffect(() => {
+    if (!lobbyCode) {
+      navigate('/');
+    }
+  }, [lobbyCode, navigate]);
+
+  const [game, setGame] = useState<IGame | null>(null);
+  const [players, setPlayers] = useState<IPlayer[]>([]);
+  const [currentPlayer, setCurrentPlayer] = useState<IPlayer | null>(null);
   const [isLeader, setIsLeader] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [revealResults, setRevealResults] = useState<any[]>([]);
+  const [roundScore, setRoundScore] = useState<number>(0);
 
   useEffect(() => {
     // Récupérer le joueur actuel depuis le localStorage
@@ -63,17 +39,19 @@ const GamePage: React.FC = () => {
     }
 
     // Demander l'état actuel du jeu au serveur
-    socket.emit('getGameState', { lobbyCode });
+    if (lobbyCode) {
+      socket.emit('getGameState', { lobbyCode: lobbyCode! });
+    }
 
     // Socket listeners
-    socket.on('gameState', (data: { game: Game; players: Player[]; leaderboard: LeaderboardEntry[] }) => {
+    socket.on('gameState', (data: { game: IGame; players: IPlayer[]; leaderboard: LeaderboardEntry[] }) => {
       console.log('Game state received:', data);
       setGame(data.game);
       setPlayers(data.players);
       setLeaderboard(data.leaderboard);
     });
 
-    socket.on('gameStarted', (data: { game: Game }) => {
+    socket.on('gameStarted', (data: { game: IGame }) => {
       console.log('Game started:', data);
       setGame(data.game);
     });
@@ -111,13 +89,21 @@ const GamePage: React.FC = () => {
         } : null
       } : null);
 
+      // Stocker les résultats pour RevealPhase
+      setRevealResults(data.results);
+
+      // Le score du round est celui du chef (leader), pas du joueur actuel
+      // data.scores contient { leaderId: score }
+      const leaderScore = Object.values(data.scores)[0] || 0;
+      setRoundScore(leaderScore);
+
       // Mettre à jour le leaderboard
       if (data.leaderboard) {
         setLeaderboard(data.leaderboard);
       }
     });
 
-    socket.on('roundStarted', (data: { round: Round }) => {
+    socket.on('roundStarted', (data: { round: IRound }) => {
       console.log('Round started:', data);
       setGame(prev => {
         if (prev) {
@@ -127,22 +113,27 @@ const GamePage: React.FC = () => {
             rounds: [...(prev.rounds || []), data.round]
           };
         } else {
-          // Si game n'existe pas encore, on le crée avec le minimum requis
+          // Si game n'existe pas encore, créer un lobby minimal
+          const minimalLobby: IGame['lobby'] = {
+            code: lobbyCode || '',
+            players: players
+          };
           return {
+            lobby: minimalLobby,
             currentRound: data.round,
-            status: 'IN_PROGRESS',
+            status: GameStatus.IN_PROGRESS,
             rounds: [data.round]
           };
         }
       });
     });
 
-    socket.on('gameEnded', (data: { leaderboard: LeaderboardEntry[]; rounds: any[] }) => {
+    socket.on('gameEnded', () => {
       console.log('Game ended, navigating to endgame');
       navigate(`/endgame/${lobbyCode}`);
     });
 
-    socket.on('updatePlayersList', (data: { players: Player[] }) => {
+    socket.on('updatePlayersList', (data: { players: IPlayer[] }) => {
       setPlayers(data.players);
     });
 
@@ -221,6 +212,9 @@ const GamePage: React.FC = () => {
             isLeader={isLeader}
             leaderName={game.currentRound.leader.name}
             isGameOver={isGameOver}
+            results={revealResults}
+            roundScore={roundScore}
+            question={game.currentRound.selectedQuestion || ''}
           />
         );
 

@@ -3,7 +3,7 @@ import { TestHelper } from '../src/utils/TestHelper';
 import { LobbyManager } from "../src/managers/LobbyManager";
 import { Lobby } from "../src/models/Lobby";
 import {Player} from "../src/models/Player";
-import {GameStatus} from "../src/models/Game";
+import {GameStatus} from '@onskone/shared';
 
 describe('LobbyManager', () => {
     beforeEach(() => {
