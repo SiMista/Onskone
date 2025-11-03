@@ -1,15 +1,31 @@
 {
-  "name": "onskone",
+  "name": "onskone-monorepo",
   "version": "1.0.0",
-  "main": "index.js",
+  "private": true,
+  "description": "Onskone - Jeu de devinettes multijoueur",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "pnpm run --parallel dev",
+    "dev:frontend": "pnpm --filter frontend dev",
+    "dev:backend": "pnpm --filter backend dev",
+    "dev:shared": "pnpm --filter @onskone/shared watch",
+    "build": "pnpm run --recursive build",
+    "build:shared": "pnpm --filter @onskone/shared build",
+    "build:frontend": "pnpm --filter frontend build",
+    "build:backend": "pnpm --filter backend build",
+    "clean": "pnpm run --recursive clean && rm -rf node_modules",
+    "install:all": "pnpm install",
+    "typecheck": "pnpm run --recursive typecheck",
+    "lint": "pnpm run --recursive lint"
   },
-  "keywords": [],
+  "keywords": ["onskone", "game", "multiplayer", "monorepo"],
   "author": "",
   "license": "ISC",
-  "description": "",
-  "dependencies": {
-    "@anthropic-ai/claude-code": "^2.0.31"
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "@types/node": "^22.10.1"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
   }
 }
