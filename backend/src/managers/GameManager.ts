@@ -1,10 +1,5 @@
 import {Game} from "../models/Game";
-import {ILobby} from "../types/ILobby";
-
-export type GameCard = {
-    category: string;
-    questions: string[];
-}
+import { ILobby, GameCard } from '@onskone/shared';
 
 export namespace GameManager {
     const loadGameCards = (questionsFilePath: string): GameCard[] => {

@@ -1,6 +1,5 @@
 import {IRound, RoundPhase} from '../types/IRound';
-import {IPlayer} from '../types/IPlayer';
-import {GameCard} from "../managers/GameManager";
+import { IPlayer, GameCard } from '@onskone/shared';
 
 export class Round implements IRound {
     roundNumber: number;
@@ -65,7 +64,7 @@ export class Round implements IRound {
         let chiefScore = 0;
 
         // Pour chaque réponse, vérifier si le chef a correctement deviné le joueur
-        for (const [playerId, answer] of Object.entries(this.answers)) {
+        for (const playerId of Object.keys(this.answers)) {
             // Trouver l'ID de cette réponse dans guesses
             const guessedPlayerId = this.guesses[playerId];
 

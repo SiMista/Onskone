@@ -1,37 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import socket from '../utils/socket';
-
-interface Player {
-  id: string;
-  name: string;
-}
-
-interface LeaderboardEntry {
-  player: Player;
-  score: number;
-}
-
-interface RoundStat {
-  roundNumber: number;
-  leader: string;
-  score: number;
-}
-
-interface RoundData {
-  roundNumber: number;
-  leader: { name: string };
-  scores: Record<string, number>;
-}
+import { IPlayer, LeaderboardEntry, RoundStat, RoundData } from '@onskone/shared';
 
 const EndGame: React.FC = () => {
   const { lobbyCode } = useParams<{ lobbyCode: string }>();
   const navigate = useNavigate();
 
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null);
+  const [currentPlayer, setCurrentPlayer] = useState<IPlayer | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
   const [bestRound, setBestRound] = useState<RoundStat | null>(null);
+
+  // Redirect if no lobby code
+  useEffect(() => {
+    if (!lobbyCode) {
+      navigate('/');
+    }
+  }, [lobbyCode, navigate]);
 
   useEffect(() => {
     // Récupérer le joueur actuel
@@ -65,7 +51,9 @@ const EndGame: React.FC = () => {
     });
 
     // Demander les résultats finaux si pas déjà reçus
-    socket.emit('getGameResults', { lobbyCode });
+    if (lobbyCode) {
+      socket.emit('getGameResults', { lobbyCode: lobbyCode! });
+    }
 
     return () => {
       socket.off('gameEnded');
@@ -73,7 +61,9 @@ const EndGame: React.FC = () => {
   }, [lobbyCode]);
 
   const handleBackToLobby = () => {
-    navigate(`/lobby/${lobbyCode}`);
+    if (lobbyCode) {
+      navigate(`/lobby/${lobbyCode}`);
+    }
   };
 
   const handleBackToHome = () => {

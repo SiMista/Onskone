@@ -1,14 +1,5 @@
 import React from 'react';
-
-interface Player {
-  id: string;
-  name: string;
-}
-
-interface LeaderboardEntry {
-  player: Player;
-  score: number;
-}
+import { LeaderboardEntry } from '@onskone/shared';
 
 interface LeaderboardProps {
   entries: LeaderboardEntry[];
@@ -42,40 +33,40 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ entries, currentPlayerId, lea
               `}
             >
               {/* Position et médaille */}
-              <div className="flex items-center gap-3 flex-1">
-                <div className="text-2xl w-8 text-center">
-                  {position === 1 ? '🥇' :
-                   position === 2 ? '🥈' :
-                   position === 3 ? '🥉' :
-                   position}
+              <div className="flex flex-col w-full">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xl">
+                    {position === 1 ? '🥇' :
+                     position === 2 ? '🥈' :
+                     position === 3 ? '🥉' :
+                     position}
+                  </span>
+                  <p className={`font-semibold text-sm truncate flex-1 ${isCurrentPlayer ? 'text-white' : 'text-white/90'}`}>
+                    {entry.player.name}
+                  </p>
                 </div>
 
-                {/* Nom du joueur */}
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className={`font-semibold ${isCurrentPlayer ? 'text-white' : 'text-white/90'}`}>
-                      {entry.player.name}
-                    </p>
-                    {isLeader && (
-                      <span className="text-sm bg-primary px-2 py-0.5 rounded-full">
-                        👑 Chef
-                      </span>
-                    )}
-                    {isCurrentPlayer && (
-                      <span className="text-xs bg-blue-500 px-2 py-0.5 rounded-full">
-                        Vous
-                      </span>
-                    )}
-                  </div>
+                {/* Badges */}
+                <div className="flex items-center gap-1 mb-2">
+                  {isLeader && (
+                    <span className="text-xs bg-yellow-500/30 text-white px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                      👑<span className="text-[10px]">Chef</span>
+                    </span>
+                  )}
+                  {isCurrentPlayer && (
+                    <span className="text-xs bg-blue-500/50 text-white px-1.5 py-0.5 rounded">
+                      Vous
+                    </span>
+                  )}
                 </div>
 
                 {/* Score */}
-                <div className="text-right">
-                  <p className="text-2xl font-bold text-white">
+                <div className="flex items-baseline gap-1">
+                  <p className="text-xl font-bold text-white">
                     {entry.score}
                   </p>
                   <p className="text-xs text-white/60">
-                    point{entry.score > 1 ? 's' : ''}
+                    pt{entry.score > 1 ? 's' : ''}
                   </p>
                 </div>
               </div>

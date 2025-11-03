@@ -12,23 +12,19 @@ const Frame: React.FC<FrameProps> = ({
   children,
   textAlign = "center"
 }) => {
+  const textAlignClass = {
+    left: 'text-left',
+    center: 'text-center',
+    right: 'text-right'
+  }[textAlign];
+
   return (
     <div
-      style={{
-        width,
-        backgroundColor: 'white',
-        padding: '20px 40px',
-        boxSizing: 'border-box',
-        borderRadius: '8px',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
-        margin: '0',
-        display: 'flex',           // <- active Flexbox
-        flexDirection: 'column',   // <- empile verticalement
-        alignItems: 'center',      // <- centre horizontalement
-        textAlign: textAlign,       // <- centre le texte à l'intérieur
-        gap: '20px',               // <- espace entre les éléments
-      }}
-    > {children} </div>
+      className={`bg-white py-5 px-10 box-border rounded-lg shadow-[0_2px_10px_rgba(0,0,0,0.4)] m-0 flex flex-col items-center gap-5 ${textAlignClass}`}
+      style={{ width }}
+    >
+      {children}
+    </div>
   );
 };
 

@@ -1,0 +1,9 @@
+packages:
+  # Frontend React
+  - 'frontend'
+
+  # Backend Node.js
+  - 'backend'
+
+  # Types partagés
+  - 'shared'
