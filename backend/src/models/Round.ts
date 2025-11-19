@@ -63,14 +63,24 @@ export class Round implements IRound {
         // Le chef gagne +1 point pour chaque bonne attribution
         let chiefScore = 0;
 
+        // Initialiser les scores de tous les joueurs à 0
+        for (const playerId of Object.keys(this.answers)) {
+            this.scores[playerId] = 0;
+        }
+
         // Pour chaque réponse, vérifier si le chef a correctement deviné le joueur
         for (const playerId of Object.keys(this.answers)) {
             // Trouver l'ID de cette réponse dans guesses
             const guessedPlayerId = this.guesses[playerId];
 
             if (guessedPlayerId === playerId) {
+                // Le chef a deviné correctement
                 chiefScore++;
+            } else if (guessedPlayerId && guessedPlayerId !== playerId) {
+                // Le chef s'est trompé - le vrai auteur gagne 1 point (réponse trompeuse)
+                this.scores[playerId] = (this.scores[playerId] || 0) + 1;
             }
+            // Si guessedPlayerId est undefined/null, personne ne gagne de point pour cette réponse
         }
 
         // Attribuer le score au chef

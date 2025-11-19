@@ -1,11 +1,11 @@
-import {Game} from "../models/Game";
-import { ILobby, GameCard } from '@onskone/shared';
+import {Game} from "../models/Game.js";
+import type { ILobby, GameCard } from '@onskone/shared';
+import * as fs from 'fs';
 
 export namespace GameManager {
     const loadGameCards = (questionsFilePath: string): GameCard[] => {
-        const fs = require('fs');
         const questions = fs.readFileSync(questionsFilePath);
-        return JSON.parse(questions) as GameCard[];
+        return JSON.parse(questions.toString()) as GameCard[];
     }
 
     let questionsPool: GameCard[] = loadGameCards('src/data/questions.json');

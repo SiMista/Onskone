@@ -1,6 +1,6 @@
-import { IPlayer } from './player';
-import { IRound } from './round';
-import { ILobby } from './lobby';
+import { IPlayer } from './player.js';
+import { IRound } from './round.js';
+import { ILobby } from './lobby.js';
 
 /**
  * Statut du jeu

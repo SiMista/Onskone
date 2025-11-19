@@ -3,6 +3,7 @@ import {LobbyManager} from '../managers/LobbyManager';
 import {GameManager} from '../managers/GameManager';
 import {Player} from "../models/Player";
 import type { ServerToClientEvents, ClientToServerEvents } from '@onskone/shared';
+import { validatePlayerName, validateAnswer, validateLobbyCode, sanitizeInput } from '../utils/validation.js';
 
 export class SocketHandler {
     private io: Server<ClientToServerEvents, ServerToClientEvents>;
@@ -18,9 +19,17 @@ export class SocketHandler {
             // Event: Create Lobby with player name as host
             socket.on('createLobby', (data) => {
                 try {
+                    // Validate player name
+                    const nameValidation = validatePlayerName(data.playerName);
+                    if (!nameValidation.isValid) {
+                        socket.emit('error', { message: nameValidation.error || 'Nom invalide' });
+                        return;
+                    }
+
+                    const sanitizedName = sanitizeInput(data.playerName);
                     const lobbyCode = LobbyManager.create();
                     const lobby = LobbyManager.getLobby(lobbyCode);
-                    const hostPlayer = new Player(data.playerName, socket.id, true);
+                    const hostPlayer = new Player(sanitizedName, socket.id, true);
                     lobby?.addPlayer(hostPlayer);
                     socket.join(lobbyCode);
                     socket.emit('lobbyCreated', {lobbyCode});
@@ -33,11 +42,29 @@ export class SocketHandler {
             // Event: Join Lobby with player name
             socket.on('joinLobby', (data) => {
                 try {
+                    // Validate lobby code
+                    const codeValidation = validateLobbyCode(data.lobbyCode);
+                    if (!codeValidation.isValid) {
+                        socket.emit('error', { message: codeValidation.error || 'Code invalide' });
+                        return;
+                    }
+
+                    // Validate player name
+                    const nameValidation = validatePlayerName(data.playerName);
+                    if (!nameValidation.isValid) {
+                        socket.emit('error', { message: nameValidation.error || 'Nom invalide' });
+                        return;
+                    }
+
+                    const sanitizedName = sanitizeInput(data.playerName);
                     const lobby = LobbyManager.getLobby(data.lobbyCode);
                     if (!lobby) {
                         socket.emit('error', { message: 'Lobby not found' });
                         return;
                     }
+
+                    // Update lobby activity
+                    lobby.updateActivity();
 
                     // Vérifie si le joueur avec ce socket.id est déjà dans le lobby
                     const existingPlayerBySocket = lobby.players.find(p => p.socketId === socket.id);
@@ -50,27 +77,27 @@ export class SocketHandler {
                     }
 
                     // Vérifie si un joueur avec ce nom existe déjà (reconnexion après refresh)
-                    const existingPlayerByName = lobby.players.find(p => p.name === data.playerName);
+                    const existingPlayerByName = lobby.players.find(p => p.name === sanitizedName);
                     if (existingPlayerByName) {
                         // C'est une reconnexion - mettre à jour le socketId
-                        console.log(`Player ${data.playerName} reconnecte au lobby ${lobby.code}. Mise à jour du socket ID.`);
+                        console.log(`Player ${sanitizedName} reconnecte au lobby ${lobby.code}. Mise à jour du socket ID.`);
                         existingPlayerByName.socketId = socket.id;
 
                         socket.join(lobby.code);
                         socket.emit('joinedLobby', { player: existingPlayerByName });
                         this.io.to(lobby.code).emit('updatePlayersList', { players: lobby.players });
-                        console.log(`${data.playerName} s'est reconnecté au lobby ${lobby.code} (${lobby.players.length} joueurs)`);
+                        console.log(`${sanitizedName} s'est reconnecté au lobby ${lobby.code} (${lobby.players.length} joueurs)`);
                         return;
                     }
 
                     // Nouveau joueur
-                    const newPlayer = new Player(data.playerName, socket.id);
+                    const newPlayer = new Player(sanitizedName, socket.id);
                     LobbyManager.addPlayer(lobby, newPlayer);
 
                     socket.join(lobby.code);
                     socket.emit('joinedLobby', { player: newPlayer });
                     this.io.to(lobby.code).emit('updatePlayersList', { players: lobby.players });
-                    console.log(`${data.playerName} a rejoint le lobby ${lobby.code} (${lobby.players.length} joueurs)`);
+                    console.log(`${sanitizedName} a rejoint le lobby ${lobby.code} (${lobby.players.length} joueurs)`);
 
                 } catch (error) {
                     console.error('Error joining lobby:', error);
@@ -81,13 +108,21 @@ export class SocketHandler {
             // Check player name before joining lobby
             socket.on('checkPlayerName', (data) => {
                 try {
+                    // Validate player name
+                    const nameValidation = validatePlayerName(data.playerName);
+                    if (!nameValidation.isValid) {
+                        socket.emit('error', { message: nameValidation.error || 'Nom invalide' });
+                        return;
+                    }
+
+                    const sanitizedName = sanitizeInput(data.playerName);
                     const lobby = LobbyManager.getLobby(data.lobbyCode);
                     if (!lobby) {
                         socket.emit('error', {message: 'Lobby not found'});
                         return;
                     }
-                    if (lobby.players.find(p => p.name === data.playerName)) {
-                        socket.emit('playerNameExists', {playerName: data.playerName});
+                    if (lobby.players.find(p => p.name === sanitizedName)) {
+                        socket.emit('playerNameExists', {playerName: sanitizedName});
                     } else {
                         socket.emit('playerNameValid');
                     }
@@ -171,6 +206,10 @@ export class SocketHandler {
                         socket.emit('error', {message: 'Lobby not found'});
                         return;
                     }
+
+                    // Update lobby activity
+                    lobby.updateActivity();
+
                     const game = GameManager.createGame(lobby);
                     lobby.game = game; // Assigner le jeu au lobby
 
@@ -346,12 +385,23 @@ export class SocketHandler {
             // Event: Submit Answer
             socket.on('submitAnswer', (data) => {
                 try {
+                    // Validate answer
+                    const answerValidation = validateAnswer(data.answer);
+                    if (!answerValidation.isValid) {
+                        socket.emit('error', { message: answerValidation.error || 'Réponse invalide' });
+                        return;
+                    }
+
+                    const sanitizedAnswer = sanitizeInput(data.answer);
                     const lobby = LobbyManager.getLobby(data.lobbyCode);
                     const game = lobby?.game;
                     if (!game) {
                         socket.emit('error', {message: 'Game not found'});
                         return;
                     }
+
+                    // Update lobby activity
+                    lobby?.updateActivity();
                     if (!game.currentRound) {
                         socket.emit('error', {message: 'Round not found'});
                         return;
@@ -369,7 +419,7 @@ export class SocketHandler {
                     }
 
                     // Ajouter la réponse
-                    game.currentRound.addAnswer(data.playerId, data.answer);
+                    game.currentRound.addAnswer(data.playerId, sanitizedAnswer);
 
                     // Notifier tous les joueurs qu'une réponse a été soumise
                     this.io.to(data.lobbyCode).emit('playerAnswered', {
@@ -486,8 +536,13 @@ export class SocketHandler {
                         return;
                     }
 
+                    // Filtrer les guesses non assignés (null ou undefined)
+                    const validGuesses = Object.fromEntries(
+                        Object.entries(data.guesses).filter(([_, playerId]) => playerId !== null && playerId !== undefined)
+                    );
+
                     // Enregistrer les attributions finales et calculer les scores
-                    game.currentRound.submitGuesses(data.guesses);
+                    game.currentRound.submitGuesses(validGuesses);
                     game.currentRound.calculateScores();
 
                     // Passer à la phase REVEAL
@@ -593,7 +648,11 @@ export class SocketHandler {
 
                         case 'GUESSING':
                             // Valider les attributions actuelles et passer à REVEAL
-                            game.currentRound.submitGuesses(game.currentRound.currentGuesses);
+                            // Filtrer les guesses non assignés (null ou undefined)
+                            const validGuesses = Object.fromEntries(
+                                Object.entries(game.currentRound.currentGuesses).filter(([_, playerId]) => playerId !== null && playerId !== undefined)
+                            );
+                            game.currentRound.submitGuesses(validGuesses);
                             game.currentRound.calculateScores();
                             game.currentRound.nextPhase();
 

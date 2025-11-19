@@ -11,7 +11,7 @@ interface QuestionSelectionProps {
 
 const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLeader, leaderName }) => {
   const [questions, setQuestions] = useState<GameCard[]>([]);
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [selectedQuestion, setSelectedQuestion] = useState<string | null>(null);
   const [loading, setLoading] = useState(isLeader);
 
   useEffect(() => {
@@ -31,15 +31,11 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
     };
   }, [isLeader, lobbyCode]);
 
-  const handleSelectQuestion = (index: number) => {
-    if (!isLeader || selectedIndex !== null) return;
+  const handleSelectQuestion = (question: string) => {
+    if (!isLeader || selectedQuestion !== null) return;
 
-    const selectedCard = questions[index];
-    // Sélectionner la première question de la carte (ou permettre de choisir parmi les 3)
-    const selectedQuestion = selectedCard.questions[0];
-
-    setSelectedIndex(index);
-    socket.emit('selectQuestion', { lobbyCode, selectedQuestion });
+    setSelectedQuestion(question);
+    socket.emit('selectQuestion', { lobbyCode, selectedQuestion: question });
   };
 
   const handleTimerExpire = () => {
@@ -80,48 +76,48 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
         <Timer duration={30} onExpire={handleTimerExpire} />
       </div>
 
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-6 flex-1">
-        {questions.map((card, index) => (
-          <div
-            key={index}
-            onClick={() => handleSelectQuestion(index)}
-            className={`
-              relative bg-white rounded-lg p-6 cursor-pointer
-              transition-all duration-300 ease-in-out
-              ${selectedIndex === index ? 'scale-105 shadow-[0_0_0_4px_#30c94d]' : 'scale-100 shadow-[0_2px_10px_rgba(0,0,0,0.4)]'}
-              ${selectedIndex !== null && selectedIndex !== index ? 'opacity-50' : 'opacity-100'}
-            `}
-            onMouseOver={(e) => {
-              if (selectedIndex === null) {
-                e.currentTarget.style.transform = 'scale(1.02)';
-                e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.5)';
-              }
-            }}
-            onMouseOut={(e) => {
-              if (selectedIndex !== index) {
-                e.currentTarget.style.transform = 'scale(1)';
-                e.currentTarget.style.boxShadow = '0 2px 10px rgba(0,0,0,0.4)';
-              }
-            }}
-          >
-            <div className="flex flex-col h-full">
-              <div className="bg-[#1f5d90] text-white text-sm font-semibold py-1.5 px-3 rounded-[20px] mb-4 self-start">
-                {card.category}
-              </div>
-              <div className="flex-1 flex items-center justify-center">
-                <p className="text-lg font-medium text-center text-[#333]">
-                  {card.questions[0]}
-                </p>
-              </div>
-              {selectedIndex === index && (
-                <div className="absolute top-4 right-4 text-[40px]">✅</div>
-              )}
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-6 flex-1 overflow-y-auto">
+        {questions.map((card, cardIndex) => (
+          <div key={cardIndex} className="flex flex-col gap-3">
+            <div className="bg-[#1f5d90] text-white text-sm font-semibold py-1.5 px-3 rounded-[20px] self-start">
+              {card.category}
             </div>
+            {card.questions.map((question, questionIndex) => (
+              <div
+                key={`${cardIndex}-${questionIndex}`}
+                onClick={() => handleSelectQuestion(question)}
+                className={`
+                  relative bg-white rounded-lg p-4 cursor-pointer
+                  transition-all duration-300 ease-in-out
+                  ${selectedQuestion === question ? 'scale-105 shadow-[0_0_0_4px_#30c94d]' : 'scale-100 shadow-[0_2px_10px_rgba(0,0,0,0.4)]'}
+                  ${selectedQuestion !== null && selectedQuestion !== question ? 'opacity-50' : 'opacity-100'}
+                `}
+                onMouseOver={(e) => {
+                  if (selectedQuestion === null) {
+                    e.currentTarget.style.transform = 'scale(1.02)';
+                    e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.5)';
+                  }
+                }}
+                onMouseOut={(e) => {
+                  if (selectedQuestion !== question) {
+                    e.currentTarget.style.transform = 'scale(1)';
+                    e.currentTarget.style.boxShadow = '0 2px 10px rgba(0,0,0,0.4)';
+                  }
+                }}
+              >
+                <p className="text-base font-medium text-[#333]">
+                  {question}
+                </p>
+                {selectedQuestion === question && (
+                  <div className="absolute top-2 right-2 text-[30px]">✅</div>
+                )}
+              </div>
+            ))}
           </div>
         ))}
       </div>
 
-      {selectedIndex !== null && (
+      {selectedQuestion !== null && (
         <div className="mt-6 text-center">
           <p className="text-[#30c94d] text-xl font-semibold">
             Question sélectionnée! Passage à la phase suivante...

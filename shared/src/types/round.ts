@@ -1,4 +1,4 @@
-import { IPlayer } from './player';
+import { IPlayer } from './player.js';
 
 /**
  * Phases d'un round
