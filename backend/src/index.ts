@@ -2,6 +2,7 @@ import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
 import { SocketHandler } from './sockets/SocketHandler';
+import { LobbyManager } from './managers/LobbyManager.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -16,6 +17,9 @@ const io = new Server(server, {
 
 // Instancier le gestionnaire de sockets avec l'instance 'io'
 new SocketHandler(io);
+
+// Démarrer le service de nettoyage des lobbies inactifs
+LobbyManager.startCleanupInterval();
 
 app.get('/', (req, res) => {
   res.send('Hello World');

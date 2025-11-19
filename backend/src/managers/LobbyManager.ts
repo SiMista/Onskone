@@ -5,6 +5,8 @@ import {generateLobbyCode} from '../utils/helpers';
 
 export namespace LobbyManager {
     const lobbies: Map<string, Lobby> = new Map();
+    const INACTIVE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+    const CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
     // Create a lobby using a player and add it to the lobbies map and return lobby code
     export const create = (): string => {
@@ -16,6 +18,38 @@ export namespace LobbyManager {
         // lobby.addPlayer(player);
         lobbies.set(lobbyCode, lobby);
         return lobbyCode;
+    }
+
+    /**
+     * Clean up inactive lobbies
+     */
+    export const cleanupInactiveLobbies = (): void => {
+        const now = new Date();
+        const lobbiesRemoved: string[] = [];
+
+        for (const [code, lobby] of lobbies.entries()) {
+            const inactiveTime = now.getTime() - lobby.lastActivity.getTime();
+
+            if (inactiveTime > INACTIVE_TIMEOUT_MS) {
+                lobbies.delete(code);
+                lobbiesRemoved.push(code);
+            }
+        }
+
+        if (lobbiesRemoved.length > 0) {
+            console.log(`🧹 Cleaned up ${lobbiesRemoved.length} inactive lobbies: ${lobbiesRemoved.join(', ')}`);
+        }
+    }
+
+    /**
+     * Start automatic cleanup interval
+     */
+    export const startCleanupInterval = (): void => {
+        setInterval(() => {
+            cleanupInactiveLobbies();
+        }, CLEANUP_INTERVAL_MS);
+
+        console.log(`✅ Lobby cleanup service started (checking every ${CLEANUP_INTERVAL_MS / 1000 / 60} minutes)`);
     }
 
     export const addPlayer = (lobby: Lobby, player: IPlayer): void => {

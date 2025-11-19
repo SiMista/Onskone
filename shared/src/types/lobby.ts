@@ -1,4 +1,4 @@
-import { IPlayer } from './player';
+import { IPlayer } from './player.js';
 
 /**
  * Lobby (salle d'attente avant le jeu)

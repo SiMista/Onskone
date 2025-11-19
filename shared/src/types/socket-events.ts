@@ -1,6 +1,6 @@
-import { IPlayer } from './player';
-import { IGame, LeaderboardEntry } from './game';
-import { IRound, GameCard, RoundPhase } from './round';
+import { IPlayer } from './player.js';
+import { IGame, LeaderboardEntry } from './game.js';
+import { IRound, GameCard, RoundPhase } from './round.js';
 
 /**
  * Résultat d'une réponse dans la phase de révélation

@@ -5,11 +5,17 @@ export class Lobby implements ILobby {
     code: string;
     players: IPlayer[];
     game: IGame | null;
+    lastActivity: Date;
 
     constructor(lobbyCode: string) {
         this.code = lobbyCode;
         this.players = [];
         this.game = null;
+        this.lastActivity = new Date();
+    }
+
+    updateActivity(): void {
+        this.lastActivity = new Date();
     }
 
     addPlayer(player: IPlayer): void {
