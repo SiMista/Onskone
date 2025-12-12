@@ -12,6 +12,7 @@ export class Round implements IRound {
     guesses: Record<string, string>; // Attributions finales du chef
     scores: Record<string, number>;
     timerEnd: Date | null;
+    timerProcessedForPhase: RoundPhase | null; // Empêche le double traitement du timer
 
     constructor(roundNumber: number, leader: IPlayer, gameCard: GameCard) {
         this.roundNumber = roundNumber;
@@ -24,6 +25,7 @@ export class Round implements IRound {
         this.guesses = {};
         this.scores = {};
         this.timerEnd = null;
+        this.timerProcessedForPhase = null;
     }
 
     addAnswer(playerId: string, answer: string): void {

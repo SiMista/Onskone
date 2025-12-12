@@ -20,7 +20,7 @@ const Frame: React.FC<FrameProps> = ({
 
   return (
     <div
-      className={`bg-white py-5 px-10 box-border rounded-lg shadow-[0_2px_10px_rgba(0,0,0,0.4)] m-0 flex flex-col items-center gap-5 ${textAlignClass}`}
+      className={`bg-white py-5 px-10 box-border rounded-lg shadow-[0_2px_10px_rgba(0,0,0,0.4)] m-0 flex flex-col items-center gap-3 ${textAlignClass}`}
       style={{ width }}
     >
       {children}

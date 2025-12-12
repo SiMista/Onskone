@@ -1,13 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import socket from '../utils/socket';
 import Timer from './Timer';
+import Button from './Button';
+import { GAME_CONFIG } from '../constants/game';
+import { IPlayer } from '@onskone/shared';
 
 interface AnswerPhaseProps {
   lobbyCode: string;
   question: string;
   isLeader: boolean;
   currentPlayerId: string;
-  totalPlayers: number;
+  players: IPlayer[];
+  leaderId: string;
 }
 
 const AnswerPhase: React.FC<AnswerPhaseProps> = ({
@@ -15,24 +19,36 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
   question,
   isLeader,
   currentPlayerId,
-  totalPlayers
+  players,
+  leaderId
 }) => {
   const [answer, setAnswer] = useState('');
   const [submitted, setSubmitted] = useState(false);
-  const [answersCount, setAnswersCount] = useState(0);
+  const [answeredPlayerIds, setAnsweredPlayerIds] = useState<Set<string>>(new Set());
+
+  // Joueurs qui doivent répondre (tous sauf le chef)
+  const respondingPlayers = players.filter(p => p.id !== leaderId);
+  const expectedAnswers = respondingPlayers.length;
+  const answersCount = answeredPlayerIds.size;
 
   useEffect(() => {
-    // Démarrer le timer quand on entre dans la phase
-    socket.emit('startTimer', { lobbyCode, duration: 60 }); // 60 secondes pour répondre
+    // Seul le leader démarre le timer pour éviter les conflits
+    // Petit délai pour éviter les conflits avec le timer précédent
+    const startTimerTimeout = setTimeout(() => {
+      if (isLeader) {
+        socket.emit('startTimer', { lobbyCode, duration: GAME_CONFIG.TIMERS.ANSWERING });
+      }
+    }, 500); // Délai de 500ms
 
     socket.on('playerAnswered', (data: { playerId: string; totalAnswers: number; expectedAnswers: number }) => {
-      setAnswersCount(data.totalAnswers);
+      setAnsweredPlayerIds(prev => new Set([...prev, data.playerId]));
     });
 
     return () => {
+      clearTimeout(startTimerTimeout);
       socket.off('playerAnswered');
     };
-  }, [lobbyCode]);
+  }, [lobbyCode, isLeader]);
 
   const handleSubmit = () => {
     if (!answer.trim() || submitted || isLeader) return;
@@ -47,56 +63,61 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
   };
 
   const handleTimerExpire = () => {
-    socket.emit('timerExpired', { lobbyCode });
+    // Seul le leader doit appeler timerExpired pour éviter les appels multiples
+    if (isLeader) {
+      socket.emit('timerExpired', { lobbyCode });
+    }
   };
-
-  const expectedAnswers = totalPlayers - 1; // Tous sauf le chef
 
   if (isLeader) {
     return (
-      <div className="flex flex-col items-center justify-center h-full space-y-6">
-        <div className="text-center mb-6">
-          <h2 className="text-3xl font-bold text-white mb-4">En attente des réponses...</h2>
-          <p className="text-xl text-white/80 mb-6">Question posée :</p>
-          <div className="bg-white/20 backdrop-blur-md rounded-lg p-6 max-w-2xl">
-            <p className="text-2xl font-semibold text-white">{question}</p>
+      <div className="flex flex-col items-center justify-center h-full space-y-4">
+        <div className="text-center mb-4">
+          <div className="bg-primary-light rounded-lg px-4 py-2 max-w-2xl">
+            <p className="text-gray-600 mb-4">Question posée aux autres joueurs:</p>
+            <p className="text-xl font-semibold">{question}</p>
           </div>
         </div>
 
-        <Timer duration={60} onExpire={handleTimerExpire} />
+        <Timer duration={GAME_CONFIG.TIMERS.ANSWERING} onExpire={handleTimerExpire} />
 
         <div className="text-center">
-          <p className="text-4xl font-bold text-white mb-2">
+          <p className="text-4xl font-bold text-gray-800 mb-2">
             {answersCount} / {expectedAnswers}
           </p>
-          <p className="text-lg text-white/70">Réponses reçues</p>
+          <p className="text-lg text-gray-600">Réponses reçues</p>
         </div>
 
-        <div className="grid grid-cols-5 gap-2 max-w-md">
-          {Array.from({ length: expectedAnswers }).map((_, index) => (
-            <div
-              key={index}
-              className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold
-                ${index < answersCount ? 'bg-green-500 text-white' : 'bg-white/20 text-white/50'}
-              `}
-            >
-              {index < answersCount ? '✓' : '•'}
-            </div>
-          ))}
+        <div className="flex flex-wrap justify-center gap-3 max-w-2xl">
+          {respondingPlayers.map((player) => {
+            const hasAnswered = answeredPlayerIds.has(player.id);
+            return (
+              <div
+                key={player.id}
+                className={`
+                  px-4 py-2 rounded-lg font-medium transition-all duration-300
+                  ${hasAnswered
+                    ? 'bg-green-500 text-white shadow-lg scale-105'
+                    : 'bg-gray-200 text-gray-600'}
+                `}
+              >
+                <span className="flex items-center gap-2">
+                  {hasAnswered && <span>✓</span>}
+                  {player.name}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-full p-6 max-w-4xl mx-auto">
-      <div className="mb-6">
-        <h2 className="text-3xl font-bold text-white mb-4 text-center">Répondez à la question</h2>
-        <Timer duration={60} onExpire={handleTimerExpire} />
-      </div>
-
-      <div className="bg-white/20 backdrop-blur-md rounded-lg p-8 mb-6">
-        <p className="text-2xl font-semibold text-white text-center">{question}</p>
+    <div className="flex flex-col h-full p-4 max-w-4xl mx-auto">
+      <div className="bg-primary-light rounded-lg px-4 pb-4 mb-4">
+        <p className="text-xl font-semibold text-black text-center">{question}</p>
+        <Timer duration={GAME_CONFIG.TIMERS.ANSWERING} onExpire={handleTimerExpire} />
       </div>
 
       {!submitted ? (
@@ -105,39 +126,32 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
             value={answer}
             onChange={(e) => setAnswer(e.target.value)}
             placeholder="Écrivez votre réponse ici..."
-            maxLength={200}
-            className="flex-1 bg-white/10 backdrop-blur-md text-white text-lg p-6 rounded-lg
-              border-2 border-white/20 focus:border-white/50 outline-none resize-none
-              placeholder-white/50"
+            maxLength={50}
+            className="flex-1 bg-gray-100 text-gray-800 text-lg p-6 rounded-lg
+              border-2 border-gray-300 focus:border-primary outline-none resize-none
+              placeholder-gray-400"
           />
-          <div className="flex justify-between items-center mt-4">
-            <span className="text-white/70 text-sm">{answer.length} / 200 caractères</span>
-            <button
+          <div className="mt-4 text-center">
+            <Button
+              variant="success"
+              size="lg"
               onClick={handleSubmit}
               disabled={!answer.trim()}
-              className={`px-8 py-3 rounded-lg font-bold text-lg transition-all transform
-                ${answer.trim()
-                  ? 'bg-green-500 hover:bg-green-600 hover:scale-105 text-white cursor-pointer'
-                  : 'bg-gray-500 text-gray-300 cursor-not-allowed'
-                }
-              `}
             >
               Valider ma réponse
-            </button>
+            </Button>
           </div>
         </div>
       ) : (
-        <div className="flex-1 flex flex-col items-center justify-center space-y-6">
-          <div className="text-6xl animate-bounce">✓</div>
-          <h3 className="text-2xl font-bold text-green-400">Réponse envoyée!</h3>
-          <p className="text-white/70 text-center">
+        <div className="flex-1 flex flex-col items-center justify-center space-b-6">
+          <p className="text-gray-600 text-center">
             En attente des autres joueurs...
             <br />
             ({answersCount} / {expectedAnswers} réponses reçues)
           </p>
-          <div className="bg-white/10 backdrop-blur-md rounded-lg p-6 max-w-md">
-            <p className="text-white/70 text-sm mb-2">Votre réponse :</p>
-            <p className="text-white text-lg font-medium">{answer}</p>
+          <div className="bg-gray-100 rounded-lg p-6 max-w-md border-2 border-gray-300">
+            <p className="text-gray-600 text-sm mb-2">Votre réponse :</p>
+            <p className="text-gray-800 text-lg font-medium break-words whitespace-pre-wrap">{answer}</p>
           </div>
         </div>
       )}

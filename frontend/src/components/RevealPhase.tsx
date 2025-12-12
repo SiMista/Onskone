@@ -84,10 +84,10 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
         {/* En-têtes de colonnes - même grid que les items */}
         <div className="mb-3 px-4">
           <div className="grid grid-cols-[1fr_8rem_8rem_7rem] gap-4 items-center">
-            <p className="text-white text-xs font-bold uppercase">Réponse</p>
-            <p className="text-white text-xs font-bold uppercase text-center">Écrit par</p>
-            <p className="text-white text-xs font-bold uppercase text-center">Chef a dit</p>
-            <p className="text-white text-xs font-bold uppercase text-center">Résultat</p>
+            <p className="text-black text-xs font-bold uppercase">Réponse</p>
+            <p className="text-black text-xs font-bold uppercase text-center">Écrit par</p>
+            <p className="text-black text-xs font-bold uppercase text-center">Chef a dit</p>
+            <p className="text-black text-xs font-bold uppercase text-center">Résultat</p>
           </div>
         </div>
 
@@ -140,13 +140,12 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
       <div className="flex flex-col items-center gap-3">
         {isLeader ? (
           <>
-            <p className="text-white text-lg font-semibold">
+            <p className="text-lg font-semibold">
               {isGameOver ? '🎉 Partie terminée !' : 'Prêt pour la suite ?'}
             </p>
             <Button
               text={isGameOver ? 'Voir les résultats finaux' : 'Manche suivante'}
-              backgroundColor="#30c94d"
-              textColor="black"
+              variant='success'
               rotateEffect={true}
               onClick={handleNextRound}
             />

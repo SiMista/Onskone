@@ -16,4 +16,7 @@ export interface IPlayer {
 
   /** Score total du joueur (optionnel, utilisé dans le game state) */
   score?: number;
+
+  /** Si le joueur est actif dans le lobby (a cliqué sur rejouer après une partie) */
+  isActive: boolean;
 }

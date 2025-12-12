@@ -70,6 +70,7 @@ export class SocketHandler {
                     const existingPlayerBySocket = lobby.players.find(p => p.socketId === socket.id);
                     if (existingPlayerBySocket) {
                         console.log(`Player ${existingPlayerBySocket.name} est déjà dans le lobby ${lobby.code} avec le même socket.`);
+                        existingPlayerBySocket.isActive = true; // Marquer comme actif (rejouer)
                         socket.join(lobby.code);
                         socket.emit('joinedLobby', { player: existingPlayerBySocket });
                         this.io.to(lobby.code).emit('updatePlayersList', { players: lobby.players });
@@ -82,6 +83,7 @@ export class SocketHandler {
                         // C'est une reconnexion - mettre à jour le socketId
                         console.log(`Player ${sanitizedName} reconnecte au lobby ${lobby.code}. Mise à jour du socket ID.`);
                         existingPlayerByName.socketId = socket.id;
+                        existingPlayerByName.isActive = true; // Marquer comme actif (rejouer)
 
                         socket.join(lobby.code);
                         socket.emit('joinedLobby', { player: existingPlayerByName });
@@ -239,7 +241,7 @@ export class SocketHandler {
                 }
             });
 
-            // Request Questions (Chef demande 3 questions)
+            // Request Questions (Chef demande des cartes de questions)
             socket.on('requestQuestions', (data) => {
                 try {
                     const lobby = LobbyManager.getLobby(data.lobbyCode);
@@ -255,10 +257,17 @@ export class SocketHandler {
                         return;
                     }
 
-                    // Envoyer 3 GameCards aléatoires au chef (incluant celui déjà assigné)
-                    const questions = GameManager.getRandomQuestions(3);
+                    // Envoyer le nombre de cartes demandé (par défaut 3 pour compatibilité)
+                    const count = data.count || 3;
+                    const questions = GameManager.getRandomQuestions(count);
+
+                    // Stocker la première carte dans le Round pour l'auto-sélection
+                    if (questions.length > 0) {
+                        game.currentRound.gameCard = questions[0];
+                    }
+
                     socket.emit('questionsReceived', {questions});
-                    console.log(`Questions sent to leader in lobby ${data.lobbyCode}`);
+                    console.log(`${count} question card(s) sent to leader in lobby ${data.lobbyCode}`);
                 } catch (error) {
                     console.error('Error requesting questions:', error);
                     socket.emit('error', {message: (error as Error).message});
@@ -310,6 +319,12 @@ export class SocketHandler {
                     // Vérifier si le jeu est terminé
                     if (game.isGameOver()) {
                         game.end();
+
+                        // Marquer tous les joueurs comme inactifs (ils devront cliquer sur "Rejouer")
+                        if (lobby) {
+                            lobby.players.forEach(p => p.isActive = false);
+                        }
+
                         this.io.to(data.lobbyCode).emit('gameEnded', {
                             leaderboard: game.getLeaderboard(),
                             rounds: game.rounds
@@ -441,6 +456,18 @@ export class SocketHandler {
                             phase: game.currentRound.phase,
                             answersCount: actualAnswers
                         });
+
+                        // Automatiquement envoyer les réponses mélangées à tous les joueurs
+                        const answersArray = Object.entries(game.currentRound.answers).map(([playerId, answer]) => ({
+                            id: playerId,
+                            text: answer
+                        }));
+                        const shuffledAnswers = answersArray.sort(() => Math.random() - 0.5);
+                        this.io.to(data.lobbyCode).emit('shuffledAnswersReceived', {
+                            answers: shuffledAnswers,
+                            players: lobby.players.filter(p => p.id !== game.currentRound!.leader.id)
+                        });
+
                         console.log(`All answers submitted in lobby ${data.lobbyCode}. Moving to GUESSING phase.`);
                     }
                 } catch (error) {
@@ -449,19 +476,13 @@ export class SocketHandler {
                 }
             });
 
-            // Request Shuffled Answers (Chef demande les réponses mélangées)
+            // Request Shuffled Answers (N'importe quel joueur peut demander les réponses mélangées)
             socket.on('requestShuffledAnswers', (data) => {
                 try {
                     const lobby = LobbyManager.getLobby(data.lobbyCode);
                     const game = lobby?.game;
                     if (!game || !game.currentRound) {
                         socket.emit('error', {message: 'Game or round not found'});
-                        return;
-                    }
-
-                    // Vérifier que c'est bien le chef qui demande
-                    if (socket.id !== game.currentRound.leader.socketId) {
-                        socket.emit('error', {message: 'Only the leader can request answers'});
                         return;
                     }
 
@@ -474,7 +495,7 @@ export class SocketHandler {
                     // Mélanger les réponses (shuffle)
                     const shuffledAnswers = answersArray.sort(() => Math.random() - 0.5);
 
-                    // Envoyer les réponses mélangées à TOUS les joueurs (pas seulement le chef)
+                    // Envoyer les réponses mélangées à TOUS les joueurs
                     this.io.to(data.lobbyCode).emit('shuffledAnswersReceived', {
                         answers: shuffledAnswers,
                         players: lobby.players.filter(p => p.id !== game.currentRound!.leader.id)
@@ -619,24 +640,50 @@ export class SocketHandler {
                     }
 
                     const currentPhase = game.currentRound.phase;
+
+                    // Protection contre les doubles appels de timer pour la même phase
+                    if (game.currentRound.timerProcessedForPhase === currentPhase) {
+                        console.log(`Timer already processed for phase ${currentPhase} in lobby ${data.lobbyCode}, ignoring duplicate`);
+                        return;
+                    }
+
                     console.log(`Timer expired in lobby ${data.lobbyCode} (phase: ${currentPhase})`);
 
                     // Gérer l'expiration selon la phase
                     switch (currentPhase) {
                         case 'QUESTION_SELECTION':
-                            // Si le chef n'a pas choisi, sélectionner automatiquement la première question
-                            if (!game.currentRound.selectedQuestion && game.currentRound.gameCard.questions.length > 0) {
-                                game.currentRound.setSelectedQuestion(game.currentRound.gameCard.questions[0]);
+                            // Marquer le timer comme traité pour cette phase
+                            game.currentRound.timerProcessedForPhase = currentPhase;
+
+                            // Si le chef n'a pas choisi, sélectionner automatiquement une question aléatoire parmi celles proposées
+                            if (!game.currentRound.selectedQuestion) {
+                                // Utiliser la carte déjà proposée au chef (stockée dans gameCard)
+                                const proposedCard = game.currentRound.gameCard;
+
+                                if (!proposedCard || proposedCard.questions.length === 0) {
+                                    console.error(`No questions available for auto-selection in lobby ${data.lobbyCode}`);
+                                    break;
+                                }
+
+                                // Choisir une question au hasard parmi les 3 de la carte proposée
+                                const randomQuestion = proposedCard.questions[Math.floor(Math.random() * proposedCard.questions.length)];
+
+                                game.currentRound.setSelectedQuestion(randomQuestion);
                                 game.currentRound.nextPhase();
                                 this.io.to(data.lobbyCode).emit('questionSelected', {
-                                    question: game.currentRound.selectedQuestion || game.currentRound.gameCard.questions[0],
+                                    question: randomQuestion,
                                     phase: game.currentRound.phase,
                                     auto: true
                                 });
+                                console.log(`Auto-selected question from proposed card in lobby ${data.lobbyCode}: ${randomQuestion}`);
                             }
+                            // Sinon, la question a déjà été sélectionnée, ne rien faire
                             break;
 
                         case 'ANSWERING':
+                            // Marquer le timer comme traité pour cette phase
+                            game.currentRound.timerProcessedForPhase = currentPhase;
+
                             // Passer à la phase GUESSING même si tous n'ont pas répondu
                             game.currentRound.nextPhase();
                             this.io.to(data.lobbyCode).emit('allAnswersSubmitted', {
@@ -644,9 +691,24 @@ export class SocketHandler {
                                 answersCount: Object.keys(game.currentRound.answers).length,
                                 forced: true
                             });
+
+                            // Automatiquement envoyer les réponses mélangées à tous les joueurs
+                            const answersArray = Object.entries(game.currentRound.answers).map(([playerId, answer]) => ({
+                                id: playerId,
+                                text: answer
+                            }));
+                            const shuffledAnswers = answersArray.sort(() => Math.random() - 0.5);
+                            this.io.to(data.lobbyCode).emit('shuffledAnswersReceived', {
+                                answers: shuffledAnswers,
+                                players: lobby.players.filter(p => p.id !== game.currentRound!.leader.id)
+                            });
+                            console.log(`Timer expired - moved to GUESSING phase in lobby ${data.lobbyCode}`);
                             break;
 
                         case 'GUESSING':
+                            // Marquer le timer comme traité pour cette phase
+                            game.currentRound.timerProcessedForPhase = currentPhase;
+
                             // Valider les attributions actuelles et passer à REVEAL
                             // Filtrer les guesses non assignés (null ou undefined)
                             const validGuesses = Object.fromEntries(
@@ -678,6 +740,7 @@ export class SocketHandler {
                                 leaderboard: game.getLeaderboard(),
                                 forced: true
                             });
+                            console.log(`Timer expired - moved to REVEAL phase in lobby ${data.lobbyCode}`);
                             break;
 
                         case 'REVEAL':

@@ -61,4 +61,7 @@ export interface IRound {
 
   /** Date de fin du timer pour la phase actuelle */
   timerEnd: Date | null;
+
+  /** Phase pour laquelle le timer a été traité (protection contre les doubles appels) */
+  timerProcessedForPhase: RoundPhase | null;
 }

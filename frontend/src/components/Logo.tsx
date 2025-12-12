@@ -13,7 +13,7 @@ const Logo: React.FC<LogoProps> = ({
     <img
       src={logoSloganImg}
       alt="Logo"
-      className={`block mt-5 mb-1.5 mx-auto h-auto ${size === 'large' ? 'w-[30%]' : 'w-[20%]'}`}
+      className={`block mt-5 mb-1.5 mx-auto h-auto ${size === 'large' ? 'w-[25%]' : 'w-[18%]'}`}
     />
   );
 };

@@ -185,9 +185,10 @@ export interface ClientToServerEvents {
     lobbyCode: string;
   }) => void;
 
-  /** Demander 3 questions (réservé au chef) */
+  /** Demander des cartes de questions (réservé au chef) */
   requestQuestions: (data: {
     lobbyCode: string;
+    count?: number;
   }) => void;
 
   /** Sélectionner une question parmi les 3 (réservé au chef) */

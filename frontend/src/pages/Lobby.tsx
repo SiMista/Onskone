@@ -162,7 +162,8 @@ const Lobby = () => {
     useSocketEvent('error', handleError, [handleError]);
     useSocketEvent('gameStarted', handleGameStarted, [handleGameStarted]);
 
-    const canStartGame = players.length >= GAME_CONFIG.MIN_PLAYERS;
+    const activePlayers = players.filter(p => p.isActive);
+    const canStartGame = activePlayers.length >= GAME_CONFIG.MIN_PLAYERS;
 
     return (
         <div className="container">
@@ -178,7 +179,14 @@ const Lobby = () => {
                         </span>
                         <span>Quitter</span>
                     </div>
-                    <h3 className="m-0">Nombre de joueurs {players.length}/{GAME_CONFIG.MAX_PLAYERS}</h3>
+                    <div className="flex items-baseline gap-2 justify-center">
+                        <h3 className="m-0 font-bold text-center">
+                            Nombre de joueurs {activePlayers.length}/{GAME_CONFIG.MAX_PLAYERS}
+                        </h3>
+                        <span className="text-sm text-gray-500 italic">
+                            ({GAME_CONFIG.MIN_PLAYERS} joueurs minimum)
+                        </span>
+                    </div>
                     <ul className="list-none w-full m-0 p-0">
                         {players.map((player) => (
                             <li key={player.id}>
@@ -188,6 +196,7 @@ const Lobby = () => {
                                     isHost={player.isHost}
                                     isCurrentPlayer={currentPlayer?.id === player.id}
                                     currentPlayerIsHost={!!currentPlayer?.isHost}
+                                    isActive={player.isActive}
                                     onKick={kickPlayer}
                                     onPromote={promotePlayer}
                                 />
@@ -198,7 +207,8 @@ const Lobby = () => {
                         {currentPlayer?.isHost && (
                             <Button
                                 text="Lancer le jeu"
-                                backgroundColor="#30c94d"
+                                variant='success'
+                                size='md'
                                 rotateEffect={true}
                                 state={canStartGame ? 'default' : 'disabled'}
                                 onClick={startGame}
@@ -208,7 +218,7 @@ const Lobby = () => {
                             <small>
                                 Code du salon : <b>{lobbyCode}</b>
                             </small>
-                            <Button text="Lien d'invitation" backgroundColor="#FFC700" onClick={generateLink} />
+                            <Button text="Lien d'invitation" variant='warning' size='md' onClick={generateLink} />
                             <small className={`text-gray-500 ${showCopiedMessage ? 'visible' : 'invisible'}`}>
                                 <i>Lien copié !</i>
                             </small>
