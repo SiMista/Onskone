@@ -8,6 +8,7 @@ interface PlayerCardProps {
   isHost: boolean;
   isCurrentPlayer: boolean;
   currentPlayerIsHost: boolean;
+  isActive?: boolean;
   onKick?: (id: string) => void;
   onPromote?: (id: string) => void;
 }
@@ -18,12 +19,17 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   isHost,
   isCurrentPlayer,
   currentPlayerIsHost,
+  isActive = true,
   onKick,
   onPromote,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   return (
-    <div className="flex items-center justify-between py-1.5 px-[15px] my-2 rounded-[10px] border-2 border-[#ddd] bg-[rgb(249,245,242)] shadow-[0_2px_6px_rgba(0,0,0,0.1)] w-[95%]">
+    <div className={`flex items-center justify-between py-2 px-[15px] my-2 rounded-[10px] border-2 border-[#ddd] shadow-[0_2px_6px_rgba(0,0,0,0.1)] w-[95%] transition-all duration-300 ${
+      isActive
+        ? 'bg-[rgba(249,244,238,1)]'
+        : 'bg-gray-200 opacity-50 grayscale'
+    }`}>
       {/* Partie gauche → Avatar + nom */}
       <div className="flex items-center gap-2.5">
         <img

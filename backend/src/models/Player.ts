@@ -7,6 +7,7 @@ export class Player implements IPlayer {
     name: string;
     isHost: boolean;
     score: number;
+    isActive: boolean;
 
     constructor(name: string, socketId: string = "", isHost: boolean = false) { // isHost is false by default
         this.id = uuidv4();
@@ -14,5 +15,6 @@ export class Player implements IPlayer {
         this.name = name;
         this.isHost = isHost;
         this.score = 0;
+        this.isActive = true; // Nouveau joueur est actif par défaut
     }
 }

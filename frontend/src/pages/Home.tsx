@@ -10,10 +10,8 @@ import { useSocketEvent, useQueryParams } from '../hooks';
 import { GAME_CONFIG } from '../constants/game';
 
 const Home = () => {
-  const [playerName, setPlayerName] = useState<string>(() => {
-    const randomName = `Joueur${Math.floor(Math.random() * 1000)}`; // TODO ONLY FOR DEVMODE !
-    return randomName;
-  });
+  // Nom par défaut aléatoire pour faciliter les tests
+  const [playerName, setPlayerName] = useState<string>(`Joueur${Math.floor(Math.random() * 1000)}`);
   const queryParams = useQueryParams();
   const navigate = useNavigate();
 
@@ -81,12 +79,12 @@ const Home = () => {
           </div>
           {!lobbyCode ? (
             <div>
-              <Button text="Créer un salon" backgroundColor="#1AAFDA" onClick={createLobby} />
+              <Button text="Créer un salon" variant='primary' size='md' onClick={createLobby} />
             </div>
           ) : (
             <div>
               <small className="block mb-[7px]">Vous êtes invité à rejoindre le salon <b>{lobbyCode}</b></small>
-              <Button text="Rejoindre" backgroundColor="#FFC700" onClick={joinLobby} />
+              <Button text="Rejoindre" variant='warning' size='md' onClick={joinLobby} />
             </div>
           )}
         </Frame>

@@ -18,6 +18,7 @@ export function useTimer(initialDuration: number, options: UseTimerOptions = {})
   const [isRunning, setIsRunning] = useState(autoStart);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const onExpireRef = useRef(onExpire);
+  const hasExpiredRef = useRef(false); // Protection contre les doubles appels
 
   // Keep onExpire ref up to date
   useEffect(() => {
@@ -27,6 +28,7 @@ export function useTimer(initialDuration: number, options: UseTimerOptions = {})
   // Reset time when initial duration changes
   useEffect(() => {
     setTimeLeft(initialDuration);
+    hasExpiredRef.current = false; // Réinitialiser le flag d'expiration
   }, [initialDuration]);
 
   // Timer logic
@@ -45,7 +47,11 @@ export function useTimer(initialDuration: number, options: UseTimerOptions = {})
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
-      onExpireRef.current?.();
+      // Protection contre les doubles appels
+      if (!hasExpiredRef.current) {
+        hasExpiredRef.current = true;
+        onExpireRef.current?.();
+      }
       return;
     }
 
@@ -58,7 +64,11 @@ export function useTimer(initialDuration: number, options: UseTimerOptions = {})
             clearInterval(intervalRef.current);
             intervalRef.current = null;
           }
-          onExpireRef.current?.();
+          // Protection contre les doubles appels
+          if (!hasExpiredRef.current) {
+            hasExpiredRef.current = true;
+            onExpireRef.current?.();
+          }
           return 0;
         }
         return next;
@@ -74,6 +84,7 @@ export function useTimer(initialDuration: number, options: UseTimerOptions = {})
   }, [isRunning, timeLeft]);
 
   const start = useCallback(() => {
+    hasExpiredRef.current = false;
     setIsRunning(true);
   }, []);
 
@@ -84,6 +95,7 @@ export function useTimer(initialDuration: number, options: UseTimerOptions = {})
   const reset = useCallback((newDuration?: number) => {
     setTimeLeft(newDuration ?? initialDuration);
     setIsRunning(false);
+    hasExpiredRef.current = false;
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
@@ -93,6 +105,7 @@ export function useTimer(initialDuration: number, options: UseTimerOptions = {})
   const restart = useCallback((newDuration?: number) => {
     setTimeLeft(newDuration ?? initialDuration);
     setIsRunning(true);
+    hasExpiredRef.current = false;
   }, [initialDuration]);
 
   return {

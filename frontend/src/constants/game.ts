@@ -1,5 +1,10 @@
 // Game configuration constants
 
+// Mode debug: met les timers à 1 heure pour travailler sur le front tranquillement
+export const DEBUG_MODE = true;
+
+const DEBUG_TIMER = 3600; // 1 heure
+
 export const GAME_CONFIG = {
   // Player limits
   MIN_PLAYERS: 3,
@@ -11,9 +16,9 @@ export const GAME_CONFIG = {
 
   // Timer durations (in seconds)
   TIMERS: {
-    QUESTION_SELECTION: 30,
-    ANSWERING: 60,
-    GUESSING: 90,
+    QUESTION_SELECTION: DEBUG_MODE ? DEBUG_TIMER : 30,
+    ANSWERING: DEBUG_MODE ? DEBUG_TIMER : 60,
+    GUESSING: DEBUG_MODE ? DEBUG_TIMER : 90,
   },
 
   // UI

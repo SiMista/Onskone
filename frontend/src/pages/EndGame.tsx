@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import socket from '../utils/socket';
 import { IPlayer, LeaderboardEntry, RoundStat, RoundData } from '@onskone/shared';
+import Button from '../components/Button';
 
 const EndGame: React.FC = () => {
   const { lobbyCode } = useParams<{ lobbyCode: string }>();
@@ -67,6 +68,10 @@ const EndGame: React.FC = () => {
   };
 
   const handleBackToHome = () => {
+    // Notifier le serveur que le joueur quitte le lobby
+    if (lobbyCode && currentPlayer) {
+      socket.emit('leaveLobby', { lobbyCode, currentPlayerId: currentPlayer.id });
+    }
     localStorage.removeItem('currentPlayer');
     navigate('/');
   };
@@ -243,20 +248,20 @@ const EndGame: React.FC = () => {
 
         {/* Boutons d'action */}
         <div className="flex justify-center gap-4">
-          <button
+          <Button
+            variant="success"
+            size="xl"
             onClick={handleBackToLobby}
-            className="px-8 py-4 rounded-lg font-bold text-xl bg-green-500 hover:bg-green-600
-              text-white transition-all transform hover:scale-105 shadow-xl"
           >
-            🔄 Rejouer
-          </button>
-          <button
+            Rejouer
+          </Button>
+          <Button
+            variant="secondary"
+            size="xl"
             onClick={handleBackToHome}
-            className="px-8 py-4 rounded-lg font-bold text-xl bg-gray-500 hover:bg-gray-600
-              text-white transition-all transform hover:scale-105 shadow-xl"
           >
-            🏠 Retour à l'accueil
-          </button>
+            Retour à l'accueil
+          </Button>
         </div>
       </div>
 
