@@ -7,18 +7,16 @@ import { IPlayer, RoundPhase } from '@onskone/shared';
 import { GAME_CONFIG } from '../constants/game';
 
 interface Answer {
-  id: string; // playerId de l'auteur
+  id: string;
   text: string;
 }
 
 const NO_RESPONSE_PREFIX = '__NO_RESPONSE__';
 
-// Vérifie si une réponse est une "non-réponse" automatique
 const isNoResponse = (text: string): boolean => {
   return text.startsWith(NO_RESPONSE_PREFIX);
 };
 
-// Retourne le texte à afficher (sans le préfixe)
 const getDisplayText = (text: string): string => {
   if (isNoResponse(text)) {
     return text.substring(NO_RESPONSE_PREFIX.length);
@@ -35,22 +33,20 @@ interface GuessingPhaseProps {
 const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, leaderName }) => {
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [players, setPlayers] = useState<IPlayer[]>([]);
-  const [guesses, setGuesses] = useState<Record<string, string>>({}); // answerId -> playerId
+  const [guesses, setGuesses] = useState<Record<string, string>>({});
   const [draggedAnswerId, setDraggedAnswerId] = useState<string | null>(null);
+  const [selectedAnswerId, setSelectedAnswerId] = useState<string | null>(null); // Pour mobile
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Demander les réponses mélangées au montage du composant (fallback au cas où l'événement automatique a été manqué)
     socket.emit('requestShuffledAnswers', { lobbyCode });
 
-    // Petit délai pour laisser le temps aux listeners socket de s'initialiser sur tous les clients
     const startTimerTimeout = setTimeout(() => {
       if (isLeader) {
         socket.emit('startTimer', { lobbyCode, duration: GAME_CONFIG.TIMERS.GUESSING });
       }
     }, 500);
 
-    // Tous les joueurs reçoivent les réponses mélangées
     socket.on('shuffledAnswersReceived', (data: { answers: Answer[]; players: IPlayer[] }) => {
       setAnswers(data.answers);
       setPlayers(data.players);
@@ -58,7 +54,6 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
     });
 
     socket.on('guessUpdated', (data: { answerId: string; playerId: string | null; currentGuesses: Record<string, string> }) => {
-      // Synchronisation en temps réel du drag & drop
       setGuesses(data.currentGuesses);
     });
 
@@ -81,11 +76,13 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
   const handleDrop = (playerId: string) => {
     if (!isLeader || !draggedAnswerId) return;
 
-    // Mettre à jour localement
+    // Vérifier si le joueur a déjà une réponse assignée
+    const playerAlreadyHasAnswer = Object.values(guesses).includes(playerId);
+    if (playerAlreadyHasAnswer) return;
+
     const newGuesses = { ...guesses, [draggedAnswerId]: playerId };
     setGuesses(newGuesses);
 
-    // Broadcaster aux autres joueurs
     socket.emit('updateGuess', {
       lobbyCode,
       answerId: draggedAnswerId,
@@ -93,6 +90,32 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
     });
 
     setDraggedAnswerId(null);
+  };
+
+  // Gestion mobile: tap pour sélectionner une réponse
+  const handleAnswerTap = (answerId: string) => {
+    if (!isLeader) return;
+    setSelectedAnswerId(selectedAnswerId === answerId ? null : answerId);
+  };
+
+  // Gestion mobile: tap sur un joueur pour assigner la réponse sélectionnée
+  const handlePlayerTap = (playerId: string) => {
+    if (!isLeader || !selectedAnswerId) return;
+
+    // Vérifier si le joueur a déjà une réponse assignée
+    const playerAlreadyHasAnswer = Object.values(guesses).includes(playerId);
+    if (playerAlreadyHasAnswer) return;
+
+    const newGuesses = { ...guesses, [selectedAnswerId]: playerId };
+    setGuesses(newGuesses);
+
+    socket.emit('updateGuess', {
+      lobbyCode,
+      answerId: selectedAnswerId,
+      playerId
+    });
+
+    setSelectedAnswerId(null);
   };
 
   const handleRemoveGuess = (answerId: string) => {
@@ -112,7 +135,6 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
   const handleSubmit = () => {
     if (!isLeader) return;
 
-    // Vérifier que toutes les réponses ont été attribuées
     const allAssigned = answers.every(answer => guesses[answer.id]);
 
     if (!allAssigned) {
@@ -124,7 +146,6 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
   };
 
   const handleTimerExpire = () => {
-    // Seul le chef doit appeler timerExpired pour éviter les appels multiples
     if (isLeader) {
       socket.emit('timerExpired', { lobbyCode });
     }
@@ -142,68 +163,72 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <div className="animate-spin text-6xl mb-4">⏳</div>
-          <p className="text-xl text-gray-800">Chargement des réponses...</p>
+          <div className="animate-spin text-4xl md:text-6xl mb-4">⏳</div>
+          <p className="text-base md:text-xl text-gray-800">Chargement des réponses...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-full p-4">
-      <div className="mb-4">
-        <h2 className="text-2xl font-bold text-gray-800 mb-2 text-center">
+    <div className="flex flex-col h-full p-2 md:p-4">
+      <div className="mb-2 md:mb-4">
+        <h2 className="text-lg md:text-2xl font-bold text-gray-800 mb-1 md:mb-2 text-center">
           {isLeader ? 'Qui a écrit quoi?' : `${leaderName} devine...`}
         </h2>
-        <p className="text-sm text-gray-600 text-center mb-3">
+        <p className="text-xs md:text-sm text-gray-600 text-center mb-2 md:mb-3">
           {isLeader
-            ? 'Glissez-déposez chaque réponse vers le joueur correspondant'
-            : 'Regardez le chef hésiter et rire ensemble!'}
+            ? (window.innerWidth < 768 ? 'Tapez une réponse puis un joueur' : 'Glissez-déposez chaque réponse vers le joueur')
+            : 'Regardez le chef hésiter !'}
         </p>
-        <Timer duration={GAME_CONFIG.TIMERS.GUESSING} onExpire={handleTimerExpire} phase={RoundPhase.GUESSING} />
+        <Timer duration={GAME_CONFIG.TIMERS.GUESSING} onExpire={handleTimerExpire} phase={RoundPhase.GUESSING} lobbyCode={lobbyCode} />
       </div>
 
-      <div className="flex-1 grid grid-cols-2 gap-4 overflow-auto">
-        {/* Colonne gauche: Réponses non attribuées */}
-        <div className="bg-gray-100 rounded-lg p-4 border-2 border-gray-300">
-          <h3 className="text-xl font-bold text-gray-800 mb-4">Réponses</h3>
-          <div className="space-y-3">
+      {/* Layout responsive: colonnes sur desktop, empilé sur mobile */}
+      <div className="flex-1 flex flex-col md:grid md:grid-cols-2 gap-2 md:gap-4 overflow-auto">
+        {/* Réponses non attribuées */}
+        <div className="bg-gray-100 rounded-lg p-2 md:p-4 border-2 border-gray-300 max-h-[35vh] md:max-h-none overflow-y-auto">
+          <h3 className="text-base md:text-xl font-bold text-gray-800 mb-2 md:mb-4">Réponses</h3>
+          <div className="space-y-2 md:space-y-3">
             {getUnassignedAnswers().map((answer) => {
               const noResponse = isNoResponse(answer.text);
+              const isSelected = selectedAnswerId === answer.id;
               return (
                 <div
                   key={answer.id}
                   draggable={isLeader}
                   onDragStart={() => handleDragStart(answer.id)}
+                  onClick={() => handleAnswerTap(answer.id)}
                   className={`
-                    border-2 rounded-lg p-4 break-words whitespace-pre-wrap
+                    border-2 rounded-lg p-2 md:p-4 break-words whitespace-pre-wrap
                     ${noResponse ? 'bg-gray-100 border-gray-200' : 'bg-white border-gray-300'}
-                    ${isLeader ? 'cursor-move hover:border-primary hover:bg-blue-50' : 'cursor-default'}
+                    ${isLeader ? 'cursor-pointer md:cursor-move hover:border-primary hover:bg-blue-50' : 'cursor-default'}
+                    ${isSelected ? 'ring-2 ring-primary border-primary bg-blue-100' : ''}
                     transition-all duration-200
                     ${draggedAnswerId === answer.id ? 'opacity-50 scale-95' : ''}
                   `}
                 >
-                  <p className={`text-sm ${noResponse ? 'text-gray-400 italic' : 'text-gray-800'}`}>
+                  <p className={`text-xs md:text-sm ${noResponse ? 'text-gray-400 italic' : 'text-gray-800'}`}>
                     {getDisplayText(answer.text)}
                   </p>
                 </div>
               );
             })}
             {getUnassignedAnswers().length === 0 && (
-              <p className="text-gray-500 text-center py-8">
+              <p className="text-gray-500 text-center py-4 md:py-8 text-sm">
                 Toutes les réponses ont été attribuées
               </p>
             )}
           </div>
         </div>
 
-        {/* Colonne droite: Joueurs avec leurs réponses attribuées */}
-        <div className="space-y-3 overflow-auto">
+        {/* Joueurs avec leurs réponses attribuées */}
+        <div className="space-y-2 md:space-y-3 overflow-auto flex-1">
           {players.map((player) => {
             const assignedAnswers = getAssignedAnswers(player.id);
-            // Tronquer le nom si > 10 caractères
-            const displayName = player.name.length > 10
-              ? player.name.substring(0, 10) + '...'
+            const hasAnswer = assignedAnswers.length > 0;
+            const displayName = player.name.length > 8
+              ? player.name.substring(0, 8) + '...'
               : player.name;
 
             return (
@@ -211,35 +236,42 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
                 key={player.id}
                 onDragOver={handleDragOver}
                 onDrop={() => handleDrop(player.id)}
-                className="bg-primary-light rounded-lg p-3 flex gap-3
-                  border-2 border-primary hover:border-primary-dark transition-all"
+                onClick={() => handlePlayerTap(player.id)}
+                className={`
+                  bg-[#f9f4ee] rounded-lg p-2 md:p-3 flex gap-2 md:gap-3
+                  border-2 shadow-[0_2px_6px_rgba(0,0,0,0.1)] transition-all border-[#ddd] hover:border-primary-dark
+                  ${selectedAnswerId && isLeader && !hasAnswer ? 'cursor-pointer hover:bg-blue-100' : ''}
+                `}
               >
-                {/* Avatar et nom à gauche */}
-                <div className="flex flex-col items-center justify-center min-w-[70px]">
-                  <Avatar avatarId={player.avatarId} name={player.name} size="md" />
-                  <span className="text-xs font-semibold text-gray-700 mt-1 text-center">
+                {/* Avatar et nom */}
+                <div className="flex flex-col items-center justify-center min-w-[50px] md:min-w-[70px]">
+                  <Avatar avatarId={player.avatarId} name={player.name} size="sm" className="md:hidden" />
+                  <Avatar avatarId={player.avatarId} name={player.name} size="md" className="hidden md:block" />
+                  <span className="text-[10px] md:text-xs font-semibold text-gray-700 mt-1 text-center">
                     {displayName}
                   </span>
                 </div>
 
-                {/* Zone de réponse à droite */}
+                {/* Zone de réponse */}
                 <div className="flex-1 min-w-0">
-                  {assignedAnswers.length > 0 ? (
-                    <div className="space-y-2">
+                  {hasAnswer ? (
+                    <div className="space-y-1 md:space-y-2">
                       {assignedAnswers.map((answer) => {
-                        const noResponse = isNoResponse(answer.text);
                         return (
                           <div
                             key={answer.id}
-                            className={`rounded-lg p-3 flex justify-between items-start border-2 ${noResponse ? 'bg-gray-100 border-gray-200' : 'bg-white border-gray-300'}`}
+                            className={`rounded-lg p-2 md:p-3 flex justify-between items-start border-2 bg-white border-gray-300`}
                           >
-                            <p className={`text-sm flex-1 min-w-0 break-words whitespace-pre-wrap ${noResponse ? 'text-gray-400 italic' : 'text-gray-800'}`}>
+                            <p className={`text-xs md:text-sm flex-1 min-w-0 break-words whitespace-pre-wrap text-gray-800`}>
                               {getDisplayText(answer.text)}
                             </p>
                             {isLeader && (
                               <button
-                                onClick={() => handleRemoveGuess(answer.id)}
-                                className="ml-2 text-red-500 hover:text-red-600 font-bold"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRemoveGuess(answer.id);
+                                }}
+                                className="ml-1 md:ml-2 text-red-500 hover:text-red-600 font-bold text-sm"
                               >
                                 ✕
                               </button>
@@ -249,9 +281,9 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
                       })}
                     </div>
                   ) : (
-                    <div className="border-2 border-dashed border-gray-400 rounded-lg p-4 text-center bg-white h-full flex items-center justify-center">
-                      <p className="text-gray-500 text-sm">
-                        {isLeader ? 'Déposez une réponse ici' : 'Aucune réponse'}
+                    <div className="border-2 border-dashed border-gray-400 rounded-lg p-2 md:p-4 text-center bg-white h-full flex items-center justify-center min-h-[40px] md:min-h-[60px]">
+                      <p className="text-gray-500 text-xs md:text-sm">
+                        {isLeader ? (selectedAnswerId ? 'Tapez pour assigner' : 'Déposez ici') : '—'}
                       </p>
                     </div>
                   )}
@@ -263,15 +295,15 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
       </div>
 
       {isLeader && (
-        <div className="mt-6 text-center">
+        <div className="mt-3 md:mt-6 text-center">
           {getUnassignedAnswers().length > 0 && (
-            <p className="text-gray-500 mt-2 text-sm">
+            <p className="text-gray-500 mb-2 text-xs md:text-sm">
               Il reste {getUnassignedAnswers().length} réponse(s) à attribuer
             </p>
           )}
           <Button
             variant="success"
-            size="xl"
+            size="lg"
             onClick={handleSubmit}
             disabled={getUnassignedAnswers().length > 0}
           >

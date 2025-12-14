@@ -128,6 +128,13 @@ export interface ServerToClientEvents {
     startedAt: number; // Timestamp de démarrage (pour sync)
   }) => void;
 
+  /** État actuel du timer (réponse à requestTimerState) */
+  timerState: (data: {
+    phase: RoundPhase;
+    duration: number;
+    startedAt: number;
+  } | null) => void;
+
   /** Fin de la partie */
   gameEnded: (data: {
     leaderboard: LeaderboardEntry[];
@@ -244,6 +251,12 @@ export interface ClientToServerEvents {
   /** Notifier que le timer a expiré */
   timerExpired: (data: {
     lobbyCode: string;
+  }) => void;
+
+  /** Demander l'état actuel du timer (utile pour les navigateurs lents) */
+  requestTimerState: (data: {
+    lobbyCode: string;
+    phase?: RoundPhase;
   }) => void;
 
   /** Révéler la prochaine réponse (réservé au chef) */

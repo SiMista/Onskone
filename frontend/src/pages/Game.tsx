@@ -204,47 +204,43 @@ const GamePage: React.FC = () => {
   };
 
   return (
-    <div className="container">
+    <div className="min-h-screen flex flex-col px-2 md:px-0">
       {/* Logo */}
-      <div className="col-12">
+      <div className="flex justify-center py-2 md:py-4">
         <Logo size="small" />
       </div>
 
       {/* Error message */}
       {error && (
-        <div className="col-12">
-          <div className="bg-red-500 text-white p-4 rounded-lg mb-4">
+        <div className="w-full max-w-4xl mx-auto px-2">
+          <div className="bg-red-500 text-white p-3 md:p-4 rounded-lg mb-3 md:mb-4 text-sm md:text-base">
             {error}
           </div>
         </div>
       )}
 
-      {/* Empty columns for centering */}
-      <div className="col-2"></div>
-
       {/* Main game area - centered */}
-      <div className="col-8">
-        <div className="bg-white rounded-lg p-4 min-h-[500px]">
+      <div className="flex-1 w-full max-w-4xl mx-auto px-2">
+        <div className="bg-white rounded-lg p-2 md:p-4 min-h-[400px] md:min-h-[500px] flex flex-col">
           {/* Game info header inside main container */}
-          <div className="flex justify-between items-center mb-4 pb-3 border-b-2 border-gray-200">
-            <div className="text-gray-800 text-right">
-              <p className="text-sm font-semibold">
+          <div className="flex justify-center md:justify-between items-center mb-2 md:mb-4 pb-2 md:pb-3 border-b-2 border-gray-200">
+            <div className="text-gray-800 text-center md:text-right">
+              <p className="text-xs md:text-sm font-semibold">
                 Round {game?.currentRound?.roundNumber || 0}/{players.length} • 👑 {game?.currentRound?.leader.name || '...'}
               </p>
             </div>
           </div>
 
-          {renderPhase()}
+          <div className="flex-1">
+            {renderPhase()}
+          </div>
         </div>
       </div>
 
-      {/* Empty columns for centering */}
-      <div className="col-2"></div>
-
-      {/* Debug info 
+      {/* Debug info
       {process.env.NODE_ENV === 'development' && (
-        <div className="col-12">
-          <div className="mt-4 bg-black/50 text-white p-4 rounded-lg text-xs">
+        <div className="w-full max-w-4xl mx-auto px-2 mt-4">
+          <div className="bg-black/50 text-white p-4 rounded-lg text-xs">
             <p>Phase: {game?.currentRound?.phase || 'N/A'}</p>
             <p>Leader: {isLeader ? 'Oui' : 'Non'}</p>
             <p>Players: {players.length}</p>

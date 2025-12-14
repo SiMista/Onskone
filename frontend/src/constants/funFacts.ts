@@ -7,7 +7,7 @@ export const FUN_FACTS = [
   "Le jour de sa naissance, la première phrase prononcée par Squeezie a été : 'Est-ce que c'est bon pour vous ?'",
   "Au casino, tu peux remporter 4000 fois ta mise, mais tu ne peux perdre qu’1 fois ta mise, donc mise tout la prochaine fois ;)",
   "Un joueur de League of Legends se lave en moyenne une fois par semaine",
-  "Miser sur Kylian Mbappé buteur est statistiquement plus sûr que de miser sur l’arbitre",
+  "Il est statistiquement plus sûr de parier sur un but de Kylian Mbappé que sur un but de l’arbitre.",
   "Aller à la salle de sport régulièrement confère en plus du gain musculaire, une odeur corporelle nauséabonde",
   "Ne pas se brosser les dents entraîne systématiquement une haleine de dragon",
   "Manger du KFC tous les jours augmente fortement tes dépenses en papier toilette",

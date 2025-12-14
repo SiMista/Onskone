@@ -79,14 +79,14 @@ const EndGame: React.FC = () => {
 
   const getPodiumPosition = (index: number) => {
     // Position physique sur le podium (2ème = gauche, 1er = centre, 3ème = droite)
-    if (index === 0) return { order: 2, height: 'h-64', medal: '🥇', color: 'from-yellow-400 to-yellow-600', rank: '1er' };
-    if (index === 1) return { order: 1, height: 'h-48', medal: '🥈', color: 'from-gray-300 to-gray-500', rank: '2ème' };
-    if (index === 2) return { order: 3, height: 'h-40', medal: '🥉', color: 'from-orange-400 to-orange-600', rank: '3ème' };
+    if (index === 0) return { order: 2, height: 'h-32 md:h-64', medal: '🥇', color: 'from-yellow-400 to-yellow-600', rank: '1er' };
+    if (index === 1) return { order: 1, height: 'h-24 md:h-48', medal: '🥈', color: 'from-gray-300 to-gray-500', rank: '2ème' };
+    if (index === 2) return { order: 3, height: 'h-20 md:h-40', medal: '🥉', color: 'from-orange-400 to-orange-600', rank: '3ème' };
     return null;
   };
 
   return (
-    <div className="min-h-screen p-8 relative overflow-hidden">
+    <div className="min-h-screen p-3 md:p-8 relative overflow-hidden">
       {/* Confettis */}
       {showConfetti && (
         <div className="absolute inset-0 pointer-events-none z-50">
@@ -101,7 +101,7 @@ const EndGame: React.FC = () => {
                 animationDuration: `${2 + Math.random() * 3}s`,
               }}
             >
-              <span className="text-4xl">
+              <span className="text-2xl md:text-4xl">
                 {['🎉', '🎊', '⭐', '✨', '🏆'][Math.floor(Math.random() * 5)]}
               </span>
             </div>
@@ -111,19 +111,19 @@ const EndGame: React.FC = () => {
 
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-6xl font-bold text-white mb-4">
+        <div className="text-center mb-4 md:mb-8">
+          <h1 className="text-3xl md:text-6xl font-bold text-white mb-2 md:mb-4">
             Résultat final
           </h1>
-          <p className="text-2xl text-white/80">
+          <p className="text-base md:text-2xl text-white/80">
             {leaderboard[0]?.player.name} est celui qui vous connait le mieux !
           </p>
         </div>
 
         {/* Podium Top 3 */}
         {leaderboard.length >= 3 && (
-          <div className="mb-12">
-            <div className="flex items-end justify-center gap-4 max-w-4xl mx-auto">
+          <div className="mb-6 md:mb-12">
+            <div className="flex items-end justify-center gap-1 md:gap-4 max-w-4xl mx-auto">
               {leaderboard.slice(0, 3).map((entry, index) => {
                 const podium = getPodiumPosition(index);
                 if (!podium) return null;
@@ -137,25 +137,26 @@ const EndGame: React.FC = () => {
                     style={{ order: podium.order }}
                   >
                     {/* Joueur */}
-                    <div className={`mb-4 text-center`}>
-                      <div className="text-6xl mb-2">{podium.medal}</div>
+                    <div className={`mb-2 md:mb-4 text-center`}>
+                      <div className="text-3xl md:text-6xl mb-1 md:mb-2">{podium.medal}</div>
 
-                      <div className={`bg-white/20 backdrop-blur-md rounded-lg px-8 py-5 ${isCurrentPlayer ? 'ring-4 ring-blue-400 ring-offset-0' : ''
+                      <div className={`bg-white/20 backdrop-blur-md rounded-lg px-2 md:px-8 py-2 md:py-5 ${isCurrentPlayer ? 'ring-2 md:ring-4 ring-yellow-500 ring-offset-0' : ''
                         }`}>
                         {/* Avatar */}
-                        <Avatar avatarId={entry.player.avatarId} name={entry.player.name} size="xl" className="mx-auto mb-2" />
-                        <p className="text-white font-bold text-xl mb-1">
+                        <Avatar avatarId={entry.player.avatarId} name={entry.player.name} size="md" className="mx-auto mb-1 md:mb-2 md:hidden" />
+                        <Avatar avatarId={entry.player.avatarId} name={entry.player.name} size="xl" className="mx-auto mb-1 md:mb-2 hidden md:block" />
+                        <p className="text-white font-bold text-sm md:text-xl mb-0.5 md:mb-1 truncate max-w-[70px] md:max-w-none">
                           {entry.player.name}
                         </p>
                         {isCurrentPlayer && (
-                          <span className="text-xs bg-blue-500 px-2 py-1 rounded-full text-white">
+                          <span className="text-[10px] md:text-xs bg-yellow-500 px-1.5 md:px-2 py-0.5 md:py-1 rounded-full text-white">
                             Vous
                           </span>
                         )}
-                        <p className="text-white text-4xl font-bold mt-2">
+                        <p className="text-white text-xl md:text-4xl font-bold mt-1 md:mt-2">
                           {entry.score}
                         </p>
-                        <p className="text-white/70 text-sm">
+                        <p className="text-white/70 text-[10px] md:text-sm">
                           point{entry.score > 1 ? 's' : ''}
                         </p>
                       </div>
@@ -163,11 +164,11 @@ const EndGame: React.FC = () => {
 
                     {/* Marche du podium */}
                     <div className={`
-                      w-48 ${podium.height} bg-gradient-to-b ${podium.color}
-                      rounded-t-xl flex items-center justify-center
-                      border-4 border-white/30 shadow-2xl
+                      w-20 md:w-48 ${podium.height} bg-gradient-to-b ${podium.color}
+                      rounded-t-lg md:rounded-t-xl flex items-center justify-center
+                      border-2 md:border-4 border-white/30 shadow-2xl
                     `}>
-                      <span className="text-white text-6xl font-bold opacity-50">
+                      <span className="text-white text-2xl md:text-6xl font-bold opacity-50">
                         {podium.rank}
                       </span>
                     </div>
@@ -179,11 +180,11 @@ const EndGame: React.FC = () => {
         )}
 
         {/* Classement complet */}
-        <div className="bg-white/10 backdrop-blur-md rounded-lg p-6 mb-8 max-w-3xl mx-auto">
-          <h2 className="text-2xl font-bold text-white mb-4 text-center">
+        <div className="bg-white/10 backdrop-blur-md rounded-lg p-3 md:p-6 mb-4 md:mb-8 max-w-3xl mx-auto">
+          <h2 className="text-lg md:text-2xl font-bold text-white mb-3 md:mb-4 text-center">
             📊 Classement complet
           </h2>
-          <div className="space-y-2">
+          <div className="space-y-1.5 md:space-y-2">
             {leaderboard.map((entry, index) => {
               const isCurrentPlayer = entry.player.id === currentPlayer?.id;
               const isTop3 = index < 3;
@@ -192,27 +193,28 @@ const EndGame: React.FC = () => {
                 <div
                   key={entry.player.id}
                   className={`
-                    flex items-center justify-between p-4 rounded-lg
+                    flex items-center justify-between p-2 md:p-4 rounded-lg
                     ${isCurrentPlayer ? 'bg-blue-500/50 ring-2 ring-blue-400' : 'bg-white/5'}
                     ${isTop3 ? 'font-bold' : ''}
                   `}
                 >
-                  <div className="flex items-center gap-4">
-                    <span className="text-3xl w-12 text-center">
+                  <div className="flex items-center gap-2 md:gap-4 min-w-0">
+                    <span className="text-xl md:text-3xl w-8 md:w-12 text-center flex-shrink-0">
                       {index < 3 ? ['🥇', '🥈', '🥉'][index] : `${index + 1}.`}
                     </span>
                     {/* Avatar */}
-                    <Avatar avatarId={entry.player.avatarId} name={entry.player.name} size="md" />
-                    <span className="text-white text-lg">
+                    <Avatar avatarId={entry.player.avatarId} name={entry.player.name} size="sm" className="flex-shrink-0 md:hidden" />
+                    <Avatar avatarId={entry.player.avatarId} name={entry.player.name} size="md" className="flex-shrink-0 hidden md:block" />
+                    <span className="text-white text-sm md:text-lg truncate">
                       {entry.player.name}
                       {isCurrentPlayer && (
-                        <span className="ml-2 text-xs bg-blue-500 px-2 py-1 rounded-full">
+                        <span className="ml-1 md:ml-2 text-[10px] md:text-xs bg-blue-500 px-1.5 md:px-2 py-0.5 md:py-1 rounded-full">
                           Vous
                         </span>
                       )}
                     </span>
                   </div>
-                  <span className="text-white text-2xl font-bold">
+                  <span className="text-white text-lg md:text-2xl font-bold flex-shrink-0 ml-2">
                     {entry.score} pts
                   </span>
                 </div>
@@ -250,17 +252,17 @@ const EndGame: React.FC = () => {
         */}
 
         {/* Boutons d'action */}
-        <div className="flex justify-center gap-4">
+        <div className="flex flex-col md:flex-row justify-center gap-2 md:gap-4">
           <Button
             variant="success"
-            size="xl"
+            size="lg"
             onClick={handleBackToLobby}
           >
             Rejouer
           </Button>
           <Button
             variant="secondary"
-            size="xl"
+            size="lg"
             onClick={handleBackToHome}
           >
             Retour à l'accueil

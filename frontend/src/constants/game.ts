@@ -1,7 +1,7 @@
 // Game configuration constants
 
 // Mode debug: met les timers à 1 heure pour travailler sur le front tranquillement
-export const DEBUG_MODE = false;
+export const DEBUG_MODE = true;
 
 const DEBUG_TIMER = 3600; // 1 heure
 
@@ -62,4 +62,15 @@ export const GAME_CONFIG = {
   CONFETTI_COUNT: 50,
 } as const;
 
-export const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:8080';
+// En développement, utiliser le même hostname que la page pour permettre l'accès depuis d'autres appareils
+const getServerUrl = () => {
+  // Si une variable d'environnement est définie, l'utiliser
+  if (import.meta.env.VITE_SERVER_URL) {
+    return import.meta.env.VITE_SERVER_URL;
+  }
+  // Sinon, utiliser le même hostname que la page actuelle avec le port du backend
+  const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+  return `http://${hostname}:8080`;
+};
+
+export const SERVER_URL = getServerUrl();

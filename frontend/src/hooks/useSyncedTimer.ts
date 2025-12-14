@@ -5,6 +5,7 @@ import { RoundPhase } from '@onskone/shared';
 interface UseSyncedTimerOptions {
   onExpire?: () => void;
   phase?: RoundPhase; // Phase pour laquelle ce timer est actif
+  lobbyCode?: string; // Code du lobby pour demander l'état du timer
 }
 
 /**
@@ -12,7 +13,7 @@ interface UseSyncedTimerOptions {
  * Tous les clients calculent le temps restant basé sur le timestamp serveur
  */
 export function useSyncedTimer(defaultDuration: number, options: UseSyncedTimerOptions = {}) {
-  const { onExpire, phase } = options;
+  const { onExpire, phase, lobbyCode } = options;
 
   const [timeLeft, setTimeLeft] = useState(defaultDuration);
   const [isRunning, setIsRunning] = useState(false);
@@ -46,12 +47,29 @@ export function useSyncedTimer(defaultDuration: number, options: UseSyncedTimerO
       setTimeLeft(remaining);
     };
 
+    // Gérer aussi timerState pour la récupération d'état
+    const handleTimerState = (data: { phase: RoundPhase; duration: number; startedAt: number } | null) => {
+      if (!data) return;
+      // Réutiliser la même logique que timerStarted
+      handleTimerStarted(data);
+    };
+
     socket.on('timerStarted', handleTimerStarted);
+    socket.on('timerState', handleTimerState);
+
+    // Demander l'état actuel du timer après un court délai (pour Edge notamment)
+    const requestTimeout = setTimeout(() => {
+      if (!isRunning && phase && lobbyCode) {
+        socket.emit('requestTimerState', { lobbyCode, phase });
+      }
+    }, 100);
 
     return () => {
       socket.off('timerStarted', handleTimerStarted);
+      socket.off('timerState', handleTimerState);
+      clearTimeout(requestTimeout);
     };
-  }, [phase]);
+  }, [phase, isRunning, lobbyCode]);
 
   // Mettre à jour le countdown basé sur endTime
   useEffect(() => {
