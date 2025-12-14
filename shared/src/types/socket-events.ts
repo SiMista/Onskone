@@ -12,6 +12,9 @@ export interface RevealResult {
   /** Nom du joueur qui a écrit la réponse */
   playerName: string;
 
+  /** ID de l'avatar du joueur qui a écrit la réponse */
+  playerAvatarId?: number;
+
   /** Texte de la réponse */
   answer: string;
 
@@ -20,6 +23,9 @@ export interface RevealResult {
 
   /** Nom du joueur deviné par le chef */
   guessedPlayerName: string;
+
+  /** ID de l'avatar du joueur deviné par le chef */
+  guessedPlayerAvatarId?: number;
 
   /** Si le chef a correctement deviné */
   correct: boolean;
@@ -110,6 +116,11 @@ export interface ServerToClientEvents {
     forced?: boolean; // Si forcé par expiration du timer
   }) => void;
 
+  /** Une réponse a été révélée par le chef */
+  answerRevealed: (data: {
+    revealedIndex: number; // Index de la réponse révélée
+  }) => void;
+
   /** Démarrage d'un timer */
   timerStarted: (data: {
     phase: RoundPhase;
@@ -141,12 +152,14 @@ export interface ClientToServerEvents {
   /** Créer un nouveau lobby */
   createLobby: (data: {
     playerName: string;
+    avatarId?: number;
   }) => void;
 
   /** Rejoindre un lobby existant */
   joinLobby: (data: {
     lobbyCode: string;
     playerName: string;
+    avatarId?: number;
   }) => void;
 
   /** Quitter le lobby */
@@ -230,6 +243,11 @@ export interface ClientToServerEvents {
 
   /** Notifier que le timer a expiré */
   timerExpired: (data: {
+    lobbyCode: string;
+  }) => void;
+
+  /** Révéler la prochaine réponse (réservé au chef) */
+  revealNextAnswer: (data: {
     lobbyCode: string;
   }) => void;
 

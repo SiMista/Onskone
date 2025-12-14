@@ -27,9 +27,13 @@ export class SocketHandler {
                     }
 
                     const sanitizedName = sanitizeInput(data.playerName);
+                    // Valider avatarId (0-12)
+                    const avatarId = typeof data.avatarId === 'number' && data.avatarId >= 0 && data.avatarId <= 12
+                        ? Math.floor(data.avatarId)
+                        : 0;
                     const lobbyCode = LobbyManager.create();
                     const lobby = LobbyManager.getLobby(lobbyCode);
-                    const hostPlayer = new Player(sanitizedName, socket.id, true);
+                    const hostPlayer = new Player(sanitizedName, socket.id, true, avatarId);
                     lobby?.addPlayer(hostPlayer);
                     socket.join(lobbyCode);
                     socket.emit('lobbyCreated', {lobbyCode});
@@ -92,8 +96,11 @@ export class SocketHandler {
                         return;
                     }
 
-                    // Nouveau joueur
-                    const newPlayer = new Player(sanitizedName, socket.id);
+                    // Nouveau joueur - valider avatarId (0-12)
+                    const avatarId = typeof data.avatarId === 'number' && data.avatarId >= 0 && data.avatarId <= 12
+                        ? Math.floor(data.avatarId)
+                        : 0;
+                    const newPlayer = new Player(sanitizedName, socket.id, false, avatarId);
                     LobbyManager.addPlayer(lobby, newPlayer);
 
                     socket.join(lobby.code);
@@ -162,18 +169,33 @@ export class SocketHandler {
                 }
             });
 
-            // Kick Player from Lobby 
+            // Kick Player from Lobby
             socket.on('kickPlayer', ({ lobbyCode, playerId }) => {
                 const lobby = LobbyManager.getLobby(lobbyCode);
                 if (!lobby) {
                     socket.emit('error', { message: 'Lobby not found' });
                     return;
                 }
-                const kickedPlayer = lobby.getPlayer(playerId);
-                if (!kickedPlayer) {
-                    socket.emit('error', { message: 'Lobby not found' });
+
+                // Vérifier que c'est l'hôte qui fait la demande
+                const host = lobby.players.find(p => p.isHost);
+                if (!host || host.socketId !== socket.id) {
+                    socket.emit('error', { message: 'Only the host can kick players' });
                     return;
                 }
+
+                const kickedPlayer = lobby.getPlayer(playerId);
+                if (!kickedPlayer) {
+                    socket.emit('error', { message: 'Player not found' });
+                    return;
+                }
+
+                // L'hôte ne peut pas se kick lui-même
+                if (kickedPlayer.isHost) {
+                    socket.emit('error', { message: 'Cannot kick the host' });
+                    return;
+                }
+
                 // Remove player from lobby
                 lobby.removePlayer(kickedPlayer);
                 this.io.to(lobbyCode).emit('updatePlayersList', { players: lobby.players });
@@ -189,11 +211,26 @@ export class SocketHandler {
                     socket.emit('error', { message: 'Lobby not found' });
                     return;
                 }
+
+                // Vérifier que c'est l'hôte actuel qui fait la demande
+                const currentHost = lobby.players.find(p => p.isHost);
+                if (!currentHost || currentHost.socketId !== socket.id) {
+                    socket.emit('error', { message: 'Only the host can promote players' });
+                    return;
+                }
+
                 const playerToPromote = lobby.getPlayer(playerId);
                 if (!playerToPromote) {
                     socket.emit('error', { message: 'Player not found' });
                     return;
                 }
+
+                // Ne peut pas se promouvoir soi-même (déjà hôte)
+                if (playerToPromote.isHost) {
+                    socket.emit('error', { message: 'Player is already the host' });
+                    return;
+                }
+
                 // Promote player to host
                 lobby.setHost(playerToPromote);
                 this.io.to(lobbyCode).emit('updatePlayersList', { players: lobby.players });
@@ -257,8 +294,9 @@ export class SocketHandler {
                         return;
                     }
 
-                    // Envoyer le nombre de cartes demandé (par défaut 3 pour compatibilité)
-                    const count = data.count || 3;
+                    // Envoyer le nombre de cartes demandé (par défaut 3, max 10)
+                    const rawCount = typeof data.count === 'number' ? data.count : 3;
+                    const count = Math.max(1, Math.min(10, Math.floor(rawCount)));
                     const questions = GameManager.getRandomQuestions(count);
 
                     // Stocker la première carte dans le Round pour l'auto-sélection
@@ -578,9 +616,11 @@ export class SocketHandler {
                         return {
                             playerId,
                             playerName: player?.name || 'Unknown',
+                            playerAvatarId: player?.avatarId ?? 0,
                             answer,
                             guessedPlayerId: guessedPlayerId || '',
                             guessedPlayerName: guessedPlayer?.name || 'Personne',
+                            guessedPlayerAvatarId: guessedPlayer?.avatarId ?? 0,
                             correct: guessedPlayerId === playerId
                         };
                     });
@@ -600,6 +640,40 @@ export class SocketHandler {
                 }
             });
 
+            // Reveal Next Answer (Chef révèle la prochaine réponse)
+            socket.on('revealNextAnswer', (data) => {
+                try {
+                    const lobby = LobbyManager.getLobby(data.lobbyCode);
+                    const game = lobby?.game;
+                    if (!game || !game.currentRound) {
+                        socket.emit('error', {message: 'Game or round not found'});
+                        return;
+                    }
+
+                    // Vérifier que c'est bien le chef qui révèle
+                    if (socket.id !== game.currentRound.leader.socketId) {
+                        socket.emit('error', {message: 'Only the leader can reveal answers'});
+                        return;
+                    }
+
+                    // Incrémenter le compteur de révélations
+                    if (game.currentRound.revealedCount === undefined) {
+                        game.currentRound.revealedCount = 0;
+                    }
+                    game.currentRound.revealedCount++;
+
+                    // Broadcaster à tous les joueurs
+                    this.io.to(data.lobbyCode).emit('answerRevealed', {
+                        revealedIndex: game.currentRound.revealedCount
+                    });
+
+                    console.log(`Answer ${game.currentRound.revealedCount} revealed in lobby ${data.lobbyCode}`);
+                } catch (error) {
+                    console.error('Error revealing answer:', error);
+                    socket.emit('error', {message: (error as Error).message});
+                }
+            });
+
             // Start Timer (Démarrer un timer pour une phase)
             socket.on('startTimer', (data) => {
                 try {
@@ -610,8 +684,9 @@ export class SocketHandler {
                         return;
                     }
 
-                    // Calculer la fin du timer (en secondes)
-                    const timerDuration = data.duration || 60; // Par défaut 60 secondes
+                    // Calculer la fin du timer (en secondes) - validation: 1s minimum, 1h maximum
+                    const rawDuration = typeof data.duration === 'number' ? data.duration : 60;
+                    const timerDuration = Math.max(1, Math.min(3600, Math.floor(rawDuration)));
                     const timerEnd = new Date(Date.now() + timerDuration * 1000);
                     game.currentRound.timerEnd = timerEnd;
 
@@ -684,6 +759,16 @@ export class SocketHandler {
                             // Marquer le timer comme traité pour cette phase
                             game.currentRound.timerProcessedForPhase = currentPhase;
 
+                            // Ajouter des réponses automatiques pour les joueurs qui n'ont pas répondu
+                            const respondingPlayers = lobby.players.filter(p => p.id !== game.currentRound!.leader.id);
+                            for (const player of respondingPlayers) {
+                                if (!game.currentRound.answers[player.id]) {
+                                    // Ajouter une réponse automatique marquée avec un préfixe spécial
+                                    game.currentRound.addAnswer(player.id, `__NO_RESPONSE__${player.name} n'a pas répondu à temps`);
+                                    console.log(`Auto-answer added for player ${player.name} who didn't respond in time`);
+                                }
+                            }
+
                             // Passer à la phase GUESSING même si tous n'ont pas répondu
                             game.currentRound.nextPhase();
                             this.io.to(data.lobbyCode).emit('allAnswersSubmitted', {
@@ -726,9 +811,11 @@ export class SocketHandler {
                                 return {
                                     playerId,
                                     playerName: player?.name || 'Unknown',
+                                    playerAvatarId: player?.avatarId ?? 0,
                                     answer,
                                     guessedPlayerId: guessedPlayerId || '',
                                     guessedPlayerName: guessedPlayer?.name || 'Unknown',
+                                    guessedPlayerAvatarId: guessedPlayer?.avatarId ?? 0,
                                     correct: guessedPlayerId === playerId
                                 };
                             });

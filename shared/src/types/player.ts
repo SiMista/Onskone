@@ -19,4 +19,7 @@ export interface IPlayer {
 
   /** Si le joueur est actif dans le lobby (a cliqué sur rejouer après une partie) */
   isActive: boolean;
+
+  /** ID de l'avatar choisi par le joueur */
+  avatarId: number;
 }

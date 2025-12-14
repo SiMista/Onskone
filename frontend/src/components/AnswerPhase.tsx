@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import socket from '../utils/socket';
 import Timer from './Timer';
 import Button from './Button';
+import Avatar from './Avatar';
 import { GAME_CONFIG } from '../constants/game';
-import { IPlayer } from '@onskone/shared';
+import { IPlayer, RoundPhase } from '@onskone/shared';
 
 interface AnswerPhaseProps {
   lobbyCode: string;
@@ -75,11 +76,11 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
         <div className="text-center mb-4">
           <div className="bg-primary-light rounded-lg px-4 py-2 max-w-2xl">
             <p className="text-gray-600 mb-4">Question posée aux autres joueurs:</p>
-            <p className="text-xl font-semibold">{question}</p>
+            <p className="text-2xl font-semibold">{question}</p>
           </div>
         </div>
 
-        <Timer duration={GAME_CONFIG.TIMERS.ANSWERING} onExpire={handleTimerExpire} />
+        <Timer duration={GAME_CONFIG.TIMERS.ANSWERING} onExpire={handleTimerExpire} phase={RoundPhase.ANSWERING} />
 
         <div className="text-center">
           <p className="text-4xl font-bold text-gray-800 mb-2">
@@ -102,6 +103,7 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
                 `}
               >
                 <span className="flex items-center gap-2">
+                  <Avatar avatarId={player.avatarId} name={player.name} size="sm" />
                   {hasAnswered && <span>✓</span>}
                   {player.name}
                 </span>
@@ -116,8 +118,8 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
   return (
     <div className="flex flex-col h-full p-4 max-w-4xl mx-auto">
       <div className="bg-primary-light rounded-lg px-4 pb-4 mb-4">
-        <p className="text-xl font-semibold text-black text-center">{question}</p>
-        <Timer duration={GAME_CONFIG.TIMERS.ANSWERING} onExpire={handleTimerExpire} />
+        <p className="text-2xl font-semibold text-black text-center">{question}</p>
+        <Timer duration={GAME_CONFIG.TIMERS.ANSWERING} onExpire={handleTimerExpire} phase={RoundPhase.ANSWERING} />
       </div>
 
       {!submitted ? (
@@ -126,7 +128,12 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
             value={answer}
             onChange={(e) => setAnswer(e.target.value)}
             placeholder="Écrivez votre réponse ici..."
-            maxLength={50}
+            maxLength={GAME_CONFIG.MAX_ANSWER_LENGTH}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+              }
+            }}
             className="flex-1 bg-gray-100 text-gray-800 text-lg p-6 rounded-lg
               border-2 border-gray-300 focus:border-primary outline-none resize-none
               placeholder-gray-400"
@@ -143,7 +150,7 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
           </div>
         </div>
       ) : (
-        <div className="flex-1 flex flex-col items-center justify-center space-b-6">
+        <div className="flex-1 flex flex-col items-center justify-center space-y-6">
           <p className="text-gray-600 text-center">
             En attente des autres joueurs...
             <br />

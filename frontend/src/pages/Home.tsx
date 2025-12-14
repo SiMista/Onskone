@@ -6,12 +6,15 @@ import Frame from '../components/Frame';
 import Button from '../components/Button';
 import InputText from '../components/InputText';
 import Footer from '../components/Footer';
+import AvatarSelector from '../components/AvatarSelector';
 import { useSocketEvent, useQueryParams } from '../hooks';
-import { GAME_CONFIG } from '../constants/game';
+import { GAME_CONFIG, AVATARS } from '../constants/game';
 
 const Home = () => {
   // Nom par défaut aléatoire pour faciliter les tests
   const [playerName, setPlayerName] = useState<string>(`Joueur${Math.floor(Math.random() * 1000)}`);
+  // Avatar par défaut aléatoire
+  const [avatarId, setAvatarId] = useState<number>(Math.floor(Math.random() * AVATARS.length));
   const queryParams = useQueryParams();
   const navigate = useNavigate();
 
@@ -22,8 +25,8 @@ const Home = () => {
       alert('Veuillez entrer un nom avant de créer un salon.');
       return;
     }
-    socket.emit('createLobby', { playerName });
-  }, [playerName]);
+    socket.emit('createLobby', { playerName, avatarId });
+  }, [playerName, avatarId]);
 
   const joinLobby = useCallback(() => {
     if (!playerName.trim()) {
@@ -38,16 +41,16 @@ const Home = () => {
   }, [lobbyCode, playerName]);
 
   const handleLobbyCreated = useCallback((data: { lobbyCode: string }) => {
-    navigate(`/lobby/${data.lobbyCode}?playerName=${playerName}`);
-  }, [navigate, playerName]);
+    navigate(`/lobby/${data.lobbyCode}?playerName=${encodeURIComponent(playerName)}&avatarId=${avatarId}`);
+  }, [navigate, playerName, avatarId]);
 
   const handlePlayerNameExists = useCallback((data: { playerName: string }) => {
     alert(`Le nom "${data.playerName}" est déjà utilisé dans le salon. Veuillez choisir un autre nom.`);
   }, []);
 
   const handlePlayerNameValid = useCallback(() => {
-    navigate(`/lobby/${lobbyCode}?playerName=${playerName}`);
-  }, [navigate, lobbyCode, playerName]);
+    navigate(`/lobby/${lobbyCode}?playerName=${encodeURIComponent(playerName)}&avatarId=${avatarId}`);
+  }, [navigate, lobbyCode, playerName, avatarId]);
 
   const handleError = useCallback((data: { message: string }) => {
     console.error('Erreur:', data.message);
@@ -68,6 +71,10 @@ const Home = () => {
       <div className="col-4" >
         <Frame>
           <h3>JOUE MAINTENANT !</h3>
+          <AvatarSelector
+            selectedAvatarId={avatarId}
+            onSelect={setAvatarId}
+          />
           <div>
             <InputText
               value={playerName}

@@ -1,10 +1,12 @@
 // src/components/PlayerCard.tsx
 import { FaCrown, FaEllipsisV } from "react-icons/fa";
 import { useState } from "react";
+import Avatar from "./Avatar";
 
 interface PlayerCardProps {
   id: string;
   name: string;
+  avatarId: number;
   isHost: boolean;
   isCurrentPlayer: boolean;
   currentPlayerIsHost: boolean;
@@ -16,6 +18,7 @@ interface PlayerCardProps {
 const PlayerCard: React.FC<PlayerCardProps> = ({
   id,
   name,
+  avatarId,
   isHost,
   isCurrentPlayer,
   currentPlayerIsHost,
@@ -32,11 +35,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
     }`}>
       {/* Partie gauche → Avatar + nom */}
       <div className="flex items-center gap-2.5">
-        <img
-          src={`https://api.dicebear.com/9.x/micah/svg?scale=150&seed=${name}`}
-          alt={name}
-          className="w-10 h-10 border border-gray-500 rounded-full"
-        />
+        <Avatar avatarId={avatarId} name={name} size="md" />
         <span className={isCurrentPlayer ? "font-bold" : "font-normal"}>
           {name} {isCurrentPlayer && "(vous)"}
         </span>

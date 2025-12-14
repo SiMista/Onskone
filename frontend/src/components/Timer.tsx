@@ -1,13 +1,15 @@
 import React from 'react';
-import { useTimer } from '../hooks/useTimer';
+import { useSyncedTimer } from '../hooks/useSyncedTimer';
+import { RoundPhase } from '@onskone/shared';
 
 interface TimerProps {
-  duration: number; // Durée en secondes
+  duration: number; // Durée en secondes (fallback si pas de signal serveur)
   onExpire?: () => void;
+  phase?: RoundPhase; // Phase pour filtrer les événements timerStarted
 }
 
-const Timer: React.FC<TimerProps> = ({ duration, onExpire }) => {
-  const { timeLeft } = useTimer(duration, { onExpire, autoStart: true });
+const Timer: React.FC<TimerProps> = ({ duration, onExpire, phase }) => {
+  const { timeLeft } = useSyncedTimer(duration, { onExpire, phase });
 
   const progress = (timeLeft / duration) * 100;
   const isUrgent = timeLeft <= 10;
