@@ -10,7 +10,15 @@ const server = http.createServer(app);
 // Crée une instance de Server (socket.io)
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:3000", // Remplace par l'URL de ton frontend si nécessaire
+    // Accepter toutes les origines en développement pour permettre l'accès depuis d'autres appareils
+    origin: (origin, callback) => {
+      // Autoriser les requêtes sans origin (mobile apps, Postman, etc.) ou depuis le réseau local
+      if (!origin || origin.includes('localhost') || origin.match(/^http:\/\/192\.168\.\d+\.\d+:\d+$/)) {
+        callback(null, true);
+      } else {
+        callback(null, true); // En dev, autoriser tout. En prod, restreindre selon les besoins
+      }
+    },
     methods: ["GET", "POST"],
   },
 });

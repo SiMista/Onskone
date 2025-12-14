@@ -27,10 +27,7 @@ const Lobby = () => {
     const [currentPlayer, setCurrentPlayer] = useState<IPlayer | null>(null);
     const [showCopiedMessage, setShowCopiedMessage] = useState(false);
     const [playerName] = useState<string>(() => {
-        // D'abord vérifier l'URL
         const urlPlayerName = queryParams.get('playerName');
-
-        // Si trouvé dans l'URL, le sauvegarder
         if (urlPlayerName) {
             try {
                 localStorage.setItem(`playerName_${lobbyCode}`, urlPlayerName);
@@ -39,8 +36,6 @@ const Lobby = () => {
             }
             return urlPlayerName;
         }
-
-        // Sinon, récupérer depuis localStorage
         try {
             const savedPlayerName = localStorage.getItem(`playerName_${lobbyCode}`);
             if (savedPlayerName) {
@@ -49,8 +44,6 @@ const Lobby = () => {
         } catch (error) {
             console.error('Failed to load player name:', error);
         }
-
-        // Dernier recours: générer un nom aléatoire
         const randomName = `Joueur${Math.floor(Math.random() * 1000)}`;
         try {
             localStorage.setItem(`playerName_${lobbyCode}`, randomName);
@@ -61,7 +54,6 @@ const Lobby = () => {
     });
 
     const [avatarId] = useState<number>(() => {
-        // D'abord vérifier l'URL
         const urlAvatarId = queryParams.get('avatarId');
         if (urlAvatarId !== null) {
             const id = parseInt(urlAvatarId, 10);
@@ -74,8 +66,6 @@ const Lobby = () => {
                 return id;
             }
         }
-
-        // Sinon, récupérer depuis localStorage
         try {
             const savedAvatarId = localStorage.getItem(`avatarId_${lobbyCode}`);
             if (savedAvatarId !== null) {
@@ -85,12 +75,9 @@ const Lobby = () => {
         } catch (error) {
             console.error('Failed to load avatar id:', error);
         }
-
-        // Dernier recours: avatar aléatoire
         return Math.floor(Math.random() * 8);
     });
 
-    // Warn user before leaving
     useLeavePrompt(
         () => {
             if (currentPlayer && lobbyCode) {
@@ -102,14 +89,37 @@ const Lobby = () => {
 
     const generateLink = useCallback(() => {
         const link = `${window.location.origin}/?lobbyCode=${lobbyCode!}`;
-        navigator.clipboard.writeText(link)
-            .then(() => {
+
+        // Fonction de fallback pour copier sans l'API Clipboard (HTTP non-localhost)
+        const fallbackCopy = (text: string) => {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.left = '-9999px';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
                 setShowCopiedMessage(true);
                 setTimeout(() => setShowCopiedMessage(false), GAME_CONFIG.COPIED_MESSAGE_DURATION);
-            })
-            .catch((error) => {
-                console.error('Erreur lors de la copie du lien :', error);
-            });
+            } catch (err) {
+                console.error('Fallback copy failed:', err);
+                alert(`Lien à copier: ${text}`);
+            }
+            document.body.removeChild(textarea);
+        };
+
+        // Utiliser l'API Clipboard si disponible, sinon fallback
+        if (navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText(link)
+                .then(() => {
+                    setShowCopiedMessage(true);
+                    setTimeout(() => setShowCopiedMessage(false), GAME_CONFIG.COPIED_MESSAGE_DURATION);
+                })
+                .catch(() => fallbackCopy(link));
+        } else {
+            fallbackCopy(link);
+        }
     }, [lobbyCode]);
 
     const leaveLobby = useCallback(() => {
@@ -137,14 +147,12 @@ const Lobby = () => {
         }
     }, [lobbyCode]);
 
-    // Join lobby on mount
     useEffect(() => {
         if (lobbyCode && playerName) {
             socket.emit('joinLobby', { lobbyCode: lobbyCode!, playerName, avatarId });
         }
     }, [lobbyCode, playerName, avatarId]);
 
-    // Socket event handlers
     const handleUpdatePlayersList = useCallback((data: { players: IPlayer[] }) => {
         setPlayers(data.players);
         const potentialCurrentPlayer = data.players.find((p: IPlayer) => p.socketId === socket.id);
@@ -174,7 +182,6 @@ const Lobby = () => {
     }, [navigate]);
 
     const handleGameStarted = useCallback(() => {
-        // Save current player to localStorage
         if (currentPlayer) {
             try {
                 localStorage.setItem('currentPlayer', JSON.stringify(currentPlayer));
@@ -185,7 +192,6 @@ const Lobby = () => {
         navigate(`/game/${lobbyCode}`);
     }, [currentPlayer, lobbyCode, navigate]);
 
-    // Use custom socket hooks
     useSocketEvent('updatePlayersList', handleUpdatePlayersList, [handleUpdatePlayersList]);
     useSocketEvent('joinedLobby', handleJoinedLobby, [handleJoinedLobby]);
     useSocketEvent('kickedFromLobby', handleKickedFromLobby, [handleKickedFromLobby]);
@@ -196,71 +202,99 @@ const Lobby = () => {
     const canStartGame = activePlayers.length >= GAME_CONFIG.MIN_PLAYERS;
 
     return (
-        <div className="container">
-            <div className="col-12">
-                <Logo size="small" />
-            </div>
-            <div className='col-3'></div>
-            <div className="col-6">
-                <Frame>
-                    <div className="flex items-center cursor-pointer self-start" onClick={leaveLobby}>
-                        <span className="flex items-center mr-1.5">
-                            <BsFillCaretLeftFill size={15} />
-                        </span>
-                        <span>Quitter</span>
+        <div className="min-h-screen flex flex-col">
+            {/* Contenu principal */}
+            <div className="flex-1 w-full max-w-screen-xl mx-auto px-3 md:px-4 py-3 md:py-6">
+                {/* Logo */}
+                <div className="flex justify-center mb-3 md:mb-6">
+                    <Logo size="small" />
+                </div>
+
+                {/* Grille responsive */}
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                    {/* Spacer gauche - desktop only */}
+                    <div className="hidden md:block md:col-span-3" />
+
+                    {/* Bloc principal */}
+                    <div className="md:col-span-6">
+                        <Frame>
+                            {/* Header avec bouton quitter */}
+                            <div className="flex items-center cursor-pointer self-start" onClick={leaveLobby}>
+                                <span className="flex items-center mr-1.5">
+                                    <BsFillCaretLeftFill size={15} />
+                                </span>
+                                <span className="text-sm md:text-base">Quitter</span>
+                            </div>
+
+                            {/* Compteur de joueurs */}
+                            <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 justify-center">
+                                <h3 className="m-0 font-bold text-center text-base md:text-lg">
+                                    Joueurs {activePlayers.length}/{GAME_CONFIG.MAX_PLAYERS}
+                                </h3>
+                                <span className="text-xs md:text-sm text-gray-500 italic">
+                                    ({GAME_CONFIG.MIN_PLAYERS} joueurs minimum)
+                                </span>
+                            </div>
+
+                            {/* Liste des joueurs */}
+                            <ul className="list-none w-full m-0 p-0 max-h-[40vh] md:max-h-[50vh] overflow-y-auto">
+                                {players.map((player) => (
+                                    <li key={player.id}>
+                                        <PlayerCard
+                                            id={player.id}
+                                            name={player.name}
+                                            avatarId={player.avatarId}
+                                            isHost={player.isHost}
+                                            isCurrentPlayer={currentPlayer?.id === player.id}
+                                            currentPlayerIsHost={!!currentPlayer?.isHost}
+                                            isActive={player.isActive}
+                                            onKick={kickPlayer}
+                                            onPromote={promotePlayer}
+                                        />
+                                    </li>
+                                ))}
+                            </ul>
+
+                            {/* Actions - responsive layout */}
+                            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-center justify-center w-full">
+                                {/* Bouton lancer le jeu */}
+                                {currentPlayer?.isHost && (
+                                    <Button
+                                        text="Lancer le jeu"
+                                        variant="success"
+                                        size="md"
+                                        rotateEffect={true}
+                                        state={canStartGame ? 'default' : 'disabled'}
+                                        onClick={startGame}
+                                    />
+                                )}
+
+                                {/* Code et lien d'invitation */}
+                                <div className="flex flex-col gap-1 items-center">
+                                    <small className="text-sm">
+                                        Code : <b className="text-base">{lobbyCode}</b>
+                                    </small>
+                                    <Button
+                                        text="Copier le lien"
+                                        variant="warning"
+                                        size="sm"
+                                        onClick={generateLink}
+                                    />
+                                    <small className={`text-gray-500 text-xs ${showCopiedMessage ? 'visible' : 'invisible'}`}>
+                                        <i>Lien copié !</i>
+                                    </small>
+                                </div>
+                            </div>
+                        </Frame>
                     </div>
-                    <div className="flex items-baseline gap-2 justify-center">
-                        <h3 className="m-0 font-bold text-center">
-                            Nombre de joueurs {activePlayers.length}/{GAME_CONFIG.MAX_PLAYERS}
-                        </h3>
-                        <span className="text-sm text-gray-500 italic">
-                            ({GAME_CONFIG.MIN_PLAYERS} joueurs minimum)
-                        </span>
-                    </div>
-                    <ul className="list-none w-full m-0 p-0">
-                        {players.map((player) => (
-                            <li key={player.id}>
-                                <PlayerCard
-                                    id={player.id}
-                                    name={player.name}
-                                    avatarId={player.avatarId}
-                                    isHost={player.isHost}
-                                    isCurrentPlayer={currentPlayer?.id === player.id}
-                                    currentPlayerIsHost={!!currentPlayer?.isHost}
-                                    isActive={player.isActive}
-                                    onKick={kickPlayer}
-                                    onPromote={promotePlayer}
-                                />
-                            </li>
-                        ))}
-                    </ul>
-                    <div className="flex gap-[100px] items-center">
-                        {currentPlayer?.isHost && (
-                            <Button
-                                text="Lancer le jeu"
-                                variant='success'
-                                size='md'
-                                rotateEffect={true}
-                                state={canStartGame ? 'default' : 'disabled'}
-                                onClick={startGame}
-                            />
-                        )}
-                        <div className="flex flex-col gap-1">
-                            <small>
-                                Code du salon : <b>{lobbyCode}</b>
-                            </small>
-                            <Button text="Lien d'invitation" variant='warning' size='md' onClick={generateLink} />
-                            <small className={`text-gray-500 ${showCopiedMessage ? 'visible' : 'invisible'}`}>
-                                <i>Lien copié !</i>
-                            </small>
-                        </div>
-                    </div>
-                </Frame>
+
+                    {/* Spacer droit - desktop only */}
+                    <div className="hidden md:block md:col-span-3" />
+                </div>
             </div>
-            <div className='col-3'></div>
-            <div className="col-12">
-                <Footer />
-            </div>
+
+            {/* Footer */}
+            <Footer />
         </div>
     );
 };

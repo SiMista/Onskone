@@ -27,19 +27,16 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
   const [submitted, setSubmitted] = useState(false);
   const [answeredPlayerIds, setAnsweredPlayerIds] = useState<Set<string>>(new Set());
 
-  // Joueurs qui doivent répondre (tous sauf le chef)
   const respondingPlayers = players.filter(p => p.id !== leaderId);
   const expectedAnswers = respondingPlayers.length;
   const answersCount = answeredPlayerIds.size;
 
   useEffect(() => {
-    // Seul le leader démarre le timer pour éviter les conflits
-    // Petit délai pour éviter les conflits avec le timer précédent
     const startTimerTimeout = setTimeout(() => {
       if (isLeader) {
         socket.emit('startTimer', { lobbyCode, duration: GAME_CONFIG.TIMERS.ANSWERING });
       }
-    }, 500); // Délai de 500ms
+    }, 500);
 
     socket.on('playerAnswered', (data: { playerId: string; totalAnswers: number; expectedAnswers: number }) => {
       setAnsweredPlayerIds(prev => new Set([...prev, data.playerId]));
@@ -64,7 +61,6 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
   };
 
   const handleTimerExpire = () => {
-    // Seul le leader doit appeler timerExpired pour éviter les appels multiples
     if (isLeader) {
       socket.emit('timerExpired', { lobbyCode });
     }
@@ -72,40 +68,42 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
 
   if (isLeader) {
     return (
-      <div className="flex flex-col items-center justify-center h-full space-y-4">
-        <div className="text-center mb-4">
-          <div className="bg-primary-light rounded-lg px-4 py-2 max-w-2xl">
-            <p className="text-gray-600 mb-4">Question posée aux autres joueurs:</p>
-            <p className="text-2xl font-semibold">{question}</p>
+      <div className="flex flex-col items-center justify-center h-full p-3 md:p-6 space-y-4">
+        <div className="text-center mb-2 md:mb-4 w-full">
+          <div className="bg-primary-light rounded-lg px-3 md:px-4 py-2 max-w-2xl mx-auto">
+            <p className="text-gray-600 mb-2 md:mb-4 text-sm md:text-base">Question posée aux autres joueurs:</p>
+            <p className="text-lg md:text-2xl font-semibold">{question}</p>
           </div>
         </div>
 
-        <Timer duration={GAME_CONFIG.TIMERS.ANSWERING} onExpire={handleTimerExpire} phase={RoundPhase.ANSWERING} />
-
-        <div className="text-center">
-          <p className="text-4xl font-bold text-gray-800 mb-2">
-            {answersCount} / {expectedAnswers}
-          </p>
-          <p className="text-lg text-gray-600">Réponses reçues</p>
+        <div className="w-full max-w-md">
+          <Timer duration={GAME_CONFIG.TIMERS.ANSWERING} onExpire={handleTimerExpire} phase={RoundPhase.ANSWERING} lobbyCode={lobbyCode} />
         </div>
 
-        <div className="flex flex-wrap justify-center gap-3 max-w-2xl">
+        <div className="text-center">
+          <p className="text-3xl md:text-4xl font-bold text-gray-800 mb-1 md:mb-2">
+            {answersCount} / {expectedAnswers}
+          </p>
+          <p className="text-base md:text-lg text-gray-600">Réponses reçues</p>
+        </div>
+
+        <div className="flex flex-wrap justify-center gap-2 md:gap-3 max-w-2xl px-2">
           {respondingPlayers.map((player) => {
             const hasAnswered = answeredPlayerIds.has(player.id);
             return (
               <div
                 key={player.id}
                 className={`
-                  px-4 py-2 rounded-lg font-medium transition-all duration-300
+                  px-2 md:px-4 py-1.5 md:py-2 rounded-lg font-medium transition-all duration-300 text-sm md:text-base
                   ${hasAnswered
                     ? 'bg-green-500 text-white shadow-lg scale-105'
                     : 'bg-gray-200 text-gray-600'}
                 `}
               >
-                <span className="flex items-center gap-2">
+                <span className="flex items-center gap-1.5 md:gap-2">
                   <Avatar avatarId={player.avatarId} name={player.name} size="sm" />
                   {hasAnswered && <span>✓</span>}
-                  {player.name}
+                  <span className="max-w-[80px] md:max-w-none truncate">{player.name}</span>
                 </span>
               </div>
             );
@@ -116,10 +114,10 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
   }
 
   return (
-    <div className="flex flex-col h-full p-4 max-w-4xl mx-auto">
-      <div className="bg-primary-light rounded-lg px-4 pb-4 mb-4">
-        <p className="text-2xl font-semibold text-black text-center">{question}</p>
-        <Timer duration={GAME_CONFIG.TIMERS.ANSWERING} onExpire={handleTimerExpire} phase={RoundPhase.ANSWERING} />
+    <div className="flex flex-col h-full p-3 md:p-4 max-w-4xl mx-auto">
+      <div className="bg-primary-light rounded-lg px-3 md:px-4 pb-3 md:pb-4 mb-3 md:mb-4">
+        <p className="text-lg md:text-2xl font-semibold text-black text-center">{question}</p>
+        <Timer duration={GAME_CONFIG.TIMERS.ANSWERING} onExpire={handleTimerExpire} phase={RoundPhase.ANSWERING} lobbyCode={lobbyCode} />
       </div>
 
       {!submitted ? (
@@ -134,11 +132,11 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
                 e.preventDefault();
               }
             }}
-            className="flex-1 bg-gray-100 text-gray-800 text-lg p-6 rounded-lg
+            className="flex-1 min-h-[120px] md:min-h-[150px] bg-gray-100 text-gray-800 text-base md:text-lg p-4 md:p-6 rounded-lg
               border-2 border-gray-300 focus:border-primary outline-none resize-none
               placeholder-gray-400"
           />
-          <div className="mt-4 text-center">
+          <div className="mt-3 md:mt-4 text-center">
             <Button
               variant="success"
               size="lg"
@@ -150,15 +148,36 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
           </div>
         </div>
       ) : (
-        <div className="flex-1 flex flex-col items-center justify-center space-y-6">
-          <p className="text-gray-600 text-center">
+        <div className="flex-1 flex flex-col items-center justify-center space-y-4 md:space-y-6">
+          <p className="text-gray-600 text-center text-sm md:text-base">
             En attente des autres joueurs...
             <br />
-            ({answersCount} / {expectedAnswers} réponses reçues)
+            <div className="flex flex-wrap justify-center gap-2 md:gap-3 max-w-2xl px-2">
+              {respondingPlayers.map((player) => {
+                const hasAnswered = answeredPlayerIds.has(player.id);
+                return (
+                  <div
+                    key={player.id}
+                    className={`
+                  px-2 md:px-4 py-1.5 md:py-2 rounded-lg font-medium transition-all duration-300 text-sm md:text-base
+                  ${hasAnswered
+                        ? 'bg-green-500 text-white shadow-lg scale-105'
+                        : 'bg-gray-200 text-gray-600'}
+                `}
+                  >
+                    <span className="flex items-center gap-1.5 md:gap-2">
+                      <Avatar avatarId={player.avatarId} name={player.name} size="sm" />
+                      {hasAnswered && <span>✓</span>}
+                      <span className="max-w-[80px] md:max-w-none truncate">{player.name}</span>
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           </p>
-          <div className="bg-gray-100 rounded-lg p-6 max-w-md border-2 border-gray-300">
-            <p className="text-gray-600 text-sm mb-2">Votre réponse :</p>
-            <p className="text-gray-800 text-lg font-medium break-words whitespace-pre-wrap">{answer}</p>
+          <div className="bg-gray-100 rounded-lg p-4 md:p-6 max-w-md w-full border-2 border-gray-300">
+            <p className="text-gray-600 text-xs md:text-sm mb-2">Votre réponse :</p>
+            <p className="text-gray-800 text-base md:text-lg font-medium break-words whitespace-pre-wrap">{answer}</p>
           </div>
         </div>
       )}

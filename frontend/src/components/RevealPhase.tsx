@@ -63,28 +63,28 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
   return (
     <div className="flex flex-col h-full p-2 max-w-2xl mx-auto">
       {/* Header - Question */}
-      <div className="bg-primary-light rounded-lg px-2 py-2 max-w-2xl text-center">
-        <p className="text-sm text-gray-500 mb-2">
+      <div className="bg-primary-light rounded-lg px-2 py-2 max-w-2xl text-center mb-2 md:mb-3">
+        <p className="text-xs md:text-sm text-gray-500 mb-1 md:mb-2">
           Question posée durant cette manche:
         </p>
-        <p className="text-2xl font-semibold text-gray-800">
+        <p className="text-base md:text-2xl font-semibold text-gray-800">
           {question}
         </p>
       </div>
 
       {/* Résultats détaillés avec en-têtes de colonnes */}
-      <div className="flex-1 overflow-auto mb-4">
+      <div className="flex-1 overflow-auto mb-3 md:mb-4">
         {/* En-têtes de colonnes - inversées : Chef a dit | Écrit par */}
-        <div className="mb-3 px-4">
-          <div className="grid grid-cols-[1fr_5rem_5rem] gap-4 items-center">
-            <p className="text-black text-xs font-bold uppercase">Réponse</p>
-            <p className="text-black text-xs font-bold uppercase text-center">Chef a dit</p>
-            <p className="text-black text-xs font-bold uppercase text-center">Écrit par</p>
+        <div className="mb-2 md:mb-3 px-2 md:px-4">
+          <div className="grid grid-cols-[1fr_3.5rem_3.5rem] md:grid-cols-[1fr_5rem_5rem] gap-2 md:gap-4 items-center">
+            <p className="text-black text-[10px] md:text-xs font-bold uppercase">Réponse</p>
+            <p className="text-black text-[10px] md:text-xs font-bold uppercase text-center">Chef a dit</p>
+            <p className="text-black text-[10px] md:text-xs font-bold uppercase text-center">Écrit par</p>
           </div>
         </div>
 
         {/* Liste des résultats */}
-        <div className="space-y-3 px-4">
+        <div className="space-y-2 md:space-y-3 px-2 md:px-4">
           {results.map((result, index) => {
             const isRevealed = index < revealedCount;
             const noResponse = isNoResponse(result.answer);
@@ -93,7 +93,7 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
               <div
                 key={result.playerId}
                 className={`
-                  rounded-lg p-4 transform transition-all duration-500 border-[3px]
+                  rounded-lg p-2 md:p-4 transform transition-all duration-500 border-2 md:border-[3px]
                   ${isRevealed
                     ? result.correct
                       ? 'bg-[#30c94d] border-black shadow-[0_2px_10px_rgba(0,0,0,0.3)]'
@@ -102,10 +102,10 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
                   }
                 `}
               >
-                <div className="grid grid-cols-[1fr_5rem_5rem] gap-4 items-center">
+                <div className="grid grid-cols-[1fr_3.5rem_3.5rem] md:grid-cols-[1fr_5rem_5rem] gap-2 md:gap-4 items-center">
                   {/* Réponse */}
                   <p
-                    className={`text-base truncate ${noResponse ? 'italic text-gray-500 font-normal' : 'font-bold'} ${isRevealed && !noResponse ? 'text-black' : noResponse ? '' : 'text-gray-800'}`}
+                    className={`text-xs md:text-base truncate ${noResponse ? 'italic text-gray-500 font-normal' : 'font-bold'} ${isRevealed && !noResponse ? 'text-black' : noResponse ? '' : 'text-gray-800'}`}
                     title={getDisplayText(result.answer)}
                   >
                     {getDisplayText(result.answer)}
@@ -115,17 +115,18 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
                   <div className="flex flex-col items-center">
                     {result.guessedPlayerName && result.guessedPlayerName !== 'Personne' ? (
                       <>
-                        <Avatar avatarId={result.guessedPlayerAvatarId ?? 0} name={result.guessedPlayerName} size="md" />
-                        <span className={`text-xs font-semibold mt-1 ${isRevealed ? 'text-black' : 'text-gray-700'}`} title={result.guessedPlayerName}>
-                          {truncateName(result.guessedPlayerName)}
+                        <Avatar avatarId={result.guessedPlayerAvatarId ?? 0} name={result.guessedPlayerName} size="sm" className="md:hidden" />
+                        <Avatar avatarId={result.guessedPlayerAvatarId ?? 0} name={result.guessedPlayerName} size="md" className="hidden md:block" />
+                        <span className={`text-[10px] md:text-xs font-semibold mt-0.5 md:mt-1 ${isRevealed ? 'text-black' : 'text-gray-700'}`} title={result.guessedPlayerName}>
+                          {truncateName(result.guessedPlayerName, 6)}
                         </span>
                       </>
                     ) : (
                       <>
-                        <div className="w-10 h-10 rounded-full bg-gray-300 border-2 border-black flex items-center justify-center text-gray-600 font-bold text-lg shadow-md">
+                        <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gray-300 border-2 border-black flex items-center justify-center text-gray-600 font-bold text-sm md:text-lg shadow-md">
                           ?
                         </div>
-                        <span className={`text-xs font-semibold mt-1 ${isRevealed ? 'text-black' : 'text-gray-700'}`}>
+                        <span className={`text-[10px] md:text-xs font-semibold mt-0.5 md:mt-1 ${isRevealed ? 'text-black' : 'text-gray-700'}`}>
                           Aucun
                         </span>
                       </>
@@ -136,17 +137,18 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
                   <div className="flex flex-col items-center">
                     {isRevealed ? (
                       <>
-                        <Avatar avatarId={result.playerAvatarId ?? 0} name={result.playerName} size="md" />
-                        <span className="text-xs font-semibold text-black mt-1" title={result.playerName}>
-                          {truncateName(result.playerName)}
+                        <Avatar avatarId={result.playerAvatarId ?? 0} name={result.playerName} size="sm" className="md:hidden" />
+                        <Avatar avatarId={result.playerAvatarId ?? 0} name={result.playerName} size="md" className="hidden md:block" />
+                        <span className="text-[10px] md:text-xs font-semibold text-black mt-0.5 md:mt-1" title={result.playerName}>
+                          {truncateName(result.playerName, 6)}
                         </span>
                       </>
                     ) : (
                       <>
-                        <div className="w-10 h-10 rounded-full bg-gray-200 border-2 border-dashed border-gray-400 flex items-center justify-center text-gray-500 font-bold text-xl shadow-md">
+                        <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gray-200 border-2 border-dashed border-gray-400 flex items-center justify-center text-gray-500 font-bold text-base md:text-xl shadow-md">
                           ?
                         </div>
-                        <span className="text-xs font-semibold text-gray-500 mt-1">
+                        <span className="text-[10px] md:text-xs font-semibold text-gray-500 mt-0.5 md:mt-1">
                           ???
                         </span>
                       </>
@@ -160,26 +162,26 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
       </div>
 
       {/* Boutons */}
-      <div className="flex flex-col items-center gap-3">
+      <div className="flex flex-col items-center gap-2 md:gap-3">
         {!allRevealed ? (
           isLeader ? (
             <Button
               variant="warning"
-              size="xl"
+              size="lg"
               onClick={handleRevealNext}
             >
-              Révéler ({revealedCount + 1}/{totalAnswers})
+              Révéler ({revealedCount}/{totalAnswers})
             </Button>
           ) : (
-            <div className="bg-white rounded-lg p-5 shadow-[0_2px_10px_rgba(0,0,0,0.3)] text-center">
-              <p className="text-gray-900 text-base font-semibold">
+            <div className="bg-white rounded-lg p-3 md:p-5 shadow-[0_2px_10px_rgba(0,0,0,0.3)] text-center">
+              <p className="text-gray-900 text-sm md:text-base font-semibold">
                 ⏳ {leaderName} révèle les réponses... ({revealedCount}/{totalAnswers})
               </p>
             </div>
           )
         ) : isLeader ? (
           <>
-            <p className="text-lg font-semibold">
+            <p className="text-base md:text-lg font-semibold">
               {isGameOver ? '🎉 Partie terminée !' : 'Prêt pour la suite ?'}
             </p>
             <Button
@@ -190,8 +192,8 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
             />
           </>
         ) : (
-          <div className="bg-white rounded-lg p-5 shadow-[0_2px_10px_rgba(0,0,0,0.3)] text-center">
-            <p className="text-gray-900 text-base font-semibold">
+          <div className="bg-white rounded-lg p-3 md:p-5 shadow-[0_2px_10px_rgba(0,0,0,0.3)] text-center">
+            <p className="text-gray-900 text-sm md:text-base font-semibold">
               {isGameOver
                 ? '⏳ En attente des résultats finaux...'
                 : `⏳ En attente que ${leaderName} lance la manche suivante...`

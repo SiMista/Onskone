@@ -25,6 +25,7 @@ const InputText: React.FC<InputTextProps> = ({
       maxLength={maxLength}
       className="p-2.5 rounded-[50px] shadow-[0_2px_10px_rgba(0,0,0,0.4)] outline-none"
       style={{
+        backgroundColor: "#f9f4ee",
         border: `2.5px solid ${borderColor}`,
       }}
     />

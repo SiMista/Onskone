@@ -6,10 +6,11 @@ interface TimerProps {
   duration: number; // Durée en secondes (fallback si pas de signal serveur)
   onExpire?: () => void;
   phase?: RoundPhase; // Phase pour filtrer les événements timerStarted
+  lobbyCode?: string; // Code du lobby pour demander l'état du timer (utile pour Edge)
 }
 
-const Timer: React.FC<TimerProps> = ({ duration, onExpire, phase }) => {
-  const { timeLeft } = useSyncedTimer(duration, { onExpire, phase });
+const Timer: React.FC<TimerProps> = ({ duration, onExpire, phase, lobbyCode }) => {
+  const { timeLeft } = useSyncedTimer(duration, { onExpire, phase, lobbyCode });
 
   const progress = (timeLeft / duration) * 100;
   const isUrgent = timeLeft <= 10;

@@ -687,20 +687,64 @@ export class SocketHandler {
                     // Calculer la fin du timer (en secondes) - validation: 1s minimum, 1h maximum
                     const rawDuration = typeof data.duration === 'number' ? data.duration : 60;
                     const timerDuration = Math.max(1, Math.min(3600, Math.floor(rawDuration)));
-                    const timerEnd = new Date(Date.now() + timerDuration * 1000);
+                    const startedAt = Date.now();
+                    const timerEnd = new Date(startedAt + timerDuration * 1000);
+
+                    // Stocker les infos du timer pour pouvoir les renvoyer sur demande
                     game.currentRound.timerEnd = timerEnd;
+                    game.currentRound.timerStartedAt = startedAt;
+                    game.currentRound.timerDuration = timerDuration;
 
                     // Broadcaster le démarrage du timer à tous
                     this.io.to(data.lobbyCode).emit('timerStarted', {
                         phase: game.currentRound.phase,
                         duration: timerDuration,
-                        startedAt: Date.now()
+                        startedAt: startedAt
                     });
 
                     console.log(`Timer started for ${timerDuration}s in lobby ${data.lobbyCode} (phase: ${game.currentRound.phase})`);
                 } catch (error) {
                     console.error('Error starting timer:', error);
                     socket.emit('error', {message: (error as Error).message});
+                }
+            });
+
+            // Request Timer State (Demander l'état actuel du timer - utile pour les navigateurs lents comme Edge)
+            socket.on('requestTimerState', (data) => {
+                try {
+                    const lobby = LobbyManager.getLobby(data.lobbyCode);
+                    const game = lobby?.game;
+                    if (!game || !game.currentRound) {
+                        socket.emit('timerState', null);
+                        return;
+                    }
+
+                    // Vérifier si un timer est actif pour cette phase
+                    if (game.currentRound.timerStartedAt && game.currentRound.timerDuration) {
+                        // Vérifier si on demande la bonne phase
+                        if (data.phase && data.phase !== game.currentRound.phase) {
+                            socket.emit('timerState', null);
+                            return;
+                        }
+
+                        // Vérifier si le timer n'a pas expiré
+                        const elapsed = Date.now() - game.currentRound.timerStartedAt;
+                        const remaining = game.currentRound.timerDuration * 1000 - elapsed;
+
+                        if (remaining > 0) {
+                            socket.emit('timerState', {
+                                phase: game.currentRound.phase,
+                                duration: game.currentRound.timerDuration,
+                                startedAt: game.currentRound.timerStartedAt
+                            });
+                            return;
+                        }
+                    }
+
+                    socket.emit('timerState', null);
+                } catch (error) {
+                    console.error('Error getting timer state:', error);
+                    socket.emit('timerState', null);
                 }
             });
 
