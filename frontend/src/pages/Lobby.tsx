@@ -60,6 +60,36 @@ const Lobby = () => {
         return randomName;
     });
 
+    const [avatarId] = useState<number>(() => {
+        // D'abord vérifier l'URL
+        const urlAvatarId = queryParams.get('avatarId');
+        if (urlAvatarId !== null) {
+            const id = parseInt(urlAvatarId, 10);
+            if (!isNaN(id)) {
+                try {
+                    localStorage.setItem(`avatarId_${lobbyCode}`, String(id));
+                } catch (error) {
+                    console.error('Failed to save avatar id:', error);
+                }
+                return id;
+            }
+        }
+
+        // Sinon, récupérer depuis localStorage
+        try {
+            const savedAvatarId = localStorage.getItem(`avatarId_${lobbyCode}`);
+            if (savedAvatarId !== null) {
+                const id = parseInt(savedAvatarId, 10);
+                if (!isNaN(id)) return id;
+            }
+        } catch (error) {
+            console.error('Failed to load avatar id:', error);
+        }
+
+        // Dernier recours: avatar aléatoire
+        return Math.floor(Math.random() * 8);
+    });
+
     // Warn user before leaving
     useLeavePrompt(
         () => {
@@ -110,9 +140,9 @@ const Lobby = () => {
     // Join lobby on mount
     useEffect(() => {
         if (lobbyCode && playerName) {
-            socket.emit('joinLobby', { lobbyCode: lobbyCode!, playerName });
+            socket.emit('joinLobby', { lobbyCode: lobbyCode!, playerName, avatarId });
         }
-    }, [lobbyCode, playerName]);
+    }, [lobbyCode, playerName, avatarId]);
 
     // Socket event handlers
     const handleUpdatePlayersList = useCallback((data: { players: IPlayer[] }) => {
@@ -193,6 +223,7 @@ const Lobby = () => {
                                 <PlayerCard
                                     id={player.id}
                                     name={player.name}
+                                    avatarId={player.avatarId}
                                     isHost={player.isHost}
                                     isCurrentPlayer={currentPlayer?.id === player.id}
                                     currentPlayerIsHost={!!currentPlayer?.isHost}

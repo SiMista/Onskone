@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import socket from '../utils/socket';
 import { IPlayer, LeaderboardEntry, RoundStat, RoundData } from '@onskone/shared';
 import Button from '../components/Button';
+import Avatar from '../components/Avatar';
 
 const EndGame: React.FC = () => {
   const { lobbyCode } = useParams<{ lobbyCode: string }>();
@@ -11,7 +12,7 @@ const EndGame: React.FC = () => {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [currentPlayer, setCurrentPlayer] = useState<IPlayer | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
-  const [bestRound, setBestRound] = useState<RoundStat | null>(null);
+  const [_bestRound, setBestRound] = useState<RoundStat | null>(null);
 
   // Redirect if no lobby code
   useEffect(() => {
@@ -111,20 +112,17 @@ const EndGame: React.FC = () => {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-6xl font-bold text-white mb-4 animate-pulse">
-            🎮 Partie terminée! 🎮
+          <h1 className="text-6xl font-bold text-white mb-4">
+            Résultat final
           </h1>
           <p className="text-2xl text-white/80">
-            Félicitations à tous les joueurs!
+            {leaderboard[0]?.player.name} est celui qui vous connait le mieux !
           </p>
         </div>
 
         {/* Podium Top 3 */}
         {leaderboard.length >= 3 && (
           <div className="mb-12">
-            <h2 className="text-3xl font-bold text-white text-center mb-8">
-              🏆 Podium 🏆
-            </h2>
             <div className="flex items-end justify-center gap-4 max-w-4xl mx-auto">
               {leaderboard.slice(0, 3).map((entry, index) => {
                 const podium = getPodiumPosition(index);
@@ -139,11 +137,13 @@ const EndGame: React.FC = () => {
                     style={{ order: podium.order }}
                   >
                     {/* Joueur */}
-                    <div className={`mb-4 text-center ${isCurrentPlayer ? 'scale-110' : ''}`}>
-                      <div className="text-6xl mb-2 animate-bounce">{podium.medal}</div>
-                      <div className={`bg-white/20 backdrop-blur-md rounded-lg p-4 ${
-                        isCurrentPlayer ? 'ring-4 ring-blue-400' : ''
-                      }`}>
+                    <div className={`mb-4 text-center`}>
+                      <div className="text-6xl mb-2">{podium.medal}</div>
+
+                      <div className={`bg-white/20 backdrop-blur-md rounded-lg px-8 py-5 ${isCurrentPlayer ? 'ring-4 ring-blue-400 ring-offset-0' : ''
+                        }`}>
+                        {/* Avatar */}
+                        <Avatar avatarId={entry.player.avatarId} name={entry.player.name} size="xl" className="mx-auto mb-2" />
                         <p className="text-white font-bold text-xl mb-1">
                           {entry.player.name}
                         </p>
@@ -201,6 +201,8 @@ const EndGame: React.FC = () => {
                     <span className="text-3xl w-12 text-center">
                       {index < 3 ? ['🥇', '🥈', '🥉'][index] : `${index + 1}.`}
                     </span>
+                    {/* Avatar */}
+                    <Avatar avatarId={entry.player.avatarId} name={entry.player.name} size="md" />
                     <span className="text-white text-lg">
                       {entry.player.name}
                       {isCurrentPlayer && (
@@ -219,7 +221,7 @@ const EndGame: React.FC = () => {
           </div>
         </div>
 
-        {/* Statistiques */}
+        {/* Statistiques 
         <div className="grid grid-cols-2 gap-4 max-w-3xl mx-auto mb-8">
           {bestRound && (
             <div className="bg-white/10 backdrop-blur-md rounded-lg p-6 text-center">
@@ -245,6 +247,7 @@ const EndGame: React.FC = () => {
             </p>
           </div>
         </div>
+        */}
 
         {/* Boutons d'action */}
         <div className="flex justify-center gap-4">

@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import socket from '../utils/socket';
 import Timer from './Timer';
 import Button from './Button';
-import { GameCard } from '@onskone/shared';
+import { GameCard, RoundPhase } from '@onskone/shared';
 import { GAME_CONFIG } from '../constants/game';
+import { getRandomFunFact, getNextFunFact } from '../constants/funFacts';
 
 interface QuestionSelectionProps {
   lobbyCode: string;
@@ -16,13 +17,33 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
   const [selectedQuestion, setSelectedQuestion] = useState<string | null>(null);
   const [loading, setLoading] = useState(isLeader);
   const [relancesLeft, setRelancesLeft] = useState(3);
+  const [funFact, setFunFact] = useState<string>(getRandomFunFact());
+  const [factFading, setFactFading] = useState(false);
+
+  // Effet pour changer les faits insolites toutes les 5 secondes (pour les non-leaders)
+  useEffect(() => {
+    if (isLeader) return;
+
+    const factInterval = setInterval(() => {
+      setFactFading(true);
+      setTimeout(() => {
+        setFunFact(prev => getNextFunFact(prev));
+        setFactFading(false);
+      }, 300); // Durée du fade out avant de changer
+    }, 8000); // Change toutes les 5 secondes
+
+    return () => clearInterval(factInterval);
+  }, [isLeader]);
 
   useEffect(() => {
-    if (isLeader) {
-      // Le chef demande une carte (1 seule)
-      socket.emit('requestQuestions', { lobbyCode, count: 1 });
-      socket.emit('startTimer', { lobbyCode, duration: GAME_CONFIG.TIMERS.QUESTION_SELECTION });
-    }
+    // Petit délai pour laisser le temps aux listeners socket de s'initialiser sur tous les clients
+    const startTimerTimeout = setTimeout(() => {
+      if (isLeader) {
+        // Le chef demande une carte (1 seule)
+        socket.emit('requestQuestions', { lobbyCode, count: 1 });
+        socket.emit('startTimer', { lobbyCode, duration: GAME_CONFIG.TIMERS.QUESTION_SELECTION });
+      }
+    }, 500);
 
     socket.on('questionsReceived', (data: { questions: GameCard[] }) => {
       if (data.questions.length > 0) {
@@ -32,6 +53,7 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
     });
 
     return () => {
+      clearTimeout(startTimerTimeout);
       socket.off('questionsReceived');
     };
   }, [isLeader, lobbyCode]);
@@ -47,7 +69,6 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
     if (!isLeader || selectedQuestion !== null || relancesLeft <= 0) return;
 
     setRelancesLeft(prev => prev - 1);
-    setLoading(true);
     socket.emit('requestQuestions', { lobbyCode, count: 1 });
   };
 
@@ -64,11 +85,22 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
         <div className="text-center mb-4 w-full max-w-2xl">
           <div className="bg-primary-light rounded-lg px-4 py-2 max-w-2xl">
             <p className="text-center mb-4">Le leader de cette manche est <strong>{leaderName}</strong></p>
-            <p className="text-2xl font-semibold ">En attente de sa sélection de question…</p>
-            <Timer duration={GAME_CONFIG.TIMERS.QUESTION_SELECTION} onExpire={handleTimerExpire} />
+            <p className="text-2xl font-semibold">En attente de sa sélection de question…</p>
+            <Timer duration={GAME_CONFIG.TIMERS.QUESTION_SELECTION} onExpire={handleTimerExpire} phase={RoundPhase.QUESTION_SELECTION} />
           </div>
         </div>
-        <div className="text-5xl">🤔</div>
+
+        {/* Fait insolite */}
+        <div className="max-w-md text-center">
+          <p className="text-xs text-gray-500 uppercase font-semibold mb-2">Le saviez-vous ?</p>
+          <p
+            className={`text-gray-700 text-base italic transition-opacity duration-300 ${factFading ? 'opacity-0' : 'opacity-100'}`}
+          >
+            {funFact}
+          </p>
+        </div>
+
+        <div className="text-5xl animate-bounce">🤔</div>
       </div>
     );
   }
@@ -90,7 +122,7 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
         <div className="flex-1 flex flex-col items-center justify-center">
           <div className="bg-primary text-xl font-semibold px-6 rounded-full mb-4 w-full text-center">
             Vous êtes le leader de cette manche !
-            <Timer duration={GAME_CONFIG.TIMERS.QUESTION_SELECTION} onExpire={handleTimerExpire} />
+            <Timer duration={GAME_CONFIG.TIMERS.QUESTION_SELECTION} onExpire={handleTimerExpire} phase={RoundPhase.QUESTION_SELECTION} />
           </div>
           <div className="flex flex-col items-center gap-2 w-full">
             <p className="text-lg font-medium mb-4">Choisissez une question pour cette manche :</p>

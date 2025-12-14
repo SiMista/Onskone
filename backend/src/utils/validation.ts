@@ -4,7 +4,7 @@
 
 const MIN_NAME_LENGTH = 2;
 const MAX_NAME_LENGTH = 20;
-const MAX_ANSWER_LENGTH = 200;
+const MAX_ANSWER_LENGTH = 70; // Synced with frontend GAME_CONFIG.MAX_ANSWER_LENGTH
 
 export interface ValidationResult {
   isValid: boolean;

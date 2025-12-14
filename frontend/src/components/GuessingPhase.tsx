@@ -2,13 +2,29 @@ import React, { useEffect, useState } from 'react';
 import socket from '../utils/socket';
 import Timer from './Timer';
 import Button from './Button';
-import { IPlayer } from '@onskone/shared';
+import Avatar from './Avatar';
+import { IPlayer, RoundPhase } from '@onskone/shared';
 import { GAME_CONFIG } from '../constants/game';
 
 interface Answer {
   id: string; // playerId de l'auteur
   text: string;
 }
+
+const NO_RESPONSE_PREFIX = '__NO_RESPONSE__';
+
+// Vérifie si une réponse est une "non-réponse" automatique
+const isNoResponse = (text: string): boolean => {
+  return text.startsWith(NO_RESPONSE_PREFIX);
+};
+
+// Retourne le texte à afficher (sans le préfixe)
+const getDisplayText = (text: string): string => {
+  if (isNoResponse(text)) {
+    return text.substring(NO_RESPONSE_PREFIX.length);
+  }
+  return text;
+};
 
 interface GuessingPhaseProps {
   lobbyCode: string;
@@ -27,10 +43,12 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
     // Demander les réponses mélangées au montage du composant (fallback au cas où l'événement automatique a été manqué)
     socket.emit('requestShuffledAnswers', { lobbyCode });
 
-    // Le leader démarre le timer pour la phase de devinette
-    if (isLeader) {
-      socket.emit('startTimer', { lobbyCode, duration: GAME_CONFIG.TIMERS.GUESSING });
-    }
+    // Petit délai pour laisser le temps aux listeners socket de s'initialiser sur tous les clients
+    const startTimerTimeout = setTimeout(() => {
+      if (isLeader) {
+        socket.emit('startTimer', { lobbyCode, duration: GAME_CONFIG.TIMERS.GUESSING });
+      }
+    }, 500);
 
     // Tous les joueurs reçoivent les réponses mélangées
     socket.on('shuffledAnswersReceived', (data: { answers: Answer[]; players: IPlayer[] }) => {
@@ -45,6 +63,7 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
     });
 
     return () => {
+      clearTimeout(startTimerTimeout);
       socket.off('shuffledAnswersReceived');
       socket.off('guessUpdated');
     };
@@ -105,7 +124,7 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
   };
 
   const handleTimerExpire = () => {
-    // Seul le leader doit appeler timerExpired pour éviter les appels multiples
+    // Seul le chef doit appeler timerExpired pour éviter les appels multiples
     if (isLeader) {
       socket.emit('timerExpired', { lobbyCode });
     }
@@ -141,7 +160,7 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
             ? 'Glissez-déposez chaque réponse vers le joueur correspondant'
             : 'Regardez le chef hésiter et rire ensemble!'}
         </p>
-        <Timer duration={GAME_CONFIG.TIMERS.GUESSING} onExpire={handleTimerExpire} />
+        <Timer duration={GAME_CONFIG.TIMERS.GUESSING} onExpire={handleTimerExpire} phase={RoundPhase.GUESSING} />
       </div>
 
       <div className="flex-1 grid grid-cols-2 gap-4 overflow-auto">
@@ -149,21 +168,27 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
         <div className="bg-gray-100 rounded-lg p-4 border-2 border-gray-300">
           <h3 className="text-xl font-bold text-gray-800 mb-4">Réponses</h3>
           <div className="space-y-3">
-            {getUnassignedAnswers().map((answer) => (
-              <div
-                key={answer.id}
-                draggable={isLeader}
-                onDragStart={() => handleDragStart(answer.id)}
-                className={`
-                  bg-white border-2 border-gray-300 rounded-lg p-4 break-words whitespace-pre-wrap
-                  ${isLeader ? 'cursor-move hover:border-primary hover:bg-blue-50' : 'cursor-default'}
-                  transition-all duration-200
-                  ${draggedAnswerId === answer.id ? 'opacity-50 scale-95' : ''}
-                `}
-              >
-                <p className="text-gray-800 text-sm">{answer.text}</p>
-              </div>
-            ))}
+            {getUnassignedAnswers().map((answer) => {
+              const noResponse = isNoResponse(answer.text);
+              return (
+                <div
+                  key={answer.id}
+                  draggable={isLeader}
+                  onDragStart={() => handleDragStart(answer.id)}
+                  className={`
+                    border-2 rounded-lg p-4 break-words whitespace-pre-wrap
+                    ${noResponse ? 'bg-gray-100 border-gray-200' : 'bg-white border-gray-300'}
+                    ${isLeader ? 'cursor-move hover:border-primary hover:bg-blue-50' : 'cursor-default'}
+                    transition-all duration-200
+                    ${draggedAnswerId === answer.id ? 'opacity-50 scale-95' : ''}
+                  `}
+                >
+                  <p className={`text-sm ${noResponse ? 'text-gray-400 italic' : 'text-gray-800'}`}>
+                    {getDisplayText(answer.text)}
+                  </p>
+                </div>
+              );
+            })}
             {getUnassignedAnswers().length === 0 && (
               <p className="text-gray-500 text-center py-8">
                 Toutes les réponses ont été attribuées
@@ -173,46 +198,60 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
         </div>
 
         {/* Colonne droite: Joueurs avec leurs réponses attribuées */}
-        <div className="space-y-4 overflow-auto">
+        <div className="space-y-3 overflow-auto">
           {players.map((player) => {
             const assignedAnswers = getAssignedAnswers(player.id);
+            // Tronquer le nom si > 10 caractères
+            const displayName = player.name.length > 10
+              ? player.name.substring(0, 10) + '...'
+              : player.name;
 
             return (
               <div
                 key={player.id}
                 onDragOver={handleDragOver}
                 onDrop={() => handleDrop(player.id)}
-                className="bg-primary-light rounded-lg p-4
-                  border-2 border-primary hover:border-primary-dark transition-all "
+                className="bg-primary-light rounded-lg p-3 flex gap-3
+                  border-2 border-primary hover:border-primary-dark transition-all"
               >
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-lg font-bold text-black">{player.name}</h4>
-                  <span className="bg-primary px-3 py-1 rounded-full text-sm text-white">
-                    {assignedAnswers.length} réponse{assignedAnswers.length > 1 ? 's' : ''}
+                {/* Avatar et nom à gauche */}
+                <div className="flex flex-col items-center justify-center min-w-[70px]">
+                  <Avatar avatarId={player.avatarId} name={player.name} size="md" />
+                  <span className="text-xs font-semibold text-gray-700 mt-1 text-center">
+                    {displayName}
                   </span>
                 </div>
 
-                <div className="space-y-2">
-                  {assignedAnswers.map((answer) => (
-                    <div
-                      key={answer.id}
-                      className="bg-white rounded-lg p-3 flex justify-between items-start border-2 border-gray-300"
-                    >
-                      <p className="text-gray-800 text-sm flex-1 min-w-0 break-words whitespace-pre-wrap">{answer.text}</p>
-                      {isLeader && (
-                        <button
-                          onClick={() => handleRemoveGuess(answer.id)}
-                          className="ml-2 text-red-500 hover:text-red-600 font-bold "
-                        >
-                          ✕
-                        </button>
-                      )}
+                {/* Zone de réponse à droite */}
+                <div className="flex-1 min-w-0">
+                  {assignedAnswers.length > 0 ? (
+                    <div className="space-y-2">
+                      {assignedAnswers.map((answer) => {
+                        const noResponse = isNoResponse(answer.text);
+                        return (
+                          <div
+                            key={answer.id}
+                            className={`rounded-lg p-3 flex justify-between items-start border-2 ${noResponse ? 'bg-gray-100 border-gray-200' : 'bg-white border-gray-300'}`}
+                          >
+                            <p className={`text-sm flex-1 min-w-0 break-words whitespace-pre-wrap ${noResponse ? 'text-gray-400 italic' : 'text-gray-800'}`}>
+                              {getDisplayText(answer.text)}
+                            </p>
+                            {isLeader && (
+                              <button
+                                onClick={() => handleRemoveGuess(answer.id)}
+                                className="ml-2 text-red-500 hover:text-red-600 font-bold"
+                              >
+                                ✕
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
-                  ))}
-                  {assignedAnswers.length === 0 && (
-                    <div className="border-2 border-dashed border-gray-400 rounded-lg p-6 text-center bg-white">
+                  ) : (
+                    <div className="border-2 border-dashed border-gray-400 rounded-lg p-4 text-center bg-white h-full flex items-center justify-center">
                       <p className="text-gray-500 text-sm">
-                        {isLeader ? 'Déposez une réponse ici' : 'Aucune réponse attribuée'}
+                        {isLeader ? 'Déposez une réponse ici' : 'Aucune réponse'}
                       </p>
                     </div>
                   )}

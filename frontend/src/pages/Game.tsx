@@ -241,7 +241,7 @@ const GamePage: React.FC = () => {
       {/* Empty columns for centering */}
       <div className="col-2"></div>
 
-      {/* Debug info */}
+      {/* Debug info 
       {process.env.NODE_ENV === 'development' && (
         <div className="col-12">
           <div className="mt-4 bg-black/50 text-white p-4 rounded-lg text-xs">
@@ -251,6 +251,7 @@ const GamePage: React.FC = () => {
           </div>
         </div>
       )}
+        */}
     </div>
   );
 };
