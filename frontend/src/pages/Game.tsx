@@ -222,7 +222,7 @@ const GamePage: React.FC = () => {
       )}
 
       {/* Main game area - centered */}
-      <div className={`flex-1 w-full max-w-4xl mx-auto px-2 flex flex-col md:pt-0 ${
+      <div className={`flex-1 w-full max-w-4xl mx-auto px-2 pb-7 md:pb-10 flex flex-col md:pt-0 ${
         (game?.currentRound?.phase === RoundPhase.GUESSING ||
          (game?.currentRound?.phase === RoundPhase.QUESTION_SELECTION && isLeader))
           ? 'pt-0'
