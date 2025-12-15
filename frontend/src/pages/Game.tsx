@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import socket from '../utils/socket';
 import QuestionSelection from '../components/QuestionSelection';
@@ -6,7 +6,7 @@ import AnswerPhase from '../components/AnswerPhase';
 import GuessingPhase from '../components/GuessingPhase';
 import RevealPhase from '../components/RevealPhase';
 import Logo from '../components/Logo';
-import { IPlayer, IRound, IGame, RoundPhase, GameStatus } from '@onskone/shared';
+import { IPlayer, IRound, IGame, RoundPhase, GameStatus, RevealResult } from '@onskone/shared';
 
 const GamePage: React.FC = () => {
   const { lobbyCode } = useParams<{ lobbyCode: string }>();
@@ -23,8 +23,8 @@ const GamePage: React.FC = () => {
   const [players, setPlayers] = useState<IPlayer[]>([]);
   const [currentPlayer, setCurrentPlayer] = useState<IPlayer | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [revealResults, setRevealResults] = useState<any[]>([]);
-  const [roundScore, setRoundScore] = useState<number>(0);
+  const [revealResults, setRevealResults] = useState<RevealResult[]>([]);
+  const errorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Calculer isLeader directement (pas de useEffect) pour éviter les race conditions
   const isLeader = !!(game?.currentRound && currentPlayer && game.currentRound.leader.id === currentPlayer.id);
@@ -73,7 +73,7 @@ const GamePage: React.FC = () => {
       } : null);
     });
 
-    socket.on('revealResults', (data: { phase: RoundPhase; results: any[]; scores: Record<string, number> }) => {
+    socket.on('revealResults', (data: { phase: RoundPhase; results: RevealResult[]; scores: Record<string, number> }) => {
       setGame(prev => prev ? {
         ...prev,
         currentRound: prev.currentRound ? {
@@ -84,11 +84,6 @@ const GamePage: React.FC = () => {
 
       // Stocker les résultats pour RevealPhase
       setRevealResults(data.results);
-
-      // Le score du round est celui du chef (leader), pas du joueur actuel
-      // data.scores contient { leaderId: score }
-      const leaderScore = Object.values(data.scores)[0] || 0;
-      setRoundScore(leaderScore);
     });
 
     socket.on('roundStarted', (data: { round: IRound }) => {
@@ -125,7 +120,11 @@ const GamePage: React.FC = () => {
 
     socket.on('error', (data: { message: string }) => {
       setError(data.message);
-      setTimeout(() => setError(null), 5000);
+      // Cleanup previous timeout if exists
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+      }
+      errorTimeoutRef.current = setTimeout(() => setError(null), 5000);
     });
 
     return () => {
@@ -138,6 +137,10 @@ const GamePage: React.FC = () => {
       socket.off('gameEnded');
       socket.off('updatePlayersList');
       socket.off('error');
+      // Cleanup error timeout
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+      }
     };
   }, [navigate, lobbyCode]);
 
@@ -193,7 +196,6 @@ const GamePage: React.FC = () => {
             leaderName={game.currentRound.leader.name}
             isGameOver={isGameOver}
             results={revealResults}
-            roundScore={roundScore}
             question={game.currentRound.selectedQuestion || ''}
           />
         );
@@ -220,8 +222,13 @@ const GamePage: React.FC = () => {
       )}
 
       {/* Main game area - centered */}
-      <div className="flex-1 w-full max-w-4xl mx-auto px-2">
-        <div className="bg-white rounded-lg p-2 md:p-4 min-h-[400px] md:min-h-[500px] flex flex-col">
+      <div className={`flex-1 w-full max-w-4xl mx-auto px-2 flex flex-col md:pt-0 ${
+        (game?.currentRound?.phase === RoundPhase.GUESSING ||
+         (game?.currentRound?.phase === RoundPhase.QUESTION_SELECTION && isLeader))
+          ? 'pt-0'
+          : 'pt-[5vh]'
+      }`}>
+        <div className="bg-white rounded-lg p-2 md:p-4 min-h-[400px] md:min-h-[500px] flex flex-col shadow-[0_2px_10px_rgba(0,0,0,0.3)]">
           {/* Game info header inside main container */}
           <div className="flex justify-center md:justify-between items-center mb-2 md:mb-4 pb-2 md:pb-3 border-b-2 border-gray-200">
             <div className="text-gray-800 text-center md:text-right">

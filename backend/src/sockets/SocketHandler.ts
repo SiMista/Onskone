@@ -7,10 +7,28 @@ import { validatePlayerName, validateAnswer, validateLobbyCode, sanitizeInput } 
 
 export class SocketHandler {
     private io: Server<ClientToServerEvents, ServerToClientEvents>;
+    // Map pour stocker les timeouts de déconnexion (clé: lobbyCode_playerName)
+    private disconnectTimeouts: Map<string, NodeJS.Timeout> = new Map();
+    // Délai de grâce pour la reconnexion (30 secondes)
+    private readonly RECONNECT_GRACE_PERIOD = 30000;
 
     constructor(io: Server<ClientToServerEvents, ServerToClientEvents>) {
         this.io = io;
         this.setupSocketEvents();
+    }
+
+    private getDisconnectKey(lobbyCode: string, playerName: string): string {
+        return `${lobbyCode}_${playerName}`;
+    }
+
+    private cancelDisconnectTimeout(lobbyCode: string, playerName: string): void {
+        const key = this.getDisconnectKey(lobbyCode, playerName);
+        const timeout = this.disconnectTimeouts.get(key);
+        if (timeout) {
+            clearTimeout(timeout);
+            this.disconnectTimeouts.delete(key);
+            console.log(`⏱️ Timeout de déconnexion annulé pour ${playerName} dans ${lobbyCode}`);
+        }
     }
 
     private setupSocketEvents(): void {
@@ -74,6 +92,8 @@ export class SocketHandler {
                     const existingPlayerBySocket = lobby.players.find(p => p.socketId === socket.id);
                     if (existingPlayerBySocket) {
                         console.log(`Player ${existingPlayerBySocket.name} est déjà dans le lobby ${lobby.code} avec le même socket.`);
+                        // Annuler le timeout de déconnexion s'il existe
+                        this.cancelDisconnectTimeout(lobby.code, existingPlayerBySocket.name);
                         existingPlayerBySocket.isActive = true; // Marquer comme actif (rejouer)
                         socket.join(lobby.code);
                         socket.emit('joinedLobby', { player: existingPlayerBySocket });
@@ -86,6 +106,8 @@ export class SocketHandler {
                     if (existingPlayerByName) {
                         // C'est une reconnexion - mettre à jour le socketId
                         console.log(`Player ${sanitizedName} reconnecte au lobby ${lobby.code}. Mise à jour du socket ID.`);
+                        // Annuler le timeout de déconnexion s'il existe
+                        this.cancelDisconnectTimeout(lobby.code, sanitizedName);
                         existingPlayerByName.socketId = socket.id;
                         existingPlayerByName.isActive = true; // Marquer comme actif (rejouer)
 
@@ -885,7 +907,7 @@ export class SocketHandler {
             });
 
             // ===== DISCONNECT HANDLING =====
-            // Cleanup automatique quand un joueur se déconnecte
+            // Marquer le joueur comme inactif avec délai de grâce pour reconnexion
             socket.on('disconnect', (reason) => {
                 console.log(`❌ User disconnected: ${socket.id} (reason: ${reason})`);
 
@@ -896,18 +918,44 @@ export class SocketHandler {
                     const disconnectedPlayer = lobby.players.find(p => p.socketId === socket.id);
 
                     if (disconnectedPlayer) {
-                        console.log(`🧹 Cleaning up player ${disconnectedPlayer.name} from lobby ${lobby.code}`);
+                        console.log(`⏸️ Player ${disconnectedPlayer.name} disconnected from lobby ${lobby.code} - starting grace period`);
 
-                        // Retirer le joueur du lobby
-                        const isLobbyRemoved = LobbyManager.removePlayer(lobby, disconnectedPlayer);
+                        // Marquer le joueur comme inactif (au lieu de le supprimer immédiatement)
+                        disconnectedPlayer.isActive = false;
 
-                        if (isLobbyRemoved) {
-                            console.log(`🗑️  Lobby ${lobby.code} was empty and has been removed`);
-                        } else {
-                            // Notifier les autres joueurs de la mise à jour
-                            this.io.to(lobby.code).emit('updatePlayersList', { players: lobby.players });
-                            console.log(`📢 Updated players list in lobby ${lobby.code} (${lobby.players.length} remaining)`);
-                        }
+                        // Notifier les autres joueurs
+                        this.io.to(lobby.code).emit('updatePlayersList', { players: lobby.players });
+
+                        // Créer un timeout pour supprimer le joueur après le délai de grâce
+                        const key = this.getDisconnectKey(lobby.code, disconnectedPlayer.name);
+
+                        // Annuler un éventuel timeout existant
+                        this.cancelDisconnectTimeout(lobby.code, disconnectedPlayer.name);
+
+                        const timeout = setTimeout(() => {
+                            // Vérifier si le joueur est toujours inactif
+                            const currentLobby = LobbyManager.getLobby(lobby.code);
+                            if (!currentLobby) return;
+
+                            const playerToRemove = currentLobby.players.find(p => p.name === disconnectedPlayer.name && !p.isActive);
+                            if (playerToRemove) {
+                                console.log(`🧹 Grace period expired - removing ${playerToRemove.name} from lobby ${lobby.code}`);
+
+                                const isLobbyRemoved = LobbyManager.removePlayer(currentLobby, playerToRemove);
+
+                                if (isLobbyRemoved) {
+                                    console.log(`🗑️  Lobby ${lobby.code} was empty and has been removed`);
+                                } else {
+                                    this.io.to(lobby.code).emit('updatePlayersList', { players: currentLobby.players });
+                                    console.log(`📢 Updated players list in lobby ${lobby.code} (${currentLobby.players.length} remaining)`);
+                                }
+                            }
+
+                            this.disconnectTimeouts.delete(key);
+                        }, this.RECONNECT_GRACE_PERIOD);
+
+                        this.disconnectTimeouts.set(key, timeout);
+                        console.log(`⏱️ Grace period started for ${disconnectedPlayer.name} (${this.RECONNECT_GRACE_PERIOD / 1000}s)`);
                     }
                 });
             });

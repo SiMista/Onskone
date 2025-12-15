@@ -1,4 +1,3 @@
-import React from 'react';
 import { useSyncedTimer } from '../hooks/useSyncedTimer';
 import { RoundPhase } from '@onskone/shared';
 
@@ -9,7 +8,7 @@ interface TimerProps {
   lobbyCode?: string; // Code du lobby pour demander l'état du timer (utile pour Edge)
 }
 
-const Timer: React.FC<TimerProps> = ({ duration, onExpire, phase, lobbyCode }) => {
+const Timer = ({ duration, onExpire, phase, lobbyCode }: TimerProps) => {
   const { timeLeft } = useSyncedTimer(duration, { onExpire, phase, lobbyCode });
 
   const progress = (timeLeft / duration) * 100;

@@ -1,4 +1,4 @@
-import React, { ReactNode } from "react";
+import { ReactNode } from "react";
 
 type ButtonVariant = "primary" | "success" | "danger" | "warning" | "secondary" | "ghost";
 type ButtonSize = "sm" | "md" | "lg" | "xl";

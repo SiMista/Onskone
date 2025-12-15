@@ -1,30 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import socket from '../utils/socket';
 import Button from './Button';
 import Avatar from './Avatar';
-
-const NO_RESPONSE_PREFIX = '__NO_RESPONSE__';
-
-// Vérifie si une réponse est une "non-réponse" automatique
-const isNoResponse = (text: string): boolean => {
-  return text.startsWith(NO_RESPONSE_PREFIX);
-};
-
-// Retourne le texte à afficher (sans le préfixe)
-const getDisplayText = (text: string): string => {
-  if (isNoResponse(text)) {
-    return text.substring(NO_RESPONSE_PREFIX.length);
-  }
-  return text;
-};
+import { RevealResult } from '@onskone/shared';
+import { isNoResponse, getDisplayText } from '../utils/answerHelpers';
 
 interface RevealPhaseProps {
   lobbyCode: string;
   isLeader: boolean;
   leaderName: string;
   isGameOver: boolean;
-  results: any[];
-  roundScore: number;
+  results: RevealResult[];
   question: string;
 }
 
@@ -173,11 +159,9 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
               Révéler ({revealedCount}/{totalAnswers})
             </Button>
           ) : (
-            <div className="bg-white rounded-lg p-3 md:p-5 shadow-[0_2px_10px_rgba(0,0,0,0.3)] text-center">
-              <p className="text-gray-900 text-sm md:text-base font-semibold">
-                ⏳ {leaderName} révèle les réponses... ({revealedCount}/{totalAnswers})
-              </p>
-            </div>
+            <p className="text-gray-900 text-sm md:text-base font-semibold">
+              {leaderName} révèle les réponses... ({revealedCount}/{totalAnswers})
+            </p>
           )
         ) : isLeader ? (
           <>
@@ -192,11 +176,11 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
             />
           </>
         ) : (
-          <div className="bg-white rounded-lg p-3 md:p-5 shadow-[0_2px_10px_rgba(0,0,0,0.3)] text-center">
+          <div className="text-center">
             <p className="text-gray-900 text-sm md:text-base font-semibold">
               {isGameOver
-                ? '⏳ En attente des résultats finaux...'
-                : `⏳ En attente que ${leaderName} lance la manche suivante...`
+                ? `En attente que ${leaderName} révèle les résultats finaux...`
+                : `En attente que ${leaderName} lance la manche suivante...`
               }
             </p>
           </div>

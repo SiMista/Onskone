@@ -1,4 +1,4 @@
-import React from 'react';
+import { useState } from 'react';
 import { getAvatarUrl } from '../constants/game';
 
 interface AvatarProps {
@@ -15,7 +15,7 @@ const sizeClasses = {
   xl: 'w-20 h-20 text-3xl',
 };
 
-const Avatar: React.FC<AvatarProps> = ({ avatarId, name = '', size = 'md', className = '' }) => {
+const Avatar = ({ avatarId, name = '', size = 'md', className = '' }: AvatarProps) => {
   const sizeClass = sizeClasses[size];
 
   // Fallback: initiales si l'image ne charge pas
@@ -28,7 +28,7 @@ const Avatar: React.FC<AvatarProps> = ({ avatarId, name = '', size = 'md', class
       .toUpperCase() || '?';
   };
 
-  const [imageError, setImageError] = React.useState(false);
+  const [imageError, setImageError] = useState(false);
   const avatarUrl = getAvatarUrl(avatarId);
 
   return (

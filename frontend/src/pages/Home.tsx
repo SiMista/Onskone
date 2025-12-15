@@ -19,6 +19,7 @@ const Home = () => {
   const navigate = useNavigate();
 
   const lobbyCode = queryParams.get('lobbyCode');
+  const hostName = queryParams.get('host');
 
   const createLobby = useCallback(() => {
     if (!playerName.trim()) {
@@ -64,15 +65,6 @@ const Home = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Bouton info - visible uniquement sur mobile */}
-      <button
-        onClick={() => setIsInfoOpen(true)}
-        className="md:hidden fixed top-4 right-4 z-40 w-10 h-10 rounded-full bg-transparent shadow-lg flex items-center justify-center text-primary text-white font-bold text-xl border-3 border-primary border-white hover:bg-primary transition-colors"
-        aria-label="🎯 Comment jouer"
-      >
-        i
-      </button>
-
       {/* Modal d'information */}
       <InfoModal
         isOpen={isInfoOpen}
@@ -96,7 +88,7 @@ const Home = () => {
       </InfoModal>
 
       {/* Contenu principal */}
-      <div className="flex-1 w-full max-w-screen-xl mx-auto px-4 py-4 md:py-8">
+      <div className="flex-1 w-full max-w-screen-xl mx-auto px-4 py-4 md:py-8 flex flex-col justify-center md:justify-start">
         {/* Logo */}
         <div className="flex justify-center mb-4 md:mb-8">
           <Logo size="large" />
@@ -110,7 +102,7 @@ const Home = () => {
           {/* Bloc "Joue maintenant" */}
           <div className="md:col-span-4">
             <Frame>
-              <h3 className="text-lg md:text-xl">JOUE MAINTENANT !</h3>
+              <h3 className="text-lg md:text-xl font-bold">JOUE MAINTENANT !</h3>
               <AvatarSelector
                 selectedAvatarId={avatarId}
                 onSelect={setAvatarId}
@@ -131,26 +123,44 @@ const Home = () => {
               ) : (
                 <div>
                   <small className="block mb-2 text-sm">
-                    Vous êtes invité à rejoindre le salon <b>{lobbyCode}</b>
+                    Vous êtes invité à rejoindre le salon de <b>{hostName || 'un ami'}</b>
                   </small>
                   <Button text="Rejoindre" variant="warning" size="md" onClick={joinLobby} />
                 </div>
               )}
             </Frame>
+
+            {/* Bouton Comment jouer - mobile uniquement */}
+            <div className="md:hidden mt-4 text-center">
+              <button
+                onClick={() => setIsInfoOpen(true)}
+                className="text-white text-sm underline underline-offset-2 hover:text-white/80 transition-colors cursor-pointer"
+              >
+                Comment jouer ?
+              </button>
+            </div>
           </div>
 
           {/* Bloc explications - desktop only */}
           <div className="hidden md:block md:col-span-6">
             <Frame textAlign="left">
-              <h2 className='text-lg font-bold mb-4'>🎯 Comment jouer ?</h2>
-              <p>
-                1. Un <b>chef</b> est choisi au hasard et sélectionne une question parmi trois propositions.
-                <br /><br />
-                2. Les joueurs répondent <b>anonymement</b>, et le chef tente de deviner qui a écrit quoi.
-                <br /><br />
-                3. À la fin, les prénoms sont révélés et le chef marque des points selon ses bonnes réponses.
+              <div className="w-full border-b border-gray-200 pb-3 mb-2">
+                <h2 className='text-xl font-bold text-gray-800 m-0'>Comment jouer ?</h2>
+              </div>
+              <div className="space-y-4">
+                <p>
+                  <span className="font-bold">1.</span> Un <b>chef</b> est choisi au hasard et sélectionne une quCorestion parmi trois propositions.
+                </p>
+                <p>
+                  <span className="font-bold">2.</span> Les joueurs répondent <b>anonymement</b>, et le chef tente de deviner qui a écrit quoi.
+                </p>
+                <p>
+                  <span className="font-bold">3.</span> À la fin, les prénoms sont révélés et le chef marque des points selon ses bonnes réponses.
+                </p>
+              </div>
+              <p className="text-center text-lg font-bold text-primary mt-6">
+                Alors, on se connaît ?
               </p>
-              <h3>Alors, on se connaît ?</h3>
             </Frame>
           </div>
 

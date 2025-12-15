@@ -1,13 +1,13 @@
-import React from 'react';
+import { ReactNode } from 'react';
 
 interface InfoModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
-const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose, title, children }) => {
+const InfoModal = ({ isOpen, onClose, title, children }: InfoModalProps) => {
   if (!isOpen) return null;
 
   return (
@@ -24,7 +24,7 @@ const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose, title, children 
           <h2 className="text-xl font-bold text-gray-800 m-0">{title}</h2>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors text-gray-600 font-bold"
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors text-gray-600 font-bold cursor-pointer"
           >
             ✕
           </button>

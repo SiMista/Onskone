@@ -60,3 +60,19 @@ button {
 .start-11 { @apply col-start-11; }
 .start-12 { @apply col-start-12; }
 
+/* Animation pour le menu popup */
+@keyframes menu-open {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-menu-open {
+  animation: menu-open 0.15s ease-out forwards;
+}
+

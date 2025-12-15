@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import socket from '../utils/socket';
 import { IPlayer, LeaderboardEntry, RoundStat, RoundData } from '@onskone/shared';
 import Button from '../components/Button';
 import Avatar from '../components/Avatar';
+import Logo from '../components/Logo';
 
 const EndGame: React.FC = () => {
   const { lobbyCode } = useParams<{ lobbyCode: string }>();
@@ -110,20 +111,22 @@ const EndGame: React.FC = () => {
       )}
 
       <div className="max-w-7xl mx-auto">
+        {/* Logo */}
+        <div className="flex justify-center mb-3 md:mb-6">
+          <Logo size="small" />
+        </div>
+
         {/* Header */}
         <div className="text-center mb-4 md:mb-8">
-          <h1 className="text-3xl md:text-6xl font-bold text-white mb-2 md:mb-4">
-            Résultat final
-          </h1>
-          <p className="text-base md:text-2xl text-white/80">
-            {leaderboard[0]?.player.name} est celui qui vous connait le mieux !
+          <p className="text-base md:text-2xl text-white/80 ">
+            <strong>{leaderboard[0]?.player.name}</strong> est celui qui vous connait le mieux !
           </p>
         </div>
 
         {/* Podium Top 3 */}
         {leaderboard.length >= 3 && (
           <div className="mb-6 md:mb-12">
-            <div className="flex items-end justify-center gap-1 md:gap-4 max-w-4xl mx-auto">
+            <div className="flex items-end justify-center gap-5 md:gap-4 max-w-4xl mx-auto">
               {leaderboard.slice(0, 3).map((entry, index) => {
                 const podium = getPodiumPosition(index);
                 if (!podium) return null;
@@ -164,7 +167,7 @@ const EndGame: React.FC = () => {
 
                     {/* Marche du podium */}
                     <div className={`
-                      w-20 md:w-48 ${podium.height} bg-gradient-to-b ${podium.color}
+                      w-25 md:w-48 ${podium.height} bg-gradient-to-b ${podium.color}
                       rounded-t-lg md:rounded-t-xl flex items-center justify-center
                       border-2 md:border-4 border-white/30 shadow-2xl
                     `}>
@@ -182,7 +185,7 @@ const EndGame: React.FC = () => {
         {/* Classement complet */}
         <div className="bg-white/10 backdrop-blur-md rounded-lg p-3 md:p-6 mb-4 md:mb-8 max-w-3xl mx-auto">
           <h2 className="text-lg md:text-2xl font-bold text-white mb-3 md:mb-4 text-center">
-            📊 Classement complet
+            Classement final
           </h2>
           <div className="space-y-1.5 md:space-y-2">
             {leaderboard.map((entry, index) => {
@@ -239,7 +242,7 @@ const EndGame: React.FC = () => {
           )}
 
           <div className="bg-white/10 backdrop-blur-md rounded-lg p-6 text-center">
-            <div className="text-4xl mb-2">🎯</div>
+            <div className="text-4xl mb-2"></div>
             <h3 className="text-lg font-bold text-white mb-2">Total de rounds</h3>
             <p className="text-3xl font-bold text-white mt-2">
               {leaderboard.length}
@@ -252,7 +255,7 @@ const EndGame: React.FC = () => {
         */}
 
         {/* Boutons d'action */}
-        <div className="flex flex-col md:flex-row justify-center gap-2 md:gap-4">
+        <div className="flex flex-col md:flex-row justify-center items-center gap-2 md:gap-10 w-2/3 md:w-auto mx-auto">
           <Button
             variant="success"
             size="lg"
