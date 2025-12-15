@@ -11,7 +11,7 @@ export const FUN_FACTS = [
   "Aller à la salle de sport régulièrement confère en plus du gain musculaire, une odeur corporelle nauséabonde",
   "Ne pas se brosser les dents entraîne systématiquement une haleine de dragon",
   "Manger du KFC tous les jours augmente fortement tes dépenses en papier toilette",
-  "Qui s'endort avec les fesses qui grattent, se réveille avec les doigts qui puent",
+  "Celui qui s'endort avec les fesses qui grattent, se réveille avec les doigts qui puent",
   "Un Français qui prononce mal Aya Nakamura est à 99.9% raciste",
   "Si dans une musique de rap, tu entends 'numéro 10 comme ...', ce rappeur est forcément éclaté",
   "4 hommes sur 5 ne comprennent pas la douleur subie par les femmes au quotidien (je suis le 5ème)"

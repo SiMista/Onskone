@@ -11,6 +11,7 @@ interface PlayerCardProps {
   isCurrentPlayer: boolean;
   currentPlayerIsHost: boolean;
   isActive?: boolean;
+  isFirstPlayer?: boolean;
   onKick?: (id: string) => void;
   onPromote?: (id: string) => void;
 }
@@ -23,16 +24,23 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   isCurrentPlayer,
   currentPlayerIsHost,
   isActive = true,
+  isFirstPlayer = false,
   onKick,
   onPromote,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const buttonRef = useRef<HTMLSpanElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Fermer le menu quand on clique ailleurs
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(event.target as Node) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(event.target as Node)
+      ) {
         setIsOpen(false);
       }
     };
@@ -45,6 +53,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isOpen]);
+
   return (
     <div className={`flex items-center justify-between py-2 px-[15px] my-2 rounded-[10px] border-2 border-[#ddd] shadow-[0_2px_6px_rgba(0,0,0,0.1)] w-[95%] transition-all duration-300 ${
       isActive
@@ -60,18 +69,25 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
       </div>
 
       {/* Partie droite → couronne ou menu */}
-      <div className="relative" ref={menuRef}>
+      <div className="relative">
         {isHost ? (
           <FaCrown color="#fcad11" size={30} />
         ) : currentPlayerIsHost ? (
           <>
-            <FaEllipsisV
-              size={20}
+            <span
+              ref={buttonRef}
               className="cursor-pointer"
               onClick={() => setIsOpen(!isOpen)}
-            />
+            >
+              <FaEllipsisV size={20} />
+            </span>
             {isOpen && (
-              <div className="absolute top-full right-0 bg-white border-2 border-dashed border-[#b0b0b0] rounded-2xl shadow-[0_6px_16px_rgba(0,0,0,0.15)] z-50 text-right min-w-[160px] overflow-hidden scale-100 transition-transform duration-200 ease-out">
+              <div
+                ref={menuRef}
+                className={`absolute right-0 bg-white border-2 border-dashed border-[#b0b0b0] rounded-2xl shadow-[0_6px_16px_rgba(0,0,0,0.15)] z-[100] text-right min-w-[160px] overflow-hidden animate-menu-open ${
+                  isFirstPlayer ? 'top-full mt-1 origin-top-right' : 'bottom-full mb-1 origin-bottom-right'
+                }`}
+              >
                 <div
                   className="py-3 px-4 cursor-pointer text-[15px] font-semibold text-[#333333] border-b border-[#d0d0d0] transition-[background,transform] duration-200"
                   onMouseEnter={(e) => {
@@ -116,4 +132,3 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
 };
 
 export default PlayerCard;
-

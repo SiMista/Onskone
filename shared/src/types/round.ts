@@ -67,4 +67,10 @@ export interface IRound {
 
   /** Nombre de réponses révélées dans la phase REVEAL */
   revealedCount?: number;
+
+  /** Timestamp de démarrage du timer (pour synchronisation) */
+  timerStartedAt?: number;
+
+  /** Durée du timer en secondes */
+  timerDuration?: number;
 }

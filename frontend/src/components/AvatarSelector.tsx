@@ -1,4 +1,3 @@
-import React from 'react';
 import { AVATARS, getAvatarUrl } from '../constants/game';
 
 interface AvatarSelectorProps {
@@ -6,7 +5,7 @@ interface AvatarSelectorProps {
   onSelect: (avatarId: number) => void;
 }
 
-const AvatarSelector: React.FC<AvatarSelectorProps> = ({ selectedAvatarId, onSelect }) => {
+const AvatarSelector = ({ selectedAvatarId, onSelect }: AvatarSelectorProps) => {
   const handlePrevious = () => {
     const newId = selectedAvatarId === 0 ? AVATARS.length - 1 : selectedAvatarId - 1;
     onSelect(newId);

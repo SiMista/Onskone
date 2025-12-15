@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import socket from '../utils/socket';
 import Timer from './Timer';
 import Button from './Button';
@@ -109,7 +109,7 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <div className="text-4xl md:text-5xl mb-3 md:mb-4">⏳</div>
+          <div className="text-4xl md:text-5xl mb-3 md:mb-4 animate-spin">⏳</div>
           <p className="text-base md:text-lg text-gray-800">Chargement des questions...</p>
         </div>
       </div>

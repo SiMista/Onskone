@@ -88,7 +88,9 @@ const Lobby = () => {
     );
 
     const generateLink = useCallback(() => {
-        const link = `${window.location.origin}/?lobbyCode=${lobbyCode!}`;
+        const host = players.find(p => p.isHost);
+        const hostName = host ? encodeURIComponent(host.name) : '';
+        const link = `${window.location.origin}/?lobbyCode=${lobbyCode!}&host=${hostName}`;
 
         // Fonction de fallback pour copier sans l'API Clipboard (HTTP non-localhost)
         const fallbackCopy = (text: string) => {
@@ -120,7 +122,7 @@ const Lobby = () => {
         } else {
             fallbackCopy(link);
         }
-    }, [lobbyCode]);
+    }, [lobbyCode, players]);
 
     const leaveLobby = useCallback(() => {
         if (currentPlayer && lobbyCode) {
@@ -238,7 +240,7 @@ const Lobby = () => {
 
                             {/* Liste des joueurs */}
                             <ul className="list-none w-full m-0 p-0 max-h-[40vh] md:max-h-[50vh] overflow-y-auto">
-                                {players.map((player) => (
+                                {players.map((player, index) => (
                                     <li key={player.id}>
                                         <PlayerCard
                                             id={player.id}
@@ -248,6 +250,7 @@ const Lobby = () => {
                                             isCurrentPlayer={currentPlayer?.id === player.id}
                                             currentPlayerIsHost={!!currentPlayer?.isHost}
                                             isActive={player.isActive}
+                                            isFirstPlayer={index === 0}
                                             onKick={kickPlayer}
                                             onPromote={promotePlayer}
                                         />
@@ -256,26 +259,28 @@ const Lobby = () => {
                             </ul>
 
                             {/* Actions - responsive layout */}
-                            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-center justify-center w-full">
+                            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-center sm:items-start justify-center w-full">
                                 {/* Bouton lancer le jeu */}
-                                {currentPlayer?.isHost && (
+                                {currentPlayer?.isHost ? (
                                     <Button
                                         text="Lancer le jeu"
                                         variant="success"
                                         size="md"
-                                        rotateEffect={true}
-                                        state={canStartGame ? 'default' : 'disabled'}
+                                        rotateEffect
+                                        disabled={!canStartGame}
                                         onClick={startGame}
                                     />
+                                ) : (
+                                    <div className="flex items-center gap-2 px-4 py-2 text-gray-500">
+                                        <span className="text-lg animate-pulse">⏳</span>
+                                        <span className="text-sm italic ">Seul l'hôte peut lancer le jeu</span>
+                                    </div>
                                 )}
 
                                 {/* Code et lien d'invitation */}
                                 <div className="flex flex-col gap-1 items-center">
-                                    <small className="text-sm">
-                                        Code : <b className="text-base">{lobbyCode}</b>
-                                    </small>
                                     <Button
-                                        text="Copier le lien"
+                                        text="Copier le lien d'invitation"
                                         variant="warning"
                                         size="sm"
                                         onClick={generateLink}

@@ -1,0 +1,64 @@
+import { useState, useMemo } from 'react';
+import ContactModal from './ContactModal';
+import LegalModal from './LegalModal';
+import PrivacyModal from './PrivacyModal';
+
+type ModalType = 'mentions' | 'confidentialite' | 'contact' | null;
+
+const footerLinkClass = 'hover:text-white transition-colors underline cursor-pointer';
+
+const Footer: React.FC = () => {
+  const [activeModal, setActiveModal] = useState<ModalType>(null);
+
+  const currentYear = useMemo(() => new Date().getFullYear(), []);
+
+  const closeModal = () => setActiveModal(null);
+
+  return (
+    <>
+      <footer className="w-full py-5 text-center text-white/60 text-xs select-none">
+        <div className="mb-2">
+          Onskone &copy; {currentYear}
+        </div>
+        <div className="flex justify-center gap-4">
+          <button
+            type="button"
+            onClick={() => setActiveModal('mentions')}
+            className={footerLinkClass}
+          >
+            Mentions légales
+          </button>
+          <span aria-hidden="true">|</span>
+          <button
+            type="button"
+            onClick={() => setActiveModal('confidentialite')}
+            className={footerLinkClass}
+          >
+            Confidentialité
+          </button>
+          <span aria-hidden="true">|</span>
+          <button
+            type="button"
+            onClick={() => setActiveModal('contact')}
+            className={footerLinkClass}
+          >
+            Nous contacter
+          </button>
+        </div>
+      </footer>
+
+      {/* Modals - rendered conditionally for performance */}
+      {activeModal === 'mentions' && (
+        <LegalModal isOpen onClose={closeModal} />
+      )}
+      {activeModal === 'confidentialite' && (
+        <PrivacyModal isOpen onClose={closeModal} />
+      )}
+      {activeModal === 'contact' && (
+        <ContactModal isOpen onClose={closeModal} />
+      )}
+    </>
+  );
+};
+
+export default Footer;

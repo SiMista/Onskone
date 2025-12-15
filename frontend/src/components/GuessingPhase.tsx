@@ -1,28 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import socket from '../utils/socket';
 import Timer from './Timer';
 import Button from './Button';
 import Avatar from './Avatar';
 import { IPlayer, RoundPhase } from '@onskone/shared';
 import { GAME_CONFIG } from '../constants/game';
+import { isNoResponse, getDisplayText } from '../utils/answerHelpers';
 
 interface Answer {
   id: string;
   text: string;
 }
-
-const NO_RESPONSE_PREFIX = '__NO_RESPONSE__';
-
-const isNoResponse = (text: string): boolean => {
-  return text.startsWith(NO_RESPONSE_PREFIX);
-};
-
-const getDisplayText = (text: string): string => {
-  if (isNoResponse(text)) {
-    return text.substring(NO_RESPONSE_PREFIX.length);
-  }
-  return text;
-};
 
 interface GuessingPhaseProps {
   lobbyCode: string;
@@ -177,9 +165,14 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
           {isLeader ? 'Qui a écrit quoi?' : `${leaderName} devine...`}
         </h2>
         <p className="text-xs md:text-sm text-gray-600 text-center mb-2 md:mb-3">
-          {isLeader
-            ? (window.innerWidth < 768 ? 'Tapez une réponse puis un joueur' : 'Glissez-déposez chaque réponse vers le joueur')
-            : 'Regardez le chef hésiter !'}
+          {isLeader ? (
+            <>
+              <span className="md:hidden">Tapez une réponse puis un joueur</span>
+              <span className="hidden md:inline">Glissez-déposez chaque réponse vers le joueur</span>
+            </>
+          ) : (
+            'Regardez le chef hésiter !'
+          )}
         </p>
         <Timer duration={GAME_CONFIG.TIMERS.GUESSING} onExpire={handleTimerExpire} phase={RoundPhase.GUESSING} lobbyCode={lobbyCode} />
       </div>

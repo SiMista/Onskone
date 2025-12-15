@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import socket from '../utils/socket';
 import Timer from './Timer';
 import Button from './Button';
@@ -69,8 +69,8 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
   if (isLeader) {
     return (
       <div className="flex flex-col items-center justify-center h-full p-3 md:p-6 space-y-4">
-        <div className="text-center mb-2 md:mb-4 w-full">
-          <div className="bg-primary-light rounded-lg px-3 md:px-4 py-2 max-w-2xl mx-auto">
+        <div className="text-center mb-2 md:mb-4 w-full ">
+          <div className="bg-primary-light rounded-lg px-3 md:px-4 py-2 max-w-2xl mx-auto ">
             <p className="text-gray-600 mb-2 md:mb-4 text-sm md:text-base">Question posée aux autres joueurs:</p>
             <p className="text-lg md:text-2xl font-semibold">{question}</p>
           </div>
