@@ -229,7 +229,7 @@ const Lobby = () => {
                             </div>
 
                             {/* Compteur de joueurs */}
-                            <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 justify-center">
+                            <div className="flex flex-row sm:flex-row items-center gap-1 sm:gap-2 justify-center">
                                 <h3 className="m-0 font-bold text-center text-base md:text-lg">
                                     Joueurs {activePlayers.length}/{GAME_CONFIG.MAX_PLAYERS}
                                 </h3>

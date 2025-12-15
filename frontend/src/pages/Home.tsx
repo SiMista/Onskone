@@ -88,7 +88,7 @@ const Home = () => {
       </InfoModal>
 
       {/* Contenu principal */}
-      <div className="flex-1 w-full max-w-screen-xl mx-auto px-4 py-4 md:py-8 flex flex-col justify-center md:justify-start">
+      <div className="flex-1 w-full max-w-screen-xl mx-auto px-4 py-4 md:py-4 flex flex-col justify-center md:justify-start">
         {/* Logo */}
         <div className="flex justify-center mb-4 md:mb-8">
           <Logo size="large" />
@@ -149,7 +149,7 @@ const Home = () => {
               </div>
               <div className="space-y-4">
                 <p>
-                  <span className="font-bold">1.</span> Un <b>chef</b> est choisi au hasard et sélectionne une quCorestion parmi trois propositions.
+                  <span className="font-bold">1.</span> Un <b>chef</b> est choisi au hasard et sélectionne une question parmi trois propositions.
                 </p>
                 <p>
                   <span className="font-bold">2.</span> Les joueurs répondent <b>anonymement</b>, et le chef tente de deviner qui a écrit quoi.
