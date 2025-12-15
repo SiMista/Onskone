@@ -30,8 +30,8 @@ git push origin main
 | Region | Frankfurt (EU) |
 | Root Directory | ⚠️ **Laisser vide** (racine du projet) |
 | Runtime | Node |
-| Build Command | `corepack enable && pnpm install && pnpm run build:shared` |
-| Start Command | `cd backend && pnpm start` |
+| Build Command | `npm install -g pnpm && pnpm install && pnpm run build:shared` |
+| Start Command | `cd backend && npm start` |
 | Instance Type | **Free** |
 
 4. Ajoute les variables d'environnement :
