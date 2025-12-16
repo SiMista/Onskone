@@ -2,9 +2,9 @@
  * Input validation utilities for server-side security
  */
 
-const MIN_NAME_LENGTH = 2;
-const MAX_NAME_LENGTH = 20;
-const MAX_ANSWER_LENGTH = 70; // Synced with frontend GAME_CONFIG.MAX_ANSWER_LENGTH
+import { GAME_CONSTANTS } from '@onskone/shared';
+
+const { MIN_NAME_LENGTH, MAX_NAME_LENGTH, MAX_ANSWER_LENGTH } = GAME_CONSTANTS;
 
 export interface ValidationResult {
   isValid: boolean;
@@ -77,7 +77,7 @@ export function validateLobbyCode(code: string): ValidationResult {
 }
 
 /**
- * Sanitize user input (basic protection)
+ * Sanitize user input (comprehensive XSS protection)
  */
 export function sanitizeInput(input: string): string {
   if (!input || typeof input !== 'string') {
@@ -86,6 +86,20 @@ export function sanitizeInput(input: string): string {
 
   return input
     .trim()
+    // HTML entities
+    .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    // Remove null bytes
+    .replace(/\0/g, '')
+    // Remove javascript: protocol
+    .replace(/javascript:/gi, '')
+    // Remove data: protocol (can be used for XSS)
+    .replace(/data:/gi, '')
+    // Remove vbscript: protocol
+    .replace(/vbscript:/gi, '')
+    // Remove on* event handlers
+    .replace(/on\w+\s*=/gi, '');
 }

@@ -12,7 +12,7 @@ import { useSocketEvent, useQueryParams } from '../hooks';
 import { GAME_CONFIG, AVATARS } from '../constants/game';
 
 const Home = () => {
-  const [playerName, setPlayerName] = useState<string>(`Joueur${Math.floor(Math.random() * 1000)}`);
+  const [playerName, setPlayerName] = useState<string>('');
   const [avatarId, setAvatarId] = useState<number>(Math.floor(Math.random() * AVATARS.length));
   const [isInfoOpen, setIsInfoOpen] = useState(false);
   const queryParams = useQueryParams();

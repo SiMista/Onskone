@@ -1,30 +1,21 @@
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import { TestHelper } from '../src/utils/TestHelper';
-import { LobbyManager } from "../src/managers/LobbyManager";
+import * as LobbyManager from "../src/managers/LobbyManager";
 import { Lobby } from "../src/models/Lobby";
-import {Player} from "../src/models/Player";
-import {GameStatus} from '@onskone/shared';
+import { Player } from "../src/models/Player";
 
 describe('LobbyManager', () => {
     beforeEach(() => {
-        jest.clearAllMocks(); // Nettoyer l'état entre les tests
+        jest.clearAllMocks();
     });
 
     it('should create a lobby successfully and generate a valid lobbyCode', () => {
-        const hostPlayer = new Player('Host', true);
-        const lobbyCode = LobbyManager.create(hostPlayer);
-
+        const lobbyCode = LobbyManager.create();
         expect(lobbyCode).toMatch(/^[A-Z0-9]{6}$/);
     });
 
-    it('should throw an error if a non-host player tries to create a lobby', () => {
-        const nonHostPlayer = new Player('Non-Host', false);
-        expect(() => LobbyManager.create(nonHostPlayer)).toThrowError('Player is not authorized to create a lobby.');
-    });
-
     it('should return a lobby when getting a lobby', () => {
-        const hostPlayer = new Player('Host', true);
-        const lobbyCode = LobbyManager.create(hostPlayer);
+        const lobbyCode = LobbyManager.create();
         const lobby = LobbyManager.getLobby(lobbyCode);
 
         expect(lobby).toBeInstanceOf(Lobby);
@@ -33,7 +24,7 @@ describe('LobbyManager', () => {
 
     it('should add a player to the lobby', () => {
         const lobby = TestHelper.createLobbyWithPlayers();
-        const player = new Player('Player 3');
+        const player = new Player('Player 3', 'socket-3');
         LobbyManager.addPlayer(lobby, player);
 
         expect(lobby.players).toContainEqual(player);
@@ -53,28 +44,5 @@ describe('LobbyManager', () => {
         LobbyManager.removePlayer(lobby, originalHost);
 
         expect(lobby.players[0].isHost).toBe(true);
-    });
-
-    it('should start a game if there are enough players', () => {
-        const lobby = TestHelper.createLobbyWithPlayers(['Player 2', 'Player 3']);
-        const startResult = LobbyManager.startGame(lobby);
-
-        expect(startResult).toBe(true);
-        expect(lobby.game.status).toBe(GameStatus.IN_PROGRESS);
-    });
-
-    it('should return false if there are not enough players to start a game', () => {
-        const lobby = TestHelper.createLobbyWithPlayers(['Player 2']);
-        const startResult = LobbyManager.startGame(lobby);
-
-        expect(startResult).toBe(false);
-    });
-
-    it('should return false if trying to start a game that already started', () => {
-        const lobby = TestHelper.createLobbyWithPlayers(['Player 2', 'Player 3']);
-        LobbyManager.startGame(lobby); // Start once
-        const startResult = LobbyManager.startGame(lobby); // Try to start again
-
-        expect(startResult).toBe(false);
     });
 });

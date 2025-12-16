@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import socket from '../utils/socket';
-import { IPlayer, LeaderboardEntry, RoundStat, RoundData } from '@onskone/shared';
+import { IPlayer, LeaderboardEntry, RoundData } from '@onskone/shared';
 import Button from '../components/Button';
 import Avatar from '../components/Avatar';
 import Logo from '../components/Logo';
@@ -9,11 +9,11 @@ import Logo from '../components/Logo';
 const EndGame: React.FC = () => {
   const { lobbyCode } = useParams<{ lobbyCode: string }>();
   const navigate = useNavigate();
+  const confettiTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [currentPlayer, setCurrentPlayer] = useState<IPlayer | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
-  const [_bestRound, setBestRound] = useState<RoundStat | null>(null);
 
   // Redirect if no lobby code
   useEffect(() => {
@@ -24,31 +24,32 @@ const EndGame: React.FC = () => {
 
   useEffect(() => {
     // Récupérer le joueur actuel
-    const storedPlayer = localStorage.getItem('currentPlayer');
-    if (storedPlayer) {
-      setCurrentPlayer(JSON.parse(storedPlayer));
+    let parsedPlayer: IPlayer | null = null;
+    try {
+      const storedPlayer = localStorage.getItem('currentPlayer');
+      if (storedPlayer) {
+        parsedPlayer = JSON.parse(storedPlayer);
+        setCurrentPlayer(parsedPlayer);
+      }
+    } catch (error) {
+      console.error('Error parsing stored player:', error);
+      localStorage.removeItem('currentPlayer');
     }
 
     // Récupérer les données finales
     socket.on('gameEnded', (data: { leaderboard: LeaderboardEntry[]; rounds: RoundData[] }) => {
       setLeaderboard(data.leaderboard);
 
-      // Calculer le meilleur round (score le plus élevé en un seul round)
-      if (data.rounds && data.rounds.length > 0) {
-        const best = data.rounds.reduce((max: RoundStat, round: RoundData) => {
-          const roundScore = Math.max(...Object.values(round.scores));
-          return roundScore > max.score ? { roundNumber: round.roundNumber, leader: round.leader.name, score: roundScore } : max;
-        }, { roundNumber: 0, leader: '', score: 0 });
-        setBestRound(best);
-      }
-
       // Afficher les confettis pour le gagnant
-      if (data.leaderboard.length > 0 && storedPlayer) {
+      if (data.leaderboard.length > 0 && parsedPlayer) {
         const winner = data.leaderboard[0];
-        const player = JSON.parse(storedPlayer);
-        if (winner.player.id === player.id) {
+        if (winner.player.id === parsedPlayer.id) {
           setShowConfetti(true);
-          setTimeout(() => setShowConfetti(false), 5000);
+          // Clean up previous timeout if exists
+          if (confettiTimeoutRef.current) {
+            clearTimeout(confettiTimeoutRef.current);
+          }
+          confettiTimeoutRef.current = setTimeout(() => setShowConfetti(false), 5000);
         }
       }
     });
@@ -60,6 +61,10 @@ const EndGame: React.FC = () => {
 
     return () => {
       socket.off('gameEnded');
+      // Clean up confetti timeout on unmount
+      if (confettiTimeoutRef.current) {
+        clearTimeout(confettiTimeoutRef.current);
+      }
     };
   }, [lobbyCode]);
 
@@ -225,34 +230,6 @@ const EndGame: React.FC = () => {
             })}
           </div>
         </div>
-
-        {/* Statistiques 
-        <div className="grid grid-cols-2 gap-4 max-w-3xl mx-auto mb-8">
-          {bestRound && (
-            <div className="bg-white/10 backdrop-blur-md rounded-lg p-6 text-center">
-              <div className="text-4xl mb-2">🌟</div>
-              <h3 className="text-lg font-bold text-white mb-2">Meilleur round</h3>
-              <p className="text-white/80">
-                Round {bestRound.roundNumber} - {bestRound.leader}
-              </p>
-              <p className="text-3xl font-bold text-yellow-400 mt-2">
-                {bestRound.score} points
-              </p>
-            </div>
-          )}
-
-          <div className="bg-white/10 backdrop-blur-md rounded-lg p-6 text-center">
-            <div className="text-4xl mb-2"></div>
-            <h3 className="text-lg font-bold text-white mb-2">Total de rounds</h3>
-            <p className="text-3xl font-bold text-white mt-2">
-              {leaderboard.length}
-            </p>
-            <p className="text-white/70 text-sm">
-              (Chaque joueur a été chef)
-            </p>
-          </div>
-        </div>
-        */}
 
         {/* Boutons d'action */}
         <div className="flex flex-col md:flex-row justify-center items-center gap-2 md:gap-10 w-2/3 md:w-auto mx-auto">

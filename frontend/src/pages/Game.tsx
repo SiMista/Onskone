@@ -31,10 +31,15 @@ const GamePage: React.FC = () => {
 
   useEffect(() => {
     // Récupérer le joueur actuel depuis le localStorage
-    const storedPlayer = localStorage.getItem('currentPlayer');
-    if (storedPlayer) {
-      const player = JSON.parse(storedPlayer);
-      setCurrentPlayer(player);
+    try {
+      const storedPlayer = localStorage.getItem('currentPlayer');
+      if (storedPlayer) {
+        const player = JSON.parse(storedPlayer);
+        setCurrentPlayer(player);
+      }
+    } catch (error) {
+      console.error('Error parsing stored player:', error);
+      localStorage.removeItem('currentPlayer');
     }
 
     // Demander l'état actuel du jeu au serveur

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import socket from '../utils/socket';
 import Logo from '../components/Logo';
@@ -26,6 +26,7 @@ const Lobby = () => {
     const [players, setPlayers] = useState<IPlayer[]>([]);
     const [currentPlayer, setCurrentPlayer] = useState<IPlayer | null>(null);
     const [showCopiedMessage, setShowCopiedMessage] = useState(false);
+    const copiedMessageTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const [playerName] = useState<string>(() => {
         const urlPlayerName = queryParams.get('playerName');
         if (urlPlayerName) {
@@ -87,10 +88,28 @@ const Lobby = () => {
         !!currentPlayer
     );
 
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (copiedMessageTimeoutRef.current) {
+                clearTimeout(copiedMessageTimeoutRef.current);
+            }
+        };
+    }, []);
+
     const generateLink = useCallback(() => {
         const host = players.find(p => p.isHost);
         const hostName = host ? encodeURIComponent(host.name) : '';
         const link = `${window.location.origin}/?lobbyCode=${lobbyCode!}&host=${hostName}`;
+
+        // Helper to show copied message with proper cleanup
+        const showCopied = () => {
+            if (copiedMessageTimeoutRef.current) {
+                clearTimeout(copiedMessageTimeoutRef.current);
+            }
+            setShowCopiedMessage(true);
+            copiedMessageTimeoutRef.current = setTimeout(() => setShowCopiedMessage(false), GAME_CONFIG.COPIED_MESSAGE_DURATION);
+        };
 
         // Fonction de fallback pour copier sans l'API Clipboard (HTTP non-localhost)
         const fallbackCopy = (text: string) => {
@@ -102,8 +121,7 @@ const Lobby = () => {
             textarea.select();
             try {
                 document.execCommand('copy');
-                setShowCopiedMessage(true);
-                setTimeout(() => setShowCopiedMessage(false), GAME_CONFIG.COPIED_MESSAGE_DURATION);
+                showCopied();
             } catch (err) {
                 console.error('Fallback copy failed:', err);
                 alert(`Lien à copier: ${text}`);
@@ -114,10 +132,7 @@ const Lobby = () => {
         // Utiliser l'API Clipboard si disponible, sinon fallback
         if (navigator.clipboard?.writeText) {
             navigator.clipboard.writeText(link)
-                .then(() => {
-                    setShowCopiedMessage(true);
-                    setTimeout(() => setShowCopiedMessage(false), GAME_CONFIG.COPIED_MESSAGE_DURATION);
-                })
+                .then(() => showCopied())
                 .catch(() => fallbackCopy(link));
         } else {
             fallbackCopy(link);

@@ -1,5 +1,5 @@
-import {LobbyManager} from "../managers/LobbyManager";
-import {GameManager} from "../managers/GameManager";
+import * as LobbyManager from "../managers/LobbyManager";
+import * as GameManager from "../managers/GameManager";
 import {Player} from "../models/Player";
 import {Lobby} from "../models/Lobby";
 import {Game} from "../models/Game";

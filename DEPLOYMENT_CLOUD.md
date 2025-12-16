@@ -57,7 +57,7 @@ git push origin main
 |-------|--------|
 | Name | `onskone-frontend` |
 | Root Directory | ⚠️ **Laisser vide** (racine du projet) |
-| Build Command | `corepack enable && pnpm install && pnpm run build:shared && cd frontend && pnpm run build` |
+| Build Command | `npm install -g pnpm && pnpm install && pnpm run build:shared && cd frontend && pnpm run build` |
 | Publish Directory | `frontend/dist` |
 
 4. Ajoute les variables d'environnement :
@@ -65,7 +65,7 @@ git push origin main
 | Variable | Valeur |
 |----------|--------|
 | `VITE_SERVER_URL` | `https://onskone-backend.onrender.com` (ton URL backend) |
-| `VITE_CONTACT_EMAIL` | `ton@email.com` |
+| `VITE_CONTACT_EMAIL` | `onskonelejeu@gmail.com` |
 
 5. Clique **Create Static Site**
 
@@ -133,7 +133,7 @@ Clique sur le service créé, puis **Settings** :
 | Variable | Valeur |
 |----------|--------|
 | `VITE_SERVER_URL` | `https://ton-backend.up.railway.app` |
-| `VITE_CONTACT_EMAIL` | `ton@email.com` |
+| `VITE_CONTACT_EMAIL` | `onskonelejeu@gmail.com` |
 
 5. Va dans **Settings** → **Networking** → **Generate Domain**
 

@@ -28,8 +28,6 @@ export class Game implements IGame {
 
         this.currentRound = new Round(roundNumber, leader, gameCard);
         this.rounds.push(this.currentRound);
-
-        console.log(`Round ${roundNumber} started with leader: ${leader.name}`);
     }
 
     getRandomGameCard(): GameCard {
