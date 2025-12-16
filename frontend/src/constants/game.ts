@@ -14,7 +14,7 @@ export const AVATARS = [
   // (Fred, Scooby Doo) White man, blonde hair, blue shirt
   { id: 0, params: 'backgroundColor=b6e3f4&baseColor=f2be99&hair=fonze&hairColor=f5d731&mouth=smile&eyes=smiling&eyebrows=up&nose=curve&ears=attached&shirt=crew&shirtColor=82deff' },
   // Black women, blue shirt, earrings
-  { id: 1, params: 'backgroundColor=edce95&baseColor=8f5742&hair=full&hairColor=1f1f1f&mouth=smile&eyes=eyes&eyebrows=up&&nose=curve&earrings=hoop&earringsProbability=100&shirt=open&shirtColor=5cb7e0&glasses=round&glassesProbability=100&glassesColor=363535' },
+  { id: 1, params: 'backgroundColor=edce95&baseColor=8f5742&hair=full&hairColor=1f1f1f&mouth=smile&eyes=eyes&eyebrows=up&&nose=curve&earrings=stud&earringsProbability=100&shirt=open&shirtColor=5cb7e0&glasses=round&glassesProbability=100&glassesColor=363535' },
   // (Harry) White man, red hair, glasses
   { id: 2, params: 'backgroundColor=d1f4d1&baseColor=f2be99&hair=dannyPhantom&hairColor=b55239&mouth=laughing&eyes=eyes&eyebrows=up&nose=curve&ears=attached&shirt=crew&shirtColor=e3c698&glasses=round&glassesProbability=100&glassesColor=363535' },
   // (Brinda) Black women, pink shirt, earrings

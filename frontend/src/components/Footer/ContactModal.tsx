@@ -14,7 +14,7 @@ interface ContactForm {
   message: string;
 }
 
-const CONTACT_EMAIL = import.meta.env.VITE_CONTACT_EMAIL || 'contact@onskone.com';
+const CONTACT_EMAIL = import.meta.env.VITE_CONTACT_EMAIL || 'onskonelejeu@gmail.com';
 
 const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) => {
   const [contactForm, setContactForm] = useState<ContactForm>({
@@ -86,7 +86,10 @@ const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) => {
           </div>
         ) : (
           <>
-            <p className="mb-4">{LEGAL_CONTENT.contact.description}</p>
+            <p className="mb-4">
+              Une question, une suggestion ou un problème ?<br />
+              N'hésitez pas à nous envoyer un email à l'adresse <strong>{CONTACT_EMAIL}</strong> ou en remplissant le formulaire ci-dessous.
+            </p>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>

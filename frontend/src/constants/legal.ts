@@ -66,7 +66,6 @@ export const LEGAL_CONTENT = {
     ]
   },
   contact: {
-    title: 'Nous contacter',
-    description: `Une question, une suggestion ou un problème ? N'hésitez pas à nous contacter en remplissant le formulaire ci-dessous.`
+    title: 'Nous contacter'
   }
 };
