@@ -1,9 +1,12 @@
 import {Server, Socket} from 'socket.io';
-import {LobbyManager} from '../managers/LobbyManager';
-import {GameManager} from '../managers/GameManager';
+import * as LobbyManager from '../managers/LobbyManager';
+import * as GameManager from '../managers/GameManager';
 import {Player} from "../models/Player";
 import type { ServerToClientEvents, ClientToServerEvents } from '@onskone/shared';
+import { GAME_CONSTANTS } from '@onskone/shared';
 import { validatePlayerName, validateAnswer, validateLobbyCode, sanitizeInput } from '../utils/validation.js';
+import { rateLimiters } from '../utils/rateLimiter.js';
+import logger from '../utils/logger.js';
 
 export class SocketHandler {
     private io: Server<ClientToServerEvents, ServerToClientEvents>;
@@ -21,22 +24,61 @@ export class SocketHandler {
         return `${lobbyCode}_${playerName}`;
     }
 
+    /**
+     * Build reveal results from the current round's answers and guesses
+     */
+    private buildRevealResults(lobby: ReturnType<typeof LobbyManager.getLobby>, round: NonNullable<ReturnType<typeof LobbyManager.getLobby>>['game']['currentRound']): Array<{
+        playerId: string;
+        playerName: string;
+        playerAvatarId: number;
+        answer: string;
+        guessedPlayerId: string;
+        guessedPlayerName: string;
+        guessedPlayerAvatarId: number;
+        correct: boolean;
+    }> {
+        if (!lobby || !round) return [];
+
+        return Object.entries(round.answers).map(([playerId, answer]) => {
+            const guessedPlayerId = round.guesses[playerId];
+            const player = lobby.getPlayer(playerId);
+            const guessedPlayer = guessedPlayerId ? lobby.getPlayer(guessedPlayerId) : null;
+
+            return {
+                playerId,
+                playerName: player?.name || 'Unknown',
+                playerAvatarId: player?.avatarId ?? 0,
+                answer,
+                guessedPlayerId: guessedPlayerId || '',
+                guessedPlayerName: guessedPlayer?.name || 'Non assigné',
+                guessedPlayerAvatarId: guessedPlayer?.avatarId ?? 0,
+                correct: guessedPlayerId === playerId
+            };
+        });
+    }
+
     private cancelDisconnectTimeout(lobbyCode: string, playerName: string): void {
         const key = this.getDisconnectKey(lobbyCode, playerName);
         const timeout = this.disconnectTimeouts.get(key);
         if (timeout) {
             clearTimeout(timeout);
             this.disconnectTimeouts.delete(key);
-            console.log(`⏱️ Timeout de déconnexion annulé pour ${playerName} dans ${lobbyCode}`);
+            logger.debug(`Timeout de déconnexion annulé pour ${playerName} dans ${lobbyCode}`);
         }
     }
 
     private setupSocketEvents(): void {
         this.io.on('connection', (socket: Socket<ClientToServerEvents, ServerToClientEvents>) => {
-            console.log(`✅ User connected: ${socket.id}`);
+            logger.socket.connect(socket.id);
             // Event: Create Lobby with player name as host
             socket.on('createLobby', (data) => {
                 try {
+                    // Rate limiting
+                    if (!rateLimiters.createLobby.isAllowed(socket.id)) {
+                        socket.emit('error', { message: 'Trop de requêtes. Veuillez patienter.' });
+                        return;
+                    }
+
                     // Validate player name
                     const nameValidation = validatePlayerName(data.playerName);
                     if (!nameValidation.isValid) {
@@ -45,25 +87,33 @@ export class SocketHandler {
                     }
 
                     const sanitizedName = sanitizeInput(data.playerName);
-                    // Valider avatarId (0-12)
-                    const avatarId = typeof data.avatarId === 'number' && data.avatarId >= 0 && data.avatarId <= 12
+                    // Valider avatarId
+                    const avatarId = typeof data.avatarId === 'number'
+                        && data.avatarId >= GAME_CONSTANTS.MIN_AVATAR_ID
+                        && data.avatarId <= GAME_CONSTANTS.MAX_AVATAR_ID
                         ? Math.floor(data.avatarId)
-                        : 0;
+                        : GAME_CONSTANTS.MIN_AVATAR_ID;
                     const lobbyCode = LobbyManager.create();
                     const lobby = LobbyManager.getLobby(lobbyCode);
                     const hostPlayer = new Player(sanitizedName, socket.id, true, avatarId);
                     lobby?.addPlayer(hostPlayer);
                     socket.join(lobbyCode);
                     socket.emit('lobbyCreated', {lobbyCode});
-                    console.log(`Lobby created: ${lobbyCode}`);
+                    logger.game.created(lobbyCode, sanitizedName);
                 } catch (error) {
-                    console.error('Error creating lobby:', error);
+                    logger.error('Error creating lobby', { error: (error as Error).message });
                     socket.emit('error', {message: (error as Error).message});
                 }
             });
             // Event: Join Lobby with player name
             socket.on('joinLobby', (data) => {
                 try {
+                    // Rate limiting
+                    if (!rateLimiters.joinLobby.isAllowed(socket.id)) {
+                        socket.emit('error', { message: 'Trop de requêtes. Veuillez patienter.' });
+                        return;
+                    }
+
                     // Validate lobby code
                     const codeValidation = validateLobbyCode(data.lobbyCode);
                     if (!codeValidation.isValid) {
@@ -91,7 +141,7 @@ export class SocketHandler {
                     // Vérifie si le joueur avec ce socket.id est déjà dans le lobby
                     const existingPlayerBySocket = lobby.players.find(p => p.socketId === socket.id);
                     if (existingPlayerBySocket) {
-                        console.log(`Player ${existingPlayerBySocket.name} est déjà dans le lobby ${lobby.code} avec le même socket.`);
+                        logger.debug(`Player ${existingPlayerBySocket.name} déjà dans le lobby ${lobby.code}`);
                         // Annuler le timeout de déconnexion s'il existe
                         this.cancelDisconnectTimeout(lobby.code, existingPlayerBySocket.name);
                         existingPlayerBySocket.isActive = true; // Marquer comme actif (rejouer)
@@ -105,7 +155,7 @@ export class SocketHandler {
                     const existingPlayerByName = lobby.players.find(p => p.name === sanitizedName);
                     if (existingPlayerByName) {
                         // C'est une reconnexion - mettre à jour le socketId
-                        console.log(`Player ${sanitizedName} reconnecte au lobby ${lobby.code}. Mise à jour du socket ID.`);
+                        logger.info(`Player ${sanitizedName} reconnecte au lobby ${lobby.code}`);
                         // Annuler le timeout de déconnexion s'il existe
                         this.cancelDisconnectTimeout(lobby.code, sanitizedName);
                         existingPlayerByName.socketId = socket.id;
@@ -114,24 +164,25 @@ export class SocketHandler {
                         socket.join(lobby.code);
                         socket.emit('joinedLobby', { player: existingPlayerByName });
                         this.io.to(lobby.code).emit('updatePlayersList', { players: lobby.players });
-                        console.log(`${sanitizedName} s'est reconnecté au lobby ${lobby.code} (${lobby.players.length} joueurs)`);
                         return;
                     }
 
-                    // Nouveau joueur - valider avatarId (0-12)
-                    const avatarId = typeof data.avatarId === 'number' && data.avatarId >= 0 && data.avatarId <= 12
+                    // Nouveau joueur - valider avatarId
+                    const avatarId = typeof data.avatarId === 'number'
+                        && data.avatarId >= GAME_CONSTANTS.MIN_AVATAR_ID
+                        && data.avatarId <= GAME_CONSTANTS.MAX_AVATAR_ID
                         ? Math.floor(data.avatarId)
-                        : 0;
+                        : GAME_CONSTANTS.MIN_AVATAR_ID;
                     const newPlayer = new Player(sanitizedName, socket.id, false, avatarId);
                     LobbyManager.addPlayer(lobby, newPlayer);
 
                     socket.join(lobby.code);
                     socket.emit('joinedLobby', { player: newPlayer });
                     this.io.to(lobby.code).emit('updatePlayersList', { players: lobby.players });
-                    console.log(`${sanitizedName} a rejoint le lobby ${lobby.code} (${lobby.players.length} joueurs)`);
+                    logger.info(`${sanitizedName} a rejoint le lobby ${lobby.code}`, { playerCount: lobby.players.length });
 
                 } catch (error) {
-                    console.error('Error joining lobby:', error);
+                    logger.error('Error joining lobby', { error: (error as Error).message });
                     socket.emit('error', { message: (error as Error).message });
                 }
             });
@@ -158,7 +209,7 @@ export class SocketHandler {
                         socket.emit('playerNameValid');
                     }
                 } catch (error) {
-                    console.error('Error checking player name:', error);
+                    logger.error('Error checking player name', { error: (error as Error).message });
                     socket.emit('error', {message: (error as Error).message});
                 }
             });
@@ -171,7 +222,7 @@ export class SocketHandler {
                         socket.emit('error', {message: 'Lobby not found'});
                         return;
                     }
-                    console.log('leaveLobby', data.currentPlayerId, data.lobbyCode);
+                    logger.debug('leaveLobby', { playerId: data.currentPlayerId, lobbyCode: data.lobbyCode });
                     const player = lobby.getPlayer(data.currentPlayerId);
                     if (!player) {
                         socket.emit('error', {message: 'Player not found'});
@@ -179,14 +230,14 @@ export class SocketHandler {
                     }
                     const isLobbyRemoved = LobbyManager.removePlayer(lobby, player);
                     this.io.to(lobby.code).emit('updatePlayersList', {players: lobby.players});
-                    console.log(`${player.name} a quitté le lobby ${lobby.code}`);
+                    logger.info(`${player.name} a quitté le lobby ${lobby.code}`);
                     if (isLobbyRemoved) {
                         socket.leave(lobby.code);
-                        console.log(`Lobby ${lobby.code} removed`);
+                        logger.info(`Lobby ${lobby.code} supprimé`);
                     }
 
                 } catch (error) {
-                    console.error('Error leaving lobby:', error);
+                    logger.error('Error leaving lobby', { error: (error as Error).message });
                     socket.emit('error', {message: (error as Error).message});
                 }
             });
@@ -221,7 +272,7 @@ export class SocketHandler {
                 // Remove player from lobby
                 lobby.removePlayer(kickedPlayer);
                 this.io.to(lobbyCode).emit('updatePlayersList', { players: lobby.players });
-                console.log(`Player ${kickedPlayer.name} kicked from lobby ${lobbyCode}`);
+                logger.info(`Player ${kickedPlayer.name} expulsé du lobby ${lobbyCode}`);
                 // Notify kicked player
                 this.io.to(kickedPlayer.socketId).emit('kickedFromLobby');
             });       
@@ -256,15 +307,35 @@ export class SocketHandler {
                 // Promote player to host
                 lobby.setHost(playerToPromote);
                 this.io.to(lobbyCode).emit('updatePlayersList', { players: lobby.players });
-                console.log(`Player ${playerToPromote.name} promoted to host in lobby ${lobbyCode}`);
+                logger.info(`Player ${playerToPromote.name} promu hôte dans ${lobbyCode}`);
             });
 
             // Start Game
             socket.on('startGame', (data) => {
                 try {
+                    // Rate limiting
+                    if (!rateLimiters.gameAction.isAllowed(socket.id)) {
+                        socket.emit('error', { message: 'Trop de requêtes. Veuillez patienter.' });
+                        return;
+                    }
+
                     const lobby = LobbyManager.getLobby(data.lobbyCode);
                     if (!lobby) {
                         socket.emit('error', {message: 'Lobby not found'});
+                        return;
+                    }
+
+                    // Vérifier que c'est l'hôte qui lance la partie
+                    const host = lobby.players.find(p => p.isHost);
+                    if (!host || host.socketId !== socket.id) {
+                        socket.emit('error', { message: 'Seul l\'hôte peut lancer la partie' });
+                        return;
+                    }
+
+                    // Vérifier qu'il y a assez de joueurs
+                    const activePlayers = lobby.players.filter(p => p.isActive);
+                    if (activePlayers.length < 3) {
+                        socket.emit('error', { message: 'Il faut au moins 3 joueurs pour lancer la partie' });
                         return;
                     }
 
@@ -293,9 +364,9 @@ export class SocketHandler {
                     if (game.currentRound) {
                         this.io.to(data.lobbyCode).emit('roundStarted', {round: game.currentRound});
                     }
-                    console.log(`Game started in lobby ${data.lobbyCode} - Round 1 started with leader: ${game.currentRound?.leader.name}`);
+                    logger.game.started(data.lobbyCode, activePlayers.length);
                 } catch (error) {
-                    console.error('Error starting game:', error);
+                    logger.error('Error starting game', { error: (error as Error).message });
                     socket.emit('error', {message: (error as Error).message});
                 }
             });
@@ -327,9 +398,9 @@ export class SocketHandler {
                     }
 
                     socket.emit('questionsReceived', {questions});
-                    console.log(`${count} question card(s) sent to leader in lobby ${data.lobbyCode}`);
+                    logger.debug(`${count} carte(s) envoyée(s) au leader`, { lobbyCode: data.lobbyCode });
                 } catch (error) {
-                    console.error('Error requesting questions:', error);
+                    logger.error('Error requesting questions', { error: (error as Error).message });
                     socket.emit('error', {message: (error as Error).message});
                 }
             });
@@ -359,9 +430,9 @@ export class SocketHandler {
                         question: data.selectedQuestion,
                         phase: game.currentRound.phase
                     });
-                    console.log(`Question selected in lobby ${data.lobbyCode}: ${data.selectedQuestion}`);
+                    logger.debug(`Question sélectionnée`, { lobbyCode: data.lobbyCode });
                 } catch (error) {
-                    console.error('Error selecting question:', error);
+                    logger.error('Error selecting question', { error: (error as Error).message });
                     socket.emit('error', {message: (error as Error).message});
                 }
             });
@@ -389,7 +460,7 @@ export class SocketHandler {
                             leaderboard: game.getLeaderboard(),
                             rounds: game.rounds
                         });
-                        console.log(`Game ended in lobby ${data.lobbyCode}`);
+                        logger.game.ended(data.lobbyCode);
                         return;
                     }
 
@@ -397,10 +468,10 @@ export class SocketHandler {
                     game.nextRound();
                     if (game.currentRound) {
                         this.io.to(data.lobbyCode).emit('roundStarted', {round: game.currentRound});
+                        logger.game.roundStarted(data.lobbyCode, game.currentRound.roundNumber, game.currentRound.leader.name);
                     }
-                    console.log(`Round ${game.currentRound?.roundNumber} started in lobby ${data.lobbyCode}`);
                 } catch (error) {
-                    console.error('Error starting next round:', error);
+                    logger.error('Error starting next round', { error: (error as Error).message });
                     socket.emit('error', {message: (error as Error).message});
                 }
             });
@@ -420,7 +491,7 @@ export class SocketHandler {
                         rounds: game.rounds
                     });
                 } catch (error) {
-                    console.error('Error getting game results:', error);
+                    logger.error('Error getting game results', { error: (error as Error).message });
                     socket.emit('error', {message: (error as Error).message});
                 }
             });
@@ -452,7 +523,7 @@ export class SocketHandler {
                         leaderboard: game.getLeaderboard()
                     });
                 } catch (error) {
-                    console.error('Error getting game state:', error);
+                    logger.error('Error getting game state', { error: (error as Error).message });
                     socket.emit('error', {message: (error as Error).message});
                 }
             });
@@ -503,7 +574,7 @@ export class SocketHandler {
                         expectedAnswers: lobby.players.length - 1 // Tous sauf le chef
                     });
 
-                    console.log(`Answer submitted by player ${player.name} in lobby ${data.lobbyCode} (${Object.keys(game.currentRound.answers).length}/${lobby.players.length - 1})`);
+                    logger.debug(`Réponse soumise par ${player.name}`, { lobbyCode: data.lobbyCode, answers: Object.keys(game.currentRound.answers).length });
 
                     // Vérifier si tous les joueurs (sauf le chef) ont répondu
                     const expectedAnswers = lobby.players.length - 1;
@@ -528,10 +599,10 @@ export class SocketHandler {
                             players: lobby.players.filter(p => p.id !== game.currentRound!.leader.id)
                         });
 
-                        console.log(`All answers submitted in lobby ${data.lobbyCode}. Moving to GUESSING phase.`);
+                        logger.info(`Toutes les réponses soumises, passage à GUESSING`, { lobbyCode: data.lobbyCode });
                     }
                 } catch (error) {
-                    console.error('Error submitting answer:', error);
+                    logger.error('Error submitting answer', { error: (error as Error).message });
                     socket.emit('error', {message: (error as Error).message});
                 }
             });
@@ -560,10 +631,8 @@ export class SocketHandler {
                         answers: shuffledAnswers,
                         players: lobby.players.filter(p => p.id !== game.currentRound!.leader.id)
                     });
-
-                    console.log(`Shuffled answers sent to all players in lobby ${data.lobbyCode}`);
                 } catch (error) {
-                    console.error('Error requesting shuffled answers:', error);
+                    logger.error('Error requesting shuffled answers', { error: (error as Error).message });
                     socket.emit('error', {message: (error as Error).message});
                 }
             });
@@ -593,10 +662,8 @@ export class SocketHandler {
                         playerId: data.playerId,
                         currentGuesses: game.currentRound.currentGuesses
                     });
-
-                    console.log(`Guess updated in lobby ${data.lobbyCode}: answer ${data.answerId} -> player ${data.playerId}`);
                 } catch (error) {
-                    console.error('Error updating guess:', error);
+                    logger.error('Error updating guess', { error: (error as Error).message });
                     socket.emit('error', {message: (error as Error).message});
                 }
             });
@@ -630,22 +697,7 @@ export class SocketHandler {
                     game.currentRound.nextPhase();
 
                     // Créer les résultats détaillés
-                    const results = Object.entries(game.currentRound.answers).map(([playerId, answer]) => {
-                        const guessedPlayerId = game.currentRound!.guesses[playerId];
-                        const player = lobby.getPlayer(playerId);
-                        const guessedPlayer = guessedPlayerId ? lobby.getPlayer(guessedPlayerId) : null;
-
-                        return {
-                            playerId,
-                            playerName: player?.name || 'Unknown',
-                            playerAvatarId: player?.avatarId ?? 0,
-                            answer,
-                            guessedPlayerId: guessedPlayerId || '',
-                            guessedPlayerName: guessedPlayer?.name || 'Personne',
-                            guessedPlayerAvatarId: guessedPlayer?.avatarId ?? 0,
-                            correct: guessedPlayerId === playerId
-                        };
-                    });
+                    const results = this.buildRevealResults(lobby, game.currentRound);
 
                     // Broadcast les résultats à tous
                     this.io.to(data.lobbyCode).emit('revealResults', {
@@ -655,9 +707,9 @@ export class SocketHandler {
                         leaderboard: game.getLeaderboard()
                     });
 
-                    console.log(`Guesses submitted in lobby ${data.lobbyCode}. Leader scored: ${game.currentRound.scores[game.currentRound.leader.id] || 0}, Results: ${results.length}`);
+                    logger.info(`Attributions validées`, { lobbyCode: data.lobbyCode, leaderScore: game.currentRound.scores[game.currentRound.leader.id] || 0 });
                 } catch (error) {
-                    console.error('Error submitting guesses:', error);
+                    logger.error('Error submitting guesses', { error: (error as Error).message });
                     socket.emit('error', {message: (error as Error).message});
                 }
             });
@@ -688,10 +740,8 @@ export class SocketHandler {
                     this.io.to(data.lobbyCode).emit('answerRevealed', {
                         revealedIndex: game.currentRound.revealedCount
                     });
-
-                    console.log(`Answer ${game.currentRound.revealedCount} revealed in lobby ${data.lobbyCode}`);
                 } catch (error) {
-                    console.error('Error revealing answer:', error);
+                    logger.error('Error revealing answer', { error: (error as Error).message });
                     socket.emit('error', {message: (error as Error).message});
                 }
             });
@@ -723,10 +773,9 @@ export class SocketHandler {
                         duration: timerDuration,
                         startedAt: startedAt
                     });
-
-                    console.log(`Timer started for ${timerDuration}s in lobby ${data.lobbyCode} (phase: ${game.currentRound.phase})`);
+                    logger.debug(`Timer démarré: ${timerDuration}s`, { lobbyCode: data.lobbyCode, phase: game.currentRound.phase });
                 } catch (error) {
-                    console.error('Error starting timer:', error);
+                    logger.error('Error starting timer', { error: (error as Error).message });
                     socket.emit('error', {message: (error as Error).message});
                 }
             });
@@ -765,7 +814,7 @@ export class SocketHandler {
 
                     socket.emit('timerState', null);
                 } catch (error) {
-                    console.error('Error getting timer state:', error);
+                    logger.error('Error getting timer state', { error: (error as Error).message });
                     socket.emit('timerState', null);
                 }
             });
@@ -784,11 +833,11 @@ export class SocketHandler {
 
                     // Protection contre les doubles appels de timer pour la même phase
                     if (game.currentRound.timerProcessedForPhase === currentPhase) {
-                        console.log(`Timer already processed for phase ${currentPhase} in lobby ${data.lobbyCode}, ignoring duplicate`);
+                        logger.debug(`Timer déjà traité pour phase ${currentPhase}, ignoré`);
                         return;
                     }
 
-                    console.log(`Timer expired in lobby ${data.lobbyCode} (phase: ${currentPhase})`);
+                    logger.info(`Timer expiré`, { lobbyCode: data.lobbyCode, phase: currentPhase });
 
                     // Gérer l'expiration selon la phase
                     switch (currentPhase) {
@@ -802,7 +851,7 @@ export class SocketHandler {
                                 const proposedCard = game.currentRound.gameCard;
 
                                 if (!proposedCard || proposedCard.questions.length === 0) {
-                                    console.error(`No questions available for auto-selection in lobby ${data.lobbyCode}`);
+                                    logger.error('Pas de questions disponibles pour auto-sélection', { lobbyCode: data.lobbyCode });
                                     break;
                                 }
 
@@ -816,7 +865,7 @@ export class SocketHandler {
                                     phase: game.currentRound.phase,
                                     auto: true
                                 });
-                                console.log(`Auto-selected question from proposed card in lobby ${data.lobbyCode}: ${randomQuestion}`);
+                                logger.info(`Question auto-sélectionnée`, { lobbyCode: data.lobbyCode });
                             }
                             // Sinon, la question a déjà été sélectionnée, ne rien faire
                             break;
@@ -831,7 +880,7 @@ export class SocketHandler {
                                 if (!game.currentRound.answers[player.id]) {
                                     // Ajouter une réponse automatique marquée avec un préfixe spécial
                                     game.currentRound.addAnswer(player.id, `__NO_RESPONSE__${player.name} n'a pas répondu à temps`);
-                                    console.log(`Auto-answer added for player ${player.name} who didn't respond in time`);
+                                    logger.debug(`Réponse auto ajoutée pour ${player.name}`);
                                 }
                             }
 
@@ -853,7 +902,6 @@ export class SocketHandler {
                                 answers: shuffledAnswers,
                                 players: lobby.players.filter(p => p.id !== game.currentRound!.leader.id)
                             });
-                            console.log(`Timer expired - moved to GUESSING phase in lobby ${data.lobbyCode}`);
                             break;
 
                         case 'GUESSING':
@@ -869,22 +917,7 @@ export class SocketHandler {
                             game.currentRound.calculateScores();
                             game.currentRound.nextPhase();
 
-                            const results = Object.entries(game.currentRound.answers).map(([playerId, answer]) => {
-                                const guessedPlayerId = game.currentRound!.guesses[playerId];
-                                const player = lobby.getPlayer(playerId);
-                                const guessedPlayer = guessedPlayerId ? lobby.getPlayer(guessedPlayerId) : null;
-
-                                return {
-                                    playerId,
-                                    playerName: player?.name || 'Unknown',
-                                    playerAvatarId: player?.avatarId ?? 0,
-                                    answer,
-                                    guessedPlayerId: guessedPlayerId || '',
-                                    guessedPlayerName: guessedPlayer?.name || 'Unknown',
-                                    guessedPlayerAvatarId: guessedPlayer?.avatarId ?? 0,
-                                    correct: guessedPlayerId === playerId
-                                };
-                            });
+                            const results = this.buildRevealResults(lobby, game.currentRound);
 
                             this.io.to(data.lobbyCode).emit('revealResults', {
                                 phase: game.currentRound.phase,
@@ -893,7 +926,6 @@ export class SocketHandler {
                                 leaderboard: game.getLeaderboard(),
                                 forced: true
                             });
-                            console.log(`Timer expired - moved to REVEAL phase in lobby ${data.lobbyCode}`);
                             break;
 
                         case 'REVEAL':
@@ -901,7 +933,7 @@ export class SocketHandler {
                             break;
                     }
                 } catch (error) {
-                    console.error('Error handling timer expiration:', error);
+                    logger.error('Error handling timer expiration', { error: (error as Error).message });
                     socket.emit('error', {message: (error as Error).message});
                 }
             });
@@ -909,7 +941,7 @@ export class SocketHandler {
             // ===== DISCONNECT HANDLING =====
             // Marquer le joueur comme inactif avec délai de grâce pour reconnexion
             socket.on('disconnect', (reason) => {
-                console.log(`❌ User disconnected: ${socket.id} (reason: ${reason})`);
+                logger.socket.disconnect(socket.id, reason);
 
                 // Parcourir tous les lobbies pour trouver le joueur déconnecté
                 const lobbies = LobbyManager.getLobbies();
@@ -918,7 +950,7 @@ export class SocketHandler {
                     const disconnectedPlayer = lobby.players.find(p => p.socketId === socket.id);
 
                     if (disconnectedPlayer) {
-                        console.log(`⏸️ Player ${disconnectedPlayer.name} disconnected from lobby ${lobby.code} - starting grace period`);
+                        logger.info(`Player ${disconnectedPlayer.name} déconnecté du lobby ${lobby.code}`);
 
                         // Marquer le joueur comme inactif (au lieu de le supprimer immédiatement)
                         disconnectedPlayer.isActive = false;
@@ -939,15 +971,14 @@ export class SocketHandler {
 
                             const playerToRemove = currentLobby.players.find(p => p.name === disconnectedPlayer.name && !p.isActive);
                             if (playerToRemove) {
-                                console.log(`🧹 Grace period expired - removing ${playerToRemove.name} from lobby ${lobby.code}`);
+                                logger.info(`Période de grâce expirée, suppression de ${playerToRemove.name}`);
 
                                 const isLobbyRemoved = LobbyManager.removePlayer(currentLobby, playerToRemove);
 
                                 if (isLobbyRemoved) {
-                                    console.log(`🗑️  Lobby ${lobby.code} was empty and has been removed`);
+                                    logger.info(`Lobby ${lobby.code} supprimé (vide)`);
                                 } else {
                                     this.io.to(lobby.code).emit('updatePlayersList', { players: currentLobby.players });
-                                    console.log(`📢 Updated players list in lobby ${lobby.code} (${currentLobby.players.length} remaining)`);
                                 }
                             }
 
@@ -955,7 +986,6 @@ export class SocketHandler {
                         }, this.RECONNECT_GRACE_PERIOD);
 
                         this.disconnectTimeouts.set(key, timeout);
-                        console.log(`⏱️ Grace period started for ${disconnectedPlayer.name} (${this.RECONNECT_GRACE_PERIOD / 1000}s)`);
                     }
                 });
             });

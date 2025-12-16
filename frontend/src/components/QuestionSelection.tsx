@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import socket from '../utils/socket';
 import Timer from './Timer';
 import Button from './Button';
@@ -19,20 +19,30 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
   const [relancesLeft, setRelancesLeft] = useState(3);
   const [funFact, setFunFact] = useState<string>(getRandomFunFact());
   const [factFading, setFactFading] = useState(false);
+  const factFadeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Effet pour changer les faits insolites toutes les 5 secondes (pour les non-leaders)
+  // Effet pour changer les faits insolites toutes les 8 secondes (pour les non-leaders)
   useEffect(() => {
     if (isLeader) return;
 
     const factInterval = setInterval(() => {
       setFactFading(true);
-      setTimeout(() => {
+      // Clear any existing fade timeout before setting a new one
+      if (factFadeTimeoutRef.current) {
+        clearTimeout(factFadeTimeoutRef.current);
+      }
+      factFadeTimeoutRef.current = setTimeout(() => {
         setFunFact(prev => getNextFunFact(prev));
         setFactFading(false);
       }, 300); // Durée du fade out avant de changer
-    }, 8000); // Change toutes les 5 secondes
+    }, 8000);
 
-    return () => clearInterval(factInterval);
+    return () => {
+      clearInterval(factInterval);
+      if (factFadeTimeoutRef.current) {
+        clearTimeout(factFadeTimeoutRef.current);
+      }
+    };
   }, [isLeader]);
 
   useEffect(() => {

@@ -3,9 +3,9 @@ export const LEGAL_CONTENT = {
     title: 'Mentions Légales',
     sections: [
       {
-        title: 'Éditeur du site',
-        content: `Le site Onskone est un projet personnel de divertissement.`,
-        extra: `<strong>Responsable de la publication :</strong> Simeon Deiva<br /><strong>Contact :</strong> simeondeiva@gmail.com`
+        title: 'Message du développeur',
+        content: `C'est avec plaisir que je vous présente le site officiel du jeu de société Onskoné? !! Mon frère a eu l'idée de ce jeu en 2024, après l'avoir aidé pour les designs avec GIMP et présenté le prototype du jeu à de nombreux amis ainsi qu'au festival de Cannes, nous avons eu pas mal de retours positifs. J'ai donc décidé de me lancer dans le développement de ce site web pour populariser cette idée géniale 😄. J'espère que vous apprécierez jouer à Onskoné? n'hésitez pas à me dire votre avis sur le jeu, je le lirais avec plaisr !`,
+        extra: `<strong>Responsable du site : </strong>Simeon Deiva<br /><strong>Créateur du jeu : </strong>Sylvain Deiva<br /><strong>Contact :</strong> onskonelejeu@gmail.com`
       },
       {
         title: 'Hébergement',
@@ -15,6 +15,11 @@ export const LEGAL_CONTENT = {
         title: 'Propriété intellectuelle',
         content: `L'ensemble des contenus (textes, images, graphismes, logo, icônes, etc.) figurant sur le site Onskone sont protégés par les lois relatives à la propriété intellectuelle et appartiennent à l'éditeur ou font l'objet d'une autorisation d'utilisation.`,
         extra: `Toute reproduction, représentation, modification, publication ou adaptation de tout ou partie des éléments du site est interdite sans autorisation préalable écrite.`
+      },
+      {
+        title: 'Crédits',
+        content: `Les avatars utilisés dans ce jeu sont générés avec DiceBear (style "Micah").`,
+        extra: `<a href="https://www.dicebear.com/styles/micah/" target="_blank" rel="noopener noreferrer" class="text-primary underline">DiceBear Micah</a> par <strong>DiceBear</strong>, sous licence <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer" class="text-primary underline">CC BY 4.0</a>.`
       },
       {
         title: 'Limitation de responsabilité',
@@ -52,7 +57,7 @@ export const LEGAL_CONTENT = {
       },
       {
         title: 'Vos droits',
-        content: `Conformément à la réglementation en vigueur, vous disposez d'un droit d'accès, de rectification et de suppression de vos données. Pour exercer ces droits, contactez-nous à : simeondeiva@gmail.com`
+        content: `Conformément à la réglementation en vigueur, vous disposez d'un droit d'accès, de rectification et de suppression de vos données. Pour exercer ces droits, contactez-nous à : onskonelejeu@gmail.com`
       },
       {
         title: 'Partage des données',

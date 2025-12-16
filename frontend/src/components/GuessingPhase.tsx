@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import socket from '../utils/socket';
 import Timer from './Timer';
 import Button from './Button';
@@ -139,13 +139,14 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
     }
   };
 
-  const getAssignedAnswers = (playerId: string) => {
-    return answers.filter(answer => guesses[answer.id] === playerId);
-  };
-
-  const getUnassignedAnswers = () => {
+  // Memoize filtered arrays to prevent unnecessary re-renders
+  const unassignedAnswers = useMemo(() => {
     return answers.filter(answer => !guesses[answer.id]);
-  };
+  }, [answers, guesses]);
+
+  const getAssignedAnswers = useCallback((playerId: string) => {
+    return answers.filter(answer => guesses[answer.id] === playerId);
+  }, [answers, guesses]);
 
   if (loading) {
     return (
@@ -183,7 +184,7 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
         <div className="bg-gray-100 rounded-lg p-2 md:p-4 border-2 border-gray-300 max-h-[35vh] md:max-h-none overflow-y-auto">
           <h3 className="text-base md:text-xl font-bold text-gray-800 mb-2 md:mb-4">Réponses</h3>
           <div className="space-y-2 md:space-y-3">
-            {getUnassignedAnswers().map((answer) => {
+            {unassignedAnswers.map((answer) => {
               const noResponse = isNoResponse(answer.text);
               const isSelected = selectedAnswerId === answer.id;
               return (
@@ -207,7 +208,7 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
                 </div>
               );
             })}
-            {getUnassignedAnswers().length === 0 && (
+            {unassignedAnswers.length === 0 && (
               <p className="text-gray-500 text-center py-4 md:py-8 text-sm">
                 Toutes les réponses ont été attribuées
               </p>
@@ -289,16 +290,16 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
 
       {isLeader && (
         <div className="mt-3 md:mt-6 text-center">
-          {getUnassignedAnswers().length > 0 && (
+          {unassignedAnswers.length > 0 && (
             <p className="text-gray-500 mb-2 text-xs md:text-sm">
-              Il reste {getUnassignedAnswers().length} réponse(s) à attribuer
+              Il reste {unassignedAnswers.length} réponse(s) à attribuer
             </p>
           )}
           <Button
             variant="success"
             size="lg"
             onClick={handleSubmit}
-            disabled={getUnassignedAnswers().length > 0}
+            disabled={unassignedAnswers.length > 0}
           >
             Valider mes choix
           </Button>

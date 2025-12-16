@@ -4,6 +4,9 @@
  * Package de types partagés entre le frontend et le backend
  */
 
+// Constants
+export { GAME_CONSTANTS } from './constants.js';
+
 // Player
 export { IPlayer } from './types/player.js';
 
