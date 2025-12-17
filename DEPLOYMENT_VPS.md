@@ -260,7 +260,7 @@ cd ~/apps
 
 ```bash
 # Cloner le repo (REMPLACEZ par votre URL GitHub)
-git clone https://github.com/TON_USERNAME/onskone.git
+git clone https://github.com/TON_USERNAME/Onskone.git
 cd onskone
 ```
 
@@ -273,7 +273,7 @@ cd onskone
 **But** : Installer les dépendances et compiler le code pour la production.
 
 ```bash
-cd ~/apps/onskone
+cd ~/apps/Onskone
 
 # Installer toutes les dépendances (librairies externes)
 pnpm install
@@ -304,7 +304,7 @@ cd ..
 ### Créer le fichier .env
 
 ```bash
-cd ~/apps/onskone/backend
+cd ~/apps/Onskone/backend
 nano .env
 ```
 
@@ -325,7 +325,7 @@ NODE_ENV=production
 ### Lancer le backend avec PM2
 
 ```bash
-cd ~/apps/onskone/backend
+cd ~/apps/Onskone/backend
 
 # Démarrer l'application avec PM2
 pm2 start npx --name "onskone-backend" -- tsx src/index.ts
@@ -391,7 +391,7 @@ server {
     server_name _;                # Accepte toutes les requêtes
 
     # Frontend : servir les fichiers statiques
-    root /home/onskone/apps/onskone/frontend/build;
+    root /home/onskone/apps/Onskone/frontend/build;
     index index.html;
 
     # Routing React : renvoie vers index.html pour les routes SPA
@@ -431,7 +431,7 @@ server {
     listen 80;
     server_name onskone.fr www.onskone.fr;
 
-    root /home/onskone/apps/onskone/frontend/build;
+    root /home/onskone/apps/Onskone/frontend/build;
     index index.html;
 
     location / {
@@ -524,13 +524,13 @@ sudo certbot renew --dry-run
 
 ```bash
 su - onskone
-nano ~/apps/onskone/deploy.sh
+nano ~/apps/Onskone/deploy.sh
 ```
 
 Contenu :
 ```bash
 #!/bin/bash
-cd ~/apps/onskone
+cd ~/apps/Onskone
 
 echo "Pulling latest changes..."
 git pull origin main
@@ -558,14 +558,14 @@ echo "Deployment complete!"
 
 ```bash
 # Rendre le script exécutable
-chmod +x ~/apps/onskone/deploy.sh
+chmod +x ~/apps/Onskone/deploy.sh
 ```
 
-> **Explication** : `chmod +x` donne les droits d'exécution au fichier.
+> **Explication** : `chmod +x` donne les droits d'exéCommcution au fichier.
 
 Pour déployer une mise à jour :
 ```bash
-~/apps/onskone/deploy.sh
+~/apps/Onskone/deploy.sh
 ```
 
 ---
@@ -587,7 +587,7 @@ su - onskone                       # Basculer vers onskone
 pm2 status                         # Voir les processus
 pm2 logs onskone-backend           # Voir les logs de l'app
 pm2 restart onskone-backend        # Redémarrer l'app
-~/apps/onskone/deploy.sh           # Déployer une mise à jour
+~/apps/Onskone/deploy.sh           # Déployer une mise à jour
 exit                               # Revenir à debian
 ```
 
@@ -635,12 +635,12 @@ sudo chown -R onskone:onskone /home/onskone/apps
 
 ### Page blanche
 ```bash
-ls /home/onskone/apps/onskone/frontend/build
+ls /home/onskone/apps/Onskone/frontend/build
 ```
 Si vide ou erreur :
 ```bash
 su - onskone
-cd ~/apps/onskone/frontend && pnpm run build
+cd ~/apps/Onskone/frontend && pnpm run build
 ```
 
 ---
