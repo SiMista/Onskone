@@ -77,15 +77,24 @@ export const GAME_CONFIG = {
   CONFETTI_COUNT: 50,
 } as const;
 
-// En développement, utiliser le même hostname que la page pour permettre l'accès depuis d'autres appareils
+// Configuration de l'URL du serveur backend
 const getServerUrl = () => {
   // Si une variable d'environnement est définie, l'utiliser
   if (import.meta.env.VITE_SERVER_URL) {
     return import.meta.env.VITE_SERVER_URL;
   }
-  // Sinon, utiliser le même hostname que la page actuelle avec le port du backend
+
+  // En production (pas localhost), utiliser le même origin (Nginx fait le proxy)
   const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-  return `http://${hostname}:8080`;
+  const isLocalDev = hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.');
+
+  if (isLocalDev) {
+    // En dev local, se connecter directement au backend sur le port 8080
+    return `http://${hostname}:8080`;
+  }
+
+  // En production, utiliser le même origin (port 80/443, Nginx proxy vers 8080)
+  return typeof window !== 'undefined' ? window.location.origin : '';
 };
 
 export const SERVER_URL = getServerUrl();
