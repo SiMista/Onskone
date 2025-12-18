@@ -13,6 +13,8 @@ export class Round implements IRound {
     scores: Record<string, number>;
     timerEnd: Date | null;
     timerProcessedForPhase: RoundPhase | null; // Empêche le double traitement du timer
+    timerPhase: RoundPhase | null; // Phase pour laquelle le timer a été démarré
+    relancesUsed: number; // Nombre de relances utilisées par le chef
 
     constructor(roundNumber: number, leader: IPlayer, gameCard: GameCard) {
         this.roundNumber = roundNumber;
@@ -26,6 +28,8 @@ export class Round implements IRound {
         this.scores = {};
         this.timerEnd = null;
         this.timerProcessedForPhase = null;
+        this.timerPhase = null;
+        this.relancesUsed = 0;
     }
 
     addAnswer(playerId: string, answer: string): void {

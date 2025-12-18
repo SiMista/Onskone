@@ -187,6 +187,25 @@ export class SocketHandler {
                 }
             });
 
+            // Get lobby info (for invite links)
+            socket.on('getLobbyInfo', (data: { lobbyCode: string }) => {
+                try {
+                    const lobby = LobbyManager.getLobby(data.lobbyCode);
+                    if (!lobby) {
+                        socket.emit('lobbyInfo', { exists: false });
+                        return;
+                    }
+                    const host = lobby.players.find(p => p.isHost);
+                    socket.emit('lobbyInfo', {
+                        exists: true,
+                        hostName: host?.name || null
+                    });
+                } catch (error) {
+                    logger.error('Error getting lobby info', { error: (error as Error).message });
+                    socket.emit('lobbyInfo', { exists: false });
+                }
+            });
+
             // Check player name before joining lobby
             socket.on('checkPlayerName', (data) => {
                 try {
@@ -387,6 +406,18 @@ export class SocketHandler {
                         return;
                     }
 
+                    // Si c'est une relance explicite (isRelance: true), incrémenter le compteur
+                    if (data.isRelance === true) {
+                        game.currentRound.relancesUsed = (game.currentRound.relancesUsed || 0) + 1;
+                    }
+
+                    // Si une carte existe déjà et ce n'est pas une relance, c'est une reconnexion → renvoyer la carte existante
+                    if (game.currentRound.gameCard?.questions?.length > 0 && data.isRelance !== true) {
+                        socket.emit('questionsReceived', { questions: [game.currentRound.gameCard] });
+                        logger.debug(`Carte existante renvoyée au leader (reconnexion)`, { lobbyCode: data.lobbyCode });
+                        return;
+                    }
+
                     // Envoyer le nombre de cartes demandé (par défaut 3, max 10)
                     const rawCount = typeof data.count === 'number' ? data.count : 3;
                     const count = Math.max(1, Math.min(10, Math.floor(rawCount)));
@@ -397,7 +428,7 @@ export class SocketHandler {
                         game.currentRound.gameCard = questions[0];
                     }
 
-                    socket.emit('questionsReceived', {questions});
+                    socket.emit('questionsReceived', { questions });
                     logger.debug(`${count} carte(s) envoyée(s) au leader`, { lobbyCode: data.lobbyCode });
                 } catch (error) {
                     logger.error('Error requesting questions', { error: (error as Error).message });
@@ -496,14 +527,39 @@ export class SocketHandler {
                 }
             });
 
-            // Event: Get Game State (pour récupérer l'état actuel du jeu)
-            socket.on('getGameState', (data) => {
+            // Event: Get Game State (pour récupérer l'état actuel du jeu + reconnexion)
+            socket.on('getGameState', (data: { lobbyCode: string; playerId?: string }) => {
                 try {
                     const lobby = LobbyManager.getLobby(data.lobbyCode);
                     const game = lobby?.game;
                     if (!game) {
                         socket.emit('error', {message: 'Game not found'});
                         return;
+                    }
+
+                    // Reconnexion: mettre à jour le socketId du joueur
+                    if (data.playerId) {
+                        const player = lobby.players.find(p => p.id === data.playerId);
+                        if (player) {
+                            const oldSocketId = player.socketId;
+                            player.socketId = socket.id;
+                            player.isActive = true;
+                            socket.join(lobby.code);
+                            logger.info(`Player ${player.name} reconnected to game`, {
+                                lobbyCode: data.lobbyCode,
+                                oldSocketId,
+                                newSocketId: socket.id
+                            });
+
+                            // Si c'est le leader du round actuel, mettre à jour son socketId
+                            if (game.currentRound && game.currentRound.leader.id === data.playerId) {
+                                game.currentRound.leader.socketId = socket.id;
+                                logger.info(`Leader socketId updated for round ${game.currentRound.roundNumber}`);
+                            }
+
+                            // Notifier les autres joueurs
+                            this.io.to(lobby.code).emit('updatePlayersList', { players: lobby.players });
+                        }
                     }
 
                     // Créer un objet sérialisable sans référence circulaire
@@ -517,10 +573,36 @@ export class SocketHandler {
                         rounds: game.rounds
                     };
 
+                    // Données de reconnexion pour restaurer l'état du joueur
+                    const reconnectionData: {
+                        answeredPlayerIds: string[];
+                        myAnswer?: string;
+                        currentGuesses?: Record<string, string>;
+                        relancesUsed?: number;
+                    } = {
+                        answeredPlayerIds: game.currentRound ? Object.keys(game.currentRound.answers) : []
+                    };
+
+                    // Si le joueur a fourni son ID, envoyer sa réponse s'il en a soumis une
+                    if (data.playerId && game.currentRound?.answers[data.playerId]) {
+                        reconnectionData.myAnswer = game.currentRound.answers[data.playerId];
+                    }
+
+                    // Restaurer les guesses pour la phase GUESSING
+                    if (game.currentRound?.currentGuesses) {
+                        reconnectionData.currentGuesses = game.currentRound.currentGuesses;
+                    }
+
+                    // Restaurer le nombre de relances utilisées pour QUESTION_SELECTION
+                    if (game.currentRound?.relancesUsed !== undefined) {
+                        reconnectionData.relancesUsed = game.currentRound.relancesUsed;
+                    }
+
                     socket.emit('gameState', {
                         game: gameData,
                         players: lobby.players,
-                        leaderboard: game.getLeaderboard()
+                        leaderboard: game.getLeaderboard(),
+                        reconnectionData
                     });
                 } catch (error) {
                     logger.error('Error getting game state', { error: (error as Error).message });
@@ -756,6 +838,24 @@ export class SocketHandler {
                         return;
                     }
 
+                    // Vérifier si un timer est déjà en cours pour CETTE phase (évite reset sur refresh)
+                    // Chaque phase a son propre timer, on vérifie aussi la phase
+                    const requestedPhase = game.currentRound.phase;
+                    if (game.currentRound.timerStartedAt && game.currentRound.timerEnd && game.currentRound.timerDuration && game.currentRound.timerPhase === requestedPhase) {
+                        const now = Date.now();
+                        const timerEndTime = game.currentRound.timerEnd.getTime();
+                        if (now < timerEndTime) {
+                            // Timer encore actif pour cette phase - ne pas le reset, juste renvoyer l'état actuel au client
+                            logger.debug(`Timer déjà actif pour phase ${requestedPhase}, pas de reset`, { lobbyCode: data.lobbyCode, phase: requestedPhase });
+                            socket.emit('timerStarted', {
+                                phase: game.currentRound.phase,
+                                duration: game.currentRound.timerDuration,
+                                startedAt: game.currentRound.timerStartedAt
+                            });
+                            return;
+                        }
+                    }
+
                     // Calculer la fin du timer (en secondes) - validation: 1s minimum, 1h maximum
                     const rawDuration = typeof data.duration === 'number' ? data.duration : 60;
                     const timerDuration = Math.max(1, Math.min(3600, Math.floor(rawDuration)));
@@ -766,6 +866,7 @@ export class SocketHandler {
                     game.currentRound.timerEnd = timerEnd;
                     game.currentRound.timerStartedAt = startedAt;
                     game.currentRound.timerDuration = timerDuration;
+                    game.currentRound.timerPhase = game.currentRound.phase; // Pour éviter les conflits entre phases
 
                     // Broadcaster le démarrage du timer à tous
                     this.io.to(data.lobbyCode).emit('timerStarted', {

@@ -13,6 +13,8 @@ interface AnswerPhaseProps {
   currentPlayerId: string;
   players: IPlayer[];
   leaderId: string;
+  initialAnsweredPlayerIds?: string[];
+  initialMyAnswer?: string;
 }
 
 const AnswerPhase: React.FC<AnswerPhaseProps> = ({
@@ -21,11 +23,16 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
   isLeader,
   currentPlayerId,
   players,
-  leaderId
+  leaderId,
+  initialAnsweredPlayerIds,
+  initialMyAnswer
 }) => {
-  const [answer, setAnswer] = useState('');
-  const [submitted, setSubmitted] = useState(false);
-  const [answeredPlayerIds, setAnsweredPlayerIds] = useState<Set<string>>(new Set());
+  // Initialiser avec les données de reconnexion si disponibles
+  const [answer, setAnswer] = useState(initialMyAnswer || '');
+  const [submitted, setSubmitted] = useState(!!initialMyAnswer);
+  const [answeredPlayerIds, setAnsweredPlayerIds] = useState<Set<string>>(
+    new Set(initialAnsweredPlayerIds || [])
+  );
 
   const respondingPlayers = players.filter(p => p.id !== leaderId);
   const expectedAnswers = respondingPlayers.length;

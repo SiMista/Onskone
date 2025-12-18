@@ -16,12 +16,14 @@ interface GuessingPhaseProps {
   lobbyCode: string;
   isLeader: boolean;
   leaderName: string;
+  question: string;
+  initialGuesses?: Record<string, string>;
 }
 
-const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, leaderName }) => {
+const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, leaderName, question, initialGuesses }) => {
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [players, setPlayers] = useState<IPlayer[]>([]);
-  const [guesses, setGuesses] = useState<Record<string, string>>({});
+  const [guesses, setGuesses] = useState<Record<string, string>>(initialGuesses || {});
   const [draggedAnswerId, setDraggedAnswerId] = useState<string | null>(null);
   const [selectedAnswerId, setSelectedAnswerId] = useState<string | null>(null); // Pour mobile
   const [loading, setLoading] = useState(true);
@@ -163,18 +165,18 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
     <div className="flex flex-col h-full p-2 md:p-4">
       <div className="mb-2 md:mb-4">
         <h2 className="text-lg md:text-2xl font-bold text-gray-800 mb-1 md:mb-2 text-center">
-          {isLeader ? 'Qui a écrit quoi?' : `${leaderName} devine...`}
-        </h2>
-        <p className="text-xs md:text-sm text-gray-600 text-center mb-2 md:mb-3">
           {isLeader ? (
             <>
               <span className="md:hidden">Tapez une réponse puis un joueur</span>
               <span className="hidden md:inline">Glissez-déposez chaque réponse vers le joueur</span>
             </>
           ) : (
-            'Regardez le chef hésiter !'
+            `${leaderName} devine...`
           )}
-        </p>
+        </h2>
+        <div className="bg-primary-light rounded-lg px-3 py-2 mb-2 md:mb-3">
+          <p className="text-sm md:text-base text-gray-800 text-center font-medium">{question}</p>
+        </div>
         <Timer duration={GAME_CONFIG.TIMERS.GUESSING} onExpire={handleTimerExpire} phase={RoundPhase.GUESSING} lobbyCode={lobbyCode} />
       </div>
 

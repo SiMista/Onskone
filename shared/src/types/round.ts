@@ -73,4 +73,10 @@ export interface IRound {
 
   /** Durée du timer en secondes */
   timerDuration?: number;
+
+  /** Phase pour laquelle le timer a été démarré (évite les conflits entre phases) */
+  timerPhase?: RoundPhase;
+
+  /** Nombre de relances utilisées par le chef en phase QUESTION_SELECTION */
+  relancesUsed?: number;
 }

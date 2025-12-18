@@ -55,6 +55,9 @@ export interface ServerToClientEvents {
   /** Le nom du joueur est valide */
   playerNameValid: () => void;
 
+  /** Informations sur un lobby (pour les liens d'invitation) */
+  lobbyInfo: (data: { exists: boolean; hostName?: string | null }) => void;
+
   // ===== GAME EVENTS =====
 
   /** Notification de démarrage du jeu */
@@ -65,6 +68,12 @@ export interface ServerToClientEvents {
     game: IGame;
     players: IPlayer[];
     leaderboard: LeaderboardEntry[];
+    reconnectionData?: {
+      answeredPlayerIds: string[];
+      myAnswer?: string;
+      currentGuesses?: Record<string, string>;
+      relancesUsed?: number;
+    };
   }) => void;
 
   /** Démarrage d'un nouveau round */
@@ -193,6 +202,11 @@ export interface ClientToServerEvents {
     playerName: string;
   }) => void;
 
+  /** Récupérer les informations d'un lobby (pour les liens d'invitation) */
+  getLobbyInfo: (data: {
+    lobbyCode: string;
+  }) => void;
+
   // ===== GAME EVENTS =====
 
   /** Démarrer la partie (réservé à l'hôte) */
@@ -203,12 +217,14 @@ export interface ClientToServerEvents {
   /** Récupérer l'état actuel du jeu (pour reconnexion) */
   getGameState: (data: {
     lobbyCode: string;
+    playerId?: string;
   }) => void;
 
   /** Demander des cartes de questions (réservé au chef) */
   requestQuestions: (data: {
     lobbyCode: string;
     count?: number;
+    isRelance?: boolean;
   }) => void;
 
   /** Sélectionner une question parmi les 3 (réservé au chef) */

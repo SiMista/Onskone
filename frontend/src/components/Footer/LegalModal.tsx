@@ -17,7 +17,7 @@ const LegalModal: React.FC<LegalModalProps> = ({ isOpen, onClose }) => {
         {LEGAL_CONTENT.mentions.sections.map((section, index) => (
           <section key={index}>
             <h3 className="font-bold text-lg mb-2">{section.title}</h3>
-            <p>{section.content}</p>
+            <p dangerouslySetInnerHTML={{ __html: section.content }} />
             {section.extra && (
               <p
                 className="mt-2"
