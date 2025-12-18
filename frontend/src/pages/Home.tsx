@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import socket from '../utils/socket';
 import Logo from '../components/Logo';
@@ -15,11 +15,19 @@ const Home = () => {
   const [playerName, setPlayerName] = useState<string>('');
   const [avatarId, setAvatarId] = useState<number>(Math.floor(Math.random() * AVATARS.length));
   const [isInfoOpen, setIsInfoOpen] = useState(false);
+  const [hostName, setHostName] = useState<string | null>(null);
+  const [lobbyExists, setLobbyExists] = useState<boolean | null>(null);
   const queryParams = useQueryParams();
   const navigate = useNavigate();
 
   const lobbyCode = queryParams.get('lobbyCode');
-  const hostName = queryParams.get('host');
+
+  // Fetch lobby info when there's a lobby code in URL
+  useEffect(() => {
+    if (lobbyCode) {
+      socket.emit('getLobbyInfo', { lobbyCode });
+    }
+  }, [lobbyCode]);
 
   const createLobby = useCallback(() => {
     if (!playerName.trim()) {
@@ -58,6 +66,14 @@ const Home = () => {
     alert(`Erreur: ${data.message}`);
   }, []);
 
+  const handleLobbyInfo = useCallback((data: { exists: boolean; hostName?: string | null }) => {
+    setLobbyExists(data.exists);
+    if (data.exists && data.hostName) {
+      setHostName(data.hostName);
+    }
+  }, []);
+
+  useSocketEvent('lobbyInfo', handleLobbyInfo, [handleLobbyInfo]);
   useSocketEvent('lobbyCreated', handleLobbyCreated, [handleLobbyCreated]);
   useSocketEvent('playerNameExists', handlePlayerNameExists, [handlePlayerNameExists]);
   useSocketEvent('playerNameValid', handlePlayerNameValid, [handlePlayerNameValid]);
@@ -119,6 +135,15 @@ const Home = () => {
               {!lobbyCode ? (
                 <div>
                   <Button text="Créer un salon" variant="primary" size="md" onClick={createLobby} />
+                </div>
+              ) : lobbyExists === null ? (
+                <div className="text-center">
+                  <span className="text-sm text-gray-500">Vérification du salon...</span>
+                </div>
+              ) : lobbyExists === false ? (
+                <div className="text-center space-y-2">
+                  <p className="text-sm text-red-600">Ce salon n'existe plus ou a expiré.</p>
+                  <Button text="Créer un nouveau salon" variant="primary" size="md" onClick={createLobby} />
                 </div>
               ) : (
                 <div>

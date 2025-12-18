@@ -24,6 +24,12 @@ const GamePage: React.FC = () => {
   const [currentPlayer, setCurrentPlayer] = useState<IPlayer | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [revealResults, setRevealResults] = useState<RevealResult[]>([]);
+  const [reconnectionData, setReconnectionData] = useState<{
+    answeredPlayerIds: string[];
+    myAnswer?: string;
+    currentGuesses?: Record<string, string>;
+    relancesUsed?: number;
+  } | null>(null);
   const errorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Calculer isLeader directement (pas de useEffect) pour éviter les race conditions
@@ -31,26 +37,40 @@ const GamePage: React.FC = () => {
 
   useEffect(() => {
     // Récupérer le joueur actuel depuis le localStorage
+    let playerId: string | undefined;
     try {
       const storedPlayer = localStorage.getItem('currentPlayer');
       if (storedPlayer) {
         const player = JSON.parse(storedPlayer);
         setCurrentPlayer(player);
+        playerId = player.id;
       }
     } catch (error) {
       console.error('Error parsing stored player:', error);
       localStorage.removeItem('currentPlayer');
     }
 
-    // Demander l'état actuel du jeu au serveur
+    // Demander l'état actuel du jeu au serveur (avec playerId pour la reconnexion)
     if (lobbyCode) {
-      socket.emit('getGameState', { lobbyCode: lobbyCode! });
+      socket.emit('getGameState', { lobbyCode: lobbyCode!, playerId });
     }
 
     // Socket listeners
-    socket.on('gameState', (data: { game: IGame; players: IPlayer[] }) => {
+    socket.on('gameState', (data: {
+      game: IGame;
+      players: IPlayer[];
+      reconnectionData?: {
+        answeredPlayerIds: string[];
+        myAnswer?: string;
+        currentGuesses?: Record<string, string>;
+        relancesUsed?: number;
+      };
+    }) => {
       setGame(data.game);
       setPlayers(data.players);
+      if (data.reconnectionData) {
+        setReconnectionData(data.reconnectionData);
+      }
     });
 
     socket.on('gameStarted', (data: { game: IGame }) => {
@@ -169,6 +189,7 @@ const GamePage: React.FC = () => {
             lobbyCode={lobbyCode!}
             isLeader={isLeader}
             leaderName={game.currentRound.leader.name}
+            initialRelancesUsed={reconnectionData?.relancesUsed}
           />
         );
 
@@ -181,6 +202,8 @@ const GamePage: React.FC = () => {
             currentPlayerId={currentPlayer.id}
             players={players}
             leaderId={game.currentRound.leader.id}
+            initialAnsweredPlayerIds={reconnectionData?.answeredPlayerIds}
+            initialMyAnswer={reconnectionData?.myAnswer}
           />
         );
 
@@ -190,6 +213,8 @@ const GamePage: React.FC = () => {
             lobbyCode={lobbyCode!}
             isLeader={isLeader}
             leaderName={game.currentRound.leader.name}
+            question={game.currentRound.selectedQuestion || ''}
+            initialGuesses={reconnectionData?.currentGuesses}
           />
         );
 

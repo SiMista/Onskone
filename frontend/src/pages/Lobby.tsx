@@ -9,7 +9,7 @@ import { BsFillCaretLeftFill } from "react-icons/bs";
 import PlayerCard from '../components/PlayerCard';
 import { IPlayer } from '@onskone/shared';
 import { useSocketEvent, useQueryParams, useLeavePrompt } from '../hooks';
-import { GAME_CONFIG } from '../constants/game';
+import { GAME_CONFIG, AVATARS } from '../constants/game';
 
 const Lobby = () => {
     const { lobbyCode } = useParams<{ lobbyCode: string }>();
@@ -76,7 +76,7 @@ const Lobby = () => {
         } catch (error) {
             console.error('Failed to load avatar id:', error);
         }
-        return Math.floor(Math.random() * 8);
+        return Math.floor(Math.random() * AVATARS.length);
     });
 
     useLeavePrompt(
@@ -98,9 +98,7 @@ const Lobby = () => {
     }, []);
 
     const generateLink = useCallback(() => {
-        const host = players.find(p => p.isHost);
-        const hostName = host ? encodeURIComponent(host.name) : '';
-        const link = `${window.location.origin}/?lobbyCode=${lobbyCode!}&host=${hostName}`;
+        const link = `${window.location.origin}/?lobbyCode=${lobbyCode!}`;
 
         // Helper to show copied message with proper cleanup
         const showCopied = () => {
@@ -137,7 +135,7 @@ const Lobby = () => {
         } else {
             fallbackCopy(link);
         }
-    }, [lobbyCode, players]);
+    }, [lobbyCode]);
 
     const leaveLobby = useCallback(() => {
         if (currentPlayer && lobbyCode) {

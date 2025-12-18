@@ -14,17 +14,17 @@ export const GAME_CONSTANTS = {
 
   // Avatar settings
   MIN_AVATAR_ID: 0,
-  MAX_AVATAR_ID: 12,
-  AVATAR_COUNT: 13, // 0-12 inclusive
+  MAX_AVATAR_ID: 17,
+  AVATAR_COUNT: 18, // 0-17 inclusive
 
   // Game settings
   DEFAULT_CARD_RELANCES: 3,
 
   // Timer durations (in seconds)
   TIMERS: {
-    QUESTION_SELECTION: 30,
-    ANSWERING: 60,
-    GUESSING: 90,
+    QUESTION_SELECTION: 45,
+    ANSWERING: 90,
+    GUESSING: 120,
   },
 
   // Lobby code format

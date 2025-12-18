@@ -10,13 +10,14 @@ interface QuestionSelectionProps {
   lobbyCode: string;
   isLeader: boolean;
   leaderName: string;
+  initialRelancesUsed?: number;
 }
 
-const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLeader, leaderName }) => {
+const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLeader, leaderName, initialRelancesUsed }) => {
   const [currentCard, setCurrentCard] = useState<GameCard | null>(null);
   const [selectedQuestion, setSelectedQuestion] = useState<string | null>(null);
   const [loading, setLoading] = useState(isLeader);
-  const [relancesLeft, setRelancesLeft] = useState(3);
+  const [relancesLeft, setRelancesLeft] = useState(3 - (initialRelancesUsed || 0));
   const [funFact, setFunFact] = useState<string>(getRandomFunFact());
   const [factFading, setFactFading] = useState(false);
   const factFadeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -79,7 +80,7 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
     if (!isLeader || selectedQuestion !== null || relancesLeft <= 0) return;
 
     setRelancesLeft(prev => prev - 1);
-    socket.emit('requestQuestions', { lobbyCode, count: 1 });
+    socket.emit('requestQuestions', { lobbyCode, count: 1, isRelance: true });
   };
 
   const handleTimerExpire = () => {

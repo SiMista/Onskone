@@ -1,11 +1,28 @@
 export const LEGAL_CONTENT = {
+  about: {
+    title: 'À propos',
+    sections: [
+      {
+        title: 'Notre histoire',
+        content: `C'est avec plaisir que je vous présente le site officiel du jeu de société Onskoné? ! Mon frère a eu l'idée de ce jeu en 2024. Après l'avoir aidé pour les designs avec GIMP et présenté le prototype du jeu à de nombreux amis ainsi qu'au festival de Cannes, nous avons eu pas mal de retours positifs. J'ai donc décidé de me lancer dans le développement de ce site web pour populariser cette idée géniale. J'espère que vous apprécierez jouer à Onskoné? N'hésitez pas à me donner votre avis sur le jeu, je le lirai avec plaisir !`
+      },
+      {
+        title: 'Remerciements',
+        content: `Un ÉNORME merci, à ceux qui m'ont soutenu et encouragé à faire ce projet:`,
+        list: [
+          'Ma soeur, Mimi, qui m\'a encouragé à continuer le site tout au long du développement',
+          'Brinda et Sathya, vous m\'avez donné de l\'ambition sans hésiter dès le début du projet',
+          'Et bien sûr, mon ami Philippe, qui m\'a soutenu sans arrêt pour faire le site et m\'a aidé sur toute la partie technique du projet.'
+        ]
+      }
+    ]
+  },
   mentions: {
     title: 'Mentions Légales',
     sections: [
       {
-        title: 'Message du développeur',
-        content: `C'est avec plaisir que je vous présente le site officiel du jeu de société Onskoné? !! Mon frère a eu l'idée de ce jeu en 2024, après l'avoir aidé pour les designs avec GIMP et présenté le prototype du jeu à de nombreux amis ainsi qu'au festival de Cannes, nous avons eu pas mal de retours positifs. J'ai donc décidé de me lancer dans le développement de ce site web pour populariser cette idée géniale 😄. J'espère que vous apprécierez jouer à Onskoné? n'hésitez pas à me dire votre avis sur le jeu, je le lirais avec plaisr !`,
-        extra: `<strong>Responsable du site : </strong>Simeon Deiva<br /><strong>Créateur du jeu : </strong>Sylvain Deiva<br /><strong>Contact :</strong> onskonelejeu@gmail.com`
+        title: 'Éditeur du site',
+        content: `<strong>Responsable du site :</strong> Simeon Deiva<br /><strong>Contact :</strong> onskonelejeu@gmail.com`
       },
       {
         title: 'Hébergement',

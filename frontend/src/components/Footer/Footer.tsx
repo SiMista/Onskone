@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react';
+import AboutModal from './AboutModal';
 import ContactModal from './ContactModal';
 import LegalModal from './LegalModal';
 import PrivacyModal from './PrivacyModal';
 
-type ModalType = 'mentions' | 'confidentialite' | 'contact' | null;
+type ModalType = 'about' | 'mentions' | 'confidentialite' | 'contact' | null;
 
 const footerLinkClass = 'hover:text-white transition-colors underline cursor-pointer';
 
@@ -20,7 +21,15 @@ const Footer: React.FC = () => {
         <div className="mb-2">
           Onskone &copy; {currentYear}
         </div>
-        <div className="flex justify-center gap-4">
+        <div className="flex justify-center gap-4 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setActiveModal('about')}
+            className={footerLinkClass}
+          >
+            À propos
+          </button>
+          <span aria-hidden="true">|</span>
           <button
             type="button"
             onClick={() => setActiveModal('mentions')}
@@ -48,6 +57,9 @@ const Footer: React.FC = () => {
       </footer>
 
       {/* Modals - rendered conditionally for performance */}
+      {activeModal === 'about' && (
+        <AboutModal isOpen onClose={closeModal} />
+      )}
       {activeModal === 'mentions' && (
         <LegalModal isOpen onClose={closeModal} />
       )}

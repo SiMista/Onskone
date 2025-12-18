@@ -106,7 +106,8 @@ export const removePlayer = (lobby: Lobby, player: IPlayer): boolean => {
 };
 
 export const getLobby = (lobbyCode: string): Lobby | undefined => {
-    return lobbies.get(lobbyCode);
+    // Normalize to uppercase since lobby codes are generated as uppercase
+    return lobbies.get(lobbyCode.toUpperCase());
 };
 
 export const getLobbies = (): Map<string, Lobby> => {
