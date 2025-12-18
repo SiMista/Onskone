@@ -50,10 +50,18 @@ const GamePage: React.FC = () => {
       localStorage.removeItem('currentPlayer');
     }
 
+    // Fonction pour demander l'état du jeu
+    const fetchGameState = () => {
+      if (lobbyCode && playerId) {
+        socket.emit('getGameState', { lobbyCode: lobbyCode!, playerId });
+      }
+    };
+
     // Demander l'état actuel du jeu au serveur (avec playerId pour la reconnexion)
-    if (lobbyCode) {
-      socket.emit('getGameState', { lobbyCode: lobbyCode!, playerId });
-    }
+    fetchGameState();
+
+    // Écouter les reconnexions socket (après perte de connexion ou retour d'arrière-plan sur mobile)
+    socket.on('connect', fetchGameState);
 
     // Socket listeners
     socket.on('gameState', (data: {
@@ -153,6 +161,7 @@ const GamePage: React.FC = () => {
     });
 
     return () => {
+      socket.off('connect');
       socket.off('gameState');
       socket.off('gameStarted');
       socket.off('questionSelected');

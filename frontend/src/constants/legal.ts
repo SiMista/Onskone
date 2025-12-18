@@ -3,7 +3,7 @@ export const LEGAL_CONTENT = {
     title: 'À propos',
     sections: [
       {
-        title: 'Notre histoire',
+        title: 'Message du créateur',
         content: `C'est avec plaisir que je vous présente le site officiel du jeu de société Onskoné? ! Mon frère a eu l'idée de ce jeu en 2024. Après l'avoir aidé pour les designs avec GIMP et présenté le prototype du jeu à de nombreux amis ainsi qu'au festival de Cannes, nous avons eu pas mal de retours positifs. J'ai donc décidé de me lancer dans le développement de ce site web pour populariser cette idée géniale. J'espère que vous apprécierez jouer à Onskoné? N'hésitez pas à me donner votre avis sur le jeu, je le lirai avec plaisir !`
       },
       {
@@ -21,7 +21,7 @@ export const LEGAL_CONTENT = {
     title: 'Mentions Légales',
     sections: [
       {
-        title: 'Éditeur du site',
+        title: 'Développeur du site',
         content: `<strong>Responsable du site :</strong> Simeon Deiva<br /><strong>Contact :</strong> onskonelejeu@gmail.com`
       },
       {
