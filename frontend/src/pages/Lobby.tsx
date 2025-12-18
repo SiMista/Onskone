@@ -162,10 +162,23 @@ const Lobby = () => {
         }
     }, [lobbyCode]);
 
+    // Rejoindre le lobby au montage ET lors d'une reconnexion socket
     useEffect(() => {
-        if (lobbyCode && playerName) {
-            socket.emit('joinLobby', { lobbyCode: lobbyCode!, playerName, avatarId });
-        }
+        const joinLobbyFn = () => {
+            if (lobbyCode && playerName) {
+                socket.emit('joinLobby', { lobbyCode: lobbyCode!, playerName, avatarId });
+            }
+        };
+
+        // Rejoindre au montage
+        joinLobbyFn();
+
+        // Écouter les reconnexions socket (après perte de connexion ou retour d'arrière-plan sur mobile)
+        socket.on('connect', joinLobbyFn);
+
+        return () => {
+            socket.off('connect', joinLobbyFn);
+        };
     }, [lobbyCode, playerName, avatarId]);
 
     const handleUpdatePlayersList = useCallback((data: { players: IPlayer[] }) => {
