@@ -34,9 +34,10 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
     new Set(initialAnsweredPlayerIds || [])
   );
 
-  // Only active players (not the leader) are expected to answer
-  const respondingPlayers = players.filter(p => p.id !== leaderId && p.isActive);
-  const expectedAnswers = respondingPlayers.length;
+  // All players except the leader (show inactive players as disconnected)
+  const respondingPlayers = players.filter(p => p.id !== leaderId);
+  // Only count active players for expected answers
+  const expectedAnswers = respondingPlayers.filter(p => p.isActive).length;
   const answersCount = answeredPlayerIds.size;
 
   useEffect(() => {
@@ -98,20 +99,23 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
         <div className="flex flex-wrap justify-center gap-2 md:gap-3 max-w-2xl px-2">
           {respondingPlayers.map((player) => {
             const hasAnswered = answeredPlayerIds.has(player.id);
+            const isDisconnected = !player.isActive;
             return (
               <div
                 key={player.id}
                 className={`
                   px-2 md:px-4 py-1.5 md:py-2 rounded-lg font-medium transition-all duration-300 text-sm md:text-base
-                  ${hasAnswered
-                    ? 'bg-green-500 text-white shadow-lg scale-105'
-                    : 'bg-gray-200 text-gray-600'}
+                  ${isDisconnected
+                    ? 'bg-gray-300 text-gray-500 opacity-60'
+                    : hasAnswered
+                      ? 'bg-green-500 text-white shadow-lg scale-105'
+                      : 'bg-gray-200 text-gray-600'}
                 `}
               >
                 <span className="flex items-center gap-1.5 md:gap-2">
                   <Avatar avatarId={player.avatarId} name={player.name} size="sm" />
-                  {hasAnswered && <span>✓</span>}
-                  <span className="max-w-[80px] md:max-w-none truncate">{player.name}</span>
+                  {!isDisconnected && hasAnswered && <span>✓</span>}
+                  <span className="max-w-[80px] md:max-w-none truncate">{player.name}{isDisconnected && ' (déconnecté)'}</span>
                 </span>
               </div>
             );
@@ -163,20 +167,23 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
             <div className="flex flex-wrap justify-center gap-2 md:gap-3 max-w-2xl px-2">
               {respondingPlayers.map((player) => {
                 const hasAnswered = answeredPlayerIds.has(player.id);
+                const isDisconnected = !player.isActive;
                 return (
                   <div
                     key={player.id}
                     className={`
                   px-2 md:px-4 py-1.5 md:py-2 rounded-lg font-medium transition-all duration-300 text-sm md:text-base
-                  ${hasAnswered
-                        ? 'bg-green-500 text-white shadow-lg scale-105'
-                        : 'bg-gray-200 text-gray-600'}
+                  ${isDisconnected
+                        ? 'bg-gray-300 text-gray-500 opacity-60'
+                        : hasAnswered
+                          ? 'bg-green-500 text-white shadow-lg scale-105'
+                          : 'bg-gray-200 text-gray-600'}
                 `}
                   >
                     <span className="flex items-center gap-1.5 md:gap-2">
                       <Avatar avatarId={player.avatarId} name={player.name} size="sm" />
-                      {hasAnswered && <span>✓</span>}
-                      <span className="max-w-[80px] md:max-w-none truncate">{player.name}</span>
+                      {!isDisconnected && hasAnswered && <span>✓</span>}
+                      <span className="max-w-[80px] md:max-w-none truncate">{player.name}{isDisconnected && ' (déconnecté)'}</span>
                     </span>
                   </div>
                 );

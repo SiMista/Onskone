@@ -20,8 +20,12 @@ export class SocketHandler {
     private reconnectionLocks: Set<string> = new Set();
     // Délai de grâce pour la reconnexion (30 secondes)
     private readonly RECONNECT_GRACE_PERIOD = 30000;
-    // Délai avant de sauter le round du chef déconnecté (5 secondes - pour le changement d'app mobile)
-    private readonly LEADER_DISCONNECT_DELAY = 5000;
+    // Délai avant de sauter le round du chef déconnecté (15 secondes - pour le changement d'app mobile)
+    private readonly LEADER_DISCONNECT_DELAY = 15000;
+    // Délai avant de marquer un joueur comme inactif (5 secondes - pour le changement d'app mobile)
+    private readonly INACTIVE_DELAY = 5000;
+    // Map pour stocker les timeouts d'inactivité (clé: lobbyCode_playerName)
+    private inactiveTimeouts: Map<string, NodeJS.Timeout> = new Map();
 
     constructor(io: Server<ClientToServerEvents, ServerToClientEvents>) {
         this.io = io;
@@ -110,6 +114,16 @@ export class SocketHandler {
             clearTimeout(timeout);
             this.leaderDisconnectTimeouts.delete(lobbyCode);
             logger.debug(`Timeout de déconnexion du chef annulé pour ${lobbyCode}`);
+        }
+    }
+
+    private cancelInactiveTimeout(lobbyCode: string, playerName: string): void {
+        const key = this.getDisconnectKey(lobbyCode, playerName);
+        const timeout = this.inactiveTimeouts.get(key);
+        if (timeout) {
+            clearTimeout(timeout);
+            this.inactiveTimeouts.delete(key);
+            logger.debug(`Timeout d'inactivité annulé pour ${playerName} dans ${lobbyCode}`);
         }
     }
 
@@ -223,8 +237,9 @@ export class SocketHandler {
                     const existingPlayerBySocket = lobby.players.find(p => p.socketId === socket.id);
                     if (existingPlayerBySocket) {
                         logger.debug(`Player ${existingPlayerBySocket.name} déjà dans le lobby ${lobby.code}`);
-                        // Annuler le timeout de déconnexion s'il existe
+                        // Annuler les timeouts de déconnexion et d'inactivité s'ils existent
                         this.cancelDisconnectTimeout(lobby.code, existingPlayerBySocket.name);
+                        this.cancelInactiveTimeout(lobby.code, existingPlayerBySocket.name);
                         existingPlayerBySocket.isActive = true; // Marquer comme actif (rejouer)
                         socket.join(lobby.code);
                         socket.emit('joinedLobby', { player: existingPlayerBySocket });
@@ -250,8 +265,9 @@ export class SocketHandler {
                         try {
                             // C'est une reconnexion - mettre à jour le socketId
                             logger.info(`Player ${sanitizedName} reconnecte au lobby ${lobby.code}`);
-                            // Annuler le timeout de déconnexion s'il existe
+                            // Annuler les timeouts de déconnexion et d'inactivité s'ils existent
                             this.cancelDisconnectTimeout(lobby.code, sanitizedName);
+                            this.cancelInactiveTimeout(lobby.code, sanitizedName);
                             existingPlayerByName.socketId = socket.id;
                             existingPlayerByName.isActive = true; // Marquer comme actif (rejouer)
 
@@ -808,8 +824,9 @@ export class SocketHandler {
                                     player.isActive = true;
                                     socket.join(lobby.code);
 
-                                    // Annuler le timeout de déconnexion s'il existe
+                                    // Annuler les timeouts de déconnexion et d'inactivité s'ils existent
                                     this.cancelDisconnectTimeout(lobby.code, player.name);
+                                    this.cancelInactiveTimeout(lobby.code, player.name);
 
                                     logger.info(`Player ${player.name} reconnected to game`, {
                                         lobbyCode: data.lobbyCode,
@@ -1438,11 +1455,41 @@ export class SocketHandler {
                     if (disconnectedPlayer) {
                         logger.info(`Player ${disconnectedPlayer.name} déconnecté du lobby ${lobby.code}`);
 
-                        // Marquer le joueur comme inactif (au lieu de le supprimer immédiatement)
-                        disconnectedPlayer.isActive = false;
+                        const lobbyCode = lobby.code;
+                        const playerName = disconnectedPlayer.name;
+                        const playerId = disconnectedPlayer.id;
 
-                        // Notifier les autres joueurs
-                        this.io.to(lobby.code).emit('updatePlayersList', { players: lobby.players });
+                        // Annuler un éventuel timeout d'inactivité existant
+                        this.cancelInactiveTimeout(lobbyCode, playerName);
+
+                        // Créer un timeout pour marquer le joueur comme inactif après un délai
+                        const inactiveKey = this.getDisconnectKey(lobbyCode, playerName);
+                        const inactiveTimeout = setTimeout(() => {
+                            this.inactiveTimeouts.delete(inactiveKey);
+
+                            // Revérifier que le lobby existe
+                            const currentLobby = LobbyManager.getLobby(lobbyCode);
+                            if (!currentLobby) return;
+
+                            // Retrouver le joueur
+                            const player = currentLobby.players.find(p => p.id === playerId);
+                            if (!player) return;
+
+                            // Si le joueur s'est reconnecté entre temps, ne rien faire
+                            if (player.isActive) {
+                                logger.debug(`Player ${playerName} s'est reconnecté, timeout inactivité ignoré`);
+                                return;
+                            }
+
+                            // Marquer le joueur comme inactif
+                            player.isActive = false;
+                            logger.info(`Player ${playerName} marqué inactif après ${this.INACTIVE_DELAY}ms`);
+
+                            // Notifier les autres joueurs
+                            this.io.to(lobbyCode).emit('updatePlayersList', { players: currentLobby.players });
+                        }, this.INACTIVE_DELAY);
+
+                        this.inactiveTimeouts.set(inactiveKey, inactiveTimeout);
 
                         // === GESTION DU JEU EN COURS ===
                         const game = lobby.game;
@@ -1541,18 +1588,14 @@ export class SocketHandler {
                         }
 
                         // Créer un timeout pour supprimer le joueur après le délai de grâce
-                        const key = this.getDisconnectKey(lobby.code, disconnectedPlayer.name);
+                        const disconnectKey = this.getDisconnectKey(lobbyCode, playerName);
 
                         // Annuler un éventuel timeout existant
-                        this.cancelDisconnectTimeout(lobby.code, disconnectedPlayer.name);
-
-                        // Stocker le code du lobby pour éviter de capturer l'objet entier
-                        const lobbyCode = lobby.code;
-                        const playerName = disconnectedPlayer.name;
+                        this.cancelDisconnectTimeout(lobbyCode, playerName);
 
                         const timeout = setTimeout(() => {
                             // Toujours supprimer l'entrée du timeout en premier (évite les fuites mémoire)
-                            this.disconnectTimeouts.delete(key);
+                            this.disconnectTimeouts.delete(disconnectKey);
 
                             // Vérifier si le lobby existe encore
                             const currentLobby = LobbyManager.getLobby(lobbyCode);
@@ -1576,7 +1619,7 @@ export class SocketHandler {
                             }
                         }, this.RECONNECT_GRACE_PERIOD);
 
-                        this.disconnectTimeouts.set(key, timeout);
+                        this.disconnectTimeouts.set(disconnectKey, timeout);
                     }
                 });
             });
