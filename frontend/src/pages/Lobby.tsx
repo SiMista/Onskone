@@ -358,7 +358,7 @@ const Lobby = () => {
                 onClose={() => setShowFewPlayersModal(false)}
                 onConfirm={doStartGame}
                 title="Pas beaucoup de joueurs :("
-                message="La partie serait plus amusante avec au moins 4 joueurs. Lancer quand même ?"
+                message="La partie serait plus amusante avec au moins 4 joueurs. Démarrer la partie quand même ?"
                 confirmText="Lancer"
                 cancelText="Attendre"
                 confirmVariant="success"
