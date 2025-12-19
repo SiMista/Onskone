@@ -1,3 +1,4 @@
+import { randomInt } from 'crypto';
 import {IGame, LeaderboardEntry} from '../types/IGame';
 import {IRound} from '../types/IRound';
 import {Round} from './Round';
@@ -19,11 +20,35 @@ export class Game implements IGame {
 
     nextRound(): void {
         if (this.status !== GameStatus.IN_PROGRESS) {
-            throw new Error("The game hasn't started or is already finished. Status: " + this.status);
+            throw new Error("La partie n'a pas démarré ou est déjà terminée. Statut: " + this.status);
         }
+
+        // Vérifier qu'il y a des joueurs actifs
+        const activePlayers = this.getActivePlayers();
+        if (activePlayers.length === 0) {
+            throw new Error("Impossible de créer un round sans joueurs actifs");
+        }
+
+        // Vérifier qu'on n'a pas dépassé le nombre max de rounds
+        if (this.isGameOver()) {
+            throw new Error("Le nombre maximum de rounds a été atteint");
+        }
+
         const roundNumber = this.currentRound ? this.currentRound.roundNumber + 1 : 1;
-        const leaderIndex = (roundNumber - 1) % this.lobby.players.length;
-        const leader = this.lobby.players[leaderIndex];
+
+        // Trouver les joueurs actifs qui n'ont pas encore été chefs
+        const previousLeaderIds = new Set(this.rounds.map(r => r.leader.id));
+        const eligibleLeaders = activePlayers.filter(p => !previousLeaderIds.has(p.id));
+
+        // Si tous les joueurs actifs ont été chefs, la partie devrait être terminée
+        if (eligibleLeaders.length === 0) {
+            throw new Error("Tous les joueurs actifs ont déjà été chefs");
+        }
+
+        // Choisir un chef au HASARD parmi les éligibles (pas déterminé par l'ordre du lobby)
+        const randomIndex = randomInt(0, eligibleLeaders.length);
+        const leader = eligibleLeaders[randomIndex];
+
         const gameCard = this.getRandomGameCard();
 
         this.currentRound = new Round(roundNumber, leader, gameCard);
@@ -31,8 +56,12 @@ export class Game implements IGame {
     }
 
     getRandomGameCard(): GameCard {
+        if (this.cards.length === 0) {
+            throw new Error("Aucune carte de jeu disponible");
+        }
         const items = Array.from(this.cards);
-        return items[Math.floor(Math.random() * items.length)];
+        const randomIndex = randomInt(0, items.length);
+        return items[randomIndex];
     }
 
     start(): void {
@@ -44,13 +73,19 @@ export class Game implements IGame {
     }
 
     getMaxRounds(): number {
-        // Chaque joueur doit passer chef une fois
-        return this.lobby.players.length;
+        // Chaque joueur ACTIF doit passer chef une fois
+        return this.getActivePlayers().length;
+    }
+
+    getActivePlayers(): typeof this.lobby.players {
+        return this.lobby.players.filter(p => p.isActive);
     }
 
     isGameOver(): boolean {
-        // La partie est terminée quand on a fait autant de rounds que de joueurs
-        return this.rounds.length >= this.getMaxRounds();
+        // La partie est terminée quand on a fait autant de rounds que de joueurs actifs
+        // ou s'il n'y a plus assez de joueurs actifs
+        const activePlayers = this.getActivePlayers();
+        return this.rounds.length >= activePlayers.length || activePlayers.length < 2;
     }
 
     getLeaderboard(): LeaderboardEntry[] {

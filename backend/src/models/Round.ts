@@ -12,9 +12,12 @@ export class Round implements IRound {
     guesses: Record<string, string>; // Attributions finales du chef
     scores: Record<string, number>;
     timerEnd: Date | null;
-    timerProcessedForPhase: RoundPhase | null; // Empêche le double traitement du timer
-    timerPhase: RoundPhase | null; // Phase pour laquelle le timer a été démarré
+    timerStartedAt: number | undefined; // Timestamp de démarrage du timer
+    timerDuration: number | undefined; // Durée du timer en secondes
+    timerProcessedForPhase: RoundPhase | null | undefined; // Empêche le double traitement du timer
+    timerPhase: RoundPhase | undefined; // Phase pour laquelle le timer a été démarré
     relancesUsed: number; // Nombre de relances utilisées par le chef
+    revealedCount: number; // Nombre de réponses révélées en phase REVEAL
 
     constructor(roundNumber: number, leader: IPlayer, gameCard: GameCard) {
         this.roundNumber = roundNumber;
@@ -27,9 +30,12 @@ export class Round implements IRound {
         this.guesses = {};
         this.scores = {};
         this.timerEnd = null;
+        this.timerStartedAt = undefined;
+        this.timerDuration = undefined;
         this.timerProcessedForPhase = null;
-        this.timerPhase = null;
+        this.timerPhase = undefined;
         this.relancesUsed = 0;
+        this.revealedCount = 0;
     }
 
     addAnswer(playerId: string, answer: string): void {

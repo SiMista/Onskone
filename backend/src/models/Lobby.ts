@@ -24,11 +24,8 @@ export class Lobby implements ILobby {
 
     setHost(player: IPlayer): void {
         this.players.forEach(p => {
-            if (p.name === player.name) {
-                p.isHost = true;
-            } else {
-                p.isHost = false;
-            }
+            // Compare by id, not name (two players could theoretically have same name)
+            p.isHost = p.id === player.id;
         });
     }
 

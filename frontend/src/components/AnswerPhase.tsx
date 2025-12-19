@@ -34,7 +34,8 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
     new Set(initialAnsweredPlayerIds || [])
   );
 
-  const respondingPlayers = players.filter(p => p.id !== leaderId);
+  // Only active players (not the leader) are expected to answer
+  const respondingPlayers = players.filter(p => p.id !== leaderId && p.isActive);
   const expectedAnswers = respondingPlayers.length;
   const answersCount = answeredPlayerIds.size;
 

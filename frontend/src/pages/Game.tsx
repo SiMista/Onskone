@@ -6,6 +6,8 @@ import AnswerPhase from '../components/AnswerPhase';
 import GuessingPhase from '../components/GuessingPhase';
 import RevealPhase from '../components/RevealPhase';
 import Logo from '../components/Logo';
+import { useLeavePrompt } from '../hooks';
+import { getCurrentPlayerFromStorage } from '../utils/playerHelpers';
 import { IPlayer, IRound, IGame, RoundPhase, GameStatus, RevealResult } from '@onskone/shared';
 
 const GamePage: React.FC = () => {
@@ -23,6 +25,7 @@ const GamePage: React.FC = () => {
   const [players, setPlayers] = useState<IPlayer[]>([]);
   const [currentPlayer, setCurrentPlayer] = useState<IPlayer | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notification, setNotification] = useState<string | null>(null);
   const [revealResults, setRevealResults] = useState<RevealResult[]>([]);
   const [reconnectionData, setReconnectionData] = useState<{
     answeredPlayerIds: string[];
@@ -31,23 +34,21 @@ const GamePage: React.FC = () => {
     relancesUsed?: number;
   } | null>(null);
   const errorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const notificationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Calculer isLeader directement (pas de useEffect) pour éviter les race conditions
   const isLeader = !!(game?.currentRound && currentPlayer && game.currentRound.leader.id === currentPlayer.id);
 
+  // Confirmation avant de quitter pendant une partie en cours
+  useLeavePrompt(undefined, game?.status === GameStatus.IN_PROGRESS);
+
   useEffect(() => {
-    // Récupérer le joueur actuel depuis le localStorage
+    // Récupérer et valider le joueur actuel depuis le localStorage
     let playerId: string | undefined;
-    try {
-      const storedPlayer = localStorage.getItem('currentPlayer');
-      if (storedPlayer) {
-        const player = JSON.parse(storedPlayer);
-        setCurrentPlayer(player);
-        playerId = player.id;
-      }
-    } catch (error) {
-      console.error('Error parsing stored player:', error);
-      localStorage.removeItem('currentPlayer');
+    const player = getCurrentPlayerFromStorage();
+    if (player) {
+      setCurrentPlayer(player);
+      playerId = player.id;
     }
 
     // Fonction pour demander l'état du jeu
@@ -60,8 +61,25 @@ const GamePage: React.FC = () => {
     // Demander l'état actuel du jeu au serveur (avec playerId pour la reconnexion)
     fetchGameState();
 
-    // Écouter les reconnexions socket (après perte de connexion ou retour d'arrière-plan sur mobile)
+    // Écouter les reconnexions socket (après perte de connexion)
     socket.on('connect', fetchGameState);
+
+    // MOBILE: Écouter quand l'app redevient visible (retour après changement d'app)
+    // Sur mobile, le socket peut être "pausé" sans se déconnecter complètement
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        if (socket.connected) {
+          // Socket déjà connecté - resynchroniser immédiatement
+          fetchGameState();
+        } else {
+          // Socket déconnecté - attendre la reconnexion avant d'appeler fetchGameState
+          socket.once('connect', fetchGameState);
+          socket.connect();
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     // Socket listeners
     socket.on('gameState', (data: {
@@ -119,6 +137,15 @@ const GamePage: React.FC = () => {
       setRevealResults(data.results);
     });
 
+    socket.on('roundSkipped', (data: { skippedLeaderName: string; reason: string }) => {
+      // Afficher une notification que le round a été sauté
+      setNotification(`${data.skippedLeaderName} s'est déconnecté - round passé`);
+      if (notificationTimeoutRef.current) {
+        clearTimeout(notificationTimeoutRef.current);
+      }
+      notificationTimeoutRef.current = setTimeout(() => setNotification(null), 5000);
+    });
+
     socket.on('roundStarted', (data: { round: IRound }) => {
       setGame(prev => {
         if (prev) {
@@ -167,13 +194,18 @@ const GamePage: React.FC = () => {
       socket.off('questionSelected');
       socket.off('allAnswersSubmitted');
       socket.off('revealResults');
+      socket.off('roundSkipped');
       socket.off('roundStarted');
       socket.off('gameEnded');
       socket.off('updatePlayersList');
       socket.off('error');
-      // Cleanup error timeout
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      // Cleanup timeouts
       if (errorTimeoutRef.current) {
         clearTimeout(errorTimeoutRef.current);
+      }
+      if (notificationTimeoutRef.current) {
+        clearTimeout(notificationTimeoutRef.current);
       }
     };
   }, [navigate, lobbyCode]);
@@ -188,8 +220,9 @@ const GamePage: React.FC = () => {
     }
 
     const phase = game.currentRound.phase;
-    // Vérifier si c'est le dernier round (tous les joueurs ont été chef une fois)
-    const isGameOver = game.currentRound.roundNumber >= players.length;
+    // Vérifier si c'est le dernier round (tous les joueurs ACTIFS ont été chef une fois)
+    const activePlayers = players.filter(p => p.isActive);
+    const isGameOver = game.currentRound.roundNumber >= activePlayers.length;
 
     switch (phase) {
       case RoundPhase.QUESTION_SELECTION:
@@ -256,6 +289,15 @@ const GamePage: React.FC = () => {
         <div className="w-full max-w-4xl mx-auto px-2">
           <div className="bg-red-500 text-white p-3 md:p-4 rounded-lg mb-3 md:mb-4 text-sm md:text-base">
             {error}
+          </div>
+        </div>
+      )}
+
+      {/* Notification message (round skipped, etc.) */}
+      {notification && (
+        <div className="w-full max-w-4xl mx-auto px-2">
+          <div className="bg-amber-500 text-white p-3 md:p-4 rounded-lg mb-3 md:mb-4 text-sm md:text-base text-center">
+            ⚠️ {notification}
           </div>
         </div>
       )}

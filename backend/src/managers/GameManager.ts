@@ -1,3 +1,4 @@
+import { randomInt } from 'crypto';
 import {Game} from "../models/Game.js";
 import type { ILobby, GameCard } from '@onskone/shared';
 import * as fs from 'fs/promises';
@@ -63,7 +64,7 @@ export const getRandomQuestions = (count: number): GameCard[] => {
 
     // Sélectionner 'count' questions aléatoires
     for (let i = 0; i < Math.min(count, poolCopy.length); i++) {
-        const randomIndex = Math.floor(Math.random() * poolCopy.length);
+        const randomIndex = randomInt(0, poolCopy.length);
         selectedQuestions.push(poolCopy[randomIndex]);
         poolCopy.splice(randomIndex, 1); // Éviter les doublons
     }
