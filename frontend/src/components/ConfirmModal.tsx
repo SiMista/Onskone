@@ -44,13 +44,7 @@ const ConfirmModal = ({
         </div>
 
         {/* Footer with buttons */}
-        <div className="px-6 py-4 bg-gray-50 flex flex-col sm:flex-row gap-3 justify-center">
-          <Button
-            text={cancelText}
-            variant="secondary"
-            size="sm"
-            onClick={onClose}
-          />
+        <div className="px-6 py-4 bg-gray-50 flex flex-col flex-row gap-3 justify-center">
           <Button
             text={confirmText}
             variant={confirmVariant}
@@ -60,6 +54,13 @@ const ConfirmModal = ({
               onClose();
             }}
           />
+          <Button
+            text={cancelText}
+            variant="secondary"
+            size="sm"
+            onClick={onClose}
+          />
+
         </div>
       </div>
     </div>
