@@ -314,11 +314,15 @@ Contenu à écrire :
 ```env
 PORT=8080
 NODE_ENV=production
+ALLOWED_ORIGINS=http://VOTRE_IP_OU_DOMAINE
 ```
 
 > **Explication** :
 > - `PORT=8080` = le backend écoutera sur le port 8080
 > - `NODE_ENV=production` = active les optimisations de production
+> - `ALLOWED_ORIGINS` = origine autorisée pour CORS (ex: `http://51.254.130.224` ou `https://onskone.fr`)
+
+> **IMPORTANT** : Remplacez `VOTRE_IP_OU_DOMAINE` par l'adresse réelle de votre site (ex: `http://51.254.130.224` ou `https://onskone.fr` si vous avez un domaine avec SSL).
 
 > **Pour sauvegarder** : `Ctrl+X`, puis `Y` (yes), puis `Enter`.
 
