@@ -7,7 +7,9 @@ const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(SERVER_URL
   autoConnect: true,
   reconnection: true,
   reconnectionDelay: 1000,
-  reconnectionAttempts: 5,
+  reconnectionDelayMax: 5000,
+  reconnectionAttempts: Infinity, // Ne jamais abandonner (important pour mobile)
+  timeout: 20000,
 });
 
 export default socket;

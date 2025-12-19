@@ -79,6 +79,12 @@ export interface ServerToClientEvents {
   /** Démarrage d'un nouveau round */
   roundStarted: (data: { round: IRound }) => void;
 
+  /** Un round a été sauté (chef déconnecté) */
+  roundSkipped: (data: {
+    skippedLeaderName: string;
+    reason: 'leader_disconnected';
+  }) => void;
+
   /** Réception des 3 questions pour le chef */
   questionsReceived: (data: { questions: GameCard[] }) => void;
 
@@ -109,11 +115,10 @@ export interface ServerToClientEvents {
     players: IPlayer[]; // Joueurs qui ont répondu (sans le chef)
   }) => void;
 
-  /** Mise à jour d'une attribution (drag & drop en temps réel) */
+  /** Mise à jour d'une attribution (drag & drop en temps réel) - delta seulement */
   guessUpdated: (data: {
     answerId: string;
     playerId: string | null;
-    currentGuesses: Record<string, string>;
   }) => void;
 
   /** Révélation des résultats du round */

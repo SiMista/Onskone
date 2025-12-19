@@ -43,8 +43,17 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
       setLoading(false);
     });
 
-    socket.on('guessUpdated', (data: { answerId: string; playerId: string | null; currentGuesses: Record<string, string> }) => {
-      setGuesses(data.currentGuesses);
+    socket.on('guessUpdated', (data: { answerId: string; playerId: string | null }) => {
+      // Mise à jour locale basée sur le delta (économie de bande passante)
+      setGuesses(prev => {
+        const updated = { ...prev };
+        if (data.playerId === null) {
+          delete updated[data.answerId];
+        } else {
+          updated[data.answerId] = data.playerId;
+        }
+        return updated;
+      });
     });
 
     return () => {

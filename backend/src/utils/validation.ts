@@ -56,6 +56,11 @@ export function validateAnswer(answer: string): ValidationResult {
     return { isValid: false, error: `La réponse ne peut pas dépasser ${MAX_ANSWER_LENGTH} caractères` };
   }
 
+  // Block reserved prefix used for system-generated "no response" messages
+  if (trimmedAnswer.startsWith('__NO_RESPONSE__')) {
+    return { isValid: false, error: 'La réponse contient un préfixe réservé' };
+  }
+
   return { isValid: true };
 }
 
@@ -71,6 +76,23 @@ export function validateLobbyCode(code: string): ValidationResult {
 
   if (!/^[A-Z0-9]{6}$/.test(trimmedCode)) {
     return { isValid: false, error: 'Le code doit contenir 6 caractères alphanumériques' };
+  }
+
+  return { isValid: true };
+}
+
+/**
+ * Validate player ID format (UUID v4)
+ */
+export function validatePlayerId(playerId: string): ValidationResult {
+  if (!playerId || typeof playerId !== 'string') {
+    return { isValid: false, error: 'ID joueur invalide' };
+  }
+
+  // UUID v4 format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(playerId)) {
+    return { isValid: false, error: 'Format ID joueur invalide' };
   }
 
   return { isValid: true };

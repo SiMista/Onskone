@@ -1,10 +1,11 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import socket from '../utils/socket';
 import { IPlayer, LeaderboardEntry, RoundData } from '@onskone/shared';
 import Button from '../components/Button';
 import Avatar from '../components/Avatar';
 import Logo from '../components/Logo';
+import { getCurrentPlayerFromStorage } from '../utils/playerHelpers';
 
 const EndGame: React.FC = () => {
   const { lobbyCode } = useParams<{ lobbyCode: string }>();
@@ -23,17 +24,10 @@ const EndGame: React.FC = () => {
   }, [lobbyCode, navigate]);
 
   useEffect(() => {
-    // Récupérer le joueur actuel
-    let parsedPlayer: IPlayer | null = null;
-    try {
-      const storedPlayer = localStorage.getItem('currentPlayer');
-      if (storedPlayer) {
-        parsedPlayer = JSON.parse(storedPlayer);
-        setCurrentPlayer(parsedPlayer);
-      }
-    } catch (error) {
-      console.error('Error parsing stored player:', error);
-      localStorage.removeItem('currentPlayer');
+    // Récupérer et valider le joueur actuel
+    const parsedPlayer = getCurrentPlayerFromStorage();
+    if (parsedPlayer) {
+      setCurrentPlayer(parsedPlayer);
     }
 
     // Récupérer les données finales
@@ -91,24 +85,37 @@ const EndGame: React.FC = () => {
     return null;
   };
 
+  // Pre-generate stable random values for confetti animation (prevents re-renders issues)
+  const confettiItems = useMemo(() => {
+    const emojis = ['🎉', '🎊', '⭐', '✨', '🏆'];
+    return Array.from({ length: 50 }, (_, i) => ({
+      id: i,
+      left: Math.random() * 100,
+      top: Math.random() * 20,
+      delay: Math.random() * 3,
+      duration: 2 + Math.random() * 3,
+      emoji: emojis[Math.floor(Math.random() * emojis.length)],
+    }));
+  }, []);
+
   return (
     <div className="min-h-screen p-3 md:p-8 relative overflow-hidden">
       {/* Confettis */}
       {showConfetti && (
         <div className="absolute inset-0 pointer-events-none z-50">
-          {Array.from({ length: 50 }).map((_, i) => (
+          {confettiItems.map((item) => (
             <div
-              key={i}
+              key={item.id}
               className="absolute animate-fall"
               style={{
-                left: `${Math.random() * 100}%`,
-                top: `-${Math.random() * 20}%`,
-                animationDelay: `${Math.random() * 3}s`,
-                animationDuration: `${2 + Math.random() * 3}s`,
+                left: `${item.left}%`,
+                top: `-${item.top}%`,
+                animationDelay: `${item.delay}s`,
+                animationDuration: `${item.duration}s`,
               }}
             >
               <span className="text-2xl md:text-4xl">
-                {['🎉', '🎊', '⭐', '✨', '🏆'][Math.floor(Math.random() * 5)]}
+                {item.emoji}
               </span>
             </div>
           ))}

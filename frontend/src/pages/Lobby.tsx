@@ -5,11 +5,14 @@ import Logo from '../components/Logo';
 import Frame from '../components/Frame';
 import Button from '../components/Button';
 import Footer from '../components/Footer';
+import ConfirmModal from '../components/ConfirmModal';
 import { BsFillCaretLeftFill } from "react-icons/bs";
 import PlayerCard from '../components/PlayerCard';
 import { IPlayer } from '@onskone/shared';
 import { useSocketEvent, useQueryParams, useLeavePrompt } from '../hooks';
 import { GAME_CONFIG, AVATARS } from '../constants/game';
+
+const RECOMMENDED_PLAYERS = 4;
 
 const Lobby = () => {
     const { lobbyCode } = useParams<{ lobbyCode: string }>();
@@ -26,6 +29,7 @@ const Lobby = () => {
     const [players, setPlayers] = useState<IPlayer[]>([]);
     const [currentPlayer, setCurrentPlayer] = useState<IPlayer | null>(null);
     const [showCopiedMessage, setShowCopiedMessage] = useState(false);
+    const [showFewPlayersModal, setShowFewPlayersModal] = useState(false);
     const copiedMessageTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const [playerName] = useState<string>(() => {
         const urlPlayerName = queryParams.get('playerName');
@@ -79,14 +83,8 @@ const Lobby = () => {
         return Math.floor(Math.random() * AVATARS.length);
     });
 
-    useLeavePrompt(
-        () => {
-            if (currentPlayer && lobbyCode) {
-                socket.emit('leaveLobby', { lobbyCode: lobbyCode!, currentPlayerId: currentPlayer.id });
-            }
-        },
-        !!currentPlayer
-    );
+    // Avertissement avant de quitter la page (le serveur gère la déconnexion automatiquement via socket.disconnect)
+    useLeavePrompt(undefined, !!currentPlayer);
 
     // Cleanup timeout on unmount
     useEffect(() => {
@@ -156,11 +154,20 @@ const Lobby = () => {
         }
     }, [lobbyCode]);
 
-    const startGame = useCallback(() => {
+    const doStartGame = useCallback(() => {
         if (lobbyCode) {
             socket.emit('startGame', { lobbyCode: lobbyCode! });
         }
     }, [lobbyCode]);
+
+    const startGame = useCallback(() => {
+        const activeCount = players.filter(p => p.isActive).length;
+        if (activeCount < RECOMMENDED_PLAYERS) {
+            setShowFewPlayersModal(true);
+        } else {
+            doStartGame();
+        }
+    }, [players, doStartGame]);
 
     // Rejoindre le lobby au montage ET lors d'une reconnexion socket
     useEffect(() => {
@@ -173,11 +180,29 @@ const Lobby = () => {
         // Rejoindre au montage
         joinLobbyFn();
 
-        // Écouter les reconnexions socket (après perte de connexion ou retour d'arrière-plan sur mobile)
+        // Écouter les reconnexions socket (après perte de connexion)
         socket.on('connect', joinLobbyFn);
+
+        // MOBILE: Écouter quand l'app redevient visible (retour après changement d'app)
+        // Sur mobile, le socket peut être "pausé" sans se déconnecter complètement
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                if (socket.connected) {
+                    // Socket déjà connecté - resynchroniser immédiatement
+                    joinLobbyFn();
+                } else {
+                    // Socket déconnecté - attendre la reconnexion avant d'appeler joinLobby
+                    socket.once('connect', joinLobbyFn);
+                    socket.connect();
+                }
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
 
         return () => {
             socket.off('connect', joinLobbyFn);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
     }, [lobbyCode, playerName, avatarId]);
 
@@ -326,6 +351,18 @@ const Lobby = () => {
 
             {/* Footer */}
             <Footer />
+
+            {/* Modal de confirmation pour peu de joueurs */}
+            <ConfirmModal
+                isOpen={showFewPlayersModal}
+                onClose={() => setShowFewPlayersModal(false)}
+                onConfirm={doStartGame}
+                title="Pas beaucoup de joueurs :("
+                message="La partie serait plus amusante avec au moins 4 joueurs. Lancer quand même ?"
+                confirmText="Lancer"
+                cancelText="Attendre"
+                confirmVariant="success"
+            />
         </div>
     );
 };

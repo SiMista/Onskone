@@ -33,15 +33,32 @@ export const create = (): string => {
 
 /**
  * Clean up inactive lobbies
+ * Ne supprime pas les lobbies avec une partie en cours
  */
 export const cleanupInactiveLobbies = (): void => {
     const now = new Date();
     const lobbiesRemoved: string[] = [];
+    const lobbiesSkipped: string[] = [];
 
     for (const [code, lobby] of lobbies.entries()) {
         const inactiveTime = now.getTime() - lobby.lastActivity.getTime();
 
         if (inactiveTime > INACTIVE_TIMEOUT_MS) {
+            // Ne pas supprimer les lobbies avec une partie en cours
+            if (lobby.game && lobby.game.status === 'IN_PROGRESS') {
+                lobbiesSkipped.push(code);
+                // Mettre à jour l'activité pour éviter de re-checker trop souvent
+                lobby.updateActivity();
+                continue;
+            }
+
+            // Ne pas supprimer les lobbies avec des joueurs actifs
+            const hasActivePlayers = lobby.players.some(p => p.isActive);
+            if (hasActivePlayers) {
+                lobbiesSkipped.push(code);
+                continue;
+            }
+
             lobbies.delete(code);
             lobbiesRemoved.push(code);
         }
@@ -49,6 +66,9 @@ export const cleanupInactiveLobbies = (): void => {
 
     if (lobbiesRemoved.length > 0) {
         logger.info(`Nettoyage de ${lobbiesRemoved.length} lobbies inactifs`, { lobbies: lobbiesRemoved });
+    }
+    if (lobbiesSkipped.length > 0) {
+        logger.debug(`${lobbiesSkipped.length} lobbies ignorés (partie en cours ou joueurs actifs)`);
     }
 };
 

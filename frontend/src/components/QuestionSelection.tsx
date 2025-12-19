@@ -95,7 +95,7 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
       <div className="flex flex-col items-center justify-center h-full w-full gap-4 md:gap-6 px-2">
         <div className="text-center mb-2 md:mb-4 w-full max-w-2xl">
           <div className="bg-primary-light rounded-lg px-3 md:px-4 py-2 max-w-2xl">
-            <p className="text-center mb-2 md:mb-4 text-sm md:text-base">Le leader de cette manche est <strong>{leaderName}</strong></p>
+            <p className="text-center mb-2 md:mb-4 text-sm md:text-base">Le chef de cette manche est <strong>{leaderName}</strong></p>
             <p className="text-lg md:text-2xl font-semibold">En attente de sa sélection de question…</p>
             <Timer duration={GAME_CONFIG.TIMERS.QUESTION_SELECTION} onExpire={handleTimerExpire} phase={RoundPhase.QUESTION_SELECTION} lobbyCode={lobbyCode} />
           </div>
@@ -132,7 +132,7 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
       {currentCard && (
         <div className="flex-1 flex flex-col items-center justify-center">
           <div className="bg-primary text-base md:text-xl font-semibold px-3 md:px-6 rounded-full mb-3 md:mb-4 w-full text-center">
-            Vous êtes le leader de cette manche !
+            Vous êtes le chef de cette manche !
             <Timer duration={GAME_CONFIG.TIMERS.QUESTION_SELECTION} onExpire={handleTimerExpire} phase={RoundPhase.QUESTION_SELECTION} lobbyCode={lobbyCode} />
           </div>
           <div className="flex flex-col items-center gap-2 w-full">
