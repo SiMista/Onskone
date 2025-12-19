@@ -3,7 +3,6 @@
  * Ajoutez vos propres faits rigolos ici !
  */
 export const FUN_FACTS = [
-  "Dans n'importe quelle boulangerie de France on ne trouvera jamais meilleur pain que toi",
   "Le jour de sa naissance, la première phrase prononcée par Squeezie a été : 'Est-ce que c'est bon pour vous ?'",
   "Au casino, tu peux remporter 4000 fois ta mise, mais tu ne peux perdre qu’1 fois ta mise, donc mise tout la prochaine fois ;)",
   "Un joueur de League of Legends se lave en moyenne une fois par semaine",
@@ -13,7 +12,7 @@ export const FUN_FACTS = [
   "Manger du KFC tous les jours augmente fortement tes dépenses en papier toilette",
   "Celui qui s'endort avec les fesses qui grattent, se réveille avec les doigts qui puent",
   "Un Français qui prononce mal Aya Nakamura est à 99.9% raciste",
-  "Si dans une musique de rap, tu entends 'numéro 10 comme ...', ce rappeur est forcément éclaté",
+  "Si dans une musique de rap, tu entends 'numéro 10 comme ...', ce rappeur est forcément nul",
   "4 hommes sur 5 ne comprennent pas la douleur subie par les femmes au quotidien (je suis le 5ème)"
 ];
 
