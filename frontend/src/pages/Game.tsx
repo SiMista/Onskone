@@ -35,6 +35,8 @@ const GamePage: React.FC = () => {
   } | null>(null);
   const errorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const notificationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Ref pour tracker si on a déjà un listener once('connect') en attente
+  const pendingConnectListenerRef = useRef<boolean>(false);
 
   // Calculer isLeader directement (pas de useEffect) pour éviter les race conditions
   const isLeader = !!(game?.currentRound && currentPlayer && game.currentRound.leader.id === currentPlayer.id);
@@ -71,11 +73,18 @@ const GamePage: React.FC = () => {
         if (socket.connected) {
           // Socket déjà connecté - resynchroniser immédiatement
           fetchGameState();
-        } else {
-          // Socket déconnecté - attendre la reconnexion avant d'appeler fetchGameState
-          socket.once('connect', fetchGameState);
+        } else if (!pendingConnectListenerRef.current) {
+          // Socket déconnecté et pas de listener en attente
+          // Évite d'empiler plusieurs listeners si visibility change rapidement
+          pendingConnectListenerRef.current = true;
+          const onConnect = () => {
+            pendingConnectListenerRef.current = false;
+            fetchGameState();
+          };
+          socket.once('connect', onConnect);
           socket.connect();
         }
+        // Si pendingConnectListenerRef.current est true, on attend déjà une reconnexion
       }
     };
 
@@ -147,6 +156,8 @@ const GamePage: React.FC = () => {
     });
 
     socket.on('roundStarted', (data: { round: IRound }) => {
+      // Réinitialiser les données de reconnexion pour la nouvelle manche
+      setReconnectionData(null);
       setGame(prev => {
         if (prev) {
           return {
@@ -188,7 +199,8 @@ const GamePage: React.FC = () => {
     });
 
     return () => {
-      socket.off('connect');
+      // Retirer le listener spécifique au lieu de tous les listeners 'connect'
+      socket.off('connect', fetchGameState);
       socket.off('gameState');
       socket.off('gameStarted');
       socket.off('questionSelected');
@@ -200,6 +212,8 @@ const GamePage: React.FC = () => {
       socket.off('updatePlayersList');
       socket.off('error');
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      // Reset le flag pour éviter un état incohérent si le composant remount
+      pendingConnectListenerRef.current = false;
       // Cleanup timeouts
       if (errorTimeoutRef.current) {
         clearTimeout(errorTimeoutRef.current);
@@ -228,6 +242,7 @@ const GamePage: React.FC = () => {
       case RoundPhase.QUESTION_SELECTION:
         return (
           <QuestionSelection
+            key={`question-selection-${game.currentRound.roundNumber}`}
             lobbyCode={lobbyCode!}
             isLeader={isLeader}
             leaderName={game.currentRound.leader.name}
@@ -238,6 +253,7 @@ const GamePage: React.FC = () => {
       case RoundPhase.ANSWERING:
         return (
           <AnswerPhase
+            key={`answer-phase-${game.currentRound.roundNumber}`}
             lobbyCode={lobbyCode!}
             question={game.currentRound.selectedQuestion || 'Chargement...'}
             isLeader={isLeader}
@@ -252,6 +268,7 @@ const GamePage: React.FC = () => {
       case RoundPhase.GUESSING:
         return (
           <GuessingPhase
+            key={`guessing-phase-${game.currentRound.roundNumber}`}
             lobbyCode={lobbyCode!}
             isLeader={isLeader}
             leaderName={game.currentRound.leader.name}
@@ -263,6 +280,7 @@ const GamePage: React.FC = () => {
       case RoundPhase.REVEAL:
         return (
           <RevealPhase
+            key={`reveal-phase-${game.currentRound.roundNumber}`}
             lobbyCode={lobbyCode!}
             isLeader={isLeader}
             leaderName={game.currentRound.leader.name}

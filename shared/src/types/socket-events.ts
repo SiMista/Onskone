@@ -133,6 +133,7 @@ export interface ServerToClientEvents {
   /** Une réponse a été révélée par le chef */
   answerRevealed: (data: {
     revealedIndex: number; // Index de la réponse révélée
+    revealedIndices: number[]; // Tous les indices révélés
   }) => void;
 
   /** Démarrage d'un timer */
@@ -280,9 +281,10 @@ export interface ClientToServerEvents {
     phase?: RoundPhase;
   }) => void;
 
-  /** Révéler la prochaine réponse (réservé au chef) */
-  revealNextAnswer: (data: {
+  /** Révéler une réponse spécifique (réservé au chef) */
+  revealAnswer: (data: {
     lobbyCode: string;
+    answerIndex: number;
   }) => void;
 
   /** Passer au round suivant (ou terminer le jeu) */

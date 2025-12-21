@@ -17,42 +17,28 @@
   },
   {
     "category": "Amour",
+    "type": "Fun",
     "questions": [
-      "La qualité que tu apprécies le plus chez un partenaire ?",
-      "Le conseil amoureux que tu donnerais à ton 'moi' plus jeune ?",
-      "Un geste d'amour qui t'a marqué ?"
+      "Quel est ton endroit idéal pour un 1er date ?",
+      "Si tu pouvais vivre une histoire d’amour de film ou de série, laquelle choisirais-tu ?",
+      "Quel est le défaut que tu ne supportes/supporterais pas chez un partenaire ?"
     ]
   },
   {
-    "category": "Animal",
+    "category": "Amour",
+    "type": "Deep",
     "questions": [
-      "L’animal que tu aimerais rencontrer dans la nature ?",
-      "Ton animal préféré ?",
-      "Ton premier animal de compagnie ?"
+      "La qualité que tu recherche ou apprécie le plus chez un partenaire ?",
+      "Le conseil amoureux que tu donnerais à ton \"moi\" plus jeune ?",
+      "Un geste d'amour qui t'a marqué ?"
     ]
   },
   {
     "category": "Année",
     "questions": [
-      "Ton meilleur souvenir de 2024 ?",
-      "Ta meilleure soirée de 2024 ?",
+      "Ton meilleur souvenir de cette année ?",
+      "Ta meilleure soirée de cette année ?",
       "Ta plus grande réussite de cette année ?"
-    ]
-  },
-  {
-    "category": "Boisson",
-    "questions": [
-      "Ta boisson chaude préférée ?",
-      "Ton soda préféré ?",
-      "Ta boisson ou cocktail préféré(e) ?"
-    ]
-  },
-  {
-    "category": "Bruit",
-    "questions": [
-      "Le bruit que tu détestes ?",
-      "Le bruit que tu préfères ?",
-      "Le bruit que tu fais souvent ?"
     ]
   },
   {
@@ -72,51 +58,11 @@
     ]
   },
   {
-    "category": "Chanson",
-    "questions": [
-      "Quelle est la chanson qui décrit le mieux ta personnalité ?",
-      "La meilleure musique all-time ?",
-      "La chanson que je choisis au karaoké ?"
-    ]
-  },
-  {
-    "category": "Choix de vie",
-    "questions": [
-      "Le nombre d’enfants que tu aimerais avoir ?",
-      "Une chose que tu souhaites accomplir avant 50 ans ?",
-      "Ton rêve dans la vie / Your biggest dream ?"
-    ]
-  },
-  {
-    "category": "Cinéma",
-    "questions": [
-      "Le meilleur film que tu as vu ?",
-      "Le meilleur film que tu as vu au cinéma ?",
-      "Le type de film que tu préfères ?"
-    ]
-  },
-  {
-    "category": "Compétence",
-    "questions": [
-      "Une compétence que tu aimerais acquérir d’ici 10 ans ?",
-      "Un talent que tu admires chez les autres mais que tu ne possèdes pas ?",
-      "Ton talent caché ou inusité ?"
-    ]
-  },
-  {
     "category": "Conseils",
     "questions": [
       "Le meilleur conseil que quelqu'un t'a donné ?",
       "Le modèle dans ta vie / Your life role model ?",
       "Quelle citation ou phrase te motive le plus ?"
-    ]
-  },
-  {
-    "category": "Cuisine",
-    "questions": [
-      "Un plat que tu pourrais manger tous les jours ?",
-      "Cuisine préférée / Favorite cuisine ?",
-      "Ton fruit préféré"
     ]
   },
   {
@@ -133,14 +79,6 @@
       "Ton pire souvenir d'école ?",
       "Premier souvenir marquant ?",
       "Ce qui te manque le plus de ton enfance ?"
-    ]
-  },
-  {
-    "category": "Expérience",
-    "questions": [
-      "Meilleur concert ou spectacle auquel tu as assisté ?",
-      "Une aventure ou expérience incroyable vécue ?",
-      "Une expérience que tu ferais pour une journée prochainement ?"
     ]
   },
   {
@@ -173,6 +111,94 @@
       "Si tu pouvais être dans un film, lequel ?",
       "Ta scène de film préférée ?",
       "Le dernier film qui t’a fait pleurer ?"
+    ]
+  },
+  {
+    "category": "Humour",
+    "questions": [
+      "Qui est ton comique préféré ?",
+      "Quelle est ta meilleure blague ?",
+      "La personne qui te fait le plus rire dans la vie ?"
+    ]
+  },
+  {
+    "category": "Humeur",
+    "questions": [
+      "Comment décrirais-tu ton humeur actuelle en un mot ?",
+      "Quel est le fou rire dont tu te souviens encore ?",
+      "Quelle est l’émotion que tu ressens le plus souvent dans une journée ?"
+    ]
+  },
+    {
+    "category": "Famille",
+    "questions": [
+      "Si vous devriez faire un voyage en famille, ou iriez-vous ?",
+      "Quel est le mot qui caractérise votre famille proche ?",
+      "La personne qui vous ressemble le + physiquement dans la famille ?"
+    ]
+  },
+    {
+    "category": "Drague",
+    "questions": [
+      "Quelle est ta technique infaillible pour séduire quelqu’un ?",
+      "Comment décrirais-tu ton style de drague en trois mots ?",
+      "Comment t’y prends-tu pour montrer à quelqu’un qu’il/elle te plaît ?"
+    ]
+  },
+    {
+    "category": "Discussions",
+    "questions": [
+      "Si tu pouvais recevoir un compliment parfait, que voudrais-tu entendre ?",
+      "Avec quelle personne(du groupe ou ailleurs) aimerais-tu avoir une longue conversation ?",
+      "Quel est ton sujet de discussion préféré ?"
+    ]
+  },
+    {
+    "category": "Développement perso",
+    "questions": [
+      "Quelle est la question que tu aimerais qu’on te pose plus souvent ?",
+      "Quelle ressource (livre, philosophie...) t’a le plus aidé à progresser dans ta vie ?",
+      "Quel est l'objectif de développement personnel que tu poursuis actuellement ?"
+    ]
+  },
+    {
+    "category": "Défauts",
+    "questions": [
+      "Quel est ton plus gros défaut ?",
+      "Quel est ton complexe physique ?",
+      "Quel défaut chez les autres as tu du mal à supporter ?"
+    ]
+  },
+    {
+    "category": "Débats",
+    "questions": [
+      "Sur quel sujet as-tu totalement changé d'avis ?",
+      "Quel est le sujet sur lequel tu es prêt(e) à débattre avec n’importe qui ?",
+      "Existe t'il un sujet ou tu es clairement pas objectif ?"
+    ]
+  },  
+    {
+    "category": "Conseils",
+    "questions": [
+      "Quel est le meilleur conseil que tu as reçu ?",
+      "Qui est le modèle dans ta vie ?",
+      "Quelle citation ou phrase te motive le plus ?"
+    ]
+  },
+    {
+    "category": "Qualités",
+    "questions": [
+      "Quel est le 1er défaut qui te vient à l'esprit vis-à-vis de ton voisin de droite ?",
+      "Quelle est la 1ère qualité qui te vient à l'esprit vis-à-vis de ton voisin de droite ?",
+      "Quelle est ton moment préféré vécu avec ton voisin de droite ?"
+    ]
+  },
+    {
+    "category": "Qui du groupe ?",
+    "questions": [
+      "Qui du groupe arrive toujours en retard ?",
+      "Qui du groupe pourrait nous surprendre avec une révélation totalement inattendue ?",
+      "Qui du groupe garderait son calme dans le chaos ?"
     ]
   }
 ]

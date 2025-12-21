@@ -28,6 +28,23 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
   const [selectedAnswerId, setSelectedAnswerId] = useState<string | null>(null); // Pour mobile
   const [loading, setLoading] = useState(true);
 
+  // Sync guesses when initialGuesses changes (reconnection during GUESSING phase)
+  useEffect(() => {
+    if (initialGuesses && Object.keys(initialGuesses).length > 0) {
+      setGuesses(prev => {
+        // Merge: keep local changes but restore server state for missing keys
+        const merged = { ...initialGuesses };
+        // Local guesses take priority (user may have made changes)
+        Object.keys(prev).forEach(key => {
+          if (prev[key]) {
+            merged[key] = prev[key];
+          }
+        });
+        return merged;
+      });
+    }
+  }, [initialGuesses]);
+
   useEffect(() => {
     socket.emit('requestShuffledAnswers', { lobbyCode });
 
