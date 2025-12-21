@@ -34,6 +34,13 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
     new Set(initialAnsweredPlayerIds || [])
   );
 
+  // Reset le state quand la question change (nouveau round)
+  useEffect(() => {
+    setAnswer(initialMyAnswer || '');
+    setSubmitted(!!initialMyAnswer);
+    setAnsweredPlayerIds(new Set(initialAnsweredPlayerIds || []));
+  }, [question, initialMyAnswer, initialAnsweredPlayerIds]);
+
   // All players except the leader (show inactive players as disconnected)
   const respondingPlayers = players.filter(p => p.id !== leaderId);
   // Only count active players for expected answers

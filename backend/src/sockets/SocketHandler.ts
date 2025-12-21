@@ -1162,8 +1162,8 @@ export class SocketHandler {
                 }
             });
 
-            // Reveal Next Answer (Chef révèle la prochaine réponse)
-            socket.on('revealNextAnswer', (data) => {
+            // Reveal Answer (Chef révèle une réponse spécifique)
+            socket.on('revealAnswer', (data: { lobbyCode: string; answerIndex: number }) => {
                 try {
                     // Rate limiting
                     if (!rateLimiters.revealAnswer.isAllowed(socket.id)) {
@@ -1184,15 +1184,23 @@ export class SocketHandler {
                         return;
                     }
 
-                    // Incrémenter le compteur de révélations
-                    if (game.currentRound.revealedCount === undefined) {
-                        game.currentRound.revealedCount = 0;
+                    // Initialiser le Set des indices révélés si nécessaire
+                    if (!game.currentRound.revealedIndices) {
+                        game.currentRound.revealedIndices = [];
                     }
-                    game.currentRound.revealedCount++;
+
+                    // Vérifier que l'index n'a pas déjà été révélé
+                    if (game.currentRound.revealedIndices.includes(data.answerIndex)) {
+                        return; // Déjà révélé, ignorer silencieusement
+                    }
+
+                    // Ajouter l'index aux révélations
+                    game.currentRound.revealedIndices.push(data.answerIndex);
 
                     // Broadcaster à tous les joueurs
                     this.io.to(data.lobbyCode).emit('answerRevealed', {
-                        revealedIndex: game.currentRound.revealedCount
+                        revealedIndex: data.answerIndex,
+                        revealedIndices: game.currentRound.revealedIndices
                     });
                 } catch (error) {
                     logger.error('Error revealing answer', { error: (error as Error).message });
@@ -1335,19 +1343,21 @@ export class SocketHandler {
                     const currentPhase = game.currentRound.phase;
 
                     // Protection contre les doubles appels de timer pour la même phase
+                    // Note: Cette vérification est thread-safe car Node.js est single-threaded
                     if (game.currentRound.timerProcessedForPhase === currentPhase) {
                         logger.debug(`Timer déjà traité pour phase ${currentPhase}, ignoré`);
                         return;
                     }
+
+                    // Marquer immédiatement comme traité pour bloquer tout appel concurrent
+                    // (même si Node.js est single-threaded, c'est une bonne pratique défensive)
+                    game.currentRound.timerProcessedForPhase = currentPhase;
 
                     logger.info(`Timer expiré`, { lobbyCode: data.lobbyCode, phase: currentPhase });
 
                     // Gérer l'expiration selon la phase
                     switch (currentPhase) {
                         case 'QUESTION_SELECTION':
-                            // Marquer le timer comme traité pour cette phase
-                            game.currentRound.timerProcessedForPhase = currentPhase;
-
                             // Si le chef n'a pas choisi, sélectionner automatiquement une question aléatoire parmi celles proposées
                             if (!game.currentRound.selectedQuestion) {
                                 // Utiliser la carte déjà proposée au chef (stockée dans gameCard)
@@ -1374,9 +1384,6 @@ export class SocketHandler {
                             break;
 
                         case 'ANSWERING':
-                            // Marquer le timer comme traité pour cette phase
-                            game.currentRound.timerProcessedForPhase = currentPhase;
-
                             // Ajouter des réponses automatiques pour les joueurs qui n'ont pas répondu
                             const respondingPlayers = lobby.players.filter(p => p.id !== game.currentRound!.leader.id);
                             for (const player of respondingPlayers) {
@@ -1408,9 +1415,6 @@ export class SocketHandler {
                             break;
 
                         case 'GUESSING':
-                            // Marquer le timer comme traité pour cette phase
-                            game.currentRound.timerProcessedForPhase = currentPhase;
-
                             // Valider les attributions actuelles et passer à REVEAL
                             // Filtrer les guesses non assignés (null ou undefined)
                             const validGuesses = Object.fromEntries(

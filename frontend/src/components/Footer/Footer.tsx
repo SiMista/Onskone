@@ -53,6 +53,15 @@ const Footer: React.FC = () => {
           >
             Nous contacter
           </button>
+          <span aria-hidden="true">|</span>
+          <a
+            href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={footerLinkClass}
+          >
+            Ne clique pas
+          </a>
         </div>
       </footer>
 

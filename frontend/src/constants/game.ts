@@ -28,7 +28,7 @@ export const AVATARS = [
   // (Michel), Bald white man
   { id: 7, params: 'backgroundColor=c5e1f5&baseColor=e0ac69&hair=mrClean&mouth=nervous&eyes=smiling&eyebrows=up&nose=curve&ears=attached&shirt=crew&shirtColor=653f8a&facialHair=scruff&facialHairProbability=100' },
   // (Simi) Black man, yellow shirt, earrings
-  { id: 8, params: 'backgroundColor=eb9d9d&baseColor=8c542b&hair=dannyPhantom&hairColor=242424&mouth=smile&eyes=eyes&eyebrows=down&nose=curve&ears=attached&shirt=open&shirtColor=e3c946&earrings=stud&earringsProbability=100' },
+  { id: 8, params: 'backgroundColor=eb9d9d&baseColor=8c542b&hair=fonze&hairColor=242424&mouth=smile&eyes=eyes&eyebrows=down&nose=curve&ears=attached&shirt=open&shirtColor=e3c946&earrings=stud&earringsProbability=100' },
   // (Boubou) Black man, blue polo, glasses
   { id: 9, params: 'backgroundColor=cfc5eb&baseColor=8d5524&hair=fonze&hairColor=242424&mouth=surprised&eyes=eyes&eyebrows=up&nose=pointed&ears=attached&shirt=collared&shirtColor=304a8a&glasses=square&glassesProbability=100&glassesColor=1a1a1a' },
   // (Sam, Totally Spies) White woman, red hair, green shirt, earrings

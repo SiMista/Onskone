@@ -12,16 +12,19 @@ interface RevealPhaseProps {
   isGameOver: boolean;
   results: RevealResult[];
   question: string;
+  initialRevealedIndices?: number[];
 }
 
-const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderName, isGameOver, results, question }) => {
-  // Nombre de réponses révélées (synchronisé via socket)
-  const [revealedCount, setRevealedCount] = useState(0);
+const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderName, isGameOver, results, question, initialRevealedIndices }) => {
+  // Indices des réponses révélées (synchronisé via socket)
+  const [revealedIndices, setRevealedIndices] = useState<Set<number>>(
+    new Set(initialRevealedIndices || [])
+  );
 
   useEffect(() => {
     // Écouter les révélations du chef
-    socket.on('answerRevealed', (data: { revealedIndex: number }) => {
-      setRevealedCount(data.revealedIndex);
+    socket.on('answerRevealed', (data: { revealedIndex: number; revealedIndices: number[] }) => {
+      setRevealedIndices(new Set(data.revealedIndices));
     });
 
     return () => {
@@ -29,9 +32,9 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
     };
   }, []);
 
-  const handleRevealNext = () => {
-    if (isLeader && revealedCount < results.length) {
-      socket.emit('revealNextAnswer', { lobbyCode });
+  const handleReveal = (index: number) => {
+    if (isLeader && !revealedIndices.has(index)) {
+      socket.emit('revealAnswer', { lobbyCode, answerIndex: index });
     }
   };
 
@@ -44,6 +47,7 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
   };
 
   const totalAnswers = results.length;
+  const revealedCount = revealedIndices.size;
   const allRevealed = revealedCount >= totalAnswers;
 
   return (
@@ -72,7 +76,7 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
         {/* Liste des résultats */}
         <div className="space-y-2 md:space-y-3 px-2 md:px-4">
           {results.map((result, index) => {
-            const isRevealed = index < revealedCount;
+            const isRevealed = revealedIndices.has(index);
             const noResponse = isNoResponse(result.answer);
 
             return (
@@ -119,7 +123,7 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
                     )}
                   </div>
 
-                  {/* Écrit par (révélé progressivement) */}
+                  {/* Écrit par (révélé ou bouton révéler) */}
                   <div className="flex flex-col items-center">
                     {isRevealed ? (
                       <>
@@ -127,6 +131,19 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
                         <Avatar avatarId={result.playerAvatarId ?? 0} name={result.playerName} size="md" className="hidden md:block" />
                         <span className="text-[10px] md:text-xs font-semibold text-black mt-0.5 md:mt-1" title={result.playerName}>
                           {truncateName(result.playerName, 6)}
+                        </span>
+                      </>
+                    ) : isLeader ? (
+                      <>
+                        <button
+                          onClick={() => handleReveal(index)}
+                          className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-yellow-400 border-2 border-black flex items-center justify-center text-black font-bold text-xs md:text-sm shadow-md hover:bg-yellow-300 hover:scale-110 transition-all cursor-pointer"
+                          title="Révéler cette réponse"
+                        >
+                          ?
+                        </button>
+                        <span className="text-[10px] md:text-xs font-semibold text-gray-500 mt-0.5 md:mt-1">
+                          ???
                         </span>
                       </>
                     ) : (
@@ -151,13 +168,9 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
       <div className="flex flex-col items-center gap-2 md:gap-3">
         {!allRevealed ? (
           isLeader ? (
-            <Button
-              variant="warning"
-              size="lg"
-              onClick={handleRevealNext}
-            >
-              Révéler ({revealedCount}/{totalAnswers})
-            </Button>
+            <p className="text-gray-900 text-sm md:text-base font-semibold">
+              Clique sur les <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-yellow-400 border-2 border-black text-black font-bold text-xs mx-1">?</span> pour révéler ({revealedCount}/{totalAnswers})
+            </p>
           ) : (
             <p className="text-gray-900 text-sm md:text-base font-semibold">
               {leaderName} révèle les réponses... ({revealedCount}/{totalAnswers})
@@ -166,7 +179,7 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
         ) : isLeader ? (
           <>
             <p className="text-base md:text-lg font-semibold">
-              {isGameOver ? '🎉 Partie terminée !' : 'Prêt pour la suite ?'}
+              {isGameOver ? 'Partie terminée !' : 'Prêt pour la suite ?'}
             </p>
             <Button
               text={isGameOver ? 'Voir les résultats finaux' : 'Manche suivante'}

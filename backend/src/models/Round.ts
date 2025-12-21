@@ -17,7 +17,7 @@ export class Round implements IRound {
     timerProcessedForPhase: RoundPhase | null | undefined; // Empêche le double traitement du timer
     timerPhase: RoundPhase | undefined; // Phase pour laquelle le timer a été démarré
     relancesUsed: number; // Nombre de relances utilisées par le chef
-    revealedCount: number; // Nombre de réponses révélées en phase REVEAL
+    revealedIndices: number[]; // Indices des réponses révélées en phase REVEAL
 
     constructor(roundNumber: number, leader: IPlayer, gameCard: GameCard) {
         this.roundNumber = roundNumber;
@@ -35,7 +35,7 @@ export class Round implements IRound {
         this.timerProcessedForPhase = null;
         this.timerPhase = undefined;
         this.relancesUsed = 0;
-        this.revealedCount = 0;
+        this.revealedIndices = [];
     }
 
     addAnswer(playerId: string, answer: string): void {

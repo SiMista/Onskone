@@ -99,7 +99,9 @@ export function validatePlayerId(playerId: string): ValidationResult {
 }
 
 /**
- * Sanitize user input (comprehensive XSS protection)
+ * Sanitize user input (XSS protection)
+ * Note: React already escapes HTML entities when rendering, so we don't encode them here
+ * to avoid double-encoding (e.g., & becoming &amp; in the UI)
  */
 export function sanitizeInput(input: string): string {
   if (!input || typeof input !== 'string') {
@@ -108,12 +110,8 @@ export function sanitizeInput(input: string): string {
 
   return input
     .trim()
-    // HTML entities
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;')
+    // Remove HTML tags (prevents injection of script tags, etc.)
+    .replace(/<[^>]*>/g, '')
     // Remove null bytes
     .replace(/\0/g, '')
     // Remove javascript: protocol

@@ -65,8 +65,8 @@ export interface IRound {
   /** Phase pour laquelle le timer a été traité (protection contre les doubles appels) */
   timerProcessedForPhase?: RoundPhase | null;
 
-  /** Nombre de réponses révélées dans la phase REVEAL */
-  revealedCount?: number;
+  /** Indices des réponses révélées dans la phase REVEAL */
+  revealedIndices?: number[];
 
   /** Timestamp de démarrage du timer (pour synchronisation) */
   timerStartedAt?: number;
