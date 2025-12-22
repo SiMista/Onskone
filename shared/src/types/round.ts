@@ -79,4 +79,7 @@ export interface IRound {
 
   /** Nombre de relances utilisées par le chef en phase QUESTION_SELECTION */
   relancesUsed?: number;
+
+  /** Cartes déjà montrées au chef (pour éviter les doublons lors des relances) */
+  shownGameCards?: GameCard[];
 }

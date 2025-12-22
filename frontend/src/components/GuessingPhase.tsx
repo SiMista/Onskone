@@ -4,7 +4,6 @@ import Timer from './Timer';
 import Button from './Button';
 import Avatar from './Avatar';
 import { IPlayer, RoundPhase } from '@onskone/shared';
-import { GAME_CONFIG } from '../constants/game';
 import { isNoResponse, getDisplayText } from '../utils/answerHelpers';
 
 interface Answer {
@@ -18,15 +17,23 @@ interface GuessingPhaseProps {
   leaderName: string;
   question: string;
   initialGuesses?: Record<string, string>;
+  playerCount: number; // Nombre total de joueurs (pour calculer la durée du timer)
 }
 
-const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, leaderName, question, initialGuesses }) => {
+const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, leaderName, question, initialGuesses, playerCount }) => {
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [players, setPlayers] = useState<IPlayer[]>([]);
   const [guesses, setGuesses] = useState<Record<string, string>>(initialGuesses || {});
   const [draggedAnswerId, setDraggedAnswerId] = useState<string | null>(null);
   const [selectedAnswerId, setSelectedAnswerId] = useState<string | null>(null); // Pour mobile
   const [loading, setLoading] = useState(true);
+
+  // Calculer la durée du timer: 120s pour 3 joueurs, +20s par joueur supplémentaire
+  const timerDuration = useMemo(() => {
+    const baseTime = 120; // 3 joueurs = 120s
+    const extraTimePerPlayer = 20;
+    return baseTime + Math.max(0, playerCount - 3) * extraTimePerPlayer;
+  }, [playerCount]);
 
   // Sync guesses when initialGuesses changes (reconnection during GUESSING phase)
   useEffect(() => {
@@ -50,7 +57,7 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
 
     const startTimerTimeout = setTimeout(() => {
       if (isLeader) {
-        socket.emit('startTimer', { lobbyCode, duration: GAME_CONFIG.TIMERS.GUESSING });
+        socket.emit('startTimer', { lobbyCode, duration: timerDuration });
       }
     }, 500);
 
@@ -78,7 +85,7 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
       socket.off('shuffledAnswersReceived');
       socket.off('guessUpdated');
     };
-  }, [lobbyCode, isLeader]);
+  }, [lobbyCode, isLeader, timerDuration]);
 
   const handleDragStart = (answerId: string) => {
     if (!isLeader) return;
@@ -203,7 +210,7 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
         <div className="bg-primary-light rounded-lg px-3 py-2 mb-2 md:mb-3">
           <p className="text-sm md:text-base text-gray-800 text-center font-medium">{question}</p>
         </div>
-        <Timer duration={GAME_CONFIG.TIMERS.GUESSING} onExpire={handleTimerExpire} phase={RoundPhase.GUESSING} lobbyCode={lobbyCode} />
+        <Timer duration={timerDuration} onExpire={handleTimerExpire} phase={RoundPhase.GUESSING} lobbyCode={lobbyCode} />
       </div>
 
       {/* Layout responsive: colonnes sur desktop, empilé sur mobile */}

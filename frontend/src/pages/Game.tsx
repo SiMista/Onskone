@@ -274,6 +274,7 @@ const GamePage: React.FC = () => {
             leaderName={game.currentRound.leader.name}
             question={game.currentRound.selectedQuestion || ''}
             initialGuesses={reconnectionData?.currentGuesses}
+            playerCount={players.length}
           />
         );
 
