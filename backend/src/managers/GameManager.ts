@@ -53,20 +53,43 @@ export const createGame = (lobby: ILobby): Game => {
     return game;
 };
 
-export const getRandomQuestions = (count: number): GameCard[] => {
+/**
+ * Compare deux GameCards pour vérifier si elles sont identiques
+ * (basé sur la catégorie et les questions)
+ */
+const areCardsEqual = (card1: GameCard, card2: GameCard): boolean => {
+    if (card1.category !== card2.category) return false;
+    if (card1.questions.length !== card2.questions.length) return false;
+    return card1.questions.every((q, i) => q === card2.questions[i]);
+};
+
+export const getRandomQuestions = (count: number, excludeCards: GameCard[] = []): GameCard[] => {
     if (questionsPool.length === 0) {
         return [];
     }
 
-    // Créer une copie du pool pour ne pas modifier l'original
-    const poolCopy = [...questionsPool];
+    // Filtrer les cartes déjà vues
+    let availableCards = questionsPool;
+    if (excludeCards.length > 0) {
+        availableCards = questionsPool.filter(card =>
+            !excludeCards.some(excluded => areCardsEqual(card, excluded))
+        );
+    }
+
+    // Si toutes les cartes ont été vues, reset et utiliser tout le pool
+    if (availableCards.length === 0) {
+        availableCards = questionsPool;
+    }
+
+    // Créer une copie pour ne pas modifier le tableau filtré
+    const poolCopy = [...availableCards];
     const selectedQuestions: GameCard[] = [];
 
     // Sélectionner 'count' questions aléatoires
     for (let i = 0; i < Math.min(count, poolCopy.length); i++) {
         const randomIndex = randomInt(0, poolCopy.length);
         selectedQuestions.push(poolCopy[randomIndex]);
-        poolCopy.splice(randomIndex, 1); // Éviter les doublons
+        poolCopy.splice(randomIndex, 1); // Éviter les doublons dans la sélection
     }
 
     return selectedQuestions;

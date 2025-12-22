@@ -628,18 +628,27 @@ export class SocketHandler {
                         return;
                     }
 
-                    // Envoyer le nombre de cartes demandé (par défaut 3, max 10)
-                    const rawCount = typeof data.count === 'number' ? data.count : 3;
+                    // Envoyer le nombre de cartes demandé (par défaut 1, max 10)
+                    const rawCount = typeof data.count === 'number' ? data.count : 1;
                     const count = Math.max(1, Math.min(10, Math.floor(rawCount)));
-                    const questions = GameManager.getRandomQuestions(count);
+
+                    // Exclure les cartes déjà montrées pour éviter les doublons lors des relances
+                    const excludeCards = game.currentRound.shownGameCards || [];
+                    const questions = GameManager.getRandomQuestions(count, excludeCards);
 
                     // Stocker la première carte dans le Round pour l'auto-sélection
+                    // et l'ajouter aux cartes déjà montrées
                     if (questions.length > 0) {
                         game.currentRound.gameCard = questions[0];
+                        // Ajouter toutes les nouvelles cartes aux cartes déjà montrées
+                        if (!game.currentRound.shownGameCards) {
+                            game.currentRound.shownGameCards = [];
+                        }
+                        game.currentRound.shownGameCards.push(...questions);
                     }
 
                     socket.emit('questionsReceived', { questions });
-                    logger.debug(`${count} carte(s) envoyée(s) au leader`, { lobbyCode: data.lobbyCode });
+                    logger.debug(`${count} carte(s) envoyée(s) au leader (${excludeCards.length} exclues)`, { lobbyCode: data.lobbyCode });
                 } catch (error) {
                     logger.error('Error requesting questions', { error: (error as Error).message });
                     socket.emit('error', {message: (error as Error).message});

@@ -18,6 +18,7 @@ export class Round implements IRound {
     timerPhase: RoundPhase | undefined; // Phase pour laquelle le timer a été démarré
     relancesUsed: number; // Nombre de relances utilisées par le chef
     revealedIndices: number[]; // Indices des réponses révélées en phase REVEAL
+    shownGameCards: GameCard[]; // Cartes déjà montrées au chef (pour éviter les doublons)
 
     constructor(roundNumber: number, leader: IPlayer, gameCard: GameCard) {
         this.roundNumber = roundNumber;
@@ -36,6 +37,7 @@ export class Round implements IRound {
         this.timerPhase = undefined;
         this.relancesUsed = 0;
         this.revealedIndices = [];
+        this.shownGameCards = [];
     }
 
     addAnswer(playerId: string, answer: string): void {
