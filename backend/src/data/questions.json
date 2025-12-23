@@ -12,7 +12,7 @@
     "questions": [
       "La qualité que tu valorises le plus chez un ami ?",
       "Ton rituel ou moment préféré avec tes amis ?",
-      "Le nom de ton meilleur ami(e) / Best friend’s name ?"
+      "Le nom de ton meilleur ami(e) ?"
     ]
   },
   {
@@ -61,7 +61,7 @@
     "category": "Conseils",
     "questions": [
       "Le meilleur conseil que quelqu'un t'a donné ?",
-      "Le modèle dans ta vie / Your life role model ?",
+      "Le modèle dans ta vie", 
       "Quelle citation ou phrase te motive le plus ?"
     ]
   },

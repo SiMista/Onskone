@@ -10,6 +10,8 @@ export class Game implements IGame {
     currentRound: IRound | null;
     status: GameStatus;
     readonly cards: GameCard[];
+    // Nombre de joueurs actifs au démarrage de la partie (fixe)
+    private initialActivePlayerCount: number = 0;
 
     constructor(lobby: ILobby, questionsPool: GameCard[]) {
         this.lobby = lobby;
@@ -65,7 +67,9 @@ export class Game implements IGame {
     }
 
     start(): void {
-        this.status = GameStatus.IN_PROGRESS
+        // Capturer le nombre de joueurs actifs au démarrage (ne changera plus)
+        this.initialActivePlayerCount = this.getActivePlayers().length;
+        this.status = GameStatus.IN_PROGRESS;
     }
 
     end(): void {
@@ -73,8 +77,10 @@ export class Game implements IGame {
     }
 
     getMaxRounds(): number {
-        // Chaque joueur ACTIF doit passer chef une fois
-        return this.getActivePlayers().length;
+        // Nombre de rounds = nombre de joueurs actifs au démarrage de la partie
+        // Utilise la valeur capturée au start() pour éviter les incohérences
+        // si des joueurs se déconnectent pendant la partie
+        return this.initialActivePlayerCount;
     }
 
     getActivePlayers(): typeof this.lobby.players {
@@ -82,10 +88,10 @@ export class Game implements IGame {
     }
 
     isGameOver(): boolean {
-        // La partie est terminée quand on a fait autant de rounds que de joueurs actifs
-        // ou s'il n'y a plus assez de joueurs actifs
+        // La partie est terminée quand on a fait autant de rounds que prévu initialement
+        // ou s'il n'y a plus assez de joueurs actifs pour continuer
         const activePlayers = this.getActivePlayers();
-        return this.rounds.length >= activePlayers.length || activePlayers.length < 2;
+        return this.rounds.length >= this.initialActivePlayerCount || activePlayers.length < 2;
     }
 
     getLeaderboard(): LeaderboardEntry[] {

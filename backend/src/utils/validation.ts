@@ -110,16 +110,21 @@ export function sanitizeInput(input: string): string {
 
   return input
     .trim()
-    // Remove HTML tags (prevents injection of script tags, etc.)
-    .replace(/<[^>]*>/g, '')
-    // Remove null bytes
+    // Remove null bytes first (can be used to bypass filters)
     .replace(/\0/g, '')
-    // Remove javascript: protocol
-    .replace(/javascript:/gi, '')
+    // Remove HTML tags (prevents injection of script tags, svg, etc.)
+    .replace(/<[^>]*>?/g, '')
+    // Remove javascript: protocol (with unicode escapes)
+    .replace(/j\s*a\s*v\s*a\s*s\s*c\s*r\s*i\s*p\s*t\s*:/gi, '')
+    .replace(/&#x?[0-9a-f]+;?/gi, '') // Remove HTML entities that could encode js:
     // Remove data: protocol (can be used for XSS)
-    .replace(/data:/gi, '')
+    .replace(/d\s*a\s*t\s*a\s*:/gi, '')
     // Remove vbscript: protocol
-    .replace(/vbscript:/gi, '')
-    // Remove on* event handlers
-    .replace(/on\w+\s*=/gi, '');
+    .replace(/v\s*b\s*s\s*c\s*r\s*i\s*p\s*t\s*:/gi, '')
+    // Remove on* event handlers (more thorough pattern)
+    .replace(/on\w+\s*=\s*["']?[^"'>\s]*/gi, '')
+    // Remove expression() CSS function (IE XSS)
+    .replace(/expression\s*\(/gi, '')
+    // Remove url() with javascript/data
+    .replace(/url\s*\(\s*['"]?\s*(javascript|data):/gi, 'url(blocked:');
 }

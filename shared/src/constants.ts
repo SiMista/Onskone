@@ -10,7 +10,7 @@ export const GAME_CONSTANTS = {
   // Character limits
   MAX_NAME_LENGTH: 20,
   MIN_NAME_LENGTH: 2,
-  MAX_ANSWER_LENGTH: 70,
+  MAX_ANSWER_LENGTH: 100,
 
   // Avatar settings
   MIN_AVATAR_ID: 0,
