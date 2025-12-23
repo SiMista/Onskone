@@ -2,7 +2,8 @@
 import { GAME_CONSTANTS } from '@onskone/shared';
 
 // Mode debug: met les timers à 1 heure pour travailler sur le front tranquillement
-export const DEBUG_MODE = false;
+// Activé via VITE_DEBUG_MODE=true dans .env ou automatiquement désactivé en production
+export const DEBUG_MODE = import.meta.env.VITE_DEBUG_MODE === 'true' && import.meta.env.DEV;
 
 const DEBUG_TIMER = 3600; // 1 heure
 

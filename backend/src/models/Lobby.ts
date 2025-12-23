@@ -1,4 +1,4 @@
-import { ILobby, IPlayer } from '@onskone/shared';
+import { ILobby, IPlayer, GAME_CONSTANTS } from '@onskone/shared';
 import { IGame } from '../types/IGame';
 
 export class Lobby implements ILobby {
@@ -19,6 +19,9 @@ export class Lobby implements ILobby {
     }
 
     addPlayer(player: IPlayer): void {
+        if (this.players.length >= GAME_CONSTANTS.MAX_PLAYERS) {
+            throw new Error(`Le salon est plein (maximum ${GAME_CONSTANTS.MAX_PLAYERS} joueurs)`);
+        }
         this.players.push(player);
     }
 

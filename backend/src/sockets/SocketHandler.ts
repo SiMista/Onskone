@@ -26,6 +26,10 @@ export class SocketHandler {
     private readonly INACTIVE_DELAY = 5000;
     // Map pour stocker les timeouts d'inactivité (clé: lobbyCode_playerName)
     private inactiveTimeouts: Map<string, NodeJS.Timeout> = new Map();
+    // Map pour stocker les joueurs kickés temporairement (clé: lobbyCode_playerName, valeur: timestamp d'expiration)
+    private kickedPlayers: Map<string, number> = new Map();
+    // Durée du blocage après kick (5 minutes)
+    private readonly KICK_BLOCK_DURATION = 5 * 60 * 1000;
 
     constructor(io: Server<ClientToServerEvents, ServerToClientEvents>) {
         this.io = io;
@@ -128,6 +132,34 @@ export class SocketHandler {
     }
 
     /**
+     * Vérifie si un joueur est bloqué (a été kické récemment)
+     * Nettoie automatiquement les entrées expirées
+     */
+    private isPlayerKicked(lobbyCode: string, playerName: string): boolean {
+        const key = this.getDisconnectKey(lobbyCode, playerName);
+        const expiration = this.kickedPlayers.get(key);
+
+        if (!expiration) return false;
+
+        if (Date.now() > expiration) {
+            // Le blocage a expiré, nettoyer l'entrée
+            this.kickedPlayers.delete(key);
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Bloque un joueur après un kick
+     */
+    private blockKickedPlayer(lobbyCode: string, playerName: string): void {
+        const key = this.getDisconnectKey(lobbyCode, playerName);
+        this.kickedPlayers.set(key, Date.now() + this.KICK_BLOCK_DURATION);
+        logger.debug(`Joueur ${playerName} bloqué du lobby ${lobbyCode} pour ${this.KICK_BLOCK_DURATION / 1000}s`);
+    }
+
+    /**
      * Clean up all disconnect timeouts and reconnection locks for a specific lobby
      */
     private cleanupLobbyResources(lobbyCode: string): void {
@@ -153,8 +185,17 @@ export class SocketHandler {
         }
         locksToDelete.forEach(key => this.reconnectionLocks.delete(key));
 
-        if (keysToDelete.length > 0 || locksToDelete.length > 0) {
-            logger.debug(`Nettoyage lobby ${lobbyCode}: ${keysToDelete.length} timeouts, ${locksToDelete.length} locks`);
+        // Clean up kicked players list for this lobby
+        const kickedToDelete: string[] = [];
+        for (const key of this.kickedPlayers.keys()) {
+            if (key.startsWith(`${lobbyCode}_`)) {
+                kickedToDelete.push(key);
+            }
+        }
+        kickedToDelete.forEach(key => this.kickedPlayers.delete(key));
+
+        if (keysToDelete.length > 0 || locksToDelete.length > 0 || kickedToDelete.length > 0) {
+            logger.debug(`Nettoyage lobby ${lobbyCode}: ${keysToDelete.length} timeouts, ${locksToDelete.length} locks, ${kickedToDelete.length} kicked`);
         }
     }
 
@@ -233,6 +274,13 @@ export class SocketHandler {
                     // IMPORTANT: Exclure le joueur qui se reconnecte pour ne pas le supprimer
                     this.cleanupDisconnectedPlayers(lobby, sanitizedName);
 
+                    // Vérifier si le joueur a été kické récemment
+                    if (this.isPlayerKicked(data.lobbyCode, sanitizedName)) {
+                        socket.emit('error', { message: 'Vous avez été expulsé de ce salon' });
+                        logger.debug(`Joueur ${sanitizedName} bloqué - a été kické du lobby ${data.lobbyCode}`);
+                        return;
+                    }
+
                     // Vérifie si le joueur avec ce socket.id est déjà dans le lobby
                     const existingPlayerBySocket = lobby.players.find(p => p.socketId === socket.id);
                     if (existingPlayerBySocket) {
@@ -244,6 +292,18 @@ export class SocketHandler {
                         socket.join(lobby.code);
                         socket.emit('joinedLobby', { player: existingPlayerBySocket });
                         this.io.to(lobby.code).emit('updatePlayersList', { players: lobby.players });
+
+                        // Si une partie est en cours, envoyer gameStarted pour rediriger vers la page de jeu
+                        if (lobby.game && lobby.game.status === 'IN_PROGRESS') {
+                            const gameData = {
+                                lobby: { code: lobby.code, players: lobby.players },
+                                currentRound: lobby.game.currentRound,
+                                status: lobby.game.status,
+                                rounds: lobby.game.rounds
+                            };
+                            socket.emit('gameStarted', { game: gameData });
+                            logger.info(`Partie en cours détectée, envoi gameStarted à ${existingPlayerBySocket.name}`);
+                        }
                         return;
                     }
 
@@ -281,6 +341,18 @@ export class SocketHandler {
                             socket.join(lobby.code);
                             socket.emit('joinedLobby', { player: existingPlayerByName });
                             this.io.to(lobby.code).emit('updatePlayersList', { players: lobby.players });
+
+                            // Si une partie est en cours, envoyer gameStarted pour rediriger vers la page de jeu
+                            if (lobby.game && lobby.game.status === 'IN_PROGRESS') {
+                                const gameData = {
+                                    lobby: { code: lobby.code, players: lobby.players },
+                                    currentRound: lobby.game.currentRound,
+                                    status: lobby.game.status,
+                                    rounds: lobby.game.rounds
+                                };
+                                socket.emit('gameStarted', { game: gameData });
+                                logger.info(`Partie en cours détectée, envoi gameStarted à ${existingPlayerByName.name}`);
+                            }
                         } finally {
                             // Relâcher le lock
                             this.reconnectionLocks.delete(lockKey);
@@ -426,50 +498,84 @@ export class SocketHandler {
 
             // Kick Player from Lobby
             socket.on('kickPlayer', ({ lobbyCode, playerId }) => {
-                // Rate limiting
-                if (!rateLimiters.kickPlayer.isAllowed(socket.id)) {
-                    socket.emit('error', { message: 'Trop de requêtes. Veuillez patienter.' });
-                    return;
-                }
+                try {
+                    // Rate limiting
+                    if (!rateLimiters.kickPlayer.isAllowed(socket.id)) {
+                        socket.emit('error', { message: 'Trop de requêtes. Veuillez patienter.' });
+                        return;
+                    }
 
-                // Validate playerId
-                const playerIdValidation = validatePlayerId(playerId);
-                if (!playerIdValidation.isValid) {
-                    socket.emit('error', { message: playerIdValidation.error || 'ID joueur invalide' });
-                    return;
-                }
+                    // Validate lobbyCode
+                    const codeValidation = validateLobbyCode(lobbyCode);
+                    if (!codeValidation.isValid) {
+                        socket.emit('error', { message: codeValidation.error || 'Code invalide' });
+                        return;
+                    }
 
-                const lobby = LobbyManager.getLobby(lobbyCode);
-                if (!lobby) {
-                    socket.emit('error', { message: 'Salon introuvable' });
-                    return;
-                }
+                    // Validate playerId
+                    const playerIdValidation = validatePlayerId(playerId);
+                    if (!playerIdValidation.isValid) {
+                        socket.emit('error', { message: playerIdValidation.error || 'ID joueur invalide' });
+                        return;
+                    }
 
-                // Vérifier que c'est l'hôte qui fait la demande
-                const host = lobby.players.find(p => p.isHost);
-                if (!host || host.socketId !== socket.id) {
-                    socket.emit('error', { message: 'Seul l\'hôte peut expulser des joueurs' });
-                    return;
-                }
+                    const lobby = LobbyManager.getLobby(lobbyCode);
+                    if (!lobby) {
+                        socket.emit('error', { message: 'Salon introuvable' });
+                        return;
+                    }
 
-                const kickedPlayer = lobby.getPlayer(playerId);
-                if (!kickedPlayer) {
-                    socket.emit('error', { message: 'Joueur introuvable' });
-                    return;
-                }
+                    // Vérifier que c'est l'hôte qui fait la demande
+                    const host = lobby.players.find(p => p.isHost);
+                    if (!host || host.socketId !== socket.id) {
+                        socket.emit('error', { message: 'Seul l\'hôte peut expulser des joueurs' });
+                        return;
+                    }
 
-                // L'hôte ne peut pas se kick lui-même
-                if (kickedPlayer.isHost) {
-                    socket.emit('error', { message: 'Impossible d\'expulser l\'hôte' });
-                    return;
-                }
+                    const kickedPlayer = lobby.getPlayer(playerId);
+                    if (!kickedPlayer) {
+                        socket.emit('error', { message: 'Joueur introuvable' });
+                        return;
+                    }
 
-                // Remove player from lobby
-                lobby.removePlayer(kickedPlayer);
-                this.io.to(lobbyCode).emit('updatePlayersList', { players: lobby.players });
-                logger.info(`Player ${kickedPlayer.name} expulsé du lobby ${lobbyCode}`);
-                // Notify kicked player
-                this.io.to(kickedPlayer.socketId).emit('kickedFromLobby');
+                    // L'hôte ne peut pas se kick lui-même
+                    if (kickedPlayer.isHost) {
+                        socket.emit('error', { message: 'Impossible d\'expulser l\'hôte' });
+                        return;
+                    }
+
+                    // Sauvegarder les infos avant suppression
+                    const kickedSocketId = kickedPlayer.socketId;
+                    const kickedPlayerName = kickedPlayer.name;
+
+                    // Annuler tous les timeouts associés au joueur
+                    this.cancelDisconnectTimeout(lobbyCode, kickedPlayerName);
+                    this.cancelInactiveTimeout(lobbyCode, kickedPlayerName);
+
+                    // Bloquer le joueur pour empêcher la reconnexion immédiate
+                    this.blockKickedPlayer(lobbyCode, kickedPlayerName);
+
+                    // Retirer le joueur du lobby
+                    lobby.removePlayer(kickedPlayer);
+
+                    // Notifier le joueur kické AVANT de le retirer de la room
+                    this.io.to(kickedSocketId).emit('kickedFromLobby');
+
+                    // Retirer le socket de la room Socket.IO
+                    const kickedSocket = this.io.sockets.sockets.get(kickedSocketId);
+                    if (kickedSocket) {
+                        kickedSocket.leave(lobbyCode);
+                        logger.debug(`Socket ${kickedSocketId} retiré de la room ${lobbyCode}`);
+                    }
+
+                    // Mettre à jour la liste des joueurs pour les autres
+                    this.io.to(lobbyCode).emit('updatePlayersList', { players: lobby.players });
+
+                    logger.info(`Player ${kickedPlayerName} expulsé du lobby ${lobbyCode}`);
+                } catch (error) {
+                    logger.error('Error kicking player', { error: (error as Error).message });
+                    socket.emit('error', { message: 'Erreur lors de l\'expulsion du joueur' });
+                }
             });       
             
             // Promote Player to Host
@@ -478,6 +584,13 @@ export class SocketHandler {
                     // Rate limiting
                     if (!rateLimiters.gameAction.isAllowed(socket.id)) {
                         socket.emit('error', { message: 'Trop de requêtes. Veuillez patienter.' });
+                        return;
+                    }
+
+                    // Validate lobbyCode
+                    const codeValidation = validateLobbyCode(lobbyCode);
+                    if (!codeValidation.isValid) {
+                        socket.emit('error', { message: codeValidation.error || 'Code invalide' });
                         return;
                     }
 
@@ -616,9 +729,14 @@ export class SocketHandler {
                         return;
                     }
 
-                    // Si c'est une relance explicite (isRelance: true), incrémenter le compteur
+                    // Si c'est une relance explicite (isRelance: true), vérifier la limite et incrémenter
                     if (data.isRelance === true) {
-                        game.currentRound.relancesUsed = (game.currentRound.relancesUsed || 0) + 1;
+                        const currentRelances = game.currentRound.relancesUsed || 0;
+                        if (currentRelances >= GAME_CONSTANTS.DEFAULT_CARD_RELANCES) {
+                            socket.emit('error', { message: `Nombre maximum de relances atteint (${GAME_CONSTANTS.DEFAULT_CARD_RELANCES})` });
+                            return;
+                        }
+                        game.currentRound.relancesUsed = currentRelances + 1;
                     }
 
                     // Si une carte existe déjà et ce n'est pas une relance, c'est une reconnexion → renvoyer la carte existante
