@@ -32,7 +32,7 @@ const ConfirmModal = ({
       />
 
       {/* Modal content */}
-      <div className="relative bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
+      <div className="relative bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden animate-modal-content">
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="text-xl font-bold text-gray-800 text-center">{title}</h2>

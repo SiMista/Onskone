@@ -19,7 +19,7 @@ const Modal = ({ isOpen, onClose, title, children }: ModalProps) => {
       />
 
       {/* Modal content */}
-      <div className="relative bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden flex flex-col">
+      <div className="relative bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden flex flex-col animate-modal-content">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <h2 className="text-xl font-bold text-gray-800">{title}</h2>

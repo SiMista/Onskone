@@ -16,7 +16,7 @@ const InfoModal = ({ isOpen, onClose, title, children }: InfoModalProps) => {
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl max-w-md w-full max-h-[80vh] overflow-y-auto shadow-2xl"
+        className="bg-white rounded-2xl max-w-md w-full max-h-[80vh] overflow-y-auto shadow-2xl animate-modal-content"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
