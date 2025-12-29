@@ -135,11 +135,29 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
             Vous êtes le chef de cette manche !
             <Timer duration={GAME_CONFIG.TIMERS.QUESTION_SELECTION} onExpire={handleTimerExpire} phase={RoundPhase.QUESTION_SELECTION} lobbyCode={lobbyCode} />
           </div>
+
           <div className="flex flex-col items-center gap-2 w-full">
             <p className="text-sm md:text-lg font-medium mb-2 md:mb-4">Choisissez une question pour cette manche :</p>
-
+            {/* Bouton pour demander une nouvelle carte (en haut de la carte) */}
+            {selectedQuestion === null && (
+              <div className="flex flex-col md:flex-row items-center justify-center gap-2 md:gap-4 mb-3 md:mb-4">
+                <Button
+                  variant="warning"
+                  size="md"
+                  onClick={handleRequestNewCard}
+                  disabled={relancesLeft <= 0}
+                  isLoading={loading}
+                >
+                  Choisir une autre carte
+                </Button>
+                <span className={`text-xs md:text-sm font-medium ${relancesLeft === 0 ? 'text-red-500' : 'text-gray-600'}`}>
+                  Relances possibles : {relancesLeft}
+                </span>
+              </div>
+            )}
             {/* Carte avec thème et questions */}
             <div className="w-full max-w-3xl bg-[#f9f4ee] backdrop-blur-sm border-4 md:border-8 border-primary/30 border-red-400 rounded-xl md:rounded-2xl p-3 md:p-6 shadow-lg">
+
               <p className="text-lg md:text-2xl font-semibold mb-2 md:mb-4 text-center pb-2 md:pb-4">Thème : {currentCard.category}</p>
               <div className="flex flex-col gap-2 md:gap-3">
                 {currentCard.questions.map((question, questionIndex) => (
@@ -166,24 +184,6 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
               </div>
             </div>
           </div>
-
-          {/* Bouton pour demander une nouvelle carte */}
-          {selectedQuestion === null && (
-            <div className="flex flex-col md:flex-row items-center gap-2 md:gap-4 pt-4 md:pt-6">
-              <Button
-                variant="warning"
-                size="md"
-                onClick={handleRequestNewCard}
-                disabled={relancesLeft <= 0}
-                isLoading={loading}
-              >
-                Choisir une autre carte
-              </Button>
-              <span className={`text-xs md:text-sm font-medium ${relancesLeft === 0 ? 'text-red-500' : 'text-gray-600'}`}>
-                Relances possibles : {relancesLeft}
-              </span>
-            </div>
-          )}
 
           {/* Message de confirmation */}
           {selectedQuestion !== null && (

@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import socket from '../utils/socket';
 import Timer from './Timer';
 import Button from './Button';
@@ -18,15 +18,20 @@ interface GuessingPhaseProps {
   question: string;
   initialGuesses?: Record<string, string>;
   playerCount: number; // Nombre total de joueurs (pour calculer la durée du timer)
+  roundNumber: number; // Numéro du round actuel (pour éviter les race conditions)
 }
 
-const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, leaderName, question, initialGuesses, playerCount }) => {
+const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, leaderName, question, initialGuesses, playerCount, roundNumber }) => {
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [players, setPlayers] = useState<IPlayer[]>([]);
   const [guesses, setGuesses] = useState<Record<string, string>>(initialGuesses || {});
   const [draggedAnswerId, setDraggedAnswerId] = useState<string | null>(null);
   const [selectedAnswerId, setSelectedAnswerId] = useState<string | null>(null); // Pour mobile
   const [loading, setLoading] = useState(true);
+  const [highlightedAnswerId, setHighlightedAnswerId] = useState<string | null>(null);
+
+  // Refs pour les cartes joueurs (pour le scroll)
+  const playerCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   // Calculer la durée du timer: 120s pour 3 joueurs, +20s par joueur supplémentaire
   const timerDuration = useMemo(() => {
@@ -61,9 +66,28 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
       }
     }, 500);
 
-    socket.on('shuffledAnswersReceived', (data: { answers: Answer[]; players: IPlayer[] }) => {
+    socket.on('shuffledAnswersReceived', (data: { answers: Answer[]; players: IPlayer[]; roundNumber?: number }) => {
+      // Ignorer les événements d'anciens rounds (race condition sur reconnexion)
+      if (data.roundNumber !== undefined && data.roundNumber !== roundNumber) {
+        console.log(`Ignoring stale shuffledAnswersReceived for round ${data.roundNumber}, current is ${roundNumber}`);
+        return;
+      }
+
       setAnswers(data.answers);
       setPlayers(data.players);
+
+      // Auto-assigner les réponses NO_RESPONSE aux joueurs correspondants
+      const autoGuesses: Record<string, string> = {};
+      data.answers.forEach(answer => {
+        if (isNoResponse(answer.text)) {
+          // answer.id est le playerId, on l'auto-assigne
+          autoGuesses[answer.id] = answer.id;
+        }
+      });
+      if (Object.keys(autoGuesses).length > 0) {
+        setGuesses(prev => ({ ...prev, ...autoGuesses }));
+      }
+
       setLoading(false);
     });
 
@@ -78,6 +102,21 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
         }
         return updated;
       });
+
+      // Scroll et animation halo quand une réponse est assignée (pour tous les joueurs)
+      if (data.playerId) {
+        // Scroll vers la carte du joueur
+        const playerCard = playerCardRefs.current[data.playerId];
+        if (playerCard) {
+          playerCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // Déclencher l'animation halo sur la zone de réponse
+        setHighlightedAnswerId(data.answerId);
+        setTimeout(() => {
+          setHighlightedAnswerId(null);
+        }, 1500); // Durée de l'animation
+      }
     });
 
     return () => {
@@ -85,7 +124,7 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
       socket.off('shuffledAnswersReceived');
       socket.off('guessUpdated');
     };
-  }, [lobbyCode, isLeader, timerDuration]);
+  }, [lobbyCode, isLeader, timerDuration, roundNumber]);
 
   const handleDragStart = (answerId: string) => {
     if (!isLeader) return;
@@ -263,6 +302,7 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
             return (
               <div
                 key={player.id}
+                ref={(el) => { playerCardRefs.current[player.id] = el; }}
                 onDragOver={handleDragOver}
                 onDrop={() => handleDrop(player.id)}
                 onClick={() => handlePlayerTap(player.id)}
@@ -286,12 +326,14 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
                   {hasAnswer ? (
                     <div className="space-y-1 md:space-y-2">
                       {assignedAnswers.map((answer) => {
+                        const noResponse = isNoResponse(answer.text);
+                        const isHighlighted = highlightedAnswerId === answer.id;
                         return (
                           <div
                             key={answer.id}
-                            className={`rounded-lg p-2 md:p-3 flex justify-between items-start border-2 bg-white border-gray-300`}
+                            className={`rounded-lg p-2 md:p-3 flex justify-between items-start border-2 ${noResponse ? 'bg-gray-100 border-gray-200' : 'bg-white border-gray-300'} ${isHighlighted ? 'animate-halo-pulse' : ''}`}
                           >
-                            <p className={`text-xs md:text-sm flex-1 min-w-0 break-words whitespace-pre-wrap text-gray-800`}>
+                            <p className={`text-xs md:text-sm flex-1 min-w-0 break-words whitespace-pre-wrap ${noResponse ? 'text-gray-400 italic' : 'text-gray-800'}`}>
                               {getDisplayText(answer.text)}
                             </p>
                             {isLeader && (

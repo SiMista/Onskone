@@ -95,7 +95,7 @@ export class SocketHandler {
                 playerAvatarId: player?.avatarId ?? 0,
                 answer: answer as string,
                 guessedPlayerId: guessedPlayerId || '',
-                guessedPlayerName: guessedPlayer?.name || 'Non assigné',
+                guessedPlayerName: guessedPlayer?.name || 'Aucun',
                 guessedPlayerAvatarId: guessedPlayer?.avatarId ?? 0,
                 correct: guessedPlayerId === playerId
             };
@@ -1132,7 +1132,8 @@ export class SocketHandler {
                         const shuffledAnswers = shuffleArray(answersArray);
                         this.io.to(data.lobbyCode).emit('shuffledAnswersReceived', {
                             answers: shuffledAnswers,
-                            players: lobby.players.filter(p => p.id !== game.currentRound!.leader.id)
+                            players: lobby.players.filter(p => p.id !== game.currentRound!.leader.id),
+                            roundNumber: game.currentRound.roundNumber
                         });
 
                         logger.info(`Toutes les réponses soumises, passage à GUESSING`, { lobbyCode: data.lobbyCode });
@@ -1168,10 +1169,11 @@ export class SocketHandler {
                     // Mélanger les réponses (shuffle)
                     const shuffledAnswers = shuffleArray(answersArray);
 
-                    // Envoyer les réponses mélangées à TOUS les joueurs
+                    // Envoyer les réponses mélangées à TOUS les joueurs (avec roundNumber pour éviter les race conditions)
                     this.io.to(data.lobbyCode).emit('shuffledAnswersReceived', {
                         answers: shuffledAnswers,
-                        players: lobby.players.filter(p => p.id !== game.currentRound!.leader.id)
+                        players: lobby.players.filter(p => p.id !== game.currentRound!.leader.id),
+                        roundNumber: game.currentRound.roundNumber
                     });
                 } catch (error) {
                     logger.error('Error requesting shuffled answers', { error: (error as Error).message });
@@ -1537,7 +1539,8 @@ export class SocketHandler {
                             const shuffledAnswers = shuffleArray(answersArray);
                             this.io.to(data.lobbyCode).emit('shuffledAnswersReceived', {
                                 answers: shuffledAnswers,
-                                players: lobby.players.filter(p => p.id !== game.currentRound!.leader.id)
+                                players: lobby.players.filter(p => p.id !== game.currentRound!.leader.id),
+                                roundNumber: game.currentRound.roundNumber
                             });
                             break;
 

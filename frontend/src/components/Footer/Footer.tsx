@@ -55,7 +55,7 @@ const Footer: React.FC = () => {
           </button>
           <span aria-hidden="true">|</span>
           <a
-            href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+            href="https://www.youtube.com/watch?v=xvFZjo5PgG0&list=RDxvFZjo5PgG0&start_radio=1"
             target="_blank"
             rel="noopener noreferrer"
             className={footerLinkClass}
