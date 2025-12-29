@@ -113,6 +113,7 @@ export interface ServerToClientEvents {
   shuffledAnswersReceived: (data: {
     answers: Array<{ id: string; text: string }>;
     players: IPlayer[]; // Joueurs qui ont répondu (sans le chef)
+    roundNumber: number; // Pour éviter les race conditions sur reconnexion
   }) => void;
 
   /** Mise à jour d'une attribution (drag & drop en temps réel) - delta seulement */

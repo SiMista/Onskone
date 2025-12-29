@@ -77,8 +77,21 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
   };
 
   const handleTimerExpire = () => {
+    // Auto-soumettre la réponse si le joueur a écrit quelque chose mais n'a pas validé
+    if (!isLeader && !submitted && answer.trim()) {
+      socket.emit('submitAnswer', {
+        lobbyCode,
+        playerId: currentPlayerId,
+        answer: answer.trim()
+      });
+      setSubmitted(true);
+    }
+
     if (isLeader) {
-      socket.emit('timerExpired', { lobbyCode });
+      // Petit délai pour laisser le temps aux réponses auto-soumises d'arriver au serveur
+      setTimeout(() => {
+        socket.emit('timerExpired', { lobbyCode });
+      }, 500);
     }
   };
 
