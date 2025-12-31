@@ -99,6 +99,21 @@ export function validatePlayerId(playerId: string): ValidationResult {
 }
 
 /**
+ * Validate and normalize avatar ID
+ * Returns a valid avatar ID within bounds, or the default if invalid
+ */
+export function validateAvatarId(avatarId: unknown): number {
+  if (
+    typeof avatarId === 'number' &&
+    avatarId >= GAME_CONSTANTS.MIN_AVATAR_ID &&
+    avatarId <= GAME_CONSTANTS.MAX_AVATAR_ID
+  ) {
+    return Math.floor(avatarId);
+  }
+  return GAME_CONSTANTS.MIN_AVATAR_ID;
+}
+
+/**
  * Sanitize user input (XSS protection)
  * Note: React already escapes HTML entities when rendering, so we don't encode them here
  * to avoid double-encoding (e.g., & becoming &amp; in the UI)

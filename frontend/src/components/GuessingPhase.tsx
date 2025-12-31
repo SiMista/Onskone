@@ -32,6 +32,8 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
 
   // Refs pour les cartes joueurs (pour le scroll)
   const playerCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  // Ref pour éviter de démarrer le timer plusieurs fois (React Strict Mode, re-renders)
+  const timerStartedRef = useRef(false);
 
   // Calculer la durée du timer: 120s pour 3 joueurs, +20s par joueur supplémentaire
   const timerDuration = useMemo(() => {
@@ -61,7 +63,9 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
     socket.emit('requestShuffledAnswers', { lobbyCode });
 
     const startTimerTimeout = setTimeout(() => {
-      if (isLeader) {
+      // Vérifier si on n'a pas déjà démarré le timer pour éviter les doublons
+      if (isLeader && !timerStartedRef.current) {
+        timerStartedRef.current = true;
         socket.emit('startTimer', { lobbyCode, duration: timerDuration });
       }
     }, 500);
@@ -103,8 +107,8 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
         return updated;
       });
 
-      // Scroll et animation halo quand une réponse est assignée (pour tous les joueurs)
-      if (data.playerId) {
+      // Scroll et animation halo quand une réponse est assignée (seulement pour les non-piliers)
+      if (data.playerId && !isLeader) {
         // Scroll vers la carte du joueur
         const playerCard = playerCardRefs.current[data.playerId];
         if (playerCard) {

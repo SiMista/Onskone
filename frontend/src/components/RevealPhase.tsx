@@ -33,7 +33,8 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
   }, []);
 
   const handleReveal = (index: number) => {
-    if (isLeader && !revealedIndices.has(index)) {
+    // Ne peut révéler que le prochain dans l'ordre (de haut en bas)
+    if (isLeader && index === nextRevealIndex) {
       socket.emit('revealAnswer', { lobbyCode, answerIndex: index });
     }
   };
@@ -50,6 +51,9 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
   const revealedCount = revealedIndices.size;
   const allRevealed = revealedCount >= totalAnswers;
 
+  // Trouver le prochain index à révéler (premier non-révélé de haut en bas)
+  const nextRevealIndex = results.findIndex((_, index) => !revealedIndices.has(index));
+
   return (
     <div className="flex flex-col h-full p-2 max-w-2xl mx-auto">
       {/* Header - Question */}
@@ -61,6 +65,21 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
           {question}
         </p>
       </div>
+
+      {/* Instruction en haut */}
+      {!allRevealed && (
+        <div className="text-center mb-2 md:mb-3">
+          {isLeader ? (
+            <p className="text-gray-900 text-sm md:text-base font-semibold">
+              Clique sur <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-yellow-400 border-2 border-black text-black font-bold text-xs mx-1">?</span> pour révéler ({revealedCount}/{totalAnswers})
+            </p>
+          ) : (
+            <p className="text-gray-900 text-sm md:text-base font-semibold">
+              {leaderName} révèle les réponses... ({revealedCount}/{totalAnswers})
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Résultats détaillés avec en-têtes de colonnes */}
       <div className="flex-1 overflow-auto mb-3 md:mb-4">
@@ -134,18 +153,31 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
                         </span>
                       </>
                     ) : isLeader ? (
-                      <>
-                        <button
-                          onClick={() => handleReveal(index)}
-                          className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-yellow-400 border-2 border-black flex items-center justify-center text-black font-bold text-xs md:text-sm shadow-md hover:bg-yellow-300 hover:scale-110 transition-all cursor-pointer"
-                          title="Révéler cette réponse"
-                        >
-                          ?
-                        </button>
-                        <span className="text-[10px] md:text-xs font-semibold text-gray-500 mt-0.5 md:mt-1">
-                          ???
-                        </span>
-                      </>
+                      index === nextRevealIndex ? (
+                        // Prochain à révéler - jaune, cliquable
+                        <>
+                          <button
+                            onClick={() => handleReveal(index)}
+                            className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-yellow-400 border-2 border-black flex items-center justify-center text-black font-bold text-xs md:text-sm shadow-md hover:bg-yellow-300 hover:scale-110 transition-all cursor-pointer animate-pulse"
+                            title="Révéler cette réponse"
+                          >
+                            ?
+                          </button>
+                          <span className="text-[10px] md:text-xs font-semibold text-gray-500 mt-0.5 md:mt-1">
+                            ???
+                          </span>
+                        </>
+                      ) : (
+                        // Verrouillé - grisé avec cadenas
+                        <>
+                          <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-gray-300 border-2 border-gray-400 flex items-center justify-center text-gray-500 font-bold text-xs md:text-sm shadow-md opacity-50">
+                            ?
+                          </div>
+                          <span className="text-[10px] md:text-xs font-semibold text-gray-400 mt-0.5 md:mt-1">
+                            ???
+                          </span>
+                        </>
+                      )
                     ) : (
                       <>
                         <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gray-200 border-2 border-dashed border-gray-400 flex items-center justify-center text-gray-500 font-bold text-base md:text-xl shadow-md">
@@ -164,41 +196,33 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
         </div>
       </div>
 
-      {/* Boutons */}
-      <div className="flex flex-col items-center gap-2 md:gap-3">
-        {!allRevealed ? (
-          isLeader ? (
-            <p className="text-gray-900 text-sm md:text-base font-semibold">
-              Clique sur les <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-yellow-400 border-2 border-black text-black font-bold text-xs mx-1">?</span> pour révéler ({revealedCount}/{totalAnswers})
-            </p>
+      {/* Boutons - seulement quand tout est révélé */}
+      {allRevealed && (
+        <div className="flex flex-col items-center gap-2 md:gap-3">
+          {isLeader ? (
+            <>
+              <p className="text-base md:text-lg font-semibold">
+                {isGameOver ? 'Partie terminée !' : 'Prêt pour la suite ?'}
+              </p>
+              <Button
+                text={isGameOver ? 'Voir les résultats finaux' : 'Manche suivante'}
+                variant='success'
+                rotateEffect={true}
+                onClick={handleNextRound}
+              />
+            </>
           ) : (
-            <p className="text-gray-900 text-sm md:text-base font-semibold">
-              {leaderName} révèle les réponses... ({revealedCount}/{totalAnswers})
-            </p>
-          )
-        ) : isLeader ? (
-          <>
-            <p className="text-base md:text-lg font-semibold">
-              {isGameOver ? 'Partie terminée !' : 'Prêt pour la suite ?'}
-            </p>
-            <Button
-              text={isGameOver ? 'Voir les résultats finaux' : 'Manche suivante'}
-              variant='success'
-              rotateEffect={true}
-              onClick={handleNextRound}
-            />
-          </>
-        ) : (
-          <div className="text-center">
-            <p className="text-gray-900 text-sm md:text-base font-semibold">
-              {isGameOver
-                ? `En attente que ${leaderName} révèle les résultats finaux...`
-                : `En attente que ${leaderName} lance la manche suivante...`
-              }
-            </p>
-          </div>
-        )}
-      </div>
+            <div className="text-center">
+              <p className="text-gray-900 text-sm md:text-base font-semibold">
+                {isGameOver
+                  ? `En attente que ${leaderName} révèle les résultats finaux...`
+                  : `En attente que ${leaderName} lance la manche suivante...`
+                }
+              </p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

@@ -22,6 +22,8 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
   const [funFact, setFunFact] = useState<string>(getRandomFunFact());
   const [factFading, setFactFading] = useState(false);
   const factFadeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Ref pour éviter de démarrer le timer plusieurs fois (React Strict Mode, re-renders)
+  const timerStartedRef = useRef(false);
 
   // Jouer le son au début de la phase
   useEffect(() => {
@@ -55,7 +57,9 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
   useEffect(() => {
     // Petit délai pour laisser le temps aux listeners socket de s'initialiser sur tous les clients
     const startTimerTimeout = setTimeout(() => {
-      if (isLeader) {
+      // Vérifier si on n'a pas déjà démarré le timer pour éviter les doublons
+      if (isLeader && !timerStartedRef.current) {
+        timerStartedRef.current = true;
         // Le pilier demande une carte (1 seule)
         socket.emit('requestQuestions', { lobbyCode, count: 1 });
         socket.emit('startTimer', { lobbyCode, duration: GAME_CONFIG.TIMERS.QUESTION_SELECTION });

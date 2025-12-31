@@ -118,8 +118,10 @@ export const removePlayer = (lobby: Lobby, player: IPlayer): boolean => {
         return true;
     }
 
-    if (player.isHost) {
-        lobby.players[0].isHost = true;
+    if (player.isHost && lobby.players.length > 0) {
+        // Promouvoir le premier joueur ACTIF comme hôte (pas un joueur déconnecté)
+        const newHost = lobby.players.find(p => p.isActive) || lobby.players[0];
+        newHost.isHost = true;
     }
 
     return false;

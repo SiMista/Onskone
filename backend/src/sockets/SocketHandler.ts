@@ -3,9 +3,12 @@ import {Server, Socket} from 'socket.io';
 import * as LobbyManager from '../managers/LobbyManager';
 import * as GameManager from '../managers/GameManager';
 import {Player} from "../models/Player";
-import type { ServerToClientEvents, ClientToServerEvents } from '@onskone/shared';
+import {Lobby} from "../models/Lobby";
+import {Round} from "../models/Round";
+import {Game} from "../models/Game";
+import type { ServerToClientEvents, ClientToServerEvents, IGame } from '@onskone/shared';
 import { GAME_CONSTANTS } from '@onskone/shared';
-import { validatePlayerName, validateAnswer, validateLobbyCode, validatePlayerId, sanitizeInput } from '../utils/validation.js';
+import { validatePlayerName, validateAnswer, validateLobbyCode, validatePlayerId, validateAvatarId, sanitizeInput } from '../utils/validation.js';
 import { rateLimiters } from '../utils/rateLimiter.js';
 import { shuffleArray } from '../utils/helpers.js';
 import logger from '../utils/logger.js';
@@ -194,9 +197,127 @@ export class SocketHandler {
         }
         kickedToDelete.forEach(key => this.kickedPlayers.delete(key));
 
-        if (keysToDelete.length > 0 || locksToDelete.length > 0 || kickedToDelete.length > 0) {
-            logger.debug(`Nettoyage lobby ${lobbyCode}: ${keysToDelete.length} timeouts, ${locksToDelete.length} locks, ${kickedToDelete.length} kicked`);
+        // Clean up inactive timeouts for this lobby
+        const inactiveToDelete: string[] = [];
+        for (const [key, timeout] of this.inactiveTimeouts.entries()) {
+            if (key.startsWith(`${lobbyCode}_`)) {
+                clearTimeout(timeout);
+                inactiveToDelete.push(key);
+            }
         }
+        inactiveToDelete.forEach(key => this.inactiveTimeouts.delete(key));
+
+        if (keysToDelete.length > 0 || locksToDelete.length > 0 || kickedToDelete.length > 0 || inactiveToDelete.length > 0) {
+            logger.debug(`Nettoyage lobby ${lobbyCode}: ${keysToDelete.length} disconnect timeouts, ${inactiveToDelete.length} inactive timeouts, ${locksToDelete.length} locks, ${kickedToDelete.length} kicked`);
+        }
+    }
+
+    /**
+     * Check if the socket is the current round's leader
+     * @returns true if socket is leader, false otherwise (also emits error to socket)
+     * Note: After this returns true, game and game.currentRound are guaranteed non-null
+     */
+    private requireLeader(
+        socket: Socket<ClientToServerEvents, ServerToClientEvents>,
+        game: IGame | null | undefined,
+        action: string
+    ): boolean {
+        if (!game?.currentRound) {
+            socket.emit('error', { message: 'Partie ou round introuvable' });
+            return false;
+        }
+        if (socket.id !== game.currentRound.leader.socketId) {
+            socket.emit('error', { message: `Seul le pilier peut ${action}` });
+            return false;
+        }
+        return true;
+    }
+
+    // ===== TIMER EXPIRATION HANDLERS =====
+
+    /**
+     * Handle timer expiration for QUESTION_SELECTION phase
+     * Auto-selects a random question if the leader hasn't chosen
+     */
+    private handleQuestionSelectionTimeout(lobbyCode: string, currentRound: Round): void {
+        if (currentRound.selectedQuestion) return; // Already selected
+
+        const proposedCard = currentRound.gameCard;
+        if (!proposedCard || proposedCard.questions.length === 0) {
+            logger.error('Pas de questions disponibles pour auto-sélection', { lobbyCode });
+            return;
+        }
+
+        // Choose a random question from the proposed card
+        const randomQuestion = proposedCard.questions[randomInt(0, proposedCard.questions.length)];
+
+        currentRound.setSelectedQuestion(randomQuestion);
+        currentRound.nextPhase();
+        this.io.to(lobbyCode).emit('questionSelected', {
+            question: randomQuestion,
+            phase: currentRound.phase,
+            auto: true
+        });
+        logger.info(`Question auto-sélectionnée`, { lobbyCode });
+    }
+
+    /**
+     * Handle timer expiration for ANSWERING phase
+     * Adds automatic "no response" answers and moves to GUESSING
+     */
+    private handleAnsweringTimeout(lobbyCode: string, lobby: Lobby, currentRound: Round): void {
+        // Add automatic answers for players who didn't respond
+        const respondingPlayers = lobby.players.filter(p => p.id !== currentRound.leader.id);
+        for (const player of respondingPlayers) {
+            if (!currentRound.answers[player.id]) {
+                currentRound.addAnswer(player.id, `__NO_RESPONSE__${player.name} n'a pas répondu à temps`);
+                logger.debug(`Réponse auto ajoutée pour ${player.name}`);
+            }
+        }
+
+        // Move to GUESSING phase
+        currentRound.nextPhase();
+        this.io.to(lobbyCode).emit('allAnswersSubmitted', {
+            phase: currentRound.phase,
+            answersCount: Object.keys(currentRound.answers).length,
+            forced: true
+        });
+
+        // Send shuffled answers to all players
+        const answersArray = Object.entries(currentRound.answers).map(([playerId, answer]) => ({
+            id: playerId,
+            text: answer
+        }));
+        const shuffledAnswers = shuffleArray(answersArray);
+        this.io.to(lobbyCode).emit('shuffledAnswersReceived', {
+            answers: shuffledAnswers,
+            players: lobby.players.filter(p => p.id !== currentRound.leader.id),
+            roundNumber: currentRound.roundNumber
+        });
+    }
+
+    /**
+     * Handle timer expiration for GUESSING phase
+     * Validates current guesses and moves to REVEAL
+     */
+    private handleGuessingTimeout(lobbyCode: string, lobby: Lobby, game: Game, currentRound: Round): void {
+        // Filter out unassigned guesses
+        const validGuesses = Object.fromEntries(
+            Object.entries(currentRound.currentGuesses).filter(([_, playerId]) => playerId !== null && playerId !== undefined)
+        );
+        currentRound.submitGuesses(validGuesses);
+        currentRound.calculateScores();
+        currentRound.nextPhase();
+
+        const results = this.buildRevealResults(lobby, currentRound);
+
+        this.io.to(lobbyCode).emit('revealResults', {
+            phase: currentRound.phase,
+            results,
+            scores: currentRound.scores,
+            leaderboard: game.getLeaderboard(),
+            forced: true
+        });
     }
 
     private setupSocketEvents(): void {
@@ -219,12 +340,7 @@ export class SocketHandler {
                     }
 
                     const sanitizedName = sanitizeInput(data.playerName);
-                    // Valider avatarId
-                    const avatarId = typeof data.avatarId === 'number'
-                        && data.avatarId >= GAME_CONSTANTS.MIN_AVATAR_ID
-                        && data.avatarId <= GAME_CONSTANTS.MAX_AVATAR_ID
-                        ? Math.floor(data.avatarId)
-                        : GAME_CONSTANTS.MIN_AVATAR_ID;
+                    const avatarId = validateAvatarId(data.avatarId);
                     const lobbyCode = LobbyManager.create();
                     const lobby = LobbyManager.getLobby(lobbyCode);
                     const hostPlayer = new Player(sanitizedName, socket.id, true, avatarId);
@@ -360,12 +476,8 @@ export class SocketHandler {
                         return;
                     }
 
-                    // Nouveau joueur - valider avatarId
-                    const avatarId = typeof data.avatarId === 'number'
-                        && data.avatarId >= GAME_CONSTANTS.MIN_AVATAR_ID
-                        && data.avatarId <= GAME_CONSTANTS.MAX_AVATAR_ID
-                        ? Math.floor(data.avatarId)
-                        : GAME_CONSTANTS.MIN_AVATAR_ID;
+                    // Nouveau joueur
+                    const avatarId = validateAvatarId(data.avatarId);
                     const newPlayer = new Player(sanitizedName, socket.id, false, avatarId);
                     LobbyManager.addPlayer(lobby, newPlayer);
 
@@ -718,30 +830,23 @@ export class SocketHandler {
 
                     const lobby = LobbyManager.getLobby(data.lobbyCode);
                     const game = lobby?.game;
-                    if (!game || !game.currentRound) {
-                        socket.emit('error', {message: 'Partie ou round introuvable'});
-                        return;
-                    }
-
-                    // Vérifier que c'est bien le pilier qui demande
-                    if (socket.id !== game.currentRound.leader.socketId) {
-                        socket.emit('error', {message: 'Seul le pilier peut demander des questions'});
-                        return;
-                    }
+                    if (!this.requireLeader(socket, game, 'demander des questions')) return;
+                    // After requireLeader, game and game.currentRound are guaranteed non-null
+                    const currentRound = game!.currentRound!;
 
                     // Si c'est une relance explicite (isRelance: true), vérifier la limite et incrémenter
                     if (data.isRelance === true) {
-                        const currentRelances = game.currentRound.relancesUsed || 0;
+                        const currentRelances = currentRound.relancesUsed || 0;
                         if (currentRelances >= GAME_CONSTANTS.DEFAULT_CARD_RELANCES) {
                             socket.emit('error', { message: `Nombre maximum de relances atteint (${GAME_CONSTANTS.DEFAULT_CARD_RELANCES})` });
                             return;
                         }
-                        game.currentRound.relancesUsed = currentRelances + 1;
+                        currentRound.relancesUsed = currentRelances + 1;
                     }
 
                     // Si une carte existe déjà et ce n'est pas une relance, c'est une reconnexion → renvoyer la carte existante
-                    if (game.currentRound.gameCard?.questions?.length > 0 && data.isRelance !== true) {
-                        socket.emit('questionsReceived', { questions: [game.currentRound.gameCard] });
+                    if (currentRound.gameCard?.questions?.length > 0 && data.isRelance !== true) {
+                        socket.emit('questionsReceived', { questions: [currentRound.gameCard] });
                         logger.debug(`Carte existante renvoyée au leader (reconnexion)`, { lobbyCode: data.lobbyCode });
                         return;
                     }
@@ -751,18 +856,18 @@ export class SocketHandler {
                     const count = Math.max(1, Math.min(10, Math.floor(rawCount)));
 
                     // Exclure les cartes déjà montrées pour éviter les doublons lors des relances
-                    const excludeCards = game.currentRound.shownGameCards || [];
+                    const excludeCards = currentRound.shownGameCards || [];
                     const questions = GameManager.getRandomQuestions(count, excludeCards);
 
                     // Stocker la première carte dans le Round pour l'auto-sélection
                     // et l'ajouter aux cartes déjà montrées
                     if (questions.length > 0) {
-                        game.currentRound.gameCard = questions[0];
+                        currentRound.gameCard = questions[0];
                         // Ajouter toutes les nouvelles cartes aux cartes déjà montrées
-                        if (!game.currentRound.shownGameCards) {
-                            game.currentRound.shownGameCards = [];
+                        if (!currentRound.shownGameCards) {
+                            currentRound.shownGameCards = [];
                         }
-                        game.currentRound.shownGameCards.push(...questions);
+                        currentRound.shownGameCards.push(...questions);
                     }
 
                     socket.emit('questionsReceived', { questions });
@@ -784,16 +889,8 @@ export class SocketHandler {
 
                     const lobby = LobbyManager.getLobby(data.lobbyCode);
                     const game = lobby?.game;
-                    if (!game || !game.currentRound) {
-                        socket.emit('error', {message: 'Partie ou round introuvable'});
-                        return;
-                    }
-
-                    // Vérifier que c'est bien le pilier qui sélectionne
-                    if (socket.id !== game.currentRound.leader.socketId) {
-                        socket.emit('error', {message: 'Seul le pilier peut sélectionner une question'});
-                        return;
-                    }
+                    if (!this.requireLeader(socket, game, 'sélectionner une question')) return;
+                    const currentRound = game!.currentRound!;
 
                     // Valider que la question sélectionnée est bien une des questions proposées
                     const validQuestion = typeof data.selectedQuestion === 'string'
@@ -806,7 +903,7 @@ export class SocketHandler {
                     }
 
                     // Vérifier que la question fait partie des questions de la carte proposée
-                    const gameCard = game.currentRound.gameCard;
+                    const gameCard = currentRound.gameCard;
                     if (gameCard && gameCard.questions && !gameCard.questions.includes(data.selectedQuestion)) {
                         logger.warn(`Question non autorisée sélectionnée`, { lobbyCode: data.lobbyCode, question: data.selectedQuestion });
                         socket.emit('error', {message: 'Cette question n\'est pas disponible'});
@@ -814,13 +911,13 @@ export class SocketHandler {
                     }
 
                     // Enregistrer la question sélectionnée et passer à la phase suivante
-                    game.currentRound.setSelectedQuestion(data.selectedQuestion);
-                    game.currentRound.nextPhase(); // Passe à ANSWERING
+                    currentRound.setSelectedQuestion(data.selectedQuestion);
+                    currentRound.nextPhase(); // Passe à ANSWERING
 
                     // Broadcast la question à tous les joueurs
                     this.io.to(data.lobbyCode).emit('questionSelected', {
                         question: data.selectedQuestion,
-                        phase: game.currentRound.phase
+                        phase: currentRound.phase
                     });
                     logger.debug(`Question sélectionnée`, { lobbyCode: data.lobbyCode });
                 } catch (error) {
@@ -1030,8 +1127,12 @@ export class SocketHandler {
             // Event: Submit Answer
             socket.on('submitAnswer', (data) => {
                 try {
-                    // Rate limiting
-                    if (!rateLimiters.submitAnswer.isAllowed(socket.id)) {
+                    // Rate limiting avec multiple keys (socket.id + lobbyCode_playerId pour éviter bypass sur reconnexion)
+                    const rateLimitKeys = [socket.id];
+                    if (data.lobbyCode && data.playerId) {
+                        rateLimitKeys.push(`${data.lobbyCode}_${data.playerId}_submitAnswer`);
+                    }
+                    if (!rateLimiters.submitAnswer.isAllowedMultiple(rateLimitKeys)) {
                         socket.emit('error', { message: 'Trop de requêtes. Veuillez patienter.' });
                         return;
                     }
@@ -1184,27 +1285,23 @@ export class SocketHandler {
             // Update Guess (Chef déplace une réponse - BROADCAST en temps réel)
             socket.on('updateGuess', (data) => {
                 try {
-                    // Rate limiting
-                    if (!rateLimiters.updateGuess.isAllowed(socket.id)) {
+                    // Rate limiting avec multiple keys (socket.id + lobbyCode pour éviter bypass sur reconnexion)
+                    const rateLimitKeys = [socket.id];
+                    if (data.lobbyCode) {
+                        rateLimitKeys.push(`${data.lobbyCode}_leader_updateGuess`);
+                    }
+                    if (!rateLimiters.updateGuess.isAllowedMultiple(rateLimitKeys)) {
                         socket.emit('error', { message: 'Trop de requêtes. Veuillez patienter.' });
                         return;
                     }
 
                     const lobby = LobbyManager.getLobby(data.lobbyCode);
                     const game = lobby?.game;
-                    if (!game || !game.currentRound) {
-                        socket.emit('error', {message: 'Partie ou round introuvable'});
-                        return;
-                    }
-
-                    // Vérifier que c'est bien le pilier qui déplace
-                    if (socket.id !== game.currentRound.leader.socketId) {
-                        socket.emit('error', {message: 'Seul le pilier peut modifier les attributions'});
-                        return;
-                    }
+                    if (!this.requireLeader(socket, game, 'modifier les attributions')) return;
+                    const currentRound = game!.currentRound!;
 
                     // Mettre à jour l'état intermédiaire du drag & drop
-                    game.currentRound.updateCurrentGuess(data.answerId, data.playerId);
+                    currentRound.updateCurrentGuess(data.answerId, data.playerId);
 
                     // BROADCASTER le delta seulement (pas l'état complet pour économiser la bande passante)
                     this.io.to(data.lobbyCode).emit('guessUpdated', {
@@ -1221,29 +1318,26 @@ export class SocketHandler {
             // Submit Guesses (Chef valide ses choix finaux)
             socket.on('submitGuesses', (data) => {
                 try {
-                    // Rate limiting
-                    if (!rateLimiters.submitGuesses.isAllowed(socket.id)) {
+                    // Rate limiting avec multiple keys (socket.id + lobbyCode pour éviter bypass sur reconnexion)
+                    const rateLimitKeys = [socket.id];
+                    if (data.lobbyCode) {
+                        rateLimitKeys.push(`${data.lobbyCode}_leader_submitGuesses`);
+                    }
+                    if (!rateLimiters.submitGuesses.isAllowedMultiple(rateLimitKeys)) {
                         socket.emit('error', { message: 'Trop de requêtes. Veuillez patienter.' });
                         return;
                     }
 
                     const lobby = LobbyManager.getLobby(data.lobbyCode);
                     const game = lobby?.game;
-                    if (!game || !game.currentRound) {
-                        socket.emit('error', {message: 'Partie ou round introuvable'});
-                        return;
-                    }
-
-                    // Vérifier que c'est bien le pilier qui valide
-                    if (socket.id !== game.currentRound.leader.socketId) {
-                        socket.emit('error', {message: 'Seul le pilier peut valider les attributions'});
-                        return;
-                    }
+                    if (!this.requireLeader(socket, game, 'valider les attributions')) return;
+                    if (!lobby) return; // Type narrowing for lobby
+                    const currentRound = game!.currentRound!;
 
                     // Valider et filtrer les guesses
-                    const answerIds = Object.keys(game.currentRound.answers);
+                    const answerIds = Object.keys(currentRound.answers);
                     const playerIds = lobby.players
-                        .filter(p => p.id !== game.currentRound!.leader.id)
+                        .filter(p => p.id !== currentRound.leader.id)
                         .map(p => p.id);
 
                     const validGuesses: Record<string, string> = {};
@@ -1267,24 +1361,24 @@ export class SocketHandler {
                     }
 
                     // Enregistrer les attributions finales et calculer les scores
-                    game.currentRound.submitGuesses(validGuesses);
-                    game.currentRound.calculateScores();
+                    currentRound.submitGuesses(validGuesses);
+                    currentRound.calculateScores();
 
                     // Passer à la phase REVEAL
-                    game.currentRound.nextPhase();
+                    currentRound.nextPhase();
 
                     // Créer les résultats détaillés
-                    const results = this.buildRevealResults(lobby, game.currentRound);
+                    const results = this.buildRevealResults(lobby, currentRound);
 
                     // Broadcast les résultats à tous
                     this.io.to(data.lobbyCode).emit('revealResults', {
-                        phase: game.currentRound.phase,
+                        phase: currentRound.phase,
                         results,
-                        scores: game.currentRound.scores,
-                        leaderboard: game.getLeaderboard()
+                        scores: currentRound.scores,
+                        leaderboard: game!.getLeaderboard()
                     });
 
-                    logger.info(`Attributions validées`, { lobbyCode: data.lobbyCode, leaderScore: game.currentRound.scores[game.currentRound.leader.id] || 0 });
+                    logger.info(`Attributions validées`, { lobbyCode: data.lobbyCode, leaderScore: currentRound.scores[currentRound.leader.id] || 0 });
                 } catch (error) {
                     logger.error('Error submitting guesses', { error: (error as Error).message });
                     socket.emit('error', {message: (error as Error).message});
@@ -1302,34 +1396,26 @@ export class SocketHandler {
 
                     const lobby = LobbyManager.getLobby(data.lobbyCode);
                     const game = lobby?.game;
-                    if (!game || !game.currentRound) {
-                        socket.emit('error', {message: 'Partie ou round introuvable'});
-                        return;
-                    }
-
-                    // Vérifier que c'est bien le pilier qui révèle
-                    if (socket.id !== game.currentRound.leader.socketId) {
-                        socket.emit('error', {message: 'Seul le pilier peut révéler les réponses'});
-                        return;
-                    }
+                    if (!this.requireLeader(socket, game, 'révéler les réponses')) return;
+                    const currentRound = game!.currentRound!;
 
                     // Initialiser le Set des indices révélés si nécessaire
-                    if (!game.currentRound.revealedIndices) {
-                        game.currentRound.revealedIndices = [];
+                    if (!currentRound.revealedIndices) {
+                        currentRound.revealedIndices = [];
                     }
 
                     // Vérifier que l'index n'a pas déjà été révélé
-                    if (game.currentRound.revealedIndices.includes(data.answerIndex)) {
+                    if (currentRound.revealedIndices.includes(data.answerIndex)) {
                         return; // Déjà révélé, ignorer silencieusement
                     }
 
                     // Ajouter l'index aux révélations
-                    game.currentRound.revealedIndices.push(data.answerIndex);
+                    currentRound.revealedIndices.push(data.answerIndex);
 
                     // Broadcaster à tous les joueurs
                     this.io.to(data.lobbyCode).emit('answerRevealed', {
                         revealedIndex: data.answerIndex,
-                        revealedIndices: game.currentRound.revealedIndices
+                        revealedIndices: currentRound.revealedIndices
                     });
                 } catch (error) {
                     logger.error('Error revealing answer', { error: (error as Error).message });
@@ -1348,30 +1434,22 @@ export class SocketHandler {
 
                     const lobby = LobbyManager.getLobby(data.lobbyCode);
                     const game = lobby?.game;
-                    if (!game || !game.currentRound) {
-                        socket.emit('error', {message: 'Partie ou round introuvable'});
-                        return;
-                    }
-
-                    // Vérifier que c'est bien le pilier qui démarre le timer
-                    if (socket.id !== game.currentRound.leader.socketId) {
-                        socket.emit('error', {message: 'Seul le pilier peut démarrer le timer'});
-                        return;
-                    }
+                    if (!this.requireLeader(socket, game, 'démarrer le timer')) return;
+                    const currentRound = game!.currentRound!;
 
                     // Vérifier si un timer est déjà en cours pour CETTE phase (évite reset sur refresh)
                     // Chaque phase a son propre timer, on vérifie aussi la phase
-                    const requestedPhase = game.currentRound.phase;
-                    if (game.currentRound.timerStartedAt && game.currentRound.timerEnd && game.currentRound.timerDuration && game.currentRound.timerPhase === requestedPhase) {
+                    const requestedPhase = currentRound.phase;
+                    if (currentRound.timerStartedAt && currentRound.timerEnd && currentRound.timerDuration && currentRound.timerPhase === requestedPhase) {
                         const now = Date.now();
-                        const timerEndTime = game.currentRound.timerEnd.getTime();
+                        const timerEndTime = currentRound.timerEnd.getTime();
                         if (now < timerEndTime) {
                             // Timer encore actif pour cette phase - ne pas le reset, juste renvoyer l'état actuel au client
                             logger.debug(`Timer déjà actif pour phase ${requestedPhase}, pas de reset`, { lobbyCode: data.lobbyCode, phase: requestedPhase });
                             socket.emit('timerStarted', {
-                                phase: game.currentRound.phase,
-                                duration: game.currentRound.timerDuration,
-                                startedAt: game.currentRound.timerStartedAt
+                                phase: currentRound.phase,
+                                duration: currentRound.timerDuration,
+                                startedAt: currentRound.timerStartedAt
                             });
                             return;
                         }
@@ -1384,18 +1462,18 @@ export class SocketHandler {
                     const timerEnd = new Date(startedAt + timerDuration * 1000);
 
                     // Stocker les infos du timer pour pouvoir les renvoyer sur demande
-                    game.currentRound.timerEnd = timerEnd;
-                    game.currentRound.timerStartedAt = startedAt;
-                    game.currentRound.timerDuration = timerDuration;
-                    game.currentRound.timerPhase = game.currentRound.phase; // Pour éviter les conflits entre phases
+                    currentRound.timerEnd = timerEnd;
+                    currentRound.timerStartedAt = startedAt;
+                    currentRound.timerDuration = timerDuration;
+                    currentRound.timerPhase = currentRound.phase; // Pour éviter les conflits entre phases
 
                     // Broadcaster le démarrage du timer à tous
                     this.io.to(data.lobbyCode).emit('timerStarted', {
-                        phase: game.currentRound.phase,
+                        phase: currentRound.phase,
                         duration: timerDuration,
                         startedAt: startedAt
                     });
-                    logger.debug(`Timer démarré: ${timerDuration}s`, { lobbyCode: data.lobbyCode, phase: game.currentRound.phase });
+                    logger.debug(`Timer démarré: ${timerDuration}s`, { lobbyCode: data.lobbyCode, phase: currentRound.phase });
                 } catch (error) {
                     logger.error('Error starting timer', { error: (error as Error).message });
                     socket.emit('error', {message: (error as Error).message});
@@ -1458,115 +1536,38 @@ export class SocketHandler {
 
                     const lobby = LobbyManager.getLobby(data.lobbyCode);
                     const game = lobby?.game;
-                    if (!game || !game.currentRound) {
-                        socket.emit('error', {message: 'Partie ou round introuvable'});
-                        return;
-                    }
+                    if (!this.requireLeader(socket, game, 'signaler l\'expiration du timer')) return;
+                    const currentRound = game!.currentRound!;
 
-                    // Vérifier que c'est bien le pilier qui signale l'expiration du timer
-                    if (socket.id !== game.currentRound.leader.socketId) {
-                        socket.emit('error', {message: 'Seul le pilier peut signaler l\'expiration du timer'});
-                        return;
-                    }
-
-                    const currentPhase = game.currentRound.phase;
+                    const currentPhase = currentRound.phase;
 
                     // Protection contre les doubles appels de timer pour la même phase
                     // Note: Cette vérification est thread-safe car Node.js est single-threaded
-                    if (game.currentRound.timerProcessedForPhase === currentPhase) {
+                    if (currentRound.timerProcessedForPhase === currentPhase) {
                         logger.debug(`Timer déjà traité pour phase ${currentPhase}, ignoré`);
                         return;
                     }
 
                     // Marquer immédiatement comme traité pour bloquer tout appel concurrent
                     // (même si Node.js est single-threaded, c'est une bonne pratique défensive)
-                    game.currentRound.timerProcessedForPhase = currentPhase;
+                    currentRound.timerProcessedForPhase = currentPhase;
 
                     logger.info(`Timer expiré`, { lobbyCode: data.lobbyCode, phase: currentPhase });
+                    if (!lobby) return; // Type narrowing for lobby
 
-                    // Gérer l'expiration selon la phase
+                    // Handle timer expiration based on current phase
                     switch (currentPhase) {
                         case 'QUESTION_SELECTION':
-                            // Si le pilier n'a pas choisi, sélectionner automatiquement une question aléatoire parmi celles proposées
-                            if (!game.currentRound.selectedQuestion) {
-                                // Utiliser la carte déjà proposée au pilier (stockée dans gameCard)
-                                const proposedCard = game.currentRound.gameCard;
-
-                                if (!proposedCard || proposedCard.questions.length === 0) {
-                                    logger.error('Pas de questions disponibles pour auto-sélection', { lobbyCode: data.lobbyCode });
-                                    break;
-                                }
-
-                                // Choisir une question au hasard parmi les 3 de la carte proposée
-                                const randomQuestion = proposedCard.questions[randomInt(0, proposedCard.questions.length)];
-
-                                game.currentRound.setSelectedQuestion(randomQuestion);
-                                game.currentRound.nextPhase();
-                                this.io.to(data.lobbyCode).emit('questionSelected', {
-                                    question: randomQuestion,
-                                    phase: game.currentRound.phase,
-                                    auto: true
-                                });
-                                logger.info(`Question auto-sélectionnée`, { lobbyCode: data.lobbyCode });
-                            }
-                            // Sinon, la question a déjà été sélectionnée, ne rien faire
+                            this.handleQuestionSelectionTimeout(data.lobbyCode, currentRound as Round);
                             break;
-
                         case 'ANSWERING':
-                            // Ajouter des réponses automatiques pour les joueurs qui n'ont pas répondu
-                            const respondingPlayers = lobby.players.filter(p => p.id !== game.currentRound!.leader.id);
-                            for (const player of respondingPlayers) {
-                                if (!game.currentRound.answers[player.id]) {
-                                    // Ajouter une réponse automatique marquée avec un préfixe spécial
-                                    game.currentRound.addAnswer(player.id, `__NO_RESPONSE__${player.name} n'a pas répondu à temps`);
-                                    logger.debug(`Réponse auto ajoutée pour ${player.name}`);
-                                }
-                            }
-
-                            // Passer à la phase GUESSING même si tous n'ont pas répondu
-                            game.currentRound.nextPhase();
-                            this.io.to(data.lobbyCode).emit('allAnswersSubmitted', {
-                                phase: game.currentRound.phase,
-                                answersCount: Object.keys(game.currentRound.answers).length,
-                                forced: true
-                            });
-
-                            // Automatiquement envoyer les réponses mélangées à tous les joueurs
-                            const answersArray = Object.entries(game.currentRound.answers).map(([playerId, answer]) => ({
-                                id: playerId,
-                                text: answer
-                            }));
-                            const shuffledAnswers = shuffleArray(answersArray);
-                            this.io.to(data.lobbyCode).emit('shuffledAnswersReceived', {
-                                answers: shuffledAnswers,
-                                players: lobby.players.filter(p => p.id !== game.currentRound!.leader.id),
-                                roundNumber: game.currentRound.roundNumber
-                            });
+                            this.handleAnsweringTimeout(data.lobbyCode, lobby, currentRound as Round);
                             break;
-
                         case 'GUESSING':
-                            // Valider les attributions actuelles et passer à REVEAL
-                            // Filtrer les guesses non assignés (null ou undefined)
-                            const validGuesses = Object.fromEntries(
-                                Object.entries(game.currentRound.currentGuesses).filter(([_, playerId]) => playerId !== null && playerId !== undefined)
-                            );
-                            game.currentRound.submitGuesses(validGuesses);
-                            game.currentRound.calculateScores();
-                            game.currentRound.nextPhase();
-
-                            const results = this.buildRevealResults(lobby, game.currentRound);
-
-                            this.io.to(data.lobbyCode).emit('revealResults', {
-                                phase: game.currentRound.phase,
-                                results,
-                                scores: game.currentRound.scores,
-                                leaderboard: game.getLeaderboard(),
-                                forced: true
-                            });
+                            this.handleGuessingTimeout(data.lobbyCode, lobby, game as Game, currentRound as Round);
                             break;
-
                         case 'REVEAL':
-                            // Rien à faire, attendre que le pilier lance le prochain round
+                            // Nothing to do, wait for leader to start next round
                             break;
                     }
                 } catch (error) {
