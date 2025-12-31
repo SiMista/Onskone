@@ -22,7 +22,7 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
   );
 
   useEffect(() => {
-    // Écouter les révélations du chef
+    // Écouter les révélations du pilier
     socket.on('answerRevealed', (data: { revealedIndex: number; revealedIndices: number[] }) => {
       setRevealedIndices(new Set(data.revealedIndices));
     });

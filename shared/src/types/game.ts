@@ -48,7 +48,7 @@ export interface RoundStat {
   /** Numéro du round */
   roundNumber: number;
 
-  /** Nom du chef */
+  /** Nom du pilier */
   leader: string;
 
   /** Score le plus élevé du round */

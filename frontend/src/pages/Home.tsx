@@ -89,13 +89,13 @@ const Home = () => {
       >
         <div className="space-y-4">
           <p>
-            <span className="font-bold">1.</span> Un <b>chef</b> est choisi au hasard et sélectionne une question parmi trois propositions.
+            <span className="font-bold">1.</span> Chaque manche, un <b>pilier</b> est choisi au hasard et sélectionne une question parmi trois propositions.
           </p>
           <p>
-            <span className="font-bold">2.</span> Les joueurs répondent <b>anonymement</b>, et le chef tente de deviner qui a écrit quoi.
+            <span className="font-bold">2.</span> Les joueurs répondent <b>anonymement</b>, et le pilier tente de deviner qui a écrit quoi.
           </p>
           <p>
-            <span className="font-bold">3.</span> À la fin, les prénoms sont révélés et le chef marque des points selon ses bonnes réponses.
+            <span className="font-bold">3.</span> À la fin, les prénoms sont révélés et le pilier marque des points selon ses bonnes réponses.
           </p>
           <p className="text-center text-lg font-bold text-primary mt-6">
             Alors, on se connaît ?
@@ -174,13 +174,13 @@ const Home = () => {
               </div>
               <div className="space-y-4">
                 <p>
-                  <span className="font-bold">1.</span> Un <b>chef</b> est choisi au hasard et sélectionne une question parmi trois propositions.
+                  <span className="font-bold">1.</span> Un <b>pilier</b> est choisi au hasard et sélectionne une question parmi trois propositions.
                 </p>
                 <p>
-                  <span className="font-bold">2.</span> Les joueurs répondent <b>anonymement</b>, et le chef tente de deviner qui a écrit quoi.
+                  <span className="font-bold">2.</span> Les joueurs répondent <b>anonymement</b>, et le pilier tente de deviner qui a écrit quoi.
                 </p>
                 <p>
-                  <span className="font-bold">3.</span> À la fin, les prénoms sont révélés et le chef marque des points selon ses bonnes réponses.
+                  <span className="font-bold">3.</span> À la fin, les prénoms sont révélés et le pilier marque des points selon ses bonnes réponses.
                 </p>
               </div>
               <p className="text-center text-lg font-bold text-primary mt-6">

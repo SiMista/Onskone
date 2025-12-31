@@ -38,16 +38,16 @@ export class Game implements IGame {
 
         const roundNumber = this.currentRound ? this.currentRound.roundNumber + 1 : 1;
 
-        // Trouver les joueurs actifs qui n'ont pas encore été chefs
+        // Trouver les joueurs actifs qui n'ont pas encore été piliers
         const previousLeaderIds = new Set(this.rounds.map(r => r.leader.id));
         const eligibleLeaders = activePlayers.filter(p => !previousLeaderIds.has(p.id));
 
-        // Si tous les joueurs actifs ont été chefs, la partie devrait être terminée
+        // Si tous les joueurs actifs ont été piliers, la partie devrait être terminée
         if (eligibleLeaders.length === 0) {
-            throw new Error("Tous les joueurs actifs ont déjà été chefs");
+            throw new Error("Tous les joueurs actifs ont déjà été piliers");
         }
 
-        // Choisir un chef au HASARD parmi les éligibles (pas déterminé par l'ordre du lobby)
+        // Choisir un pilier au HASARD parmi les éligibles (pas déterminé par l'ordre du lobby)
         const randomIndex = randomInt(0, eligibleLeaders.length);
         const leader = eligibleLeaders[randomIndex];
 

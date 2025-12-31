@@ -14,13 +14,13 @@ export class SocketHandler {
     private io: Server<ClientToServerEvents, ServerToClientEvents>;
     // Map pour stocker les timeouts de déconnexion (clé: lobbyCode_playerName)
     private disconnectTimeouts: Map<string, NodeJS.Timeout> = new Map();
-    // Map pour stocker les timeouts de déconnexion du chef (clé: lobbyCode)
+    // Map pour stocker les timeouts de déconnexion du pilier (clé: lobbyCode)
     private leaderDisconnectTimeouts: Map<string, NodeJS.Timeout> = new Map();
     // Set pour empêcher les reconnexions simultanées (clé: lobbyCode_playerName)
     private reconnectionLocks: Set<string> = new Set();
     // Délai de grâce pour la reconnexion (30 secondes)
     private readonly RECONNECT_GRACE_PERIOD = 30000;
-    // Délai avant de sauter le round du chef déconnecté (15 secondes - pour le changement d'app mobile)
+    // Délai avant de sauter le round du pilier déconnecté (15 secondes - pour le changement d'app mobile)
     private readonly LEADER_DISCONNECT_DELAY = 15000;
     // Délai avant de marquer un joueur comme inactif (5 secondes - pour le changement d'app mobile)
     private readonly INACTIVE_DELAY = 5000;
@@ -117,7 +117,7 @@ export class SocketHandler {
         if (timeout) {
             clearTimeout(timeout);
             this.leaderDisconnectTimeouts.delete(lobbyCode);
-            logger.debug(`Timeout de déconnexion du chef annulé pour ${lobbyCode}`);
+            logger.debug(`Timeout de déconnexion du pilier annulé pour ${lobbyCode}`);
         }
     }
 
@@ -331,7 +331,7 @@ export class SocketHandler {
                             existingPlayerByName.socketId = socket.id;
                             existingPlayerByName.isActive = true; // Marquer comme actif (rejouer)
 
-                            // Si c'est le chef du round actuel, annuler le timeout de saut de round
+                            // Si c'est le pilier du round actuel, annuler le timeout de saut de round
                             if (lobby.game?.currentRound?.leader.id === existingPlayerByName.id) {
                                 this.cancelLeaderDisconnectTimeout(lobby.code);
                                 lobby.game.currentRound.leader.socketId = socket.id;
@@ -723,9 +723,9 @@ export class SocketHandler {
                         return;
                     }
 
-                    // Vérifier que c'est bien le chef qui demande
+                    // Vérifier que c'est bien le pilier qui demande
                     if (socket.id !== game.currentRound.leader.socketId) {
-                        socket.emit('error', {message: 'Seul le chef peut demander des questions'});
+                        socket.emit('error', {message: 'Seul le pilier peut demander des questions'});
                         return;
                     }
 
@@ -789,9 +789,9 @@ export class SocketHandler {
                         return;
                     }
 
-                    // Vérifier que c'est bien le chef qui sélectionne
+                    // Vérifier que c'est bien le pilier qui sélectionne
                     if (socket.id !== game.currentRound.leader.socketId) {
-                        socket.emit('error', {message: 'Seul le chef peut sélectionner une question'});
+                        socket.emit('error', {message: 'Seul le pilier peut sélectionner une question'});
                         return;
                     }
 
@@ -847,7 +847,7 @@ export class SocketHandler {
 
                     // Vérifier que c'est le leader du round actuel qui demande le prochain round
                     if (game.currentRound && socket.id !== game.currentRound.leader.socketId) {
-                        socket.emit('error', {message: 'Seul le chef peut passer au round suivant'});
+                        socket.emit('error', {message: 'Seul le pilier peut passer au round suivant'});
                         return;
                     }
 
@@ -964,7 +964,7 @@ export class SocketHandler {
                                     // Si c'est le leader du round actuel, mettre à jour son socketId
                                     if (game.currentRound && game.currentRound.leader.id === data.playerId) {
                                         game.currentRound.leader.socketId = socket.id;
-                                        // Annuler le timeout de saut de round si le chef se reconnecte
+                                        // Annuler le timeout de saut de round si le pilier se reconnecte
                                         this.cancelLeaderDisconnectTimeout(lobby.code);
                                         logger.info(`Leader socketId updated for round ${game.currentRound.roundNumber}`);
                                     }
@@ -1083,16 +1083,16 @@ export class SocketHandler {
                         return;
                     }
 
-                    // Vérifier que le joueur n'est pas le chef (le chef ne répond pas)
+                    // Vérifier que le joueur n'est pas le pilier (le pilier ne répond pas)
                     if (player.id === game.currentRound.leader.id) {
-                        socket.emit('error', {message: 'Le chef ne peut pas soumettre de réponse'});
+                        socket.emit('error', {message: 'Le pilier ne peut pas soumettre de réponse'});
                         return;
                     }
 
                     // Ajouter la réponse
                     game.currentRound.addAnswer(data.playerId, sanitizedAnswer);
 
-                    // Joueurs actifs qui doivent répondre (tous sauf le chef)
+                    // Joueurs actifs qui doivent répondre (tous sauf le pilier)
                     const respondingPlayers = lobby.players.filter(p => p.isActive && p.id !== game.currentRound!.leader.id);
 
                     // Notifier tous les joueurs qu'une réponse a été soumise
@@ -1104,7 +1104,7 @@ export class SocketHandler {
 
                     logger.debug(`Réponse soumise par ${player.name}`, { lobbyCode: data.lobbyCode, answers: Object.keys(game.currentRound.answers).length });
 
-                    // Vérifier si tous les joueurs ACTIFS (sauf le chef) ont répondu
+                    // Vérifier si tous les joueurs ACTIFS (sauf le pilier) ont répondu
                     const allActiveAnswered = respondingPlayers.every(p => game.currentRound!.answers[p.id]);
 
                     if (allActiveAnswered) {
@@ -1197,9 +1197,9 @@ export class SocketHandler {
                         return;
                     }
 
-                    // Vérifier que c'est bien le chef qui déplace
+                    // Vérifier que c'est bien le pilier qui déplace
                     if (socket.id !== game.currentRound.leader.socketId) {
-                        socket.emit('error', {message: 'Seul le chef peut modifier les attributions'});
+                        socket.emit('error', {message: 'Seul le pilier peut modifier les attributions'});
                         return;
                     }
 
@@ -1234,9 +1234,9 @@ export class SocketHandler {
                         return;
                     }
 
-                    // Vérifier que c'est bien le chef qui valide
+                    // Vérifier que c'est bien le pilier qui valide
                     if (socket.id !== game.currentRound.leader.socketId) {
-                        socket.emit('error', {message: 'Seul le chef peut valider les attributions'});
+                        socket.emit('error', {message: 'Seul le pilier peut valider les attributions'});
                         return;
                     }
 
@@ -1257,9 +1257,9 @@ export class SocketHandler {
                             continue;
                         }
 
-                        // Vérifier que le playerId deviné est un joueur valide (pas le chef)
+                        // Vérifier que le playerId deviné est un joueur valide (pas le pilier)
                         if (!playerIds.includes(guessedPlayerId as string)) {
-                            logger.warn(`Guess invalide: playerId ${guessedPlayerId} inexistant ou est le chef`);
+                            logger.warn(`Guess invalide: playerId ${guessedPlayerId} inexistant ou est le pilier`);
                             continue;
                         }
 
@@ -1307,9 +1307,9 @@ export class SocketHandler {
                         return;
                     }
 
-                    // Vérifier que c'est bien le chef qui révèle
+                    // Vérifier que c'est bien le pilier qui révèle
                     if (socket.id !== game.currentRound.leader.socketId) {
-                        socket.emit('error', {message: 'Seul le chef peut révéler les réponses'});
+                        socket.emit('error', {message: 'Seul le pilier peut révéler les réponses'});
                         return;
                     }
 
@@ -1353,9 +1353,9 @@ export class SocketHandler {
                         return;
                     }
 
-                    // Vérifier que c'est bien le chef qui démarre le timer
+                    // Vérifier que c'est bien le pilier qui démarre le timer
                     if (socket.id !== game.currentRound.leader.socketId) {
-                        socket.emit('error', {message: 'Seul le chef peut démarrer le timer'});
+                        socket.emit('error', {message: 'Seul le pilier peut démarrer le timer'});
                         return;
                     }
 
@@ -1463,9 +1463,9 @@ export class SocketHandler {
                         return;
                     }
 
-                    // Vérifier que c'est bien le chef qui signale l'expiration du timer
+                    // Vérifier que c'est bien le pilier qui signale l'expiration du timer
                     if (socket.id !== game.currentRound.leader.socketId) {
-                        socket.emit('error', {message: 'Seul le chef peut signaler l\'expiration du timer'});
+                        socket.emit('error', {message: 'Seul le pilier peut signaler l\'expiration du timer'});
                         return;
                     }
 
@@ -1487,9 +1487,9 @@ export class SocketHandler {
                     // Gérer l'expiration selon la phase
                     switch (currentPhase) {
                         case 'QUESTION_SELECTION':
-                            // Si le chef n'a pas choisi, sélectionner automatiquement une question aléatoire parmi celles proposées
+                            // Si le pilier n'a pas choisi, sélectionner automatiquement une question aléatoire parmi celles proposées
                             if (!game.currentRound.selectedQuestion) {
-                                // Utiliser la carte déjà proposée au chef (stockée dans gameCard)
+                                // Utiliser la carte déjà proposée au pilier (stockée dans gameCard)
                                 const proposedCard = game.currentRound.gameCard;
 
                                 if (!proposedCard || proposedCard.questions.length === 0) {
@@ -1566,7 +1566,7 @@ export class SocketHandler {
                             break;
 
                         case 'REVEAL':
-                            // Rien à faire, attendre que le chef lance le prochain round
+                            // Rien à faire, attendre que le pilier lance le prochain round
                             break;
                     }
                 } catch (error) {
@@ -1631,7 +1631,7 @@ export class SocketHandler {
                             const currentRound = game.currentRound;
                             const lobbyCode = lobby.code;
 
-                            // CAS 1: Le joueur déconnecté est le chef actuel
+                            // CAS 1: Le joueur déconnecté est le pilier actuel
                             // On attend un court délai pour permettre la reconnexion (changement d'app mobile)
                             if (currentRound.leader.id === disconnectedPlayer.id) {
                                 logger.info(`Chef ${disconnectedPlayer.name} déconnecté, délai avant saut de round`, { lobbyCode });
@@ -1650,17 +1650,17 @@ export class SocketHandler {
                                     const currentLobby = LobbyManager.getLobby(lobbyCode);
                                     const currentGame = currentLobby?.game;
                                     if (!currentLobby || !currentGame || !currentGame.currentRound) {
-                                        logger.debug(`Lobby/jeu n'existe plus, timeout chef ignoré`);
+                                        logger.debug(`Lobby/jeu n'existe plus, timeout pilier ignoré`);
                                         return;
                                     }
 
-                                    // Vérifier que c'est toujours le même round et le même chef
+                                    // Vérifier que c'est toujours le même round et le même pilier
                                     if (currentGame.currentRound.leader.id !== leaderId) {
                                         logger.debug(`Chef a changé, timeout ignoré`);
                                         return;
                                     }
 
-                                    // Vérifier que le chef est toujours inactif (n'a pas reconnecté)
+                                    // Vérifier que le pilier est toujours inactif (n'a pas reconnecté)
                                     const leader = currentLobby.players.find(p => p.id === leaderId);
                                     if (leader?.isActive) {
                                         logger.debug(`Chef ${leaderName} s'est reconnecté, timeout ignoré`);
@@ -1675,12 +1675,12 @@ export class SocketHandler {
                                         reason: 'leader_disconnected'
                                     });
 
-                                    // Vérifier s'il reste des joueurs éligibles pour être chef
+                                    // Vérifier s'il reste des joueurs éligibles pour être pilier
                                     const activePlayers = currentLobby.players.filter(p => p.isActive);
                                     const previousLeaderIds = new Set(currentGame.rounds.map(r => r.leader.id));
                                     const eligibleLeaders = activePlayers.filter(p => !previousLeaderIds.has(p.id));
 
-                                    // Si pas assez de joueurs OU pas de chef éligible → terminer la partie
+                                    // Si pas assez de joueurs OU pas de pilier éligible → terminer la partie
                                     if (activePlayers.length < 2 || eligibleLeaders.length === 0) {
                                         currentGame.end();
                                         currentLobby.players.forEach(p => p.isActive = false);
@@ -1690,13 +1690,13 @@ export class SocketHandler {
                                         });
                                         logger.game.ended(lobbyCode);
                                     } else {
-                                        // Démarrer le round suivant avec un nouveau chef
+                                        // Démarrer le round suivant avec un nouveau pilier
                                         try {
                                             currentGame.nextRound();
                                             this.io.to(lobbyCode).emit('roundStarted', {
                                                 round: currentGame.currentRound!
                                             });
-                                            logger.info(`Nouveau round démarré après déconnexion du chef`, {
+                                            logger.info(`Nouveau round démarré après déconnexion du pilier`, {
                                                 lobbyCode,
                                                 newLeader: currentGame.currentRound!.leader.name
                                             });

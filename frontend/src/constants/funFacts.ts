@@ -11,7 +11,6 @@ export const FUN_FACTS = [
   "Ne pas se brosser les dents entraîne systématiquement une haleine de dragon",
   "Manger du KFC tous les jours augmente fortement tes dépenses en papier toilette",
   "Celui qui s'endort avec les fesses qui grattent, se réveille avec les doigts qui puent",
-  "Un Français qui prononce mal Aya Nakamura est à 99.9% raciste",
   "Si dans une musique de rap, tu entends 'numéro 10 comme ...', ce rappeur est forcément nul",
   "4 hommes sur 5 ne comprennent pas la douleur subie par les femmes au quotidien (je suis le 5ème)"
 ];
