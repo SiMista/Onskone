@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import socket from '../utils/socket';
 import Timer from './Timer';
 import Button from './Button';
@@ -34,6 +34,8 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
   const [answeredPlayerIds, setAnsweredPlayerIds] = useState<Set<string>>(
     new Set(initialAnsweredPlayerIds || [])
   );
+  // Ref pour éviter de démarrer le timer plusieurs fois (React Strict Mode, re-renders)
+  const timerStartedRef = useRef(false);
 
   // Jouer le son au début de la phase
   useEffect(() => {
@@ -45,6 +47,7 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
     setAnswer(initialMyAnswer || '');
     setSubmitted(!!initialMyAnswer);
     setAnsweredPlayerIds(new Set(initialAnsweredPlayerIds || []));
+    timerStartedRef.current = false; // Reset le flag pour le nouveau round
   }, [question, initialMyAnswer, initialAnsweredPlayerIds]);
 
   // All players except the leader (show inactive players as disconnected)
@@ -55,7 +58,9 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
 
   useEffect(() => {
     const startTimerTimeout = setTimeout(() => {
-      if (isLeader) {
+      // Vérifier si on n'a pas déjà démarré le timer pour éviter les doublons
+      if (isLeader && !timerStartedRef.current) {
+        timerStartedRef.current = true;
         socket.emit('startTimer', { lobbyCode, duration: GAME_CONFIG.TIMERS.ANSWERING });
       }
     }, 500);
@@ -189,33 +194,32 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
         <div className="flex-1 flex flex-col items-center justify-center space-y-4 md:space-y-6">
           <p className="text-gray-600 text-center text-sm md:text-base">
             En attente des autres joueurs...
-            <br />
-            <div className="flex flex-wrap justify-center gap-2 md:gap-3 max-w-2xl px-2">
-              {respondingPlayers.map((player) => {
-                const hasAnswered = answeredPlayerIds.has(player.id);
-                const isDisconnected = !player.isActive;
-                return (
-                  <div
-                    key={player.id}
-                    className={`
-                  px-2 md:px-4 py-1.5 md:py-2 rounded-lg font-medium transition-all duration-300 text-sm md:text-base
-                  ${isDisconnected
-                        ? 'bg-gray-300 text-gray-500 opacity-60'
-                        : hasAnswered
-                          ? 'bg-green-500 text-white shadow-lg scale-105'
-                          : 'bg-gray-200 text-gray-600'}
-                `}
-                  >
-                    <span className="flex items-center gap-1.5 md:gap-2">
-                      <Avatar avatarId={player.avatarId} name={player.name} size="sm" />
-                      {!isDisconnected && hasAnswered && <span>✓</span>}
-                      <span className="max-w-[80px] md:max-w-none truncate">{player.name}{isDisconnected && ' (déconnecté)'}</span>
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
           </p>
+          <div className="flex flex-wrap justify-center gap-2 md:gap-3 max-w-2xl px-2">
+            {respondingPlayers.map((player) => {
+              const hasAnswered = answeredPlayerIds.has(player.id);
+              const isDisconnected = !player.isActive;
+              return (
+                <div
+                  key={player.id}
+                  className={`
+                    px-2 md:px-4 py-1.5 md:py-2 rounded-lg font-medium transition-all duration-300 text-sm md:text-base
+                    ${isDisconnected
+                      ? 'bg-gray-300 text-gray-500 opacity-60'
+                      : hasAnswered
+                        ? 'bg-green-500 text-white shadow-lg scale-105'
+                        : 'bg-gray-200 text-gray-600'}
+                  `}
+                >
+                  <span className="flex items-center gap-1.5 md:gap-2">
+                    <Avatar avatarId={player.avatarId} name={player.name} size="sm" />
+                    {!isDisconnected && hasAnswered && <span>✓</span>}
+                    <span className="max-w-[80px] md:max-w-none truncate">{player.name}{isDisconnected && ' (déconnecté)'}</span>
+                  </span>
+                </div>
+              );
+            })}
+          </div>
           <div className="bg-gray-100 rounded-lg p-4 md:p-6 max-w-md w-full border-2 border-gray-300">
             <p className="text-gray-600 text-xs md:text-sm mb-2">Votre réponse :</p>
             <p className="text-gray-800 text-base md:text-lg font-medium break-words whitespace-pre-wrap">{answer}</p>

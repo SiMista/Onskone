@@ -45,34 +45,45 @@ export class RateLimiter {
    * @returns true if allowed, false if rate limited
    */
   isAllowed(key: string): boolean {
+    return this.isAllowedMultiple([key]);
+  }
+
+  /**
+   * Check if a request should be allowed using multiple keys
+   * Useful for rate limiting by both socket.id AND playerId to prevent reconnection bypass
+   * @param keys Array of identifiers to check (e.g., [socket.id, `${lobbyCode}_${playerId}`])
+   * @returns true if ALL keys are allowed, false if ANY key is rate limited
+   */
+  isAllowedMultiple(keys: string[]): boolean {
     const now = Date.now();
-    const entry = this.limits.get(key);
 
-    if (!entry || now > entry.resetTime) {
-      // Vérifier la limite de taille avant d'ajouter
-      if (this.limits.size >= this.maxEntries) {
-        // Supprimer les entrées expirées d'abord
-        this.cleanup();
-        // Si toujours trop plein, supprimer les plus anciennes
-        if (this.limits.size >= this.maxEntries) {
-          const keysToDelete = Array.from(this.limits.keys()).slice(0, 1000);
-          keysToDelete.forEach(k => this.limits.delete(k));
-        }
+    // D'abord vérifier si l'un des keys est déjà rate limited
+    for (const key of keys) {
+      const entry = this.limits.get(key);
+      if (entry && now <= entry.resetTime && entry.count >= this.maxRequests) {
+        return false; // Au moins une clé est rate limited
       }
-
-      // First request or window expired
-      this.limits.set(key, {
-        count: 1,
-        resetTime: now + this.windowMs
-      });
-      return true;
     }
 
-    if (entry.count >= this.maxRequests) {
-      return false;
+    // Vérifier la limite de taille avant d'ajouter
+    if (this.limits.size >= this.maxEntries) {
+      this.cleanup();
+      if (this.limits.size >= this.maxEntries) {
+        const keysToDelete = Array.from(this.limits.keys()).slice(0, 1000);
+        keysToDelete.forEach(k => this.limits.delete(k));
+      }
     }
 
-    entry.count++;
+    // Incrémenter le compteur pour chaque clé
+    for (const key of keys) {
+      const entry = this.limits.get(key);
+      if (!entry || now > entry.resetTime) {
+        this.limits.set(key, { count: 1, resetTime: now + this.windowMs });
+      } else {
+        entry.count++;
+      }
+    }
+
     return true;
   }
 
