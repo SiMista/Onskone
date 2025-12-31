@@ -4,13 +4,13 @@ import { IPlayer } from './player.js';
  * Phases d'un round
  */
 export enum RoundPhase {
-  /** Le chef sélectionne une question parmi 3 */
+  /** Le pilier sélectionne une question parmi 3 */
   QUESTION_SELECTION = 'QUESTION_SELECTION',
 
-  /** Les joueurs (sauf le chef) répondent à la question */
+  /** Les joueurs (sauf le pilier) répondent à la question */
   ANSWERING = 'ANSWERING',
 
-  /** Le chef devine qui a écrit quelle réponse */
+  /** Le pilier devine qui a écrit quelle réponse */
   GUESSING = 'GUESSING',
 
   /** Révélation des résultats */
@@ -35,7 +35,7 @@ export interface IRound {
   /** Numéro du round (1-indexed) */
   roundNumber: number;
 
-  /** Joueur chef pour ce round */
+  /** Joueur pilier pour ce round */
   leader: IPlayer;
 
   /** Carte de jeu assignée à ce round */
@@ -44,7 +44,7 @@ export interface IRound {
   /** Phase actuelle du round */
   phase: RoundPhase;
 
-  /** Question sélectionnée par le chef parmi les 3 de la carte */
+  /** Question sélectionnée par le pilier parmi les 3 de la carte */
   selectedQuestion: string | null;
 
   /** Réponses des joueurs: { playerId: answerText } */
@@ -53,7 +53,7 @@ export interface IRound {
   /** État intermédiaire du drag & drop: { answerId: playerId } */
   currentGuesses: Record<string, string>;
 
-  /** Attributions finales du chef: { answerId: playerId } */
+  /** Attributions finales du pilier: { answerId: playerId } */
   guesses: Record<string, string>;
 
   /** Scores des joueurs pour ce round: { playerId: score } */
@@ -77,9 +77,9 @@ export interface IRound {
   /** Phase pour laquelle le timer a été démarré (évite les conflits entre phases) */
   timerPhase?: RoundPhase;
 
-  /** Nombre de relances utilisées par le chef en phase QUESTION_SELECTION */
+  /** Nombre de relances utilisées par le pilier en phase QUESTION_SELECTION */
   relancesUsed?: number;
 
-  /** Cartes déjà montrées au chef (pour éviter les doublons lors des relances) */
+  /** Cartes déjà montrées au pilier (pour éviter les doublons lors des relances) */
   shownGameCards?: GameCard[];
 }

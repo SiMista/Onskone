@@ -18,16 +18,16 @@ export interface RevealResult {
   /** Texte de la réponse */
   answer: string;
 
-  /** ID du joueur deviné par le chef */
+  /** ID du joueur deviné par le pilier */
   guessedPlayerId: string;
 
-  /** Nom du joueur deviné par le chef */
+  /** Nom du joueur deviné par le pilier */
   guessedPlayerName: string;
 
-  /** ID de l'avatar du joueur deviné par le chef */
+  /** ID de l'avatar du joueur deviné par le pilier */
   guessedPlayerAvatarId?: number;
 
-  /** Si le chef a correctement deviné */
+  /** Si le pilier a correctement deviné */
   correct: boolean;
 }
 
@@ -79,16 +79,16 @@ export interface ServerToClientEvents {
   /** Démarrage d'un nouveau round */
   roundStarted: (data: { round: IRound }) => void;
 
-  /** Un round a été sauté (chef déconnecté) */
+  /** Un round a été sauté (pilier déconnecté) */
   roundSkipped: (data: {
     skippedLeaderName: string;
     reason: 'leader_disconnected';
   }) => void;
 
-  /** Réception des 3 questions pour le chef */
+  /** Réception des 3 questions pour le pilier */
   questionsReceived: (data: { questions: GameCard[] }) => void;
 
-  /** Une question a été sélectionnée par le chef */
+  /** Une question a été sélectionnée par le pilier */
   questionSelected: (data: {
     question: string;
     phase: RoundPhase;
@@ -109,10 +109,10 @@ export interface ServerToClientEvents {
     forced?: boolean; // Si forcé par expiration du timer
   }) => void;
 
-  /** Réception des réponses mélangées pour le chef */
+  /** Réception des réponses mélangées pour le pilier */
   shuffledAnswersReceived: (data: {
     answers: Array<{ id: string; text: string }>;
-    players: IPlayer[]; // Joueurs qui ont répondu (sans le chef)
+    players: IPlayer[]; // Joueurs qui ont répondu (sans le pilier)
     roundNumber: number; // Pour éviter les race conditions sur reconnexion
   }) => void;
 
@@ -131,7 +131,7 @@ export interface ServerToClientEvents {
     forced?: boolean; // Si forcé par expiration du timer
   }) => void;
 
-  /** Une réponse a été révélée par le chef */
+  /** Une réponse a été révélée par le pilier */
   answerRevealed: (data: {
     revealedIndex: number; // Index de la réponse révélée
     revealedIndices: number[]; // Tous les indices révélés
@@ -227,14 +227,14 @@ export interface ClientToServerEvents {
     playerId?: string;
   }) => void;
 
-  /** Demander des cartes de questions (réservé au chef) */
+  /** Demander des cartes de questions (réservé au pilier) */
   requestQuestions: (data: {
     lobbyCode: string;
     count?: number;
     isRelance?: boolean;
   }) => void;
 
-  /** Sélectionner une question parmi les 3 (réservé au chef) */
+  /** Sélectionner une question parmi les 3 (réservé au pilier) */
   selectQuestion: (data: {
     lobbyCode: string;
     selectedQuestion: string;
@@ -247,7 +247,7 @@ export interface ClientToServerEvents {
     answer: string;
   }) => void;
 
-  /** Demander les réponses mélangées (réservé au chef) */
+  /** Demander les réponses mélangées (réservé au pilier) */
   requestShuffledAnswers: (data: {
     lobbyCode: string;
   }) => void;
@@ -259,7 +259,7 @@ export interface ClientToServerEvents {
     playerId: string | null;
   }) => void;
 
-  /** Soumettre les attributions finales (réservé au chef) */
+  /** Soumettre les attributions finales (réservé au pilier) */
   submitGuesses: (data: {
     lobbyCode: string;
     guesses: Record<string, string>;
@@ -282,7 +282,7 @@ export interface ClientToServerEvents {
     phase?: RoundPhase;
   }) => void;
 
-  /** Révéler une réponse spécifique (réservé au chef) */
+  /** Révéler une réponse spécifique (réservé au pilier) */
   revealAnswer: (data: {
     lobbyCode: string;
     answerIndex: number;

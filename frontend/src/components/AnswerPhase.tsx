@@ -5,6 +5,7 @@ import Button from './Button';
 import Avatar from './Avatar';
 import { GAME_CONFIG } from '../constants/game';
 import { IPlayer, RoundPhase } from '@onskone/shared';
+import { playSound } from '../utils/sounds';
 
 interface AnswerPhaseProps {
   lobbyCode: string;
@@ -33,6 +34,11 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
   const [answeredPlayerIds, setAnsweredPlayerIds] = useState<Set<string>>(
     new Set(initialAnsweredPlayerIds || [])
   );
+
+  // Jouer le son au début de la phase
+  useEffect(() => {
+    playSound('answering');
+  }, []);
 
   // Reset le state quand la question change (nouveau round)
   useEffect(() => {

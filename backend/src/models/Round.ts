@@ -9,16 +9,16 @@ export class Round implements IRound {
     selectedQuestion: string | null;
     answers: Record<string, string>; // Réponses des joueurs (clé = ID du joueur, valeur = réponse)
     currentGuesses: Record<string, string>; // État intermédiaire du drag & drop
-    guesses: Record<string, string>; // Attributions finales du chef
+    guesses: Record<string, string>; // Attributions finales du pilier
     scores: Record<string, number>;
     timerEnd: Date | null;
     timerStartedAt: number | undefined; // Timestamp de démarrage du timer
     timerDuration: number | undefined; // Durée du timer en secondes
     timerProcessedForPhase: RoundPhase | null | undefined; // Empêche le double traitement du timer
     timerPhase: RoundPhase | undefined; // Phase pour laquelle le timer a été démarré
-    relancesUsed: number; // Nombre de relances utilisées par le chef
+    relancesUsed: number; // Nombre de relances utilisées par le pilier
     revealedIndices: number[]; // Indices des réponses révélées en phase REVEAL
-    shownGameCards: GameCard[]; // Cartes déjà montrées au chef (pour éviter les doublons)
+    shownGameCards: GameCard[]; // Cartes déjà montrées au pilier (pour éviter les doublons)
 
     constructor(roundNumber: number, leader: IPlayer, gameCard: GameCard) {
         this.roundNumber = roundNumber;
@@ -74,20 +74,20 @@ export class Round implements IRound {
     }
 
     calculateScores(): void {
-        // Seul le chef gagne des points : +1 par bonne attribution
+        // Seul le pilier gagne des points : +1 par bonne attribution
         let chiefScore = 0;
 
-        // Pour chaque réponse, vérifier si le chef a correctement deviné le joueur
+        // Pour chaque réponse, vérifier si le pilier a correctement deviné le joueur
         for (const playerId of Object.keys(this.answers)) {
             const guessedPlayerId = this.guesses[playerId];
 
             if (guessedPlayerId === playerId) {
-                // Le chef a deviné correctement
+                // Le pilier a deviné correctement
                 chiefScore++;
             }
         }
 
-        // Attribuer le score au chef (les autres joueurs ne gagnent pas de points)
+        // Attribuer le score au pilier (les autres joueurs ne gagnent pas de points)
         this.scores[this.leader.id] = chiefScore;
     }
 }

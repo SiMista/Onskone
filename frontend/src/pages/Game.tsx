@@ -234,7 +234,7 @@ const GamePage: React.FC = () => {
     }
 
     const phase = game.currentRound.phase;
-    // Vérifier si c'est le dernier round (tous les joueurs ACTIFS ont été chef une fois)
+    // Vérifier si c'est le dernier round (tous les joueurs ACTIFS ont été pilier une fois)
     const activePlayers = players.filter(p => p.isActive);
     const isGameOver = game.currentRound.roundNumber >= activePlayers.length;
 
