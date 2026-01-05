@@ -83,17 +83,17 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
 
       {/* Résultats détaillés avec en-têtes de colonnes */}
       <div className="flex-1 overflow-auto mb-3 md:mb-4">
-        {/* En-têtes de colonnes - inversées : Chef a dit | Écrit par */}
-        <div className="mb-2 md:mb-3 px-2 md:px-4">
-          <div className="grid grid-cols-[1fr_3.5rem_3.5rem] md:grid-cols-[1fr_5rem_5rem] gap-2 md:gap-4 items-center">
-            <p className="text-black text-[10px] md:text-xs font-bold uppercase">Réponse</p>
-            <p className="text-black text-[10px] md:text-xs font-bold uppercase text-center">Chef a dit</p>
-            <p className="text-black text-[10px] md:text-xs font-bold uppercase text-center">Écrit par</p>
-          </div>
-        </div>
-
         {/* Liste des résultats */}
         <div className="space-y-2 md:space-y-3 px-2 md:px-4">
+          {/* En-têtes de colonnes - même structure que les cartes pour alignement */}
+          <div className="px-2 md:px-4 pt-0 pb-0 border-2 md:border-[3px] border-transparent">
+            <div className="grid grid-cols-[1fr_3.5rem_0.5rem_3.5rem] md:grid-cols-[1fr_5rem_0.5rem_5rem] gap-1 md:gap-2 items-center">
+              <p className="text-black text-[10px] md:text-xs font-bold uppercase">Réponse</p>
+              <p className="text-black text-[10px] md:text-xs font-bold uppercase text-center">Chef a dit</p>
+              <p className="text-black text-[10px] md:text-xs font-bold text-center">|</p>
+              <p className="text-black text-[10px] md:text-xs font-bold uppercase text-center">Écrit par</p>
+            </div>
+          </div>
           {results.map((result, index) => {
             const isRevealed = revealedIndices.has(index);
             const noResponse = isNoResponse(result.answer);
@@ -111,10 +111,10 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
                   }
                 `}
               >
-                <div className="grid grid-cols-[1fr_3.5rem_3.5rem] md:grid-cols-[1fr_5rem_5rem] gap-2 md:gap-4 items-center">
+                <div className="grid grid-cols-[1fr_3.5rem_0.5rem_3.5rem] md:grid-cols-[1fr_5rem_0.5rem_5rem] gap-1 md:gap-2 items-center">
                   {/* Réponse */}
                   <p
-                    className={`text-xs md:text-base truncate ${noResponse ? 'italic text-gray-500 font-normal' : 'font-bold'} ${isRevealed && !noResponse ? 'text-black' : noResponse ? '' : 'text-gray-800'}`}
+                    className={`text-xs md:text-base line-clamp-2 ${noResponse ? 'italic text-gray-500 font-normal' : 'font-bold'} ${isRevealed && !noResponse ? 'text-black' : noResponse ? '' : 'text-gray-800'}`}
                     title={getDisplayText(result.answer)}
                   >
                     {getDisplayText(result.answer)}
@@ -141,6 +141,9 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
                       </>
                     )}
                   </div>
+
+                  {/* Colonne vide pour alignement avec l'en-tête */}
+                  <div></div>
 
                   {/* Écrit par (révélé ou bouton révéler) */}
                   <div className="flex flex-col items-center">

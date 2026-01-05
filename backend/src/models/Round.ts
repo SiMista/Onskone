@@ -19,6 +19,7 @@ export class Round implements IRound {
     relancesUsed: number; // Nombre de relances utilisées par le pilier
     revealedIndices: number[]; // Indices des réponses révélées en phase REVEAL
     shownGameCards: GameCard[]; // Cartes déjà montrées au pilier (pour éviter les doublons)
+    shuffledAnswerIds: string[]; // Ordre des réponses mélangées pour la reconnexion
 
     constructor(roundNumber: number, leader: IPlayer, gameCard: GameCard) {
         this.roundNumber = roundNumber;
@@ -38,6 +39,7 @@ export class Round implements IRound {
         this.relancesUsed = 0;
         this.revealedIndices = [];
         this.shownGameCards = [];
+        this.shuffledAnswerIds = [];
     }
 
     addAnswer(playerId: string, answer: string): void {

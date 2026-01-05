@@ -82,4 +82,7 @@ export interface IRound {
 
   /** Cartes déjà montrées au pilier (pour éviter les doublons lors des relances) */
   shownGameCards?: GameCard[];
+
+  /** Ordre des réponses mélangées pour la phase GUESSING (stocké pour la reconnexion) */
+  shuffledAnswerIds?: string[];
 }

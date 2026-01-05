@@ -32,6 +32,8 @@ const GamePage: React.FC = () => {
     myAnswer?: string;
     currentGuesses?: Record<string, string>;
     relancesUsed?: number;
+    revealResults?: RevealResult[];
+    revealedIndices?: number[];
   } | null>(null);
   const errorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const notificationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -99,12 +101,18 @@ const GamePage: React.FC = () => {
         myAnswer?: string;
         currentGuesses?: Record<string, string>;
         relancesUsed?: number;
+        revealResults?: RevealResult[];
+        revealedIndices?: number[];
       };
     }) => {
       setGame(data.game);
       setPlayers(data.players);
       if (data.reconnectionData) {
         setReconnectionData(data.reconnectionData);
+        // Restaurer les résultats de révélation si présents
+        if (data.reconnectionData.revealResults) {
+          setRevealResults(data.reconnectionData.revealResults);
+        }
       }
     });
 
@@ -289,6 +297,7 @@ const GamePage: React.FC = () => {
             isGameOver={isGameOver}
             results={revealResults}
             question={game.currentRound.selectedQuestion || ''}
+            initialRevealedIndices={reconnectionData?.revealedIndices}
           />
         );
 

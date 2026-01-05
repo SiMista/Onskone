@@ -187,7 +187,7 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
                       {question}
                     </p>
                     {selectedQuestion === question && (
-                      <div className="absolute top-2 right-2 md:top-3 md:right-3 text-[18px] md:text-[24px]">✅</div>
+                      <div className="absolute top-2 right-2 md:top-3 md:right-3 text-[18px] md:text-[24px]"></div>
                     )}
                   </div>
                 ))}
