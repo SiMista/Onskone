@@ -6,6 +6,7 @@ import Frame from '../components/Frame';
 import Button from '../components/Button';
 import Footer from '../components/Footer';
 import ConfirmModal from '../components/ConfirmModal';
+import InfoModal from '../components/InfoModal';
 import { BsFillCaretLeftFill } from "react-icons/bs";
 import PlayerCard from '../components/PlayerCard';
 import { IPlayer } from '@onskone/shared';
@@ -30,6 +31,7 @@ const Lobby = () => {
     const [currentPlayer, setCurrentPlayer] = useState<IPlayer | null>(null);
     const [showCopiedMessage, setShowCopiedMessage] = useState(false);
     const [showFewPlayersModal, setShowFewPlayersModal] = useState(false);
+    const [showGameAlreadyStarted, setShowGameAlreadyStarted] = useState(false);
     const copiedMessageTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const [playerName] = useState<string>(() => {
         const urlPlayerName = queryParams.get('playerName');
@@ -245,11 +247,16 @@ const Lobby = () => {
         navigate(`/game/${lobbyCode}`);
     }, [currentPlayer, lobbyCode, navigate]);
 
+    const handleGameAlreadyStarted = useCallback(() => {
+        setShowGameAlreadyStarted(true);
+    }, []);
+
     useSocketEvent('updatePlayersList', handleUpdatePlayersList, [handleUpdatePlayersList]);
     useSocketEvent('joinedLobby', handleJoinedLobby, [handleJoinedLobby]);
     useSocketEvent('kickedFromLobby', handleKickedFromLobby, [handleKickedFromLobby]);
     useSocketEvent('error', handleError, [handleError]);
     useSocketEvent('gameStarted', handleGameStarted, [handleGameStarted]);
+    useSocketEvent('gameAlreadyStarted', handleGameAlreadyStarted, [handleGameAlreadyStarted]);
 
     const activePlayers = players.filter(p => p.isActive);
     const canStartGame = activePlayers.length >= GAME_CONFIG.MIN_PLAYERS;
@@ -363,6 +370,26 @@ const Lobby = () => {
                 cancelText="Attendre"
                 confirmVariant="success"
             />
+
+            {/* Modal partie déjà commencée */}
+            <InfoModal
+                isOpen={showGameAlreadyStarted}
+                onClose={() => {
+                    setShowGameAlreadyStarted(false);
+                    navigate('/');
+                }}
+                title="Partie déjà lancée"
+            >
+                <div className="text-center space-y-4">
+                    <p className="text-6xl">😢</p>
+                    <p className="text-gray-700">
+                        Ohhhhhh mince ! La partie a déjà été lancée et tu ne peux pas la rejoindre en cours de route...
+                    </p>
+                    <p className="text-sm text-gray-500 italic">
+                        Petit conseil de ma part : changer d’amis.
+                    </p>
+                </div>
+            </InfoModal>
         </div>
     );
 };

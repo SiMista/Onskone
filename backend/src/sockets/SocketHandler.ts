@@ -7,7 +7,7 @@ import {Lobby} from "../models/Lobby";
 import {Round} from "../models/Round";
 import {Game} from "../models/Game";
 import type { ServerToClientEvents, ClientToServerEvents, IGame } from '@onskone/shared';
-import { GAME_CONSTANTS } from '@onskone/shared';
+import { GAME_CONSTANTS, RoundPhase } from '@onskone/shared';
 import { validatePlayerName, validateAnswer, validateLobbyCode, validatePlayerId, validateAvatarId, sanitizeInput } from '../utils/validation.js';
 import { rateLimiters } from '../utils/rateLimiter.js';
 import { shuffleArray } from '../utils/helpers.js';
@@ -289,6 +289,8 @@ export class SocketHandler {
             text: answer
         }));
         const shuffledAnswers = shuffleArray(answersArray);
+        // Stocker l'ordre des réponses mélangées pour la reconnexion
+        currentRound.shuffledAnswerIds = shuffledAnswers.map(a => a.id);
         this.io.to(lobbyCode).emit('shuffledAnswersReceived', {
             answers: shuffledAnswers,
             players: lobby.players.filter(p => p.id !== currentRound.leader.id),
@@ -473,6 +475,13 @@ export class SocketHandler {
                             // Relâcher le lock
                             this.reconnectionLocks.delete(lockKey);
                         }
+                        return;
+                    }
+
+                    // Vérifier si une partie est déjà en cours (empêcher les nouveaux joueurs de rejoindre)
+                    if (lobby.game && lobby.game.status === 'IN_PROGRESS') {
+                        socket.emit('gameAlreadyStarted', { message: 'La partie a déjà été lancée' });
+                        logger.info(`Nouveau joueur ${sanitizedName} refusé - partie déjà en cours dans ${lobby.code}`);
                         return;
                     }
 
@@ -1093,6 +1102,17 @@ export class SocketHandler {
                         myAnswer?: string;
                         currentGuesses?: Record<string, string>;
                         relancesUsed?: number;
+                        revealResults?: Array<{
+                            playerId: string;
+                            playerName: string;
+                            playerAvatarId: number;
+                            answer: string;
+                            guessedPlayerId: string;
+                            guessedPlayerName: string;
+                            guessedPlayerAvatarId: number;
+                            correct: boolean;
+                        }>;
+                        revealedIndices?: number[];
                     } = {
                         answeredPlayerIds: game.currentRound ? Object.keys(game.currentRound.answers) : []
                     };
@@ -1110,6 +1130,12 @@ export class SocketHandler {
                     // Restaurer le nombre de relances utilisées pour QUESTION_SELECTION
                     if (game.currentRound?.relancesUsed !== undefined) {
                         reconnectionData.relancesUsed = game.currentRound.relancesUsed;
+                    }
+
+                    // Restaurer les résultats pour la phase REVEAL
+                    if (game.currentRound && game.currentRound.phase === RoundPhase.REVEAL) {
+                        reconnectionData.revealResults = this.buildRevealResults(lobby, game.currentRound);
+                        reconnectionData.revealedIndices = game.currentRound.revealedIndices || [];
                     }
 
                     socket.emit('gameState', {
@@ -1231,6 +1257,8 @@ export class SocketHandler {
                             text: answer
                         }));
                         const shuffledAnswers = shuffleArray(answersArray);
+                        // Stocker l'ordre des réponses mélangées pour la reconnexion
+                        game.currentRound.shuffledAnswerIds = shuffledAnswers.map(a => a.id);
                         this.io.to(data.lobbyCode).emit('shuffledAnswersReceived', {
                             answers: shuffledAnswers,
                             players: lobby.players.filter(p => p.id !== game.currentRound!.leader.id),
@@ -1267,12 +1295,24 @@ export class SocketHandler {
                         text: answer
                     }));
 
-                    // Mélanger les réponses (shuffle)
-                    const shuffledAnswers = shuffleArray(answersArray);
+                    let orderedAnswers: { id: string; text: string }[];
 
-                    // Envoyer les réponses mélangées à TOUS les joueurs (avec roundNumber pour éviter les race conditions)
-                    this.io.to(data.lobbyCode).emit('shuffledAnswersReceived', {
-                        answers: shuffledAnswers,
+                    // Utiliser l'ordre stocké si disponible (reconnexion), sinon mélanger
+                    if (game.currentRound.shuffledAnswerIds && game.currentRound.shuffledAnswerIds.length > 0) {
+                        // Reconstruire les réponses dans l'ordre stocké
+                        const answersMap = new Map(answersArray.map(a => [a.id, a]));
+                        orderedAnswers = game.currentRound.shuffledAnswerIds
+                            .map(id => answersMap.get(id))
+                            .filter((a): a is { id: string; text: string } => a !== undefined);
+                    } else {
+                        // Premier appel - mélanger et stocker l'ordre
+                        orderedAnswers = shuffleArray(answersArray);
+                        game.currentRound.shuffledAnswerIds = orderedAnswers.map(a => a.id);
+                    }
+
+                    // Envoyer les réponses au joueur qui les demande uniquement
+                    socket.emit('shuffledAnswersReceived', {
+                        answers: orderedAnswers,
                         players: lobby.players.filter(p => p.id !== game.currentRound!.leader.id),
                         roundNumber: game.currentRound.roundNumber
                     });
