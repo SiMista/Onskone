@@ -12,35 +12,16 @@ import { validatePlayerName, validateAnswer, validateLobbyCode, validatePlayerId
 import { rateLimiters } from '../utils/rateLimiter.js';
 import { shuffleArray } from '../utils/helpers.js';
 import logger from '../utils/logger.js';
+import { PlayerConnectionState } from './PlayerConnectionState.js';
 
 export class SocketHandler {
     private io: Server<ClientToServerEvents, ServerToClientEvents>;
-    // Map pour stocker les timeouts de déconnexion (clé: lobbyCode_playerName)
-    private disconnectTimeouts: Map<string, NodeJS.Timeout> = new Map();
-    // Map pour stocker les timeouts de déconnexion du pilier (clé: lobbyCode)
-    private leaderDisconnectTimeouts: Map<string, NodeJS.Timeout> = new Map();
-    // Set pour empêcher les reconnexions simultanées (clé: lobbyCode_playerName)
-    private reconnectionLocks: Set<string> = new Set();
-    // Délai de grâce pour la reconnexion (30 secondes)
-    private readonly RECONNECT_GRACE_PERIOD = 30000;
-    // Délai avant de sauter le round du pilier déconnecté (15 secondes - pour le changement d'app mobile)
-    private readonly LEADER_DISCONNECT_DELAY = 15000;
-    // Délai avant de marquer un joueur comme inactif (5 secondes - pour le changement d'app mobile)
-    private readonly INACTIVE_DELAY = 5000;
-    // Map pour stocker les timeouts d'inactivité (clé: lobbyCode_playerName)
-    private inactiveTimeouts: Map<string, NodeJS.Timeout> = new Map();
-    // Map pour stocker les joueurs kickés temporairement (clé: lobbyCode_playerName, valeur: timestamp d'expiration)
-    private kickedPlayers: Map<string, number> = new Map();
-    // Durée du blocage après kick (5 minutes)
-    private readonly KICK_BLOCK_DURATION = 5 * 60 * 1000;
+    // Centralized connection state manager
+    private connectionState: PlayerConnectionState = new PlayerConnectionState();
 
     constructor(io: Server<ClientToServerEvents, ServerToClientEvents>) {
         this.io = io;
         this.setupSocketEvents();
-    }
-
-    private getDisconnectKey(lobbyCode: string, playerName: string): string {
-        return `${lobbyCode}_${playerName}`;
     }
 
     /**
@@ -62,7 +43,7 @@ export class SocketHandler {
             !connectedSocketIds.includes(p.socketId) &&
             p.name !== excludePlayerName &&
             // Ne pas supprimer si un timeout de reconnexion est actif (joueur en période de grâce)
-            !this.disconnectTimeouts.has(this.getDisconnectKey(lobby.code, p.name))
+            !this.connectionState.hasDisconnectTimeout(lobby.code, p.name)
         );
 
         for (const player of playersToRemove) {
@@ -103,113 +84,6 @@ export class SocketHandler {
                 correct: guessedPlayerId === playerId
             };
         });
-    }
-
-    private cancelDisconnectTimeout(lobbyCode: string, playerName: string): void {
-        const key = this.getDisconnectKey(lobbyCode, playerName);
-        const timeout = this.disconnectTimeouts.get(key);
-        if (timeout) {
-            clearTimeout(timeout);
-            this.disconnectTimeouts.delete(key);
-            logger.debug(`Timeout de déconnexion annulé pour ${playerName} dans ${lobbyCode}`);
-        }
-    }
-
-    private cancelLeaderDisconnectTimeout(lobbyCode: string): void {
-        const timeout = this.leaderDisconnectTimeouts.get(lobbyCode);
-        if (timeout) {
-            clearTimeout(timeout);
-            this.leaderDisconnectTimeouts.delete(lobbyCode);
-            logger.debug(`Timeout de déconnexion du pilier annulé pour ${lobbyCode}`);
-        }
-    }
-
-    private cancelInactiveTimeout(lobbyCode: string, playerName: string): void {
-        const key = this.getDisconnectKey(lobbyCode, playerName);
-        const timeout = this.inactiveTimeouts.get(key);
-        if (timeout) {
-            clearTimeout(timeout);
-            this.inactiveTimeouts.delete(key);
-            logger.debug(`Timeout d'inactivité annulé pour ${playerName} dans ${lobbyCode}`);
-        }
-    }
-
-    /**
-     * Vérifie si un joueur est bloqué (a été kické récemment)
-     * Nettoie automatiquement les entrées expirées
-     */
-    private isPlayerKicked(lobbyCode: string, playerName: string): boolean {
-        const key = this.getDisconnectKey(lobbyCode, playerName);
-        const expiration = this.kickedPlayers.get(key);
-
-        if (!expiration) return false;
-
-        if (Date.now() > expiration) {
-            // Le blocage a expiré, nettoyer l'entrée
-            this.kickedPlayers.delete(key);
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * Bloque un joueur après un kick
-     */
-    private blockKickedPlayer(lobbyCode: string, playerName: string): void {
-        const key = this.getDisconnectKey(lobbyCode, playerName);
-        this.kickedPlayers.set(key, Date.now() + this.KICK_BLOCK_DURATION);
-        logger.debug(`Joueur ${playerName} bloqué du lobby ${lobbyCode} pour ${this.KICK_BLOCK_DURATION / 1000}s`);
-    }
-
-    /**
-     * Clean up all disconnect timeouts and reconnection locks for a specific lobby
-     */
-    private cleanupLobbyResources(lobbyCode: string): void {
-        // Clean up all disconnect timeouts for this lobby
-        const keysToDelete: string[] = [];
-        for (const [key, timeout] of this.disconnectTimeouts.entries()) {
-            if (key.startsWith(`${lobbyCode}_`)) {
-                clearTimeout(timeout);
-                keysToDelete.push(key);
-            }
-        }
-        keysToDelete.forEach(key => this.disconnectTimeouts.delete(key));
-
-        // Clean up leader disconnect timeout for this lobby
-        this.cancelLeaderDisconnectTimeout(lobbyCode);
-
-        // Clean up all reconnection locks for this lobby
-        const locksToDelete: string[] = [];
-        for (const key of this.reconnectionLocks) {
-            if (key.startsWith(`${lobbyCode}_`)) {
-                locksToDelete.push(key);
-            }
-        }
-        locksToDelete.forEach(key => this.reconnectionLocks.delete(key));
-
-        // Clean up kicked players list for this lobby
-        const kickedToDelete: string[] = [];
-        for (const key of this.kickedPlayers.keys()) {
-            if (key.startsWith(`${lobbyCode}_`)) {
-                kickedToDelete.push(key);
-            }
-        }
-        kickedToDelete.forEach(key => this.kickedPlayers.delete(key));
-
-        // Clean up inactive timeouts for this lobby
-        const inactiveToDelete: string[] = [];
-        for (const [key, timeout] of this.inactiveTimeouts.entries()) {
-            if (key.startsWith(`${lobbyCode}_`)) {
-                clearTimeout(timeout);
-                inactiveToDelete.push(key);
-            }
-        }
-        inactiveToDelete.forEach(key => this.inactiveTimeouts.delete(key));
-
-        if (keysToDelete.length > 0 || locksToDelete.length > 0 || kickedToDelete.length > 0 || inactiveToDelete.length > 0) {
-            logger.debug(`Nettoyage lobby ${lobbyCode}: ${keysToDelete.length} disconnect timeouts, ${inactiveToDelete.length} inactive timeouts, ${locksToDelete.length} locks, ${kickedToDelete.length} kicked`);
-        }
     }
 
     /**
@@ -391,7 +265,7 @@ export class SocketHandler {
                     this.cleanupDisconnectedPlayers(lobby, sanitizedName);
 
                     // Vérifier si le joueur a été kické récemment
-                    if (this.isPlayerKicked(data.lobbyCode, sanitizedName)) {
+                    if (this.connectionState.isPlayerKicked(data.lobbyCode, sanitizedName)) {
                         socket.emit('error', { message: 'Vous avez été expulsé de ce salon' });
                         logger.debug(`Joueur ${sanitizedName} bloqué - a été kické du lobby ${data.lobbyCode}`);
                         return;
@@ -402,8 +276,7 @@ export class SocketHandler {
                     if (existingPlayerBySocket) {
                         logger.debug(`Player ${existingPlayerBySocket.name} déjà dans le lobby ${lobby.code}`);
                         // Annuler les timeouts de déconnexion et d'inactivité s'ils existent
-                        this.cancelDisconnectTimeout(lobby.code, existingPlayerBySocket.name);
-                        this.cancelInactiveTimeout(lobby.code, existingPlayerBySocket.name);
+                        this.connectionState.cancelAllPlayerTimeouts(lobby.code, existingPlayerBySocket.name);
                         existingPlayerBySocket.isActive = true; // Marquer comme actif (rejouer)
                         socket.join(lobby.code);
                         socket.emit('joinedLobby', { player: existingPlayerBySocket });
@@ -426,30 +299,24 @@ export class SocketHandler {
                     // Vérifie si un joueur avec ce nom existe déjà (reconnexion après refresh)
                     const existingPlayerByName = lobby.players.find(p => p.name === sanitizedName);
                     if (existingPlayerByName) {
-                        const lockKey = this.getDisconnectKey(lobby.code, sanitizedName);
-
                         // Vérifier si une reconnexion est déjà en cours
-                        if (this.reconnectionLocks.has(lockKey)) {
+                        if (!this.connectionState.acquireReconnectionLock(lobby.code, sanitizedName)) {
                             logger.debug(`Reconnexion déjà en cours pour ${sanitizedName}`);
                             socket.emit('error', { message: 'Reconnexion en cours, veuillez patienter.' });
                             return;
                         }
 
-                        // Acquérir le lock
-                        this.reconnectionLocks.add(lockKey);
-
                         try {
                             // C'est une reconnexion - mettre à jour le socketId
                             logger.info(`Player ${sanitizedName} reconnecte au lobby ${lobby.code}`);
                             // Annuler les timeouts de déconnexion et d'inactivité s'ils existent
-                            this.cancelDisconnectTimeout(lobby.code, sanitizedName);
-                            this.cancelInactiveTimeout(lobby.code, sanitizedName);
+                            this.connectionState.cancelAllPlayerTimeouts(lobby.code, sanitizedName);
                             existingPlayerByName.socketId = socket.id;
                             existingPlayerByName.isActive = true; // Marquer comme actif (rejouer)
 
                             // Si c'est le pilier du round actuel, annuler le timeout de saut de round
                             if (lobby.game?.currentRound?.leader.id === existingPlayerByName.id) {
-                                this.cancelLeaderDisconnectTimeout(lobby.code);
+                                this.connectionState.cancelLeaderDisconnectTimeout(lobby.code);
                                 lobby.game.currentRound.leader.socketId = socket.id;
                                 logger.info(`Chef reconnecté via joinLobby, timeout saut annulé`);
                             }
@@ -471,7 +338,7 @@ export class SocketHandler {
                             }
                         } finally {
                             // Relâcher le lock
-                            this.reconnectionLocks.delete(lockKey);
+                            this.connectionState.releaseReconnectionLock(lobby.code, sanitizedName);
                         }
                         return;
                     }
@@ -597,7 +464,7 @@ export class SocketHandler {
                     this.io.to(lobbyCode).emit('updatePlayersList', {players: lobby.players});
                     logger.info(`${player.name} a quitté le lobby ${lobbyCode}`);
                     if (isLobbyRemoved) {
-                        this.cleanupLobbyResources(lobbyCode);
+                        this.connectionState.cleanupLobby(lobbyCode);
                         socket.leave(lobbyCode);
                         logger.info(`Lobby ${lobbyCode} supprimé`);
                     }
@@ -661,11 +528,10 @@ export class SocketHandler {
                     const kickedPlayerName = kickedPlayer.name;
 
                     // Annuler tous les timeouts associés au joueur
-                    this.cancelDisconnectTimeout(lobbyCode, kickedPlayerName);
-                    this.cancelInactiveTimeout(lobbyCode, kickedPlayerName);
+                    this.connectionState.cancelAllPlayerTimeouts(lobbyCode, kickedPlayerName);
 
                     // Bloquer le joueur pour empêcher la reconnexion immédiate
-                    this.blockKickedPlayer(lobbyCode, kickedPlayerName);
+                    this.connectionState.blockKickedPlayer(lobbyCode, kickedPlayerName);
 
                     // Retirer le joueur du lobby
                     lobby.removePlayer(kickedPlayer);
@@ -1032,16 +898,11 @@ export class SocketHandler {
                     if (data.playerId) {
                         const player = lobby.players.find(p => p.id === data.playerId);
                         if (player) {
-                            const lockKey = this.getDisconnectKey(lobby.code, player.name);
-
                             // Vérifier si une reconnexion est déjà en cours
-                            if (this.reconnectionLocks.has(lockKey)) {
+                            if (this.connectionState.hasReconnectionLock(lobby.code, player.name)) {
                                 logger.debug(`Reconnexion game déjà en cours pour ${player.name}`);
                                 // Ne pas bloquer, juste envoyer l'état actuel sans mise à jour
-                            } else {
-                                // Acquérir le lock
-                                this.reconnectionLocks.add(lockKey);
-
+                            } else if (this.connectionState.acquireReconnectionLock(lobby.code, player.name)) {
                                 try {
                                     const oldSocketId = player.socketId;
                                     player.socketId = socket.id;
@@ -1049,8 +910,7 @@ export class SocketHandler {
                                     socket.join(lobby.code);
 
                                     // Annuler les timeouts de déconnexion et d'inactivité s'ils existent
-                                    this.cancelDisconnectTimeout(lobby.code, player.name);
-                                    this.cancelInactiveTimeout(lobby.code, player.name);
+                                    this.connectionState.cancelAllPlayerTimeouts(lobby.code, player.name);
 
                                     logger.info(`Player ${player.name} reconnected to game`, {
                                         lobbyCode: data.lobbyCode,
@@ -1062,7 +922,7 @@ export class SocketHandler {
                                     if (game.currentRound && game.currentRound.leader.id === data.playerId) {
                                         game.currentRound.leader.socketId = socket.id;
                                         // Annuler le timeout de saut de round si le pilier se reconnecte
-                                        this.cancelLeaderDisconnectTimeout(lobby.code);
+                                        this.connectionState.cancelLeaderDisconnectTimeout(lobby.code);
                                         logger.info(`Leader socketId updated for round ${game.currentRound.roundNumber}`);
                                     }
 
@@ -1070,7 +930,7 @@ export class SocketHandler {
                                     this.io.to(lobby.code).emit('updatePlayersList', { players: lobby.players });
                                 } finally {
                                     // Relâcher le lock
-                                    this.reconnectionLocks.delete(lockKey);
+                                    this.connectionState.releaseReconnectionLock(lobby.code, player.name);
                                 }
                             }
                         }
@@ -1594,14 +1454,8 @@ export class SocketHandler {
                         const playerName = disconnectedPlayer.name;
                         const playerId = disconnectedPlayer.id;
 
-                        // Annuler un éventuel timeout d'inactivité existant
-                        this.cancelInactiveTimeout(lobbyCode, playerName);
-
                         // Créer un timeout pour marquer le joueur comme inactif après un délai
-                        const inactiveKey = this.getDisconnectKey(lobbyCode, playerName);
-                        const inactiveTimeout = setTimeout(() => {
-                            this.inactiveTimeouts.delete(inactiveKey);
-
+                        this.connectionState.setInactiveTimeout(lobbyCode, playerName, () => {
                             // Revérifier que le lobby existe
                             const currentLobby = LobbyManager.getLobby(lobbyCode);
                             if (!currentLobby) return;
@@ -1618,35 +1472,27 @@ export class SocketHandler {
 
                             // Marquer le joueur comme inactif
                             player.isActive = false;
-                            logger.info(`Player ${playerName} marqué inactif après ${this.INACTIVE_DELAY}ms`);
+                            logger.info(`Player ${playerName} marqué inactif`);
 
                             // Notifier les autres joueurs
                             this.io.to(lobbyCode).emit('updatePlayersList', { players: currentLobby.players });
-                        }, this.INACTIVE_DELAY);
-
-                        this.inactiveTimeouts.set(inactiveKey, inactiveTimeout);
+                        });
 
                         // === GESTION DU JEU EN COURS ===
                         const game = lobby.game;
                         if (game && game.currentRound && game.status === 'IN_PROGRESS') {
                             const currentRound = game.currentRound;
-                            const lobbyCode = lobby.code;
 
                             // CAS 1: Le joueur déconnecté est le pilier actuel
                             // On attend un court délai pour permettre la reconnexion (changement d'app mobile)
                             if (currentRound.leader.id === disconnectedPlayer.id) {
                                 logger.info(`Chef ${disconnectedPlayer.name} déconnecté, délai avant saut de round`, { lobbyCode });
 
-                                // Annuler un éventuel timeout existant
-                                this.cancelLeaderDisconnectTimeout(lobbyCode);
-
                                 const leaderName = disconnectedPlayer.name;
                                 const leaderId = disconnectedPlayer.id;
 
-                                // Attendre LEADER_DISCONNECT_DELAY avant de sauter le round
-                                const leaderTimeout = setTimeout(() => {
-                                    this.leaderDisconnectTimeouts.delete(lobbyCode);
-
+                                // Attendre avant de sauter le round
+                                this.connectionState.setLeaderDisconnectTimeout(lobbyCode, () => {
                                     // Revérifier que le lobby et le jeu existent toujours
                                     const currentLobby = LobbyManager.getLobby(lobbyCode);
                                     const currentGame = currentLobby?.game;
@@ -1712,9 +1558,7 @@ export class SocketHandler {
                                             });
                                         }
                                     }
-                                }, this.LEADER_DISCONNECT_DELAY);
-
-                                this.leaderDisconnectTimeouts.set(lobbyCode, leaderTimeout);
+                                });
                             }
                             // CAS 2: Le joueur déconnecté doit répondre
                             // On ne fait RIEN immédiatement - le timer de la phase ANSWERING gérera le NO_RESPONSE
@@ -1723,15 +1567,7 @@ export class SocketHandler {
                         }
 
                         // Créer un timeout pour supprimer le joueur après le délai de grâce
-                        const disconnectKey = this.getDisconnectKey(lobbyCode, playerName);
-
-                        // Annuler un éventuel timeout existant
-                        this.cancelDisconnectTimeout(lobbyCode, playerName);
-
-                        const timeout = setTimeout(() => {
-                            // Toujours supprimer l'entrée du timeout en premier (évite les fuites mémoire)
-                            this.disconnectTimeouts.delete(disconnectKey);
-
+                        this.connectionState.setDisconnectTimeout(lobbyCode, playerName, () => {
                             // Vérifier si le lobby existe encore
                             const currentLobby = LobbyManager.getLobby(lobbyCode);
                             if (!currentLobby) {
@@ -1746,15 +1582,13 @@ export class SocketHandler {
                                 const isLobbyRemoved = LobbyManager.removePlayer(currentLobby, playerToRemove);
 
                                 if (isLobbyRemoved) {
-                                    this.cleanupLobbyResources(lobbyCode);
+                                    this.connectionState.cleanupLobby(lobbyCode);
                                     logger.info(`Lobby ${lobbyCode} supprimé (vide)`);
                                 } else {
                                     this.io.to(lobbyCode).emit('updatePlayersList', { players: currentLobby.players });
                                 }
                             }
-                        }, this.RECONNECT_GRACE_PERIOD);
-
-                        this.disconnectTimeouts.set(disconnectKey, timeout);
+                        });
                     }
                 });
             });
