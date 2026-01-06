@@ -58,6 +58,9 @@ export interface ServerToClientEvents {
   /** Informations sur un lobby (pour les liens d'invitation) */
   lobbyInfo: (data: { exists: boolean; hostName?: string | null }) => void;
 
+  /** Notification que la partie a déjà commencé (nouveau joueur refusé) */
+  gameAlreadyStarted: (data: { message: string }) => void;
+
   // ===== GAME EVENTS =====
 
   /** Notification de démarrage du jeu */

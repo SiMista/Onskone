@@ -11,8 +11,9 @@ export const LEGAL_CONTENT = {
         content: `Un ÉNORME merci, à ceux qui m'ont soutenu et encouragé à faire ce projet:`,
         list: [
           'Ma soeur, Mimi, qui m\'a encouragé à continuer le site tout au long du développement',
+          'Mon frère Sylvain, pour m\'avoir fait entièrement confiance pour réaliser le site web de son jeu',
           'Brinda et Sathya, vous m\'avez donné de l\'ambition sans hésiter dès le début du projet',
-          'Tous mes cousins qui ont testé le jeu et m\'ont donné plein de retours constructifs',
+          'Tout mes amis, mes cousins avec qui j\'ai pu tester le jeu et avoir des supers retours constructifs',
           'Et bien sûr, mon ami Philippe, qui m\'a soutenu sans arrêt pour faire le site et m\'a aidé sur toute la partie technique du projet.'
         ]
       }
@@ -23,7 +24,7 @@ export const LEGAL_CONTENT = {
     sections: [
       {
         title: 'Développeur du site',
-        content: `<strong>Responsable du site :</strong> Simeon Deiva<br /><strong>Contact :</strong> onskonelejeu@gmail.com`
+        content: `<strong>Responsable du site :</strong> Simeon Deivassagayame<br /><strong>Créateur du jeu :</strong> Sylvain Deivassagayame<br /><strong>Contact :</strong> onskonelejeu@gmail.com`
       },
       {
         title: 'Hébergement',
