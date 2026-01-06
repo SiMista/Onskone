@@ -170,8 +170,7 @@ export function handleGetGameState(ctx: HandlerContext, data: { lobbyCode: strin
                             player.isActive = true;
                             ctx.socket.join(lobby.code);
 
-                            ctx.timeoutManager.cancelDisconnectTimeout(lobby.code, player.name);
-                            ctx.timeoutManager.cancelInactiveTimeout(lobby.code, player.name);
+                            ctx.timeoutManager.cancelAllPlayerTimeouts(lobby.code, player.name);
 
                             logger.info(`Player ${player.name} reconnected to game`, {
                                 lobbyCode: data.lobbyCode,

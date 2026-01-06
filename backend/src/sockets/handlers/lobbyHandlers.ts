@@ -99,8 +99,7 @@ export function handleJoinLobby(ctx: HandlerContext, data: { lobbyCode: string; 
         const existingPlayerBySocket = lobby.players.find(p => p.socketId === ctx.socket.id);
         if (existingPlayerBySocket) {
             logger.debug(`Player ${existingPlayerBySocket.name} déjà dans le lobby ${lobby.code}`);
-            ctx.timeoutManager.cancelDisconnectTimeout(lobby.code, existingPlayerBySocket.name);
-            ctx.timeoutManager.cancelInactiveTimeout(lobby.code, existingPlayerBySocket.name);
+            ctx.timeoutManager.cancelAllPlayerTimeouts(lobby.code, existingPlayerBySocket.name);
             existingPlayerBySocket.isActive = true;
             ctx.socket.join(lobby.code);
             ctx.socket.emit('joinedLobby', { player: existingPlayerBySocket });
@@ -130,8 +129,7 @@ export function handleJoinLobby(ctx: HandlerContext, data: { lobbyCode: string; 
 
             try {
                 logger.info(`Player ${sanitizedName} reconnecte au lobby ${lobby.code}`);
-                ctx.timeoutManager.cancelDisconnectTimeout(lobby.code, sanitizedName);
-                ctx.timeoutManager.cancelInactiveTimeout(lobby.code, sanitizedName);
+                ctx.timeoutManager.cancelAllPlayerTimeouts(lobby.code, sanitizedName);
                 existingPlayerByName.socketId = ctx.socket.id;
                 existingPlayerByName.isActive = true;
 
@@ -327,8 +325,7 @@ export function handleKickPlayer(ctx: HandlerContext, data: { lobbyCode: string;
         const kickedSocketId = kickedPlayer.socketId;
         const kickedPlayerName = kickedPlayer.name;
 
-        ctx.timeoutManager.cancelDisconnectTimeout(data.lobbyCode, kickedPlayerName);
-        ctx.timeoutManager.cancelInactiveTimeout(data.lobbyCode, kickedPlayerName);
+        ctx.timeoutManager.cancelAllPlayerTimeouts(data.lobbyCode, kickedPlayerName);
         ctx.timeoutManager.blockKickedPlayer(data.lobbyCode, kickedPlayerName);
 
         lobby.removePlayer(kickedPlayer);

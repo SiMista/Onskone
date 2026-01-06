@@ -1,8 +1,49 @@
 import logger from '../../utils/logger.js';
 
 /**
+ * Configuration for timeout durations
+ */
+export interface TimeoutConfig {
+    /** Grace period for reconnection (default: 30s) */
+    reconnectGracePeriod: number;
+    /** Delay before skipping leader's round (default: 15s) */
+    leaderDisconnectDelay: number;
+    /** Delay before marking player as inactive (default: 5s) */
+    inactiveDelay: number;
+    /** Duration of kick block (default: 5min) */
+    kickBlockDuration: number;
+}
+
+/**
+ * Default timeout configuration
+ */
+export const DEFAULT_TIMEOUT_CONFIG: TimeoutConfig = {
+    reconnectGracePeriod: 30000,      // 30 seconds
+    leaderDisconnectDelay: 15000,     // 15 seconds
+    inactiveDelay: 5000,              // 5 seconds
+    kickBlockDuration: 5 * 60 * 1000, // 5 minutes
+};
+
+/**
+ * Lobby statistics for diagnostics
+ */
+export interface LobbyStats {
+    disconnectTimeouts: number;
+    inactiveTimeouts: number;
+    reconnectionLocks: number;
+    kickedPlayers: number;
+    hasLeaderTimeout: boolean;
+}
+
+/**
  * Centralized timeout management for socket disconnections and reconnections.
  * Handles disconnect timeouts, leader disconnect timeouts, inactive timeouts, and kicked players.
+ *
+ * Benefits:
+ * - Single source of truth for connection state
+ * - Automatic cleanup when lobby is removed (no memory leaks)
+ * - Thread-safe reconnection handling via locks
+ * - Diagnostic methods for debugging
  */
 export class TimeoutManager {
     // Map pour stocker les timeouts de déconnexion (clé: lobbyCode_playerName)
@@ -16,14 +57,19 @@ export class TimeoutManager {
     // Map pour stocker les joueurs kickés temporairement (clé: lobbyCode_playerName, valeur: timestamp d'expiration)
     private kickedPlayers: Map<string, number> = new Map();
 
-    // Délai de grâce pour la reconnexion (30 secondes)
-    public readonly RECONNECT_GRACE_PERIOD = 30000;
-    // Délai avant de sauter le round du pilier déconnecté (15 secondes - pour le changement d'app mobile)
-    public readonly LEADER_DISCONNECT_DELAY = 15000;
-    // Délai avant de marquer un joueur comme inactif (5 secondes - pour le changement d'app mobile)
-    public readonly INACTIVE_DELAY = 5000;
-    // Durée du blocage après kick (5 minutes)
-    public readonly KICK_BLOCK_DURATION = 5 * 60 * 1000;
+    // Configuration (public readonly pour rétrocompatibilité)
+    public readonly RECONNECT_GRACE_PERIOD: number;
+    public readonly LEADER_DISCONNECT_DELAY: number;
+    public readonly INACTIVE_DELAY: number;
+    public readonly KICK_BLOCK_DURATION: number;
+
+    constructor(config: Partial<TimeoutConfig> = {}) {
+        const mergedConfig = { ...DEFAULT_TIMEOUT_CONFIG, ...config };
+        this.RECONNECT_GRACE_PERIOD = mergedConfig.reconnectGracePeriod;
+        this.LEADER_DISCONNECT_DELAY = mergedConfig.leaderDisconnectDelay;
+        this.INACTIVE_DELAY = mergedConfig.inactiveDelay;
+        this.KICK_BLOCK_DURATION = mergedConfig.kickBlockDuration;
+    }
 
     getDisconnectKey(lobbyCode: string, playerName: string): string {
         return `${lobbyCode}_${playerName}`;
@@ -186,6 +232,73 @@ export class TimeoutManager {
         if (keysToDelete.length > 0 || locksToDelete.length > 0 || kickedToDelete.length > 0 || inactiveToDelete.length > 0) {
             logger.debug(`Nettoyage lobby ${lobbyCode}: ${keysToDelete.length} disconnect timeouts, ${inactiveToDelete.length} inactive timeouts, ${locksToDelete.length} locks, ${kickedToDelete.length} kicked`);
         }
+    }
+
+    // ===== UTILITY METHODS =====
+
+    /**
+     * Cancel all player timeouts (both disconnect and inactive)
+     * Useful when a player reconnects
+     */
+    cancelAllPlayerTimeouts(lobbyCode: string, playerName: string): void {
+        this.cancelDisconnectTimeout(lobbyCode, playerName);
+        this.cancelInactiveTimeout(lobbyCode, playerName);
+    }
+
+    // ===== DIAGNOSTIC METHODS =====
+
+    /**
+     * Get statistics for a specific lobby
+     * Useful for debugging and monitoring
+     */
+    getLobbyStats(lobbyCode: string): LobbyStats {
+        const prefix = `${lobbyCode}_`;
+
+        let disconnectTimeouts = 0;
+        let inactiveTimeouts = 0;
+        let reconnectionLocks = 0;
+        let kickedPlayers = 0;
+
+        for (const key of this.disconnectTimeouts.keys()) {
+            if (key.startsWith(prefix)) disconnectTimeouts++;
+        }
+        for (const key of this.inactiveTimeouts.keys()) {
+            if (key.startsWith(prefix)) inactiveTimeouts++;
+        }
+        for (const key of this.reconnectionLocks) {
+            if (key.startsWith(prefix)) reconnectionLocks++;
+        }
+        for (const [key, expiration] of this.kickedPlayers.entries()) {
+            if (key.startsWith(prefix) && Date.now() < expiration) kickedPlayers++;
+        }
+
+        return {
+            disconnectTimeouts,
+            inactiveTimeouts,
+            reconnectionLocks,
+            kickedPlayers,
+            hasLeaderTimeout: this.leaderDisconnectTimeouts.has(lobbyCode),
+        };
+    }
+
+    /**
+     * Get total counts across all lobbies
+     * Useful for monitoring memory usage
+     */
+    getTotalStats(): {
+        totalDisconnectTimeouts: number;
+        totalInactiveTimeouts: number;
+        totalReconnectionLocks: number;
+        totalKickedPlayers: number;
+        totalLeaderTimeouts: number;
+    } {
+        return {
+            totalDisconnectTimeouts: this.disconnectTimeouts.size,
+            totalInactiveTimeouts: this.inactiveTimeouts.size,
+            totalReconnectionLocks: this.reconnectionLocks.size,
+            totalKickedPlayers: this.kickedPlayers.size,
+            totalLeaderTimeouts: this.leaderDisconnectTimeouts.size,
+        };
     }
 }
 
