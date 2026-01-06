@@ -2,6 +2,7 @@
  * Input validation utilities for server-side security
  */
 
+import xss from 'xss';
 import { GAME_CONSTANTS } from '@onskone/shared';
 
 const { MIN_NAME_LENGTH, MAX_NAME_LENGTH, MAX_ANSWER_LENGTH } = GAME_CONSTANTS;
@@ -29,9 +30,9 @@ export function validatePlayerName(name: string): ValidationResult {
     return { isValid: false, error: `Le nom ne peut pas dépasser ${MAX_NAME_LENGTH} caractères` };
   }
 
-  // Check for forbidden characters (basic XSS prevention)
-  const forbiddenChars = /<|>|&lt;|&gt;|script/i;
-  if (forbiddenChars.test(trimmedName)) {
+  // Check for XSS attempts by comparing sanitized output with original
+  const sanitized = xss(trimmedName);
+  if (sanitized !== trimmedName) {
     return { isValid: false, error: 'Le nom contient des caractères interdits' };
   }
 
@@ -115,31 +116,20 @@ export function validateAvatarId(avatarId: unknown): number {
 
 /**
  * Sanitize user input (XSS protection)
- * Note: React already escapes HTML entities when rendering, so we don't encode them here
- * to avoid double-encoding (e.g., & becoming &amp; in the UI)
+ * Uses the xss library for comprehensive protection against XSS attacks
  */
 export function sanitizeInput(input: string): string {
   if (!input || typeof input !== 'string') {
     return '';
   }
 
-  return input
-    .trim()
-    // Remove null bytes first (can be used to bypass filters)
-    .replace(/\0/g, '')
-    // Remove HTML tags (prevents injection of script tags, svg, etc.)
-    .replace(/<[^>]*>?/g, '')
-    // Remove javascript: protocol (with unicode escapes)
-    .replace(/j\s*a\s*v\s*a\s*s\s*c\s*r\s*i\s*p\s*t\s*:/gi, '')
-    .replace(/&#x?[0-9a-f]+;?/gi, '') // Remove HTML entities that could encode js:
-    // Remove data: protocol (can be used for XSS)
-    .replace(/d\s*a\s*t\s*a\s*:/gi, '')
-    // Remove vbscript: protocol
-    .replace(/v\s*b\s*s\s*c\s*r\s*i\s*p\s*t\s*:/gi, '')
-    // Remove on* event handlers (more thorough pattern)
-    .replace(/on\w+\s*=\s*["']?[^"'>\s]*/gi, '')
-    // Remove expression() CSS function (IE XSS)
-    .replace(/expression\s*\(/gi, '')
-    // Remove url() with javascript/data
-    .replace(/url\s*\(\s*['"]?\s*(javascript|data):/gi, 'url(blocked:');
+  // Remove null bytes first (can be used to bypass filters)
+  const cleaned = input.trim().replace(/\0/g, '');
+
+  // Use xss library with stripIgnoreTag to remove all HTML tags
+  return xss(cleaned, {
+    whiteList: {}, // No tags allowed
+    stripIgnoreTag: true, // Strip all tags not in whitelist
+    stripIgnoreTagBody: ['script', 'style'], // Remove script/style content entirely
+  });
 }
