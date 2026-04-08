@@ -85,4 +85,7 @@ export interface IRound {
 
   /** Ordre des réponses mélangées pour la phase GUESSING (stocké pour la reconnexion) */
   shuffledAnswerIds?: string[];
+
+  /** Indices des réponses corrigées par similarité */
+  similarityCorrections?: number[];
 }

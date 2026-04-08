@@ -140,6 +140,24 @@ export interface ServerToClientEvents {
     revealedIndices: number[]; // Tous les indices révélés
   }) => void;
 
+  /** Similarité détectée entre deux réponses (après reveal d'une réponse incorrecte) */
+  similarityDetected: (data: {
+    answerIndex: number; // Index de la réponse révélée
+    guessedPlayerName: string; // Nom du joueur que le pilier avait deviné
+  }) => void;
+
+  /** Confirmation de similarité par le pilier (score corrigé) */
+  similarityConfirmed: (data: {
+    answerIndex: number;
+    correctedScore: number; // Nouveau score du pilier pour ce round
+    leaderboard: LeaderboardEntry[];
+  }) => void;
+
+  /** Similarité rejetée par le pilier */
+  similarityDismissed: (data: {
+    answerIndex: number;
+  }) => void;
+
   /** Démarrage d'un timer */
   timerStarted: (data: {
     phase: RoundPhase;
@@ -287,6 +305,18 @@ export interface ClientToServerEvents {
 
   /** Révéler une réponse spécifique (réservé au pilier) */
   revealAnswer: (data: {
+    lobbyCode: string;
+    answerIndex: number;
+  }) => void;
+
+  /** Confirmer que deux réponses similaires sont bien les mêmes */
+  confirmSimilarity: (data: {
+    lobbyCode: string;
+    answerIndex: number;
+  }) => void;
+
+  /** Rejeter la similarité détectée */
+  dismissSimilarity: (data: {
     lobbyCode: string;
     answerIndex: number;
   }) => void;

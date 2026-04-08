@@ -18,6 +18,7 @@ export class Round implements IRound {
     timerPhase: RoundPhase | undefined; // Phase pour laquelle le timer a été démarré
     relancesUsed: number; // Nombre de relances utilisées par le pilier
     revealedIndices: number[]; // Indices des réponses révélées en phase REVEAL
+    similarityCorrections: number[]; // Indices corrigés par similarité
     shownGameCards: GameCard[]; // Cartes déjà montrées au pilier (pour éviter les doublons)
     shuffledAnswerIds: string[]; // Ordre des réponses mélangées pour la reconnexion
 
@@ -38,6 +39,7 @@ export class Round implements IRound {
         this.timerPhase = undefined;
         this.relancesUsed = 0;
         this.revealedIndices = [];
+        this.similarityCorrections = [];
         this.shownGameCards = [];
         this.shuffledAnswerIds = [];
     }
@@ -91,5 +93,9 @@ export class Round implements IRound {
 
         // Attribuer le score au pilier (les autres joueurs ne gagnent pas de points)
         this.scores[this.leader.id] = chiefScore;
+    }
+
+    addBonusScore(playerId: string, points: number): void {
+        this.scores[playerId] = (this.scores[playerId] || 0) + points;
     }
 }

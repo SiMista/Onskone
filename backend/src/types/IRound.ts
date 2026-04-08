@@ -9,6 +9,7 @@ export interface IRound extends IRoundData {
   setSelectedQuestion(question: string): void;
   updateCurrentGuess(answerId: string, playerId: string | null): void;
   submitGuesses(guesses: Record<string, string>): void;
+  addBonusScore(playerId: string, points: number): void;
   nextPhase(): void;
 }
 

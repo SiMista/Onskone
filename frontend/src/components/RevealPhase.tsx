@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import socket from '../utils/socket';
 import Button from './Button';
 import Avatar from './Avatar';
-import { RevealResult } from '@onskone/shared';
+import SimilarityPopover from './SimilarityPopover';
+import { RevealResult, LeaderboardEntry } from '@onskone/shared';
 import { isNoResponse, getDisplayText } from '../utils/answerHelpers';
 
 interface RevealPhaseProps {
@@ -20,6 +21,13 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
   const [revealedIndices, setRevealedIndices] = useState<Set<number>>(
     new Set(initialRevealedIndices || [])
   );
+  // Modal de similarité
+  const [similarityModal, setSimilarityModal] = useState<{
+    answerIndex: number;
+    guessedPlayerName: string;
+  } | null>(null);
+  // Indices corrigés par similarité
+  const [correctedIndices, setCorrectedIndices] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     // Écouter les révélations du pilier
@@ -27,8 +35,30 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
       setRevealedIndices(new Set(data.revealedIndices));
     });
 
+    // Écouter la détection de similarité
+    socket.on('similarityDetected', (data: { answerIndex: number; guessedPlayerName: string }) => {
+      setSimilarityModal({
+        answerIndex: data.answerIndex,
+        guessedPlayerName: data.guessedPlayerName,
+      });
+    });
+
+    // Écouter la confirmation de similarité
+    socket.on('similarityConfirmed', (data: { answerIndex: number; correctedScore: number; leaderboard: LeaderboardEntry[] }) => {
+      setCorrectedIndices(prev => new Set(prev).add(data.answerIndex));
+      setSimilarityModal(null);
+    });
+
+    // Écouter le rejet de similarité
+    socket.on('similarityDismissed', () => {
+      setSimilarityModal(null);
+    });
+
     return () => {
       socket.off('answerRevealed');
+      socket.off('similarityDetected');
+      socket.off('similarityConfirmed');
+      socket.off('similarityDismissed');
     };
   }, []);
 
@@ -37,6 +67,22 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
     if (isLeader && index === nextRevealIndex) {
       socket.emit('revealAnswer', { lobbyCode, answerIndex: index });
     }
+  };
+
+  const handleConfirmSimilarity = () => {
+    if (!similarityModal) return;
+    socket.emit('confirmSimilarity', {
+      lobbyCode,
+      answerIndex: similarityModal.answerIndex,
+    });
+  };
+
+  const handleDismissSimilarity = () => {
+    if (!similarityModal) return;
+    socket.emit('dismissSimilarity', {
+      lobbyCode,
+      answerIndex: similarityModal.answerIndex,
+    });
   };
 
   const handleNextRound = () => {
@@ -98,19 +144,21 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
             const isRevealed = revealedIndices.has(index);
             const noResponse = isNoResponse(result.answer);
 
+            const showSimilarityPopover = similarityModal?.answerIndex === index;
+
             return (
-              <div
-                key={result.playerId}
-                className={`
-                  rounded-lg p-2 md:p-4 transform transition-all duration-500 border-2 md:border-[3px]
-                  ${isRevealed
-                    ? result.correct
-                      ? 'bg-[#30c94d] border-black shadow-[0_2px_10px_rgba(0,0,0,0.3)]'
-                      : 'bg-[#ff6b6b] border-black shadow-[0_2px_10px_rgba(0,0,0,0.3)]'
-                    : 'bg-white border-gray-300 shadow-[0_2px_10px_rgba(0,0,0,0.1)]'
-                  }
-                `}
-              >
+              <div key={result.playerId}>
+                <div
+                  className={`
+                    rounded-lg p-2 md:p-4 transform transition-all duration-500 border-2 md:border-[3px]
+                    ${isRevealed
+                      ? (result.correct || correctedIndices.has(index))
+                        ? 'bg-[#30c94d] border-black shadow-[0_2px_10px_rgba(0,0,0,0.3)]'
+                        : 'bg-[#ff6b6b] border-black shadow-[0_2px_10px_rgba(0,0,0,0.3)]'
+                      : 'bg-white border-gray-300 shadow-[0_2px_10px_rgba(0,0,0,0.1)]'
+                    }
+                  `}
+                >
                 <div className="grid grid-cols-[1fr_3.5rem_0.5rem_3.5rem] md:grid-cols-[1fr_5rem_0.5rem_5rem] gap-1 md:gap-2 items-center">
                   {/* Réponse */}
                   <p
@@ -194,6 +242,17 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
                   </div>
                 </div>
               </div>
+
+                {/* Popover de similarité sous la carte */}
+                {showSimilarityPopover && (
+                  <SimilarityPopover
+                    guessedPlayerName={similarityModal.guessedPlayerName}
+                    isLeader={isLeader}
+                    onConfirm={handleConfirmSimilarity}
+                    onDismiss={handleDismissSimilarity}
+                  />
+                )}
+              </div>
             );
           })}
         </div>
@@ -226,6 +285,7 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
           )}
         </div>
       )}
+
     </div>
   );
 };

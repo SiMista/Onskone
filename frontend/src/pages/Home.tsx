@@ -118,7 +118,11 @@ const Home = () => {
           {/* Bloc "Joue maintenant" */}
           <div className="md:col-span-4">
             <Frame>
-              <h3 className="text-lg md:text-xl font-bold">JOUE MAINTENANT !</h3>
+              {lobbyCode && lobbyExists ? (
+                <h3 className="text-lg md:text-xl">Vous êtes invité à rejoindre le salon de <b>{hostName || 'un ami'}</b></h3>
+              ) : (
+                <h3 className="text-lg md:text-xl font-bold">JOUE MAINTENANT !</h3>
+              )}
               <AvatarSelector
                 selectedAvatarId={avatarId}
                 onSelect={setAvatarId}
@@ -147,9 +151,6 @@ const Home = () => {
                 </div>
               ) : (
                 <div>
-                  <small className="block mb-2 text-sm">
-                    Vous êtes invité à rejoindre le salon de <b>{hostName || 'un ami'}</b>
-                  </small>
                   <Button text="Rejoindre" variant="warning" size="md" onClick={joinLobby} />
                 </div>
               )}

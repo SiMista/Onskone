@@ -11,6 +11,7 @@ import { GAME_CONSTANTS, RoundPhase } from '@onskone/shared';
 import { validatePlayerName, validateAnswer, validateLobbyCode, validatePlayerId, validateAvatarId, sanitizeInput } from '../utils/validation.js';
 import { rateLimiters } from '../utils/rateLimiter.js';
 import { shuffleArray } from '../utils/helpers.js';
+import { areAnswersSimilar } from '../utils/similarity.js';
 import logger from '../utils/logger.js';
 
 export class SocketHandler {
@@ -75,7 +76,7 @@ export class SocketHandler {
     /**
      * Build reveal results from the current round's answers and guesses
      */
-    private buildRevealResults(lobby: ReturnType<typeof LobbyManager.getLobby>, round: { answers: Record<string, string>; guesses: Record<string, string> } | null): Array<{
+    private buildRevealResults(lobby: ReturnType<typeof LobbyManager.getLobby>, round: { answers: Record<string, string>; guesses: Record<string, string>; similarityCorrections?: number[] } | null): Array<{
         playerId: string;
         playerName: string;
         playerAvatarId: number;
@@ -87,7 +88,9 @@ export class SocketHandler {
     }> {
         if (!lobby || !round) return [];
 
-        return Object.entries(round.answers).map(([playerId, answer]) => {
+        const corrections = round.similarityCorrections || [];
+
+        return Object.entries(round.answers).map(([playerId, answer], index) => {
             const guessedPlayerId = round.guesses[playerId];
             const player = lobby.getPlayer(playerId);
             const guessedPlayer = guessedPlayerId ? lobby.getPlayer(guessedPlayerId) : null;
@@ -100,7 +103,7 @@ export class SocketHandler {
                 guessedPlayerId: guessedPlayerId || '',
                 guessedPlayerName: guessedPlayer?.name || 'Aucun',
                 guessedPlayerAvatarId: guessedPlayer?.avatarId ?? 0,
-                correct: guessedPlayerId === playerId
+                correct: guessedPlayerId === playerId || corrections.includes(index)
             };
         });
     }
@@ -1457,9 +1460,103 @@ export class SocketHandler {
                         revealedIndex: data.answerIndex,
                         revealedIndices: currentRound.revealedIndices
                     });
+
+                    // Détecter la similarité si la réponse est incorrecte
+                    const results = this.buildRevealResults(lobby, currentRound);
+                    const result = results[data.answerIndex];
+                    if (result && !result.correct) {
+                        // Trouver la réponse que le joueur deviné a réellement écrite
+                        const guessedPlayerAnswer = results.find(r => r.playerId === result.guessedPlayerId)?.answer;
+                        if (guessedPlayerAnswer && !guessedPlayerAnswer.startsWith('__NO_RESPONSE__') && !result.answer.startsWith('__NO_RESPONSE__')) {
+                            if (areAnswersSimilar(result.answer, guessedPlayerAnswer)) {
+                                this.io.to(data.lobbyCode).emit('similarityDetected', {
+                                    answerIndex: data.answerIndex,
+                                    guessedPlayerName: result.guessedPlayerName
+                                });
+                            }
+                        }
+                    }
                 } catch (error) {
                     logger.error('Error revealing answer', { error: (error as Error).message });
                     socket.emit('error', {message: (error as Error).message});
+                }
+            });
+
+            // Confirm Similarity (Le pilier confirme que deux réponses similaires sont identiques)
+            socket.on('confirmSimilarity', (data: { lobbyCode: string; answerIndex: number }) => {
+                try {
+                    if (!rateLimiters.gameAction.isAllowed(socket.id)) {
+                        socket.emit('error', { message: 'Trop de requêtes. Veuillez patienter.' });
+                        return;
+                    }
+
+                    const lobby = LobbyManager.getLobby(data.lobbyCode);
+                    const game = lobby?.game;
+                    if (!this.requireLeader(socket, game, 'confirmer la similarité')) return;
+                    const currentRound = game!.currentRound!;
+
+                    // Vérifier que c'est la phase REVEAL
+                    if (currentRound.phase !== RoundPhase.REVEAL) {
+                        socket.emit('error', { message: 'Action non autorisée en dehors de la phase de révélation.' });
+                        return;
+                    }
+
+                    // Vérifier que l'index a été révélé
+                    if (!currentRound.revealedIndices?.includes(data.answerIndex)) {
+                        socket.emit('error', { message: 'Cette réponse n\'a pas encore été révélée.' });
+                        return;
+                    }
+
+                    // Vérifier que l'index n'a pas déjà été corrigé
+                    if (currentRound.similarityCorrections?.includes(data.answerIndex)) {
+                        return; // Déjà corrigé, ignorer
+                    }
+
+                    // Vérifier que la réponse était incorrecte
+                    const answerEntries = Object.entries(currentRound.answers);
+                    if (data.answerIndex >= answerEntries.length) return;
+                    const [playerId] = answerEntries[data.answerIndex];
+                    const guessedPlayerId = currentRound.guesses[playerId];
+                    if (guessedPlayerId === playerId) return; // Déjà correcte
+
+                    // Ajouter la correction et le point bonus
+                    if (!currentRound.similarityCorrections) currentRound.similarityCorrections = [];
+                    currentRound.similarityCorrections.push(data.answerIndex);
+                    currentRound.addBonusScore(currentRound.leader.id, 1);
+
+                    // Broadcaster la confirmation
+                    this.io.to(data.lobbyCode).emit('similarityConfirmed', {
+                        answerIndex: data.answerIndex,
+                        correctedScore: currentRound.scores[currentRound.leader.id] || 0,
+                        leaderboard: game!.getLeaderboard()
+                    });
+
+                    logger.info('Similarité confirmée', { lobbyCode: data.lobbyCode, answerIndex: data.answerIndex });
+                } catch (error) {
+                    logger.error('Error confirming similarity', { error: (error as Error).message });
+                    socket.emit('error', { message: (error as Error).message });
+                }
+            });
+
+            // Dismiss Similarity (Le pilier rejette la similarité)
+            socket.on('dismissSimilarity', (data: { lobbyCode: string; answerIndex: number }) => {
+                try {
+                    if (!rateLimiters.gameAction.isAllowed(socket.id)) {
+                        socket.emit('error', { message: 'Trop de requêtes. Veuillez patienter.' });
+                        return;
+                    }
+
+                    const lobby = LobbyManager.getLobby(data.lobbyCode);
+                    const game = lobby?.game;
+                    if (!this.requireLeader(socket, game, 'rejeter la similarité')) return;
+
+                    // Broadcaster le rejet pour fermer le modal chez tout le monde
+                    this.io.to(data.lobbyCode).emit('similarityDismissed', {
+                        answerIndex: data.answerIndex
+                    });
+                } catch (error) {
+                    logger.error('Error dismissing similarity', { error: (error as Error).message });
+                    socket.emit('error', { message: (error as Error).message });
                 }
             });
 
