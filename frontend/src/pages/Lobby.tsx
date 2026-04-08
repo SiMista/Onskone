@@ -139,26 +139,26 @@ const Lobby = () => {
 
     const leaveLobby = useCallback(() => {
         if (currentPlayer && lobbyCode) {
-            socket.emit('leaveLobby', { lobbyCode: lobbyCode!, currentPlayerId: currentPlayer.id });
+            socket.emit('leaveLobby', { lobbyCode, currentPlayerId: currentPlayer.id });
         }
         navigate(`/?lobbyCode=${lobbyCode}`);
     }, [currentPlayer, lobbyCode, navigate]);
 
     const kickPlayer = useCallback((playerId: string) => {
         if (lobbyCode) {
-            socket.emit('kickPlayer', { lobbyCode: lobbyCode!, playerId });
+            socket.emit('kickPlayer', { lobbyCode, playerId });
         }
     }, [lobbyCode]);
 
     const promotePlayer = useCallback((playerId: string) => {
         if (lobbyCode) {
-            socket.emit('promotePlayer', { lobbyCode: lobbyCode!, playerId });
+            socket.emit('promotePlayer', { lobbyCode, playerId });
         }
     }, [lobbyCode]);
 
     const doStartGame = useCallback(() => {
         if (lobbyCode) {
-            socket.emit('startGame', { lobbyCode: lobbyCode! });
+            socket.emit('startGame', { lobbyCode });
         }
     }, [lobbyCode]);
 
@@ -175,7 +175,7 @@ const Lobby = () => {
     useEffect(() => {
         const joinLobbyFn = () => {
             if (lobbyCode && playerName) {
-                socket.emit('joinLobby', { lobbyCode: lobbyCode!, playerName, avatarId });
+                socket.emit('joinLobby', { lobbyCode, playerName, avatarId });
             }
         };
 
@@ -283,7 +283,7 @@ const Lobby = () => {
                                 <span className="flex items-center mr-1.5">
                                     <BsFillCaretLeftFill size={15} />
                                 </span>
-                                <span className="text-sm md:text-base">Quitter</span>
+                                <span className="text-sm md:text-base">Retour</span>
                             </div>
 
                             {/* Compteur de joueurs */}

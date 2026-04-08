@@ -1,4 +1,4 @@
-import type { IPlayer, GameCard, IRound as IRoundData } from '@onskone/shared';
+import type { IRound as IRoundData } from '@onskone/shared';
 import { RoundPhase } from '@onskone/shared';
 
 // Interface pour la classe Round (avec méthodes métier)
@@ -15,4 +15,3 @@ export interface IRound extends IRoundData {
 
 // Re-export pour compatibilité
 export { RoundPhase };
-export type { IPlayer, GameCard };

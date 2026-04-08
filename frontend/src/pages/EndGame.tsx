@@ -74,7 +74,7 @@ const EndGame: React.FC = () => {
       socket.emit('leaveLobby', { lobbyCode, currentPlayerId: currentPlayer.id });
     }
     localStorage.removeItem('currentPlayer');
-    navigate('/');
+    navigate(`/?lobbyCode=${lobbyCode}`);
   };
 
   const getPodiumPosition = (index: number) => {
