@@ -8,6 +8,7 @@ import InputText from '../components/InputText';
 import Footer from '../components/Footer';
 import AvatarSelector from '../components/AvatarSelector';
 import InfoModal from '../components/InfoModal';
+import { BsFillCaretLeftFill } from "react-icons/bs";
 import { useSocketEvent, useQueryParams } from '../hooks';
 import { GAME_CONFIG, AVATARS } from '../constants/game';
 
@@ -118,6 +119,14 @@ const Home = () => {
           {/* Bloc "Joue maintenant" */}
           <div className="md:col-span-4">
             <Frame>
+              {lobbyCode && (
+                <div className="flex items-center cursor-pointer self-start" onClick={() => navigate('/')}>
+                  <span className="flex items-center mr-1.5">
+                    <BsFillCaretLeftFill size={15} />
+                  </span>
+                  <span className="text-sm md:text-base">Quitter</span>
+                </div>
+              )}
               {lobbyCode && lobbyExists ? (
                 <h3 className="text-lg md:text-xl">Vous êtes invité à rejoindre le salon de <b>{hostName || 'un ami'}</b></h3>
               ) : (
