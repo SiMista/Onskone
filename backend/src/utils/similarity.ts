@@ -47,7 +47,7 @@ export function levenshteinDistance(a: string, b: string): number {
   return prev[b.length];
 }
 
-export function areAnswersSimilar(a: string, b: string, threshold = 0.75): boolean {
+export function areAnswersSimilar(a: string, b: string, threshold = 0.65): boolean {
   const normA = normalizeAnswer(a);
   const normB = normalizeAnswer(b);
 
