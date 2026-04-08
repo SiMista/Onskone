@@ -141,7 +141,7 @@ const Lobby = () => {
         if (currentPlayer && lobbyCode) {
             socket.emit('leaveLobby', { lobbyCode: lobbyCode!, currentPlayerId: currentPlayer.id });
         }
-        navigate('/');
+        navigate(`/?lobbyCode=${lobbyCode}`);
     }, [currentPlayer, lobbyCode, navigate]);
 
     const kickPlayer = useCallback((playerId: string) => {

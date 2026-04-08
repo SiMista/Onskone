@@ -1,29 +1,5 @@
 /**
- * Utilitaires pour la gestion des réponses automatiques
- */
-
-export const NO_RESPONSE_PREFIX = '__NO_RESPONSE__';
-
-/**
- * Vérifie si une réponse est une "non-réponse" automatique
- * (générée quand le timer expire sans que le joueur ait répondu)
- */
-export const isNoResponse = (text: string): boolean => {
-  return text.startsWith(NO_RESPONSE_PREFIX);
-};
-
-/**
- * Retourne le texte à afficher (sans le préfixe de non-réponse)
- */
-export const getDisplayText = (text: string): string => {
-  if (isNoResponse(text)) {
-    return text.substring(NO_RESPONSE_PREFIX.length);
-  }
-  return text;
-};
-
-/**
- * Détection de similarité entre réponses
+ * Fonctions de détection de similarité entre réponses
  */
 
 const FRENCH_STOP_WORDS = new Set([
@@ -39,8 +15,8 @@ export function normalizeAnswer(text: string): string {
   return text
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/[\u0300-\u036f]/g, '') // retirer accents
+    .replace(/[^a-z0-9\s]/g, ' ')   // ponctuation → espace
     .split(/\s+/)
     .filter(word => word.length > 0 && !FRENCH_STOP_WORDS.has(word))
     .join(' ')
@@ -51,6 +27,7 @@ export function levenshteinDistance(a: string, b: string): number {
   if (a.length === 0) return b.length;
   if (b.length === 0) return a.length;
 
+  // Optimisation single-row
   let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
   let curr = new Array(b.length + 1);
 
@@ -59,9 +36,9 @@ export function levenshteinDistance(a: string, b: string): number {
     for (let j = 1; j <= b.length; j++) {
       const cost = a[i - 1] === b[j - 1] ? 0 : 1;
       curr[j] = Math.min(
-        prev[j] + 1,
-        curr[j - 1] + 1,
-        prev[j - 1] + cost
+        prev[j] + 1,      // suppression
+        curr[j - 1] + 1,  // insertion
+        prev[j - 1] + cost // substitution
       );
     }
     [prev, curr] = [curr, prev];

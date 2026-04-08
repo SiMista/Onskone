@@ -1,29 +1,12 @@
 import { randomInt } from 'crypto';
 import {Game} from "../models/Game.js";
 import type { ILobby, GameCard } from '@onskone/shared';
-import * as fs from 'fs/promises';
 import * as fsSync from 'fs';
 import * as path from 'path';
 import logger from '../utils/logger';
 
 let questionsPool: GameCard[] = [];
 let isLoaded = false;
-
-/**
- * Load game cards asynchronously
- */
-export const loadGameCards = async (questionsFilePath: string): Promise<void> => {
-    try {
-        const questions = await fs.readFile(questionsFilePath, 'utf-8');
-        questionsPool = JSON.parse(questions) as GameCard[];
-        isLoaded = true;
-        logger.info('Game cards loaded (async)', { count: questionsPool.length });
-    } catch (error) {
-        logger.error('Error loading game cards (async)', { error: String(error) });
-        // Fallback to sync load if async fails
-        loadGameCardsSync(questionsFilePath);
-    }
-};
 
 /**
  * Load game cards synchronously (fallback/startup)
