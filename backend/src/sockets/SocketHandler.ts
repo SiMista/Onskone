@@ -1678,15 +1678,21 @@ export class SocketHandler {
 
                     const currentPhase = currentRound.phase;
 
+                    // Protection : vérifier que le timer qui expire correspond bien à la phase actuelle
+                    // Ex: si le timer ANSWERING expire mais que la phase a déjà avancé à GUESSING
+                    // (car le dernier joueur a soumis sa réponse juste avant), on ignore
+                    if (currentRound.timerPhase && currentRound.timerPhase !== currentPhase) {
+                        logger.debug(`Timer ignoré: démarré pour ${currentRound.timerPhase} mais phase actuelle est ${currentPhase}`);
+                        return;
+                    }
+
                     // Protection contre les doubles appels de timer pour la même phase
-                    // Note: Cette vérification est thread-safe car Node.js est single-threaded
                     if (currentRound.timerProcessedForPhase === currentPhase) {
                         logger.debug(`Timer déjà traité pour phase ${currentPhase}, ignoré`);
                         return;
                     }
 
                     // Marquer immédiatement comme traité pour bloquer tout appel concurrent
-                    // (même si Node.js est single-threaded, c'est une bonne pratique défensive)
                     currentRound.timerProcessedForPhase = currentPhase;
 
                     logger.info(`Timer expiré`, { lobbyCode: data.lobbyCode, phase: currentPhase });

@@ -63,8 +63,8 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
   }, []);
 
   const handleReveal = (index: number) => {
-    // Ne peut révéler que le prochain dans l'ordre (de haut en bas)
-    if (isLeader && index === nextRevealIndex) {
+    // Ne peut révéler que le prochain dans l'ordre, et pas pendant un popover de similarité
+    if (isLeader && index === nextRevealIndex && !similarityModal) {
       socket.emit('revealAnswer', { lobbyCode, answerIndex: index });
     }
   };
@@ -205,12 +205,17 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
                       </>
                     ) : isLeader ? (
                       index === nextRevealIndex ? (
-                        // Prochain à révéler - jaune, cliquable
+                        // Prochain à révéler - jaune si disponible, grisé si modal similarité ouvert
                         <>
                           <button
                             onClick={() => handleReveal(index)}
-                            className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-yellow-400 border-2 border-black flex items-center justify-center text-black font-bold text-xs md:text-sm shadow-md hover:bg-yellow-300 hover:scale-110 transition-all cursor-pointer animate-pulse"
-                            title="Révéler cette réponse"
+                            disabled={!!similarityModal}
+                            className={`w-8 h-8 md:w-12 md:h-12 rounded-full border-2 flex items-center justify-center font-bold text-xs md:text-sm shadow-md transition-all ${
+                              similarityModal
+                                ? 'bg-gray-300 border-gray-400 text-gray-500 opacity-50 cursor-not-allowed'
+                                : 'bg-yellow-400 border-black text-black hover:bg-yellow-300 hover:scale-110 cursor-pointer animate-pulse'
+                            }`}
+                            title={similarityModal ? 'Répondez d\'abord à la question de similarité' : 'Révéler cette réponse'}
                           >
                             ?
                           </button>
