@@ -21,10 +21,13 @@ export enum RoundPhase {
  * Carte de jeu contenant une catégorie et des questions
  */
 export interface GameCard {
-  /** Catégorie de la carte (ex: "Nourriture", "Voyage") */
-  category: string;
+  /** Thème de la carte (ex: "QUOTIDIEN", "ENTRE NOUS") */
+  theme: string;
 
-  /** Liste de questions pour cette catégorie */
+  /** Sujet de la carte (ex: "Matin", "Meilleurs") */
+  subject: string;
+
+  /** Liste de questions pour ce sujet */
   questions: string[];
 }
 
