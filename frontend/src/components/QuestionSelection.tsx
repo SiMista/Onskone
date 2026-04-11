@@ -168,7 +168,8 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
             {/* Carte avec thème et questions */}
             <div className="w-full max-w-3xl bg-[#f9f4ee] backdrop-blur-sm border-4 md:border-8 border-primary/30 border-red-400 rounded-xl md:rounded-2xl p-3 md:p-6 shadow-lg">
 
-              <p className="text-lg md:text-2xl font-semibold mb-2 md:mb-4 text-center pb-2 md:pb-4">Thème : {currentCard.category}</p>
+              <p className="text-lg md:text-2xl font-semibold mb-1 md:mb-2 text-center">{currentCard.theme}</p>
+              <p className="text-sm md:text-lg text-gray-600 mb-2 md:mb-4 text-center pb-2 md:pb-4">{currentCard.subject}</p>
               <div className="flex flex-col gap-2 md:gap-3">
                 {currentCard.questions.map((question, questionIndex) => (
                   <div

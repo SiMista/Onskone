@@ -41,7 +41,7 @@ export const createGame = (lobby: ILobby): Game => {
  * (basé sur la catégorie et les questions)
  */
 const areCardsEqual = (card1: GameCard, card2: GameCard): boolean => {
-    if (card1.category !== card2.category) return false;
+    if (card1.theme !== card2.theme || card1.subject !== card2.subject) return false;
     if (card1.questions.length !== card2.questions.length) return false;
     return card1.questions.every((q, i) => q === card2.questions[i]);
 };
