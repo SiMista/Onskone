@@ -43,9 +43,12 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
   }, []);
 
   // Reset le state quand la question change (nouveau round)
+  // Ne pas écraser answer si le joueur est en train de taper (reconnexion sans submit)
   useEffect(() => {
-    setAnswer(initialMyAnswer || '');
-    setSubmitted(!!initialMyAnswer);
+    if (initialMyAnswer) {
+      setAnswer(initialMyAnswer);
+      setSubmitted(true);
+    }
     setAnsweredPlayerIds(new Set(initialAnsweredPlayerIds || []));
     timerStartedRef.current = false; // Reset le flag pour le nouveau round
   }, [question, initialMyAnswer, initialAnsweredPlayerIds]);
