@@ -35,7 +35,7 @@ const Lobby = () => {
     const [showGameAlreadyStarted, setShowGameAlreadyStarted] = useState(false);
     const [decksCatalog, setDecksCatalog] = useState<DecksCatalog>({});
     const [selectedDecks, setSelectedDecks] = useState<SelectedDecks>({});
-    const copiedMessageTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const copiedMessageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [playerName] = useState<string>(() => {
         const urlPlayerName = queryParams.get('playerName');
         if (urlPlayerName) {
@@ -291,41 +291,62 @@ const Lobby = () => {
                 </div>
 
                 {/* Grille responsive */}
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-8 gap-4">
                     {/* Spacer gauche - desktop only */}
-                    <div className="hidden md:block md:col-span-3" />
+                    <div className="hidden md:block md:col-span-1" />
 
                     {/* Bloc principal */}
                     <div className="md:col-span-6">
                         <Frame>
-                            {/* Header : Retour à gauche + compteur de joueurs à droite */}
-                            <div className="flex items-center justify-between w-full gap-2">
+                            {/* Header : Retour à gauche */}
+                            <div className="flex items-center w-full gap-2">
                                 <div className="flex items-center cursor-pointer" onClick={leaveLobby}>
                                     <span className="flex items-center mr-1.5">
                                         <BsFillCaretLeftFill size={15} />
                                     </span>
                                     <span className="text-sm md:text-base">Retour</span>
                                 </div>
-                                <h3 className="m-0 font-bold text-base md:text-lg">
-                                    Joueurs {activePlayers.length}/{GAME_CONFIG.MAX_PLAYERS}
-                                </h3>
                             </div>
 
                             {/* Panel de sélection des decks */}
-                            <div className="w-full flex flex-col gap-1">
-                                <div className="max-h-[35vh] md:max-h-[40vh] overflow-y-auto px-1">
-                                    <DeckSelector
-                                        catalog={decksCatalog}
-                                        selected={selectedDecks}
-                                        readOnly={!currentPlayer?.isHost}
-                                        hostName={hostName}
-                                        onChange={handleSelectedDecksChange}
-                                    />
-                                </div>
+                            <div className="relative w-full flex flex-col gap-1 px-1">
+                                <DeckSelector
+                                    catalog={decksCatalog}
+                                    selected={selectedDecks}
+                                    readOnly={!currentPlayer?.isHost}
+                                    hostName={hostName}
+                                    onChange={handleSelectedDecksChange}
+                                />
                             </div>
 
-                            {/* Liste des joueurs */}
-                            <ul className="list-none w-full m-0 p-0 max-h-[25vh] md:max-h-[30vh] overflow-y-auto">
+                            {/* Titre compteur de joueurs */}
+                            <span className="text-xs text-gray-500 w-full text-center">
+                                Joueurs {activePlayers.length}/{GAME_CONFIG.MAX_PLAYERS}
+                            </span>
+
+                            {/* Liste des joueurs - mobile: grille carrés 3/ligne */}
+                            <ul className="md:hidden list-none w-full m-0 p-0 grid grid-cols-3 gap-2 max-h-[40vh] overflow-y-auto">
+                                {players.map((player, index) => (
+                                    <li key={player.id} className="min-w-0">
+                                        <PlayerCard
+                                            id={player.id}
+                                            name={player.name}
+                                            avatarId={player.avatarId}
+                                            isHost={player.isHost}
+                                            isCurrentPlayer={currentPlayer?.id === player.id}
+                                            currentPlayerIsHost={!!currentPlayer?.isHost}
+                                            isActive={player.isActive}
+                                            isFirstPlayer={index < 3}
+                                            variant="square"
+                                            onKick={kickPlayer}
+                                            onPromote={promotePlayer}
+                                        />
+                                    </li>
+                                ))}
+                            </ul>
+
+                            {/* Liste des joueurs - desktop: rangées */}
+                            <ul className="hidden md:block list-none w-full m-0 p-0 max-h-[45vh] overflow-y-auto">
                                 {players.map((player, index) => (
                                     <li key={player.id}>
                                         <PlayerCard
@@ -337,6 +358,7 @@ const Lobby = () => {
                                             currentPlayerIsHost={!!currentPlayer?.isHost}
                                             isActive={player.isActive}
                                             isFirstPlayer={index === 0}
+                                            variant="row"
                                             onKick={kickPlayer}
                                             onPromote={promotePlayer}
                                         />
@@ -345,12 +367,12 @@ const Lobby = () => {
                             </ul>
 
                             {/* Actions - responsive layout */}
-                            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-center sm:items-start justify-center w-full">
-                                {/* Bouton lancer le jeu */}
+                            <div className="flex flex-row gap-4 sm:gap-6 items-start justify-center w-full">
+                                {/* Bouton Démarrer */}
                                 {currentPlayer?.isHost ? (
                                     <div className="flex flex-col items-center gap-1">
                                         <Button
-                                            text="Lancer le jeu"
+                                            text="Démarrer"
                                             variant="success"
                                             size="md"
                                             rotateEffect
@@ -392,7 +414,7 @@ const Lobby = () => {
                     </div>
 
                     {/* Spacer droit - desktop only */}
-                    <div className="hidden md:block md:col-span-3" />
+                    <div className="hidden md:block md:col-span-1" />
                 </div>
             </div>
 

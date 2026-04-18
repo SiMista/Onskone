@@ -35,8 +35,8 @@ const GamePage: React.FC = () => {
     revealResults?: RevealResult[];
     revealedIndices?: number[];
   } | null>(null);
-  const errorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const notificationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const notificationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Ref pour tracker si on a déjà un listener once('connect') en attente
   const pendingConnectListenerRef = useRef<boolean>(false);
 

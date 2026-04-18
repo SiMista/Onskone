@@ -16,7 +16,7 @@ export function useTimer(initialDuration: number, options: UseTimerOptions = {})
 
   const [timeLeft, setTimeLeft] = useState(initialDuration);
   const [isRunning, setIsRunning] = useState(autoStart);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const onExpireRef = useRef(onExpire);
   const hasExpiredRef = useRef(false); // Protection contre les doubles appels
 
