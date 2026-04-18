@@ -100,6 +100,7 @@ export interface ServerToClientEvents {
     question: string;
     phase: RoundPhase;
     auto?: boolean; // Si la question a été auto-sélectionnée (timer expiré)
+    card?: GameCard; // Carte contenant la question sélectionnée (catégorie, thème, sujet)
   }) => void;
 
   /** Un joueur a soumis sa réponse */

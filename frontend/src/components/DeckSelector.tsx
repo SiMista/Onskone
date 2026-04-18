@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { BsChevronDown } from 'react-icons/bs';
 import { Icon } from '@iconify/react';
 import type { DecksCatalog, SelectedDecks } from '@onskone/shared';
@@ -55,9 +55,30 @@ const categoryIcons: Record<string, string> = {
 };
 const DEFAULT_DECK_ICON = 'fluent-emoji-flat:flower-playing-cards';
 
+const hexToSoftBg = (hex: string): string => {
+    return `${hex}1f`;
+};
+
 const DeckSelector: React.FC<Props> = ({ catalog, selected, readOnly, hostName, onChange }) => {
     const [openCategory, setOpenCategory] = useState<string | null>(null);
+    const [displayCategory, setDisplayCategory] = useState<string | null>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
     const categories = useMemo(() => Object.keys(catalog), [catalog]);
+
+    useEffect(() => {
+        if (openCategory) setDisplayCategory(openCategory);
+    }, [openCategory]);
+
+    useEffect(() => {
+        if (!openCategory) return;
+        const handleClickOutside = (event: MouseEvent) => {
+            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+                setOpenCategory(null);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [openCategory]);
 
     const totalSelected = useMemo(
         () => Object.values(selected).reduce((acc, arr) => acc + arr.length, 0),
@@ -72,7 +93,7 @@ const DeckSelector: React.FC<Props> = ({ catalog, selected, readOnly, hostName, 
     if (categories.length === 0) {
         return (
             <div className="text-center text-sm text-gray-500 italic py-2">
-                Chargement des paquets…
+                Chargement des decks de questions…
             </div>
         );
     }
@@ -89,7 +110,7 @@ const DeckSelector: React.FC<Props> = ({ catalog, selected, readOnly, hostName, 
     };
 
     return (
-        <div className="w-full flex flex-col gap-2">
+        <div ref={containerRef} className="w-full flex flex-col gap-2">
             {/* Barre globale */}
             {readOnly ? (
                 <div className="text-xs text-gray-600 italic w-full">
@@ -135,8 +156,8 @@ const DeckSelector: React.FC<Props> = ({ catalog, selected, readOnly, hostName, 
                                     size={12}
                                     className={`transition-transform duration-300 flex-shrink-0 ${isOpen ? 'rotate-0' : '-rotate-90'}`}
                                 />
-                                <span className="font-bold text-xs flex-1 truncate text-black">{cat}</span>
-                                <span className="text-[10px] font-bold text-black/70 whitespace-nowrap flex-shrink-0 bg-white/60 rounded-full px-1.5 py-0.5">
+                                <span className="font-display font-bold text-sm tracking-tight flex-1 truncate text-black">{cat}</span>
+                                <span className="font-display text-[10px] font-bold text-black/70 whitespace-nowrap flex-shrink-0 bg-white/70 rounded-full px-1.5 py-0.5">
                                     {selectedInCat}/{themes.length}
                                 </span>
                                 {!readOnly && (
@@ -154,19 +175,74 @@ const DeckSelector: React.FC<Props> = ({ catalog, selected, readOnly, hostName, 
                                     </label>
                                 )}
                             </div>
-                            {/* Panel mobile uniquement - inline sous la catégorie */}
-                            {isOpen && (
-                                <div className="md:hidden animate-menu-open bg-white border-t-2 border-black max-h-[40vh] overflow-y-auto">
+                            {/* Panel mobile uniquement - inline sous la catégorie, animation verticale */}
+                            <div
+                                className={`md:hidden grid transition-all duration-300 ease-out ${isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}
+                            >
+                                <div className="overflow-hidden">
+                                    <div
+                                        className="border-t-2 border-black max-h-[40vh] overflow-y-auto"
+                                        style={{ backgroundColor: hexToSoftBg(color) }}
+                                    >
+                                        {description && (
+                                            <div className="px-2 py-1.5 text-[11px] italic text-gray-600 border-b border-black/20 flex items-center gap-1.5">
+                                                <Icon icon={categoryIcons[cat] ?? DEFAULT_DECK_ICON} width={16} height={16} aria-hidden />
+                                                {description}
+                                            </div>
+                                        )}
+                                        <div className="px-2 py-2 flex flex-wrap gap-1.5">
+                                            {themes.map(theme => {
+                                                const active = isThemeSelected(selected, cat, theme);
+                                                const base = 'font-display text-xs px-2.5 py-1 rounded-full border-2 font-bold tracking-tight transition-colors';
+                                                const cursor = readOnly ? 'cursor-default' : 'cursor-pointer hover:scale-105';
+                                                const inactiveStyle = 'bg-white text-gray-600 border-gray-400';
+                                                return (
+                                                    <button
+                                                        key={theme}
+                                                        type="button"
+                                                        disabled={readOnly}
+                                                        className={`${base} ${active ? 'text-black border-black' : inactiveStyle} ${cursor}`}
+                                                        style={active ? { backgroundColor: color } : undefined}
+                                                        onClick={() => !readOnly && onChange(toggleTheme(selected, cat, theme, catalog))}
+                                                    >
+                                                        {theme}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
+
+                {/* Panel desktop - partagé, inline dans la grille, pousse le contenu */}
+                {(() => {
+                    const cat = displayCategory;
+                    const themes = cat ? catalog[cat] : undefined;
+                    const color = cat ? getCategoryColor(cat) : '#ffffff';
+                    const description = cat ? (categoryDescriptions[cat] ?? '') : '';
+                    const isShown = !!openCategory;
+                    return (
+                        <div
+                            className={`hidden md:grid md:col-span-3 transition-all duration-300 ease-out ${isShown ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}
+                        >
+                            <div className="overflow-hidden">
+                                <div
+                                    className="border-2 border-black rounded-lg shadow-[2px_2px_0_0_rgba(0,0,0,0.15)] max-h-[55vh] overflow-y-auto"
+                                    style={{ backgroundColor: hexToSoftBg(color) }}
+                                >
                                     {description && (
-                                        <div className="px-2 py-1.5 text-[11px] italic text-gray-600 border-b border-black/20 flex items-center gap-1.5">
-                                            <Icon icon={categoryIcons[cat] ?? DEFAULT_DECK_ICON} width={16} height={16} aria-hidden />
+                                        <div className="px-3 py-2 text-xs italic text-gray-600 border-b-2 border-dashed border-black/20 flex items-center gap-2">
+                                            <Icon icon={categoryIcons[cat ?? ''] ?? DEFAULT_DECK_ICON} width={20} height={20} aria-hidden />
                                             {description}
                                         </div>
                                     )}
                                     <div className="px-2 py-2 flex flex-wrap gap-1.5">
-                                        {themes.map(theme => {
-                                            const active = isThemeSelected(selected, cat, theme);
-                                            const base = 'text-xs px-2.5 py-1 rounded-full border-2 font-bold transition-colors';
+                                        {themes?.map(theme => {
+                                            const active = cat ? isThemeSelected(selected, cat, theme) : false;
+                                            const base = 'font-display text-xs px-2.5 py-1 rounded-full border-2 font-bold tracking-tight transition-colors';
                                             const cursor = readOnly ? 'cursor-default' : 'cursor-pointer hover:scale-105';
                                             const inactiveStyle = 'bg-white text-gray-600 border-gray-400';
                                             return (
@@ -176,7 +252,7 @@ const DeckSelector: React.FC<Props> = ({ catalog, selected, readOnly, hostName, 
                                                     disabled={readOnly}
                                                     className={`${base} ${active ? 'text-black border-black' : inactiveStyle} ${cursor}`}
                                                     style={active ? { backgroundColor: color } : undefined}
-                                                    onClick={() => !readOnly && onChange(toggleTheme(selected, cat, theme, catalog))}
+                                                    onClick={() => !readOnly && cat && onChange(toggleTheme(selected, cat, theme, catalog))}
                                                 >
                                                     {theme}
                                                 </button>
@@ -184,45 +260,6 @@ const DeckSelector: React.FC<Props> = ({ catalog, selected, readOnly, hostName, 
                                         })}
                                     </div>
                                 </div>
-                            )}
-                        </div>
-                    );
-                })}
-
-                {/* Panel desktop uniquement - partagé, traverse toute la rangée */}
-                {openCategory && (() => {
-                    const cat = openCategory;
-                    const themes = catalog[cat];
-                    if (!themes) return null;
-                    const color = getCategoryColor(cat);
-                    const description = categoryDescriptions[cat] ?? '';
-                    return (
-                        <div className="hidden md:block animate-menu-open absolute left-0 right-0 top-full mt-1.5 z-30 border-2 border-black rounded-lg bg-white shadow-[4px_4px_0_0_rgba(0,0,0,0.2)] max-h-[50vh] overflow-y-auto md:col-span-3">
-                            {description && (
-                                <div className="px-3 py-2 text-xs italic text-gray-600 border-b-2 border-dashed border-black/20 flex items-center gap-2">
-                                    <Icon icon={categoryIcons[cat] ?? DEFAULT_DECK_ICON} width={20} height={20} aria-hidden />
-                                    {description}
-                                </div>
-                            )}
-                            <div className="px-2 py-2 flex flex-wrap gap-1.5">
-                                {themes.map(theme => {
-                                    const active = isThemeSelected(selected, cat, theme);
-                                    const base = 'text-xs px-2.5 py-1 rounded-full border-2 font-bold transition-colors';
-                                    const cursor = readOnly ? 'cursor-default' : 'cursor-pointer hover:scale-105';
-                                    const inactiveStyle = 'bg-white text-gray-600 border-gray-400';
-                                    return (
-                                        <button
-                                            key={theme}
-                                            type="button"
-                                            disabled={readOnly}
-                                            className={`${base} ${active ? 'text-black border-black' : inactiveStyle} ${cursor}`}
-                                            style={active ? { backgroundColor: color } : undefined}
-                                            onClick={() => !readOnly && onChange(toggleTheme(selected, cat, theme, catalog))}
-                                        >
-                                            {theme}
-                                        </button>
-                                    );
-                                })}
                             </div>
                         </div>
                     );

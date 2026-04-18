@@ -4,7 +4,7 @@ export const LEGAL_CONTENT = {
     sections: [
       {
         title: 'Message du créateur',
-        content: `C'est avec plaisir que je vous présente le site officiel du jeu de société Onskoné? ! Mon frère a eu l'idée de ce jeu en 2024. Après l'avoir aidé pour les designs avec GIMP et présenté le prototype du jeu à de nombreux amis ainsi qu'au festival de Cannes, nous avons eu pas mal de retours positifs. J'ai donc décidé de me lancer dans le développement de ce site web pour populariser cette idée géniale. J'espère que vous apprécierez jouer à Onskoné? N'hésitez pas à me donner votre avis sur le jeu, je le lirai avec plaisir !`
+        content: `C'est avec plaisir que l'on vous présente le site officiel du jeu de société Onskoné? ! Sylvain, mon frère, a eu l'idée de ce jeu en 2024. Après l'avoir aidé pour les designs avec GIMP et présenté le prototype du jeu à de nombreux amis ainsi qu'au festival de Cannes, nous avons eu pas mal de retours positifs. Nous avons donc décidé de nous lancer dans le développement de ce site web pour populariser cette idée géniale. Nous espérons que vous apprécierez jouer à Onskoné? N'hésitez pas à nous donner votre avis sur le jeu, nous le lirons avec plaisir !`
       },
       {
         title: 'Remerciements',

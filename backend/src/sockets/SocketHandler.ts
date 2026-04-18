@@ -259,7 +259,8 @@ export class SocketHandler {
         this.io.to(lobbyCode).emit('questionSelected', {
             question: randomQuestion,
             phase: currentRound.phase,
-            auto: true
+            auto: true,
+            card: proposedCard
         });
         logger.info(`Question auto-sélectionnée`, { lobbyCode });
     }
@@ -464,7 +465,7 @@ export class SocketHandler {
                             if (lobby.game?.currentRound?.leader.id === existingPlayerByName.id) {
                                 this.cancelLeaderDisconnectTimeout(lobby.code);
                                 lobby.game.currentRound.leader.socketId = socket.id;
-                                logger.info(`Chef reconnecté via joinLobby, timeout saut annulé`);
+                                logger.info(`Pilier reconnecté via joinLobby, timeout saut annulé`);
                             }
 
                             socket.join(lobby.code);
@@ -899,7 +900,7 @@ export class SocketHandler {
                 }
             });
 
-            // Request Questions (Chef demande des cartes de questions)
+            // Request Questions (Pilier demande des cartes de questions)
             socket.on('requestQuestions', (data) => {
                 try {
                     // Rate limiting
@@ -957,7 +958,7 @@ export class SocketHandler {
                 }
             });
 
-            // Select Question (Chef sélectionne une question)
+            // Select Question (Pilier sélectionne une question)
             socket.on('selectQuestion', (data) => {
                 try {
                     // Rate limiting
@@ -1003,7 +1004,8 @@ export class SocketHandler {
                     // Broadcast la question à tous les joueurs
                     this.io.to(data.lobbyCode).emit('questionSelected', {
                         question: data.selectedQuestion,
-                        phase: currentRound.phase
+                        phase: currentRound.phase,
+                        card: selectedCard
                     });
                     logger.debug(`Question sélectionnée`, { lobbyCode: data.lobbyCode });
                 } catch (error) {
@@ -1400,7 +1402,7 @@ export class SocketHandler {
                 }
             });
 
-            // Update Guess (Chef déplace une réponse - BROADCAST en temps réel)
+            // Update Guess (Pilier déplace une réponse - BROADCAST en temps réel)
             socket.on('updateGuess', (data) => {
                 try {
                     // Rate limiting avec multiple keys (socket.id + lobbyCode pour éviter bypass sur reconnexion)
@@ -1433,7 +1435,7 @@ export class SocketHandler {
                 }
             });
 
-            // Submit Guesses (Chef valide ses choix finaux)
+            // Submit Guesses (Pilier valide ses choix finaux)
             socket.on('submitGuesses', (data) => {
                 try {
                     // Rate limiting avec multiple keys (socket.id + lobbyCode pour éviter bypass sur reconnexion)
@@ -1503,7 +1505,7 @@ export class SocketHandler {
                 }
             });
 
-            // Reveal Answer (Chef révèle une réponse spécifique)
+            // Reveal Answer (Pilier révèle une réponse spécifique)
             socket.on('revealAnswer', (data: { lobbyCode: string; answerIndex: number }) => {
                 try {
                     // Rate limiting
@@ -1853,7 +1855,7 @@ export class SocketHandler {
                             // CAS 1: Le joueur déconnecté est le pilier actuel
                             // On attend un court délai pour permettre la reconnexion (changement d'app mobile)
                             if (currentRound.leader.id === disconnectedPlayer.id) {
-                                logger.info(`Chef ${disconnectedPlayer.name} déconnecté, délai avant saut de round`, { lobbyCode });
+                                logger.info(`Pilier ${disconnectedPlayer.name} déconnecté, délai avant saut de round`, { lobbyCode });
 
                                 // Annuler un éventuel timeout existant
                                 this.cancelLeaderDisconnectTimeout(lobbyCode);
@@ -1875,18 +1877,18 @@ export class SocketHandler {
 
                                     // Vérifier que c'est toujours le même round et le même pilier
                                     if (currentGame.currentRound.leader.id !== leaderId) {
-                                        logger.debug(`Chef a changé, timeout ignoré`);
+                                        logger.debug(`Pilier a changé, timeout ignoré`);
                                         return;
                                     }
 
                                     // Vérifier que le pilier est toujours inactif (n'a pas reconnecté)
                                     const leader = currentLobby.players.find(p => p.id === leaderId);
                                     if (leader?.isActive) {
-                                        logger.debug(`Chef ${leaderName} s'est reconnecté, timeout ignoré`);
+                                        logger.debug(`Pilier ${leaderName} s'est reconnecté, timeout ignoré`);
                                         return;
                                     }
 
-                                    logger.info(`Chef ${leaderName} toujours déconnecté, round sauté`, { lobbyCode });
+                                    logger.info(`Pilier ${leaderName} toujours déconnecté, round sauté`, { lobbyCode });
 
                                     // Notifier que le round est sauté
                                     this.io.to(lobbyCode).emit('roundSkipped', {

@@ -135,7 +135,7 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
           <div className="px-2 md:px-4 pt-0 pb-0 border-2 md:border-[3px] border-transparent">
             <div className="grid grid-cols-[1fr_3.5rem_0.5rem_3.5rem] md:grid-cols-[1fr_5rem_0.5rem_5rem] gap-1 md:gap-2 items-center">
               <p className="text-black text-[10px] md:text-xs font-bold uppercase">Réponse</p>
-              <p className="text-black text-[10px] md:text-xs font-bold uppercase text-center">Chef a dit</p>
+              <p className="text-black text-[10px] md:text-xs font-bold uppercase text-center">Pilier a dit</p>
               <p className="text-black text-[10px] md:text-xs font-bold text-center">|</p>
               <p className="text-black text-[10px] md:text-xs font-bold uppercase text-center">Écrit par</p>
             </div>
@@ -168,7 +168,7 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
                     {getDisplayText(result.answer)}
                   </p>
 
-                  {/* Chef a dit (toujours visible) */}
+                  {/* Pilier a dit (toujours visible) */}
                   <div className="flex flex-col items-center">
                     {result.guessedPlayerName && result.guessedPlayerName !== 'Personne' ? (
                       <>
