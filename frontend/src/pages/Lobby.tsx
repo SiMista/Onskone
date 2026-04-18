@@ -8,6 +8,7 @@ import Footer from '../components/Footer';
 import ConfirmModal from '../components/ConfirmModal';
 import InfoModal from '../components/InfoModal';
 import { BsFillCaretLeftFill } from "react-icons/bs";
+import { Icon } from '@iconify/react';
 import PlayerCard from '../components/PlayerCard';
 import DeckSelector from '../components/DeckSelector';
 import { IPlayer, DecksCatalog, SelectedDecks } from '@onskone/shared';
@@ -392,7 +393,7 @@ const Lobby = () => {
                                     </div>
                                 ) : (
                                     <div className="flex items-center gap-2 px-4 py-2 text-gray-500">
-                                        <span className="text-lg animate-pulse">⏳</span>
+                                        <Icon icon="fluent-emoji-flat:hourglass-not-done" className="animate-pulse" width="1.25em" height="1.25em" aria-hidden />
                                         <span className="text-sm italic ">Seul {hostName} peut lancer le jeu</span>
                                     </div>
                                 )}
@@ -443,7 +444,7 @@ const Lobby = () => {
                 title="Partie déjà lancée"
             >
                 <div className="text-center space-y-4">
-                    <p className="text-6xl">😢</p>
+                    <Icon icon="fluent-emoji-flat:crying-face" className="mx-auto" width="4rem" height="4rem" aria-hidden />
                     <p className="text-gray-700">
                         Ohhhhhh mince ! La partie a déjà été lancée et tu ne peux pas la rejoindre en cours de route...
                     </p>

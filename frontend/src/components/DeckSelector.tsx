@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { BsChevronDown } from 'react-icons/bs';
+import { Icon } from '@iconify/react';
 import type { DecksCatalog, SelectedDecks } from '@onskone/shared';
 import { getCategoryColor } from '../constants/game';
 
@@ -42,16 +43,17 @@ const setAllGlobal = (all: boolean, catalog: DecksCatalog): SelectedDecks => {
 };
 
 const categoryDescriptions: Record<string, string> = {
-    ICEBREAKERS: 'Pour briser la glace',
-    FUN: 'Amuse-toi entre amis',
-    DEEP: 'Des conversations profondes',
+    ICEBREAKERS: 'Des questions simples pour faire parler tout le monde',
+    FUN: 'Amuse toi avec tes amis sur des sujets légers et rigolos',
+    DEEP: 'Plonge dans des discussions plus profondes et personnelles',
 };
 
 const categoryIcons: Record<string, string> = {
-    ICEBREAKERS: '🧊',
-    FUN: '🎉',
-    DEEP: '🔥',
+    ICEBREAKERS: 'fluent-emoji-flat:ice',
+    FUN: 'fluent-emoji-flat:party-popper',
+    DEEP: 'fluent-emoji-flat:fire',
 };
+const DEFAULT_DECK_ICON = 'fluent-emoji-flat:flower-playing-cards';
 
 const DeckSelector: React.FC<Props> = ({ catalog, selected, readOnly, hostName, onChange }) => {
     const [openCategory, setOpenCategory] = useState<string | null>(null);
@@ -157,7 +159,7 @@ const DeckSelector: React.FC<Props> = ({ catalog, selected, readOnly, hostName, 
                                 <div className="md:hidden animate-menu-open bg-white border-t-2 border-black max-h-[40vh] overflow-y-auto">
                                     {description && (
                                         <div className="px-2 py-1.5 text-[11px] italic text-gray-600 border-b border-black/20 flex items-center gap-1.5">
-                                            <span aria-hidden>{categoryIcons[cat] ?? '🎴'}</span>
+                                            <Icon icon={categoryIcons[cat] ?? DEFAULT_DECK_ICON} width={16} height={16} aria-hidden />
                                             {description}
                                         </div>
                                     )}
@@ -198,7 +200,7 @@ const DeckSelector: React.FC<Props> = ({ catalog, selected, readOnly, hostName, 
                         <div className="hidden md:block animate-menu-open absolute left-0 right-0 top-full mt-1.5 z-30 border-2 border-black rounded-lg bg-white shadow-[4px_4px_0_0_rgba(0,0,0,0.2)] max-h-[50vh] overflow-y-auto md:col-span-3">
                             {description && (
                                 <div className="px-3 py-2 text-xs italic text-gray-600 border-b-2 border-dashed border-black/20 flex items-center gap-2">
-                                    <span className="text-lg" aria-hidden>{categoryIcons[cat] ?? '🎴'}</span>
+                                    <Icon icon={categoryIcons[cat] ?? DEFAULT_DECK_ICON} width={20} height={20} aria-hidden />
                                     {description}
                                 </div>
                             )}

@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import { LuX } from 'react-icons/lu';
 
 interface InfoModalProps {
   isOpen: boolean;
@@ -24,9 +25,10 @@ const InfoModal = ({ isOpen, onClose, title, children }: InfoModalProps) => {
           <h2 className="text-xl font-bold text-gray-800 m-0">{title}</h2>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors text-gray-600 font-bold cursor-pointer"
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors text-gray-600 cursor-pointer"
+            aria-label="Fermer"
           >
-            ✕
+            <LuX size={18} />
           </button>
         </div>
 
