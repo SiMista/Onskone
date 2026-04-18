@@ -1,10 +1,16 @@
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;700;800&display=swap');
 @import "tailwindcss";
 
 @theme {
   --font-sans: 'Nunito', sans-serif;
+  --font-display: 'Fredoka', 'Nunito', sans-serif;
   --color-gradient-start: #1f5d90;
   --color-gradient-end: #18bbed;
+}
+
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
 }
 
 html, body {
@@ -31,18 +37,39 @@ button {
 
 /* Animation pour le menu popup */
 @keyframes menu-open {
-  from {
+  0% {
     opacity: 0;
-    transform: scale(0.9) translateY(5px);
+    transform: scale(0.92) translateY(-4px);
   }
-  to {
+  60% {
+    opacity: 1;
+    transform: scale(1.015) translateY(0);
+  }
+  100% {
     opacity: 1;
     transform: scale(1) translateY(0);
   }
 }
 
 .animate-menu-open {
-  animation: menu-open 0.15s ease-out forwards;
+  animation: menu-open 0.22s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  transform-origin: top right;
+}
+
+.animate-menu-open.origin-bottom {
+  transform-origin: bottom right;
+}
+
+.menu-option {
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+
+.menu-option .menu-icon {
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.menu-option:hover .menu-icon {
+  transform: scale(1.15);
 }
 
 /* Animations pour les modals */
@@ -95,6 +122,136 @@ button {
 .animate-halo-pulse {
   animation: halo-pulse 1.5s ease-out forwards;
   -webkit-backface-visibility: hidden;
+}
+
+/* Pop-in pour arrivée des joueurs dans le lobby */
+@keyframes player-pop-in {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.8);
+  }
+  60% {
+    transform: translateY(-2px) scale(1.04);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-player-pop {
+  animation: player-pop-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* Fade/slide in pour transitions de phase */
+@keyframes phase-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-phase-enter {
+  animation: phase-enter 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+/* Stagger pour le podium EndGame */
+@keyframes podium-rise {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-podium-rise {
+  animation: podium-rise 0.7s cubic-bezier(0.34, 1.3, 0.64, 1) both;
+}
+
+/* Float subtil pour les éléments décoratifs */
+@keyframes float-gentle {
+  0%, 100% { transform: translateY(0) rotate(var(--rot, 0deg)); }
+  50% { transform: translateY(-6px) rotate(var(--rot, 0deg)); }
+}
+
+.animate-float {
+  animation: float-gentle 3.5s ease-in-out infinite;
+}
+
+/* Wiggle pour CTA */
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-2deg); }
+  75% { transform: rotate(2deg); }
+}
+
+.animate-wiggle {
+  animation: wiggle 0.4s ease-in-out;
+}
+
+/* Carousel "main de cartes" pour la sélection de question */
+.card-hand {
+  perspective: 1400px;
+  transform-style: preserve-3d;
+}
+
+.card-hand-item {
+  transition:
+    transform 0.55s cubic-bezier(0.22, 0.61, 0.36, 1),
+    opacity 0.4s ease,
+    filter 0.4s ease,
+    box-shadow 0.4s ease;
+  will-change: transform, opacity, filter;
+  transform-origin: center center;
+  backface-visibility: hidden;
+}
+
+.card-hand-item.is-active {
+  z-index: 30;
+}
+
+.card-hand-item.is-side {
+  cursor: pointer;
+  filter: saturate(0.85) brightness(0.97);
+}
+
+.card-hand-item.is-side:hover {
+  filter: saturate(1) brightness(1);
+}
+
+@keyframes card-draw-in {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 30%) rotate(-8deg) scale(0.6);
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0) rotate(0deg) scale(1);
+  }
+}
+
+.animate-card-draw {
+  animation: card-draw-in 0.55s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+
+@keyframes card-pick-pop {
+  0% { transform: translate(-50%, 0) scale(1); }
+  40% { transform: translate(-50%, -14px) scale(1.04); }
+  100% { transform: translate(-50%, -6px) scale(1.02); }
+}
+
+.animate-card-pick {
+  animation: card-pick-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
 /* Animation bounce pour le popover de similarité */

@@ -320,14 +320,14 @@ const Lobby = () => {
                             </div>
 
                             {/* Titre compteur de joueurs */}
-                            <span className="text-xs text-gray-500 w-full text-center">
+                            <span className="text-xs text-gray-500 w-full text-left">
                                 Joueurs {activePlayers.length}/{GAME_CONFIG.MAX_PLAYERS}
                             </span>
 
                             {/* Liste des joueurs - mobile: grille carrés 3/ligne */}
                             <ul className="md:hidden list-none w-full m-0 p-0 grid grid-cols-3 gap-2 max-h-[40vh] overflow-y-auto">
                                 {players.map((player, index) => (
-                                    <li key={player.id} className="min-w-0">
+                                    <li key={player.id} className="min-w-0 animate-player-pop" style={{ animationDelay: `${Math.min(index, 6) * 50}ms` }}>
                                         <PlayerCard
                                             id={player.id}
                                             name={player.name}
@@ -348,7 +348,7 @@ const Lobby = () => {
                             {/* Liste des joueurs - desktop: rangées */}
                             <ul className="hidden md:block list-none w-full m-0 p-0 max-h-[45vh] overflow-y-auto">
                                 {players.map((player, index) => (
-                                    <li key={player.id}>
+                                    <li key={player.id} className="animate-player-pop" style={{ animationDelay: `${Math.min(index, 6) * 50}ms` }}>
                                         <PlayerCard
                                             id={player.id}
                                             name={player.name}
@@ -367,7 +367,7 @@ const Lobby = () => {
                             </ul>
 
                             {/* Actions - responsive layout */}
-                            <div className="flex flex-row gap-4 sm:gap-6 items-start justify-center w-full">
+                            <div className="flex flex-row gap-4 sm:gap-6 items-start justify-center w-full mt-6 md:mt-8">
                                 {/* Bouton Démarrer */}
                                 {currentPlayer?.isHost ? (
                                     <div className="flex flex-col items-center gap-1">

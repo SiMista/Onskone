@@ -92,17 +92,27 @@ const Home = () => {
         onClose={() => setIsInfoOpen(false)}
         title="Comment jouer ?"
       >
-        <div className="space-y-4">
-          <p>
-            <span className="font-bold">1.</span> Chaque manche, un <b>pilier</b> est choisi au hasard et sélectionne une question parmi trois propositions.
-          </p>
-          <p>
-            <span className="font-bold">2.</span> Les joueurs répondent <b>anonymement</b>, et le pilier tente de deviner qui a écrit quoi.
-          </p>
-          <p>
-            <span className="font-bold">3.</span> À la fin, les prénoms sont révélés et le pilier marque des points selon ses bonnes réponses.
-          </p>
-          <p className="text-center text-lg font-bold text-primary mt-6">
+        <div className="space-y-3">
+          {[
+            { n: '1', emoji: '👑', text: (<>Un <b>pilier</b> est tiré au sort et pioche une question parmi trois propositions.</>), color: '#1AAFDA' },
+            { n: '2', emoji: '✍️', text: (<>Tout le monde répond <b>anonymement</b>, le pilier tente de deviner qui a écrit quoi.</>), color: '#FFC700' },
+            { n: '3', emoji: '🎉', text: (<>On révèle les prénoms, le pilier marque des points et on passe au suivant !</>), color: '#30c94d' },
+          ].map((step) => (
+            <div
+              key={step.n}
+              className="flex items-center gap-3 bg-[#f9f4ee] border-2 border-black rounded-xl p-3 shadow-[2px_2px_0_0_rgba(0,0,0,0.15)]"
+            >
+              <div
+                className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center font-display font-bold text-black border-2 border-black text-lg"
+                style={{ backgroundColor: step.color }}
+              >
+                {step.n}
+              </div>
+              <span className="text-2xl" aria-hidden>{step.emoji}</span>
+              <p className="text-sm m-0">{step.text}</p>
+            </div>
+          ))}
+          <p className="text-center text-lg font-display font-bold text-primary pt-2">
             Alors, on se connaît ?
           </p>
         </div>
@@ -186,21 +196,33 @@ const Home = () => {
           {/* Bloc explications - desktop only */}
           <div className="hidden md:block md:col-span-6">
             <Frame textAlign="left">
-              <div className="w-full border-b border-gray-200 pb-3 mb-2">
-                <h2 className='text-xl font-bold text-gray-800 m-0'>Comment jouer ?</h2>
+              <div className="w-full border-b-2 border-dashed border-gray-300 pb-3 mb-3 flex items-center gap-2">
+                <span className="text-2xl">🎯</span>
+                <h2 className='text-2xl font-display font-bold text-gray-800 m-0'>Comment jouer ?</h2>
               </div>
-              <div className="space-y-4">
-                <p>
-                  <span className="font-bold">1.</span> Un <b>pilier</b> est choisi au hasard et sélectionne une question parmi trois propositions.
-                </p>
-                <p>
-                  <span className="font-bold">2.</span> Les joueurs répondent <b>anonymement</b>, et le pilier tente de deviner qui a écrit quoi.
-                </p>
-                <p>
-                  <span className="font-bold">3.</span> À la fin, les prénoms sont révélés et le pilier marque des points selon ses bonnes réponses.
-                </p>
+              <div className="space-y-3 w-full">
+                {[
+                  { n: '1', emoji: '👑', text: (<>Un <b>pilier</b> est tiré au sort et pioche une question parmi trois propositions.</>), color: '#1AAFDA', rot: '-1deg' },
+                  { n: '2', emoji: '✍️', text: (<>Tout le monde répond <b>anonymement</b>, et le pilier devine qui a écrit quoi.</>), color: '#FFC700', rot: '0.8deg' },
+                  { n: '3', emoji: '🎉', text: (<>On révèle les prénoms, le pilier marque des points et on passe au suivant.</>), color: '#30c94d', rot: '-0.6deg' },
+                ].map((step) => (
+                  <div
+                    key={step.n}
+                    className="flex items-center gap-3 bg-[#f9f4ee] border-2 border-black rounded-xl p-3 shadow-[3px_3px_0_0_rgba(0,0,0,0.18)] hover:-translate-y-0.5 hover:shadow-[4px_5px_0_0_rgba(0,0,0,0.2)] transition-all"
+                    style={{ transform: `rotate(${step.rot})` }}
+                  >
+                    <div
+                      className="flex-shrink-0 w-11 h-11 rounded-full flex items-center justify-center font-display font-bold text-black border-2 border-black text-xl"
+                      style={{ backgroundColor: step.color }}
+                    >
+                      {step.n}
+                    </div>
+                    <span className="text-3xl" aria-hidden>{step.emoji}</span>
+                    <p className="text-base m-0">{step.text}</p>
+                  </div>
+                ))}
               </div>
-              <p className="text-center text-lg font-bold text-primary mt-6">
+              <p className="text-center text-xl font-display font-bold text-primary mt-4">
                 Alors, on se connaît ?
               </p>
             </Frame>
