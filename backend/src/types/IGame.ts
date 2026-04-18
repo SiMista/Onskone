@@ -4,7 +4,8 @@ import {
   ILobby,
   IPlayer,
   LeaderboardEntry,
-  IGame as IGameData
+  IGame as IGameData,
+  GameCard
 } from '@onskone/shared';
 
 // Interface pour la classe Game (avec méthodes métier)
@@ -12,6 +13,8 @@ import {
 export interface IGame extends Omit<IGameData, 'rounds' | 'currentRound'> {
   rounds: IRound[];
   currentRound: IRound | null;
+  /** Pool de cartes filtré selon les decks sélectionnés (figé au démarrage) */
+  cards: GameCard[];
   nextRound(): void;
   start(): void;
   end(): void;

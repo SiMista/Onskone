@@ -9,7 +9,8 @@ import ConfirmModal from '../components/ConfirmModal';
 import InfoModal from '../components/InfoModal';
 import { BsFillCaretLeftFill } from "react-icons/bs";
 import PlayerCard from '../components/PlayerCard';
-import { IPlayer } from '@onskone/shared';
+import DeckSelector from '../components/DeckSelector';
+import { IPlayer, DecksCatalog, SelectedDecks } from '@onskone/shared';
 import { useSocketEvent, useQueryParams, useLeavePrompt } from '../hooks';
 import { GAME_CONFIG, AVATARS } from '../constants/game';
 
@@ -32,6 +33,8 @@ const Lobby = () => {
     const [showCopiedMessage, setShowCopiedMessage] = useState(false);
     const [showFewPlayersModal, setShowFewPlayersModal] = useState(false);
     const [showGameAlreadyStarted, setShowGameAlreadyStarted] = useState(false);
+    const [decksCatalog, setDecksCatalog] = useState<DecksCatalog>({});
+    const [selectedDecks, setSelectedDecks] = useState<SelectedDecks>({});
     const copiedMessageTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const [playerName] = useState<string>(() => {
         const urlPlayerName = queryParams.get('playerName');
@@ -251,15 +254,32 @@ const Lobby = () => {
         setShowGameAlreadyStarted(true);
     }, []);
 
+    const handleLobbyDecksState = useCallback((data: { catalog: DecksCatalog; selected: SelectedDecks }) => {
+        setDecksCatalog(data.catalog);
+        setSelectedDecks(data.selected);
+    }, []);
+
+    const handleSelectedDecksChange = useCallback((next: SelectedDecks) => {
+        setSelectedDecks(next);
+        if (lobbyCode) {
+            socket.emit('updateSelectedDecks', { lobbyCode, selected: next });
+        }
+    }, [lobbyCode]);
+
     useSocketEvent('updatePlayersList', handleUpdatePlayersList, [handleUpdatePlayersList]);
     useSocketEvent('joinedLobby', handleJoinedLobby, [handleJoinedLobby]);
     useSocketEvent('kickedFromLobby', handleKickedFromLobby, [handleKickedFromLobby]);
     useSocketEvent('error', handleError, [handleError]);
     useSocketEvent('gameStarted', handleGameStarted, [handleGameStarted]);
     useSocketEvent('gameAlreadyStarted', handleGameAlreadyStarted, [handleGameAlreadyStarted]);
+    useSocketEvent('lobbyDecksState', handleLobbyDecksState, [handleLobbyDecksState]);
 
     const activePlayers = players.filter(p => p.isActive);
-    const canStartGame = activePlayers.length >= GAME_CONFIG.MIN_PLAYERS;
+    const hostName = players.find(p => p.isHost)?.name ?? 'le host';
+    const enoughPlayers = activePlayers.length >= GAME_CONFIG.MIN_PLAYERS;
+    const totalThemesSelected = Object.values(selectedDecks).reduce((acc, arr) => acc + arr.length, 0);
+    const hasThemeSelected = totalThemesSelected > 0;
+    const canStartGame = enoughPlayers && hasThemeSelected;
 
     return (
         <div className="min-h-screen flex flex-col">
@@ -278,26 +298,34 @@ const Lobby = () => {
                     {/* Bloc principal */}
                     <div className="md:col-span-6">
                         <Frame>
-                            {/* Header avec bouton quitter */}
-                            <div className="flex items-center cursor-pointer self-start" onClick={leaveLobby}>
-                                <span className="flex items-center mr-1.5">
-                                    <BsFillCaretLeftFill size={15} />
-                                </span>
-                                <span className="text-sm md:text-base">Retour</span>
-                            </div>
-
-                            {/* Compteur de joueurs */}
-                            <div className="flex flex-row sm:flex-row items-center gap-1 sm:gap-2 justify-center">
-                                <h3 className="m-0 font-bold text-center text-base md:text-lg">
+                            {/* Header : Retour à gauche + compteur de joueurs à droite */}
+                            <div className="flex items-center justify-between w-full gap-2">
+                                <div className="flex items-center cursor-pointer" onClick={leaveLobby}>
+                                    <span className="flex items-center mr-1.5">
+                                        <BsFillCaretLeftFill size={15} />
+                                    </span>
+                                    <span className="text-sm md:text-base">Retour</span>
+                                </div>
+                                <h3 className="m-0 font-bold text-base md:text-lg">
                                     Joueurs {activePlayers.length}/{GAME_CONFIG.MAX_PLAYERS}
                                 </h3>
-                                <span className="text-xs md:text-sm text-gray-500 italic">
-                                    ({GAME_CONFIG.MIN_PLAYERS} joueurs minimum)
-                                </span>
+                            </div>
+
+                            {/* Panel de sélection des decks */}
+                            <div className="w-full flex flex-col gap-1">
+                                <div className="max-h-[35vh] md:max-h-[40vh] overflow-y-auto px-1">
+                                    <DeckSelector
+                                        catalog={decksCatalog}
+                                        selected={selectedDecks}
+                                        readOnly={!currentPlayer?.isHost}
+                                        hostName={hostName}
+                                        onChange={handleSelectedDecksChange}
+                                    />
+                                </div>
                             </div>
 
                             {/* Liste des joueurs */}
-                            <ul className="list-none w-full m-0 p-0 max-h-[40vh] md:max-h-[50vh] overflow-y-auto">
+                            <ul className="list-none w-full m-0 p-0 max-h-[25vh] md:max-h-[30vh] overflow-y-auto">
                                 {players.map((player, index) => (
                                     <li key={player.id}>
                                         <PlayerCard
@@ -320,18 +348,30 @@ const Lobby = () => {
                             <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-center sm:items-start justify-center w-full">
                                 {/* Bouton lancer le jeu */}
                                 {currentPlayer?.isHost ? (
-                                    <Button
-                                        text="Lancer le jeu"
-                                        variant="success"
-                                        size="md"
-                                        rotateEffect
-                                        disabled={!canStartGame}
-                                        onClick={startGame}
-                                    />
+                                    <div className="flex flex-col items-center gap-1">
+                                        <Button
+                                            text="Lancer le jeu"
+                                            variant="success"
+                                            size="md"
+                                            rotateEffect
+                                            disabled={!canStartGame}
+                                            onClick={startGame}
+                                        />
+                                        {!enoughPlayers && (
+                                            <small className="text-xs text-gray-500 italic">
+                                                Il faut au moins {GAME_CONFIG.MIN_PLAYERS} joueurs pour lancer
+                                            </small>
+                                        )}
+                                        {enoughPlayers && !hasThemeSelected && (
+                                            <small className="text-xs text-gray-500 italic">
+                                                Il faut sélectionner au moins 1 thème
+                                            </small>
+                                        )}
+                                    </div>
                                 ) : (
                                     <div className="flex items-center gap-2 px-4 py-2 text-gray-500">
                                         <span className="text-lg animate-pulse">⏳</span>
-                                        <span className="text-sm italic ">Seul l'hôte peut lancer le jeu</span>
+                                        <span className="text-sm italic ">Seul {hostName} peut lancer le jeu</span>
                                     </div>
                                 )}
 

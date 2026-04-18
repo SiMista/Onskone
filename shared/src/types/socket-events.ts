@@ -1,6 +1,7 @@
 import { IPlayer } from './player.js';
 import { IGame, LeaderboardEntry } from './game.js';
 import { IRound, GameCard, RoundPhase } from './round.js';
+import { DecksCatalog, SelectedDecks } from './decks.js';
 
 /**
  * Résultat d'une réponse dans la phase de révélation
@@ -60,6 +61,9 @@ export interface ServerToClientEvents {
 
   /** Notification que la partie a déjà commencé (nouveau joueur refusé) */
   gameAlreadyStarted: (data: { message: string }) => void;
+
+  /** Catalogue des decks disponibles + sélection actuelle du lobby */
+  lobbyDecksState: (data: { catalog: DecksCatalog; selected: SelectedDecks }) => void;
 
   // ===== GAME EVENTS =====
 
@@ -233,6 +237,12 @@ export interface ClientToServerEvents {
   /** Récupérer les informations d'un lobby (pour les liens d'invitation) */
   getLobbyInfo: (data: {
     lobbyCode: string;
+  }) => void;
+
+  /** Mettre à jour la sélection de decks (réservé à l'hôte) */
+  updateSelectedDecks: (data: {
+    lobbyCode: string;
+    selected: SelectedDecks;
   }) => void;
 
   // ===== GAME EVENTS =====

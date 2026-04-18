@@ -177,7 +177,8 @@ const GamePage: React.FC = () => {
           // Si game n'existe pas encore, créer un lobby minimal
           const minimalLobby: IGame['lobby'] = {
             code: lobbyCode || '',
-            players: players
+            players: players,
+            selectedDecks: {}
           };
           return {
             lobby: minimalLobby,

@@ -78,6 +78,19 @@ export const GAME_CONFIG = {
   CONFETTI_COUNT: 50,
 } as const;
 
+// Couleurs associées à chaque catégorie de cartes (utilisées pour le fond du
+// header de catégorie dans le DeckSelector et pour les thèmes sélectionnés).
+// Les catégories non listées tombent sur DEFAULT_CATEGORY_COLOR.
+export const CATEGORY_COLORS: Record<string, string> = {
+  ICEBREAKERS: '#1aafda', // bleu
+  FUN: '#f6b31f',         // jaune
+  DEEP: '#ea4747',        // violet
+};
+export const DEFAULT_CATEGORY_COLOR = '#9ca3af'; // gris par défaut
+
+export const getCategoryColor = (category: string): string =>
+  CATEGORY_COLORS[category] ?? DEFAULT_CATEGORY_COLOR;
+
 // Configuration de l'URL du serveur backend
 const getServerUrl = () => {
   // Si une variable d'environnement est définie, l'utiliser

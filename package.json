@@ -17,15 +17,23 @@
     "typecheck": "pnpm run --recursive typecheck",
     "lint": "pnpm run --recursive lint"
   },
-  "keywords": ["onskone", "game", "multiplayer", "monorepo"],
+  "keywords": [
+    "onskone",
+    "game",
+    "multiplayer",
+    "monorepo"
+  ],
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "typescript": "^5.7.2",
-    "@types/node": "^22.10.1"
+    "@types/node": "^22.10.1",
+    "typescript": "^5.7.2"
   },
   "engines": {
     "node": ">=18.0.0",
     "pnpm": ">=8.0.0"
+  },
+  "dependencies": {
+    "claude": "^0.1.2"
   }
 }

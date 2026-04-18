@@ -352,6 +352,10 @@ export class SocketHandler {
                     lobby?.addPlayer(hostPlayer);
                     socket.join(lobbyCode);
                     socket.emit('lobbyCreated', {lobbyCode});
+                    socket.emit('lobbyDecksState', {
+                        catalog: GameManager.getDecksCatalog(),
+                        selected: lobby!.selectedDecks,
+                    });
                     logger.game.created(lobbyCode, sanitizedName);
                 } catch (error) {
                     logger.error('Error creating lobby', { error: (error as Error).message });
@@ -412,12 +416,16 @@ export class SocketHandler {
                         existingPlayerBySocket.isActive = true; // Marquer comme actif (rejouer)
                         socket.join(lobby.code);
                         socket.emit('joinedLobby', { player: existingPlayerBySocket });
+                        socket.emit('lobbyDecksState', {
+                            catalog: GameManager.getDecksCatalog(),
+                            selected: lobby.selectedDecks,
+                        });
                         this.io.to(lobby.code).emit('updatePlayersList', { players: lobby.players });
 
                         // Si une partie est en cours, envoyer gameStarted pour rediriger vers la page de jeu
                         if (lobby.game && lobby.game.status === 'IN_PROGRESS') {
                             const gameData = {
-                                lobby: { code: lobby.code, players: lobby.players },
+                                lobby: { code: lobby.code, players: lobby.players, selectedDecks: lobby.selectedDecks },
                                 currentRound: lobby.game.currentRound,
                                 status: lobby.game.status,
                                 rounds: lobby.game.rounds
@@ -461,12 +469,16 @@ export class SocketHandler {
 
                             socket.join(lobby.code);
                             socket.emit('joinedLobby', { player: existingPlayerByName });
+                            socket.emit('lobbyDecksState', {
+                                catalog: GameManager.getDecksCatalog(),
+                                selected: lobby.selectedDecks,
+                            });
                             this.io.to(lobby.code).emit('updatePlayersList', { players: lobby.players });
 
                             // Si une partie est en cours, envoyer gameStarted pour rediriger vers la page de jeu
                             if (lobby.game && lobby.game.status === 'IN_PROGRESS') {
                                 const gameData = {
-                                    lobby: { code: lobby.code, players: lobby.players },
+                                    lobby: { code: lobby.code, players: lobby.players, selectedDecks: lobby.selectedDecks },
                                     currentRound: lobby.game.currentRound,
                                     status: lobby.game.status,
                                     rounds: lobby.game.rounds
@@ -495,6 +507,10 @@ export class SocketHandler {
 
                     socket.join(lobby.code);
                     socket.emit('joinedLobby', { player: newPlayer });
+                    socket.emit('lobbyDecksState', {
+                        catalog: GameManager.getDecksCatalog(),
+                        selected: lobby.selectedDecks,
+                    });
                     this.io.to(lobby.code).emit('updatePlayersList', { players: lobby.players });
                     logger.info(`${sanitizedName} a rejoint le lobby ${lobby.code}`, { playerCount: lobby.players.length });
 
@@ -526,6 +542,57 @@ export class SocketHandler {
                 } catch (error) {
                     logger.error('Error getting lobby info', { error: (error as Error).message });
                     socket.emit('lobbyInfo', { exists: false });
+                }
+            });
+
+            // Update selected decks (host only)
+            socket.on('updateSelectedDecks', (data) => {
+                try {
+                    if (!rateLimiters.general.isAllowed(socket.id)) {
+                        socket.emit('error', { message: 'Trop de requêtes. Veuillez patienter.' });
+                        return;
+                    }
+
+                    const codeValidation = validateLobbyCode(data.lobbyCode);
+                    if (!codeValidation.isValid) {
+                        socket.emit('error', { message: codeValidation.error || 'Code invalide' });
+                        return;
+                    }
+
+                    const lobby = LobbyManager.getLobby(data.lobbyCode);
+                    if (!lobby) {
+                        socket.emit('error', { message: 'Salon introuvable' });
+                        return;
+                    }
+
+                    const host = lobby.players.find(p => p.isHost);
+                    if (!host || host.socketId !== socket.id) {
+                        socket.emit('error', { message: "Seul l'hôte peut modifier les decks" });
+                        return;
+                    }
+
+                    if (lobby.game && lobby.game.status === 'IN_PROGRESS') {
+                        socket.emit('error', { message: 'La partie est déjà en cours' });
+                        return;
+                    }
+
+                    const sanitized = GameManager.sanitizeSelectedDecks(data.selected || {});
+                    const totalSelected = Object.values(sanitized).reduce((acc, arr) => acc + arr.length, 0);
+                    if (totalSelected === 0) {
+                        socket.emit('error', { message: 'Au moins un thème doit être sélectionné' });
+                        return;
+                    }
+
+                    lobby.selectedDecks = sanitized;
+                    lobby.updateActivity();
+
+                    this.io.to(lobby.code).emit('lobbyDecksState', {
+                        catalog: GameManager.getDecksCatalog(),
+                        selected: lobby.selectedDecks,
+                    });
+                } catch (error) {
+                    logger.error('Error updating selected decks', { error: (error as Error).message });
+                    socket.emit('error', { message: (error as Error).message });
                 }
             });
 
@@ -812,7 +879,8 @@ export class SocketHandler {
                     const gameData = {
                         lobby: {
                             code: lobby.code,
-                            players: lobby.players
+                            players: lobby.players,
+                            selectedDecks: lobby.selectedDecks
                         },
                         currentRound: game.currentRound,
                         status: game.status,
@@ -856,24 +924,23 @@ export class SocketHandler {
                         currentRound.relancesUsed = currentRelances + 1;
                     }
 
-                    // Si une carte existe déjà et ce n'est pas une relance, c'est une reconnexion → renvoyer la carte existante
-                    if (currentRound.gameCard?.questions?.length > 0 && data.isRelance !== true) {
-                        socket.emit('questionsReceived', { questions: [currentRound.gameCard] });
-                        logger.debug(`Carte existante renvoyée au leader (reconnexion)`, { lobbyCode: data.lobbyCode });
+                    // Si des cartes existent déjà et ce n'est pas une relance, c'est une reconnexion → renvoyer les cartes existantes
+                    if ((currentRound.proposedCards?.length ?? 0) > 0 && data.isRelance !== true) {
+                        socket.emit('questionsReceived', { questions: currentRound.proposedCards! });
+                        logger.debug(`Cartes existantes renvoyées au leader (reconnexion)`, { lobbyCode: data.lobbyCode });
                         return;
                     }
 
-                    // Envoyer le nombre de cartes demandé (par défaut 1, max 10)
-                    const rawCount = typeof data.count === 'number' ? data.count : 1;
-                    const count = Math.max(1, Math.min(10, Math.floor(rawCount)));
+                    // Toujours envoyer 3 cartes au pilier
+                    const count = 3;
 
                     // Exclure les cartes déjà montrées pour éviter les doublons lors des relances
                     const excludeCards = currentRound.shownGameCards || [];
-                    const questions = GameManager.getRandomQuestions(count, excludeCards);
+                    const questions = GameManager.getRandomQuestions(count, excludeCards, game!.cards);
 
-                    // Stocker la première carte dans le Round pour l'auto-sélection
-                    // et l'ajouter aux cartes déjà montrées
+                    // Stocker les cartes proposées et la première pour l'auto-sélection
                     if (questions.length > 0) {
+                        currentRound.proposedCards = questions;
                         currentRound.gameCard = questions[0];
                         // Ajouter toutes les nouvelles cartes aux cartes déjà montrées
                         if (!currentRound.shownGameCards) {
@@ -883,7 +950,7 @@ export class SocketHandler {
                     }
 
                     socket.emit('questionsReceived', { questions });
-                    logger.debug(`${count} carte(s) envoyée(s) au leader (${excludeCards.length} exclues)`, { lobbyCode: data.lobbyCode });
+                    logger.debug(`${questions.length} carte(s) envoyée(s) au leader (${excludeCards.length} exclues)`, { lobbyCode: data.lobbyCode });
                 } catch (error) {
                     logger.error('Error requesting questions', { error: (error as Error).message });
                     socket.emit('error', {message: (error as Error).message});
@@ -914,12 +981,19 @@ export class SocketHandler {
                         return;
                     }
 
-                    // Vérifier que la question fait partie des questions de la carte proposée
-                    const gameCard = currentRound.gameCard;
-                    if (gameCard && gameCard.questions && !gameCard.questions.includes(data.selectedQuestion)) {
+                    // Vérifier que la question fait partie des questions des cartes proposées
+                    const proposedCards = currentRound.proposedCards || [currentRound.gameCard];
+                    const questionExists = proposedCards.some(card => card?.questions?.includes(data.selectedQuestion));
+                    if (!questionExists) {
                         logger.warn(`Question non autorisée sélectionnée`, { lobbyCode: data.lobbyCode, question: data.selectedQuestion });
                         socket.emit('error', {message: 'Cette question n\'est pas disponible'});
                         return;
+                    }
+
+                    // Stocker la carte contenant la question sélectionnée
+                    const selectedCard = proposedCards.find(card => card?.questions?.includes(data.selectedQuestion));
+                    if (selectedCard) {
+                        currentRound.gameCard = selectedCard;
                     }
 
                     // Enregistrer la question sélectionnée et passer à la phase suivante
@@ -1092,7 +1166,8 @@ export class SocketHandler {
                     const gameData = {
                         lobby: {
                             code: lobby.code,
-                            players: lobby.players
+                            players: lobby.players,
+                            selectedDecks: lobby.selectedDecks
                         },
                         currentRound: game.currentRound,
                         status: game.status,
