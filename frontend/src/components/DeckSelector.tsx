@@ -43,9 +43,9 @@ const setAllGlobal = (all: boolean, catalog: DecksCatalog): SelectedDecks => {
 };
 
 const categoryDescriptions: Record<string, string> = {
-    ICEBREAKERS: 'Des questions simples pour faire parler tout le monde',
-    FUN: 'Amuse toi avec tes amis sur des sujets légers et rigolos',
-    DEEP: 'Plonge dans des discussions plus profondes et personnelles',
+    ICEBREAKERS: 'Questions simples pour briser la glace',
+    FUN: 'Amuse-toi avec tes amis sur des sujets marrants',
+    DEEP: 'Plonge dans des discussions plus personnelles',
 };
 
 const categoryIcons: Record<string, string> = {
