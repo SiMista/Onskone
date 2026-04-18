@@ -130,8 +130,9 @@ const EndGame: React.FC = () => {
 
         {/* Header */}
         <div className="text-center mb-4 md:mb-8">
-          <p className="text-base md:text-2xl text-white/80 ">
-            <strong>{leaderboard[0]?.player.name}</strong> est celui qui vous connait le mieux !
+          <p className="text-base md:text-2xl text-white/90 font-display">
+            <span className="inline-block animate-wiggle">🏆</span>{' '}
+            <strong className="text-yellow-300 drop-shadow-[0_2px_0_rgba(0,0,0,0.35)]">{leaderboard[0]?.player.name}</strong> est celui qui vous connaît le mieux !
           </p>
         </div>
 
@@ -145,11 +146,12 @@ const EndGame: React.FC = () => {
 
                 const isCurrentPlayer = entry.player.id === currentPlayer?.id;
 
+                const revealDelay = index === 0 ? 600 : index === 1 ? 300 : 0;
                 return (
                   <div
                     key={entry.player.id}
-                    className="flex flex-col items-center"
-                    style={{ order: podium.order }}
+                    className="flex flex-col items-center animate-podium-rise"
+                    style={{ order: podium.order, animationDelay: `${revealDelay}ms` }}
                   >
                     {/* Joueur */}
                     <div className={`mb-2 md:mb-4 text-center`}>
@@ -196,7 +198,7 @@ const EndGame: React.FC = () => {
 
         {/* Classement complet */}
         <div className="bg-white/10 backdrop-blur-md rounded-lg p-3 md:p-6 mb-4 md:mb-8 max-w-3xl mx-auto">
-          <h2 className="text-lg md:text-2xl font-bold text-white mb-3 md:mb-4 text-center">
+          <h2 className="text-xl md:text-3xl font-display font-bold text-white mb-3 md:mb-4 text-center tracking-tight">
             Classement final
           </h2>
           <div className="space-y-1.5 md:space-y-2">
@@ -208,10 +210,11 @@ const EndGame: React.FC = () => {
                 <div
                   key={entry.player.id}
                   className={`
-                    flex items-center justify-between p-2 md:p-4 rounded-lg
+                    flex items-center justify-between p-2 md:p-4 rounded-lg animate-player-pop
                     ${isCurrentPlayer ? 'bg-blue-500/50 ring-2 ring-blue-400' : 'bg-white/5'}
                     ${isTop3 ? 'font-bold' : ''}
                   `}
+                  style={{ animationDelay: `${1100 + index * 80}ms` }}
                 >
                   <div className="flex items-center gap-2 md:gap-4 min-w-0">
                     <span className="text-xl md:text-3xl w-8 md:w-12 text-center flex-shrink-0">
@@ -239,7 +242,7 @@ const EndGame: React.FC = () => {
         </div>
 
         {/* Boutons d'action */}
-        <div className="flex flex-col md:flex-row justify-center items-center gap-2 md:gap-10 w-2/3 md:w-auto mx-auto">
+        <div className="flex flex-row justify-center items-center gap-3 md:gap-10 mx-auto">
           <Button
             variant="success"
             size="lg"
@@ -252,7 +255,7 @@ const EndGame: React.FC = () => {
             size="lg"
             onClick={handleBackToHome}
           >
-            Retour à l'accueil
+            Quitter
           </Button>
         </div>
       </div>

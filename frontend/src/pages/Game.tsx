@@ -343,13 +343,16 @@ const GamePage: React.FC = () => {
           {/* Game info header inside main container */}
           <div className="flex justify-center md:justify-between items-center mb-2 md:mb-4 pb-2 md:pb-3 border-b-2 border-gray-200">
             <div className="text-gray-800 text-center md:text-right">
-              <p className="text-xs md:text-sm font-semibold">
+              <p className="text-xs md:text-sm font-display font-semibold tracking-wide">
                 Round {game?.currentRound?.roundNumber || 0}/{players.length} • 👑 {game?.currentRound?.leader.name || '...'}
               </p>
             </div>
           </div>
 
-          <div className="flex-1">
+          <div
+            key={`${game?.currentRound?.roundNumber ?? 0}-${game?.currentRound?.phase ?? 'none'}`}
+            className="flex-1 animate-phase-enter"
+          >
             {renderPhase()}
           </div>
         </div>

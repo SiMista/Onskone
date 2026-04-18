@@ -132,96 +132,147 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
     );
   }
 
+  const locked = selectedQuestion !== null;
+
+  const handleCardClick = (idx: number) => {
+    if (locked) return;
+    if (idx === currentCardIndex) return;
+    setCurrentCardIndex(idx);
+  };
+
   return (
     <div className="flex flex-col h-full p-2 md:p-4">
       {currentCard && (
         <div className="flex-1 flex flex-col items-center justify-center">
-          <div className="bg-primary text-base md:text-xl font-semibold px-3 md:px-6 rounded-full mb-3 md:mb-4 w-full text-center">
-            Vous êtes le pilier de cette manche !
+          <div className="bg-primary text-base md:text-xl font-semibold px-3 md:px-6 py-2 md:py-3 rounded-2xl mb-3 md:mb-4 w-full text-center">
+            <p className="m-0 mb-1.5 md:mb-2">Vous êtes le pilier de cette manche !</p>
             <Timer duration={GAME_CONFIG.TIMERS.QUESTION_SELECTION} onExpire={handleTimerExpire} phase={RoundPhase.QUESTION_SELECTION} lobbyCode={lobbyCode} />
           </div>
 
           <div className="flex flex-col items-center gap-2 w-full">
-            <p className="text-sm md:text-lg font-medium mb-2 md:mb-4">Choisissez une question pour cette manche :</p>
+            <p className="text-sm md:text-base font-medium text-center leading-tight">
+              Choisis une question pour cette manche
+              <span className="block text-xs md:text-sm text-gray-500 italic font-normal">
+                (clique sur une carte à l’arrière pour la faire passer devant)
+              </span>
+            </p>
 
-            {/* Navigation entre les cartes */}
-            <div className="flex items-center gap-2 md:gap-4 w-full max-w-3xl">
-              {/* Flèche gauche */}
-              <button
-                onClick={() => setCurrentCardIndex(prev => Math.max(0, prev - 1))}
-                disabled={currentCardIndex === 0 || selectedQuestion !== null}
-                className={`flex-shrink-0 w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-xl md:text-2xl font-bold transition-all
-                  ${currentCardIndex === 0 || selectedQuestion !== null
-                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                    : 'bg-primary text-white hover:bg-primary-dark shadow-md hover:shadow-lg cursor-pointer'}`}
-              >
-                ‹
-              </button>
+            {/* Main de cartes - hauteur stable, indépendante du contenu */}
+            <div className="card-hand relative w-full max-w-xl mx-auto pt-6 md:pt-10 min-h-[420px] md:min-h-[480px]">
+              {cards.map((card, idx) => {
+                const total = cards.length;
+                let offset = idx - currentCardIndex;
+                if (offset > total / 2) offset -= total;
+                if (offset < -total / 2) offset += total;
 
-              {/* Carte avec thème et questions */}
-              <div
-                className="flex-1 bg-[#f9f4ee] backdrop-blur-sm border-4 md:border-8 rounded-xl md:rounded-2xl p-3 md:p-6 shadow-lg"
-                style={{ borderColor: getCategoryColor(currentCard.category) }}
-              >
+                const isActive = offset === 0;
+                const abs = Math.abs(offset);
 
-                {/* Indicateur de carte */}
-                <div className="flex justify-center gap-1.5 mb-2 md:mb-3">
-                  {cards.map((_, idx) => (
+                // Empilement vertical avec éventail plus marqué sur les cartes arrière
+                const sign = offset === 0 ? 0 : offset > 0 ? 1 : -1;
+                const scatterX = sign * (10 + (abs - 1) * 6); // %
+                const scatterY = -(28 + (abs - 1) * 18); // px
+                const tilt = sign * (7 + (abs - 1) * 2); // deg
+                const backScale = 0.9 - (abs - 1) * 0.05;
+
+                const color = getCategoryColor(card.category);
+
+                const transformStyle = isActive
+                  ? 'translate(-50%, 0) rotate(0deg) scale(1)'
+                  : `translate(calc(-50% + ${scatterX}%), ${scatterY}px) rotate(${tilt}deg) scale(${backScale})`;
+
+                return (
+                  <div
+                    key={`${card.theme}-${idx}`}
+                    className={`card-hand-item w-[78%] sm:w-[68%] md:w-[60%] absolute top-10 md:top-14 left-1/2 ${isActive ? 'is-active' : 'is-side'} ${isActive && locked ? 'animate-card-pick' : ''}`}
+                    style={{
+                      transform: transformStyle,
+                      pointerEvents: locked ? 'none' : 'auto',
+                      zIndex: isActive ? 30 : 20 - abs,
+                    }}
+                    onClick={() => !isActive && handleCardClick(idx)}
+                    role={!isActive ? 'button' : undefined}
+                    aria-label={!isActive ? `Voir la carte ${card.theme}` : undefined}
+                  >
                     <div
-                      key={idx}
-                      className={`w-2 h-2 md:w-2.5 md:h-2.5 rounded-full transition-all ${
-                        idx === currentCardIndex ? 'bg-gray-800 scale-125' : 'bg-gray-400'
-                      }`}
-                    />
-                  ))}
-                </div>
-
-                <p className="text-lg md:text-2xl font-semibold mb-1 md:mb-2 text-center">{currentCard.theme}</p>
-                <p className="text-sm md:text-lg text-gray-600 mb-2 md:mb-4 text-center pb-2 md:pb-4">{currentCard.subject}</p>
-                <div className="flex flex-col gap-2 md:gap-3">
-                  {currentCard.questions.map((question, questionIndex) => (
-                    <div
-                      key={questionIndex}
-                      onClick={() => handleSelectQuestion(question)}
-                      className={`
-                      relative bg-white rounded-lg px-3 md:px-4 py-2 md:py-3 cursor-pointer border-2
-                      transition-all duration-300 ease-in-out
-                      ${selectedQuestion === question
-                          ? 'scale-[1.02] md:scale-105 border-green-500 shadow-[0_0_0_3px_#30c94d] md:shadow-[0_0_0_4px_#30c94d]'
-                          : 'border-gray-300 shadow-md hover:border-primary hover:shadow-lg'}
-                      ${selectedQuestion !== null && selectedQuestion !== question ? 'opacity-50' : 'opacity-100'}
-                    `}
+                      className="bg-[#f9f4ee] border-4 md:border-[6px] rounded-2xl md:rounded-3xl p-3 md:p-5 shadow-[0_10px_30px_rgba(0,0,0,0.25)] relative overflow-hidden min-h-[360px] md:min-h-[400px] flex flex-col"
+                      style={{ borderColor: color }}
                     >
-                      <p className="text-sm md:text-base font-medium text-gray-800 pr-6 md:pr-8">
-                        {question}
-                      </p>
-                      {selectedQuestion === question && (
-                        <div className="absolute top-2 right-2 md:top-3 md:right-3 text-[18px] md:text-[24px]"></div>
+                      <div
+                        className="absolute top-2 left-2 md:top-3 md:left-3 text-[10px] md:text-xs font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full text-black"
+                        style={{ backgroundColor: color }}
+                      >
+                        {card.category}
+                      </div>
+
+                      <div className="pt-5 md:pt-6 flex-1 flex flex-col">
+                        <p className="text-lg md:text-2xl font-bold text-center !mt-0 !mb-2 md:!mb-3 leading-tight">{card.theme}</p>
+                        <p className="text-sm md:text-base text-gray-600 text-center italic !mt-0 !mb-1.5 md:!mb-2 leading-tight">
+                          <span className="font-semibold not-italic text-gray-700">Sujet :</span> {card.subject}
+                        </p>
+
+                        <div className="flex-1 flex flex-col gap-2 md:gap-3 justify-center">
+                          {card.questions.map((question, qi) => {
+                            const isSelected = selectedQuestion === question;
+                            const dimmed = locked && !isSelected;
+                            return (
+                              <div
+                                key={qi}
+                                onClick={(e) => {
+                                  if (!isActive) return;
+                                  e.stopPropagation();
+                                  handleSelectQuestion(question);
+                                }}
+                                className={`
+                                  relative bg-white rounded-lg px-3 md:px-4 py-2.5 md:py-3 border-2
+                                  min-h-[58px] md:min-h-[68px] flex items-center
+                                  transition-all duration-300 ease-in-out
+                                  ${isActive && !locked ? 'cursor-pointer hover:-translate-y-0.5 hover:border-primary hover:shadow-lg' : ''}
+                                  ${isSelected
+                                    ? 'scale-[1.02] border-green-500 shadow-[0_0_0_3px_#30c94d]'
+                                    : 'border-gray-300 shadow-md'}
+                                  ${dimmed ? 'opacity-50' : 'opacity-100'}
+                                `}
+                              >
+                                <p className="text-sm md:text-base font-medium text-gray-800 leading-snug w-full">
+                                  {question}
+                                </p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {!isActive && (
+                        <div className="absolute inset-0 bg-black/20 pointer-events-none rounded-2xl md:rounded-3xl" />
                       )}
                     </div>
-                  ))}
-                </div>
-              </div>
+                  </div>
+                );
+              })}
+            </div>
 
-              {/* Flèche droite */}
-              <button
-                onClick={() => setCurrentCardIndex(prev => Math.min(cards.length - 1, prev + 1))}
-                disabled={currentCardIndex === cards.length - 1 || selectedQuestion !== null}
-                className={`flex-shrink-0 w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-xl md:text-2xl font-bold transition-all
-                  ${currentCardIndex === cards.length - 1 || selectedQuestion !== null
-                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                    : 'bg-primary text-white hover:bg-primary-dark shadow-md hover:shadow-lg cursor-pointer'}`}
-              >
-                ›
-              </button>
+            {/* Indicateur de carte sous le carousel */}
+            <div className="flex justify-center gap-2 mt-3">
+              {cards.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleCardClick(idx)}
+                  disabled={locked}
+                  aria-label={`Aller à la carte ${idx + 1}`}
+                  className={`h-2 rounded-full transition-all ${
+                    idx === currentCardIndex ? 'bg-white w-6' : 'bg-white/50 w-2 hover:bg-white/80'
+                  } ${locked ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                />
+              ))}
             </div>
           </div>
 
           {/* Message de confirmation */}
-          {selectedQuestion !== null && (
+          {locked && (
             <div className="text-center mt-3 md:mt-4">
-              <p className="text-green-500 text-base md:text-xl font-semibold">
-                Question sélectionnée! Passage à la phase suivante...
+              <p className="text-white text-base md:text-xl font-semibold drop-shadow">
+                Question sélectionnée ! Passage à la phase suivante…
               </p>
             </div>
           )}
