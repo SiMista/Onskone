@@ -1,9 +1,8 @@
 import { useEffect, useState, useRef } from 'react';
 import socket from '../utils/socket';
 import Timer from './Timer';
-import Button from './Button';
 import { GameCard, RoundPhase } from '@onskone/shared';
-import { GAME_CONFIG } from '../constants/game';
+import { GAME_CONFIG, getCategoryColor } from '../constants/game';
 import { getRandomFunFact, getNextFunFact } from '../constants/funFacts';
 import { playSound } from '../utils/sounds';
 
@@ -14,16 +13,18 @@ interface QuestionSelectionProps {
   initialRelancesUsed?: number;
 }
 
-const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLeader, leaderName, initialRelancesUsed }) => {
-  const [currentCard, setCurrentCard] = useState<GameCard | null>(null);
+const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLeader, leaderName }) => {
+  const [cards, setCards] = useState<GameCard[]>([]);
+  const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [selectedQuestion, setSelectedQuestion] = useState<string | null>(null);
   const [loading, setLoading] = useState(isLeader);
-  const [relancesLeft, setRelancesLeft] = useState(3 - (initialRelancesUsed || 0));
   const [funFact, setFunFact] = useState<string>(getRandomFunFact());
   const [factFading, setFactFading] = useState(false);
-  const factFadeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const factFadeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Ref pour éviter de démarrer le timer plusieurs fois (React Strict Mode, re-renders)
   const timerStartedRef = useRef(false);
+
+  const currentCard = cards.length > 0 ? cards[currentCardIndex] : null;
 
   // Jouer le son au début de la phase
   useEffect(() => {
@@ -60,15 +61,16 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
       // Vérifier si on n'a pas déjà démarré le timer pour éviter les doublons
       if (isLeader && !timerStartedRef.current) {
         timerStartedRef.current = true;
-        // Le pilier demande une carte (1 seule)
-        socket.emit('requestQuestions', { lobbyCode, count: 1 });
+        // Le pilier demande 3 cartes
+        socket.emit('requestQuestions', { lobbyCode, count: 3 });
         socket.emit('startTimer', { lobbyCode, duration: GAME_CONFIG.TIMERS.QUESTION_SELECTION });
       }
     }, 500);
 
     socket.on('questionsReceived', (data: { questions: GameCard[] }) => {
       if (data.questions.length > 0) {
-        setCurrentCard(data.questions[0]); // Prendre la première carte
+        setCards(data.questions);
+        setCurrentCardIndex(0);
       }
       setLoading(false);
     });
@@ -84,13 +86,6 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
 
     setSelectedQuestion(question);
     socket.emit('selectQuestion', { lobbyCode, selectedQuestion: question });
-  };
-
-  const handleRequestNewCard = () => {
-    if (!isLeader || selectedQuestion !== null || relancesLeft <= 0) return;
-
-    setRelancesLeft(prev => prev - 1);
-    socket.emit('requestQuestions', { lobbyCode, count: 1, isRelance: true });
   };
 
   const handleTimerExpire = () => {
@@ -148,51 +143,77 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
 
           <div className="flex flex-col items-center gap-2 w-full">
             <p className="text-sm md:text-lg font-medium mb-2 md:mb-4">Choisissez une question pour cette manche :</p>
-            {/* Bouton pour demander une nouvelle carte (en haut de la carte) */}
-            {selectedQuestion === null && (
-              <div className="flex flex-col md:flex-row items-center justify-center gap-2 md:gap-4 mb-3 md:mb-4">
-                <Button
-                  variant="warning"
-                  size="md"
-                  onClick={handleRequestNewCard}
-                  disabled={relancesLeft <= 0}
-                  isLoading={loading}
-                >
-                  Choisir une autre carte
-                </Button>
-                <span className={`text-xs md:text-sm font-medium ${relancesLeft === 0 ? 'text-red-500' : 'text-gray-600'}`}>
-                  Relances possibles : {relancesLeft}
-                </span>
-              </div>
-            )}
-            {/* Carte avec thème et questions */}
-            <div className="w-full max-w-3xl bg-[#f9f4ee] backdrop-blur-sm border-4 md:border-8 border-primary/30 border-red-400 rounded-xl md:rounded-2xl p-3 md:p-6 shadow-lg">
 
-              <p className="text-lg md:text-2xl font-semibold mb-1 md:mb-2 text-center">{currentCard.theme}</p>
-              <p className="text-sm md:text-lg text-gray-600 mb-2 md:mb-4 text-center pb-2 md:pb-4">{currentCard.subject}</p>
-              <div className="flex flex-col gap-2 md:gap-3">
-                {currentCard.questions.map((question, questionIndex) => (
-                  <div
-                    key={questionIndex}
-                    onClick={() => handleSelectQuestion(question)}
-                    className={`
-                    relative bg-white rounded-lg px-3 md:px-4 py-2 md:py-3 cursor-pointer border-2
-                    transition-all duration-300 ease-in-out
-                    ${selectedQuestion === question
-                        ? 'scale-[1.02] md:scale-105 border-green-500 shadow-[0_0_0_3px_#30c94d] md:shadow-[0_0_0_4px_#30c94d]'
-                        : 'border-gray-300 shadow-md hover:border-primary hover:shadow-lg'}
-                    ${selectedQuestion !== null && selectedQuestion !== question ? 'opacity-50' : 'opacity-100'}
-                  `}
-                  >
-                    <p className="text-sm md:text-base font-medium text-gray-800 pr-6 md:pr-8">
-                      {question}
-                    </p>
-                    {selectedQuestion === question && (
-                      <div className="absolute top-2 right-2 md:top-3 md:right-3 text-[18px] md:text-[24px]"></div>
-                    )}
-                  </div>
-                ))}
+            {/* Navigation entre les cartes */}
+            <div className="flex items-center gap-2 md:gap-4 w-full max-w-3xl">
+              {/* Flèche gauche */}
+              <button
+                onClick={() => setCurrentCardIndex(prev => Math.max(0, prev - 1))}
+                disabled={currentCardIndex === 0 || selectedQuestion !== null}
+                className={`flex-shrink-0 w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-xl md:text-2xl font-bold transition-all
+                  ${currentCardIndex === 0 || selectedQuestion !== null
+                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    : 'bg-primary text-white hover:bg-primary-dark shadow-md hover:shadow-lg cursor-pointer'}`}
+              >
+                ‹
+              </button>
+
+              {/* Carte avec thème et questions */}
+              <div
+                className="flex-1 bg-[#f9f4ee] backdrop-blur-sm border-4 md:border-8 rounded-xl md:rounded-2xl p-3 md:p-6 shadow-lg"
+                style={{ borderColor: getCategoryColor(currentCard.category) }}
+              >
+
+                {/* Indicateur de carte */}
+                <div className="flex justify-center gap-1.5 mb-2 md:mb-3">
+                  {cards.map((_, idx) => (
+                    <div
+                      key={idx}
+                      className={`w-2 h-2 md:w-2.5 md:h-2.5 rounded-full transition-all ${
+                        idx === currentCardIndex ? 'bg-gray-800 scale-125' : 'bg-gray-400'
+                      }`}
+                    />
+                  ))}
+                </div>
+
+                <p className="text-lg md:text-2xl font-semibold mb-1 md:mb-2 text-center">{currentCard.theme}</p>
+                <p className="text-sm md:text-lg text-gray-600 mb-2 md:mb-4 text-center pb-2 md:pb-4">{currentCard.subject}</p>
+                <div className="flex flex-col gap-2 md:gap-3">
+                  {currentCard.questions.map((question, questionIndex) => (
+                    <div
+                      key={questionIndex}
+                      onClick={() => handleSelectQuestion(question)}
+                      className={`
+                      relative bg-white rounded-lg px-3 md:px-4 py-2 md:py-3 cursor-pointer border-2
+                      transition-all duration-300 ease-in-out
+                      ${selectedQuestion === question
+                          ? 'scale-[1.02] md:scale-105 border-green-500 shadow-[0_0_0_3px_#30c94d] md:shadow-[0_0_0_4px_#30c94d]'
+                          : 'border-gray-300 shadow-md hover:border-primary hover:shadow-lg'}
+                      ${selectedQuestion !== null && selectedQuestion !== question ? 'opacity-50' : 'opacity-100'}
+                    `}
+                    >
+                      <p className="text-sm md:text-base font-medium text-gray-800 pr-6 md:pr-8">
+                        {question}
+                      </p>
+                      {selectedQuestion === question && (
+                        <div className="absolute top-2 right-2 md:top-3 md:right-3 text-[18px] md:text-[24px]"></div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
+
+              {/* Flèche droite */}
+              <button
+                onClick={() => setCurrentCardIndex(prev => Math.min(cards.length - 1, prev + 1))}
+                disabled={currentCardIndex === cards.length - 1 || selectedQuestion !== null}
+                className={`flex-shrink-0 w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-xl md:text-2xl font-bold transition-all
+                  ${currentCardIndex === cards.length - 1 || selectedQuestion !== null
+                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    : 'bg-primary text-white hover:bg-primary-dark shadow-md hover:shadow-lg cursor-pointer'}`}
+              >
+                ›
+              </button>
             </div>
           </div>
 

@@ -58,10 +58,10 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
     <div className={`flex items-center justify-between py-2 px-[15px] my-2 rounded-[10px] border-2 border-[#ddd] shadow-[0_2px_6px_rgba(0,0,0,0.1)] w-[95%] transition-all duration-300 ${
       isActive
         ? 'bg-[#f9f4ee]'
-        : 'bg-gray-200 opacity-50 grayscale'
+        : 'bg-gray-200'
     }`}>
       {/* Partie gauche → Avatar + nom */}
-      <div className="flex items-center gap-2.5">
+      <div className={`flex items-center gap-2.5 ${!isActive ? 'opacity-50 grayscale' : ''}`}>
         <Avatar avatarId={avatarId} name={name} size="md" />
         <span className={isCurrentPlayer ? "font-bold" : "font-normal"}>
           {name} {isCurrentPlayer && "(vous)"}

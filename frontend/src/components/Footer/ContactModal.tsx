@@ -102,7 +102,7 @@ const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) => {
                   value={contactForm.name}
                   onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
                   className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-primary outline-none transition-colors"
-                  placeholder="Jean Dupont"
+                  placeholder="Votre nom"
                 />
               </div>
 
@@ -116,7 +116,7 @@ const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) => {
                   value={contactForm.email}
                   onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
                   className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-primary outline-none transition-colors"
-                  placeholder="jean.dupont@email.com"
+                  placeholder="votre.email@exemple.com"
                 />
               </div>
 

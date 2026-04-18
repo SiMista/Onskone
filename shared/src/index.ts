@@ -13,6 +13,9 @@ export { IPlayer } from './types/player.js';
 // Lobby
 export { ILobby } from './types/lobby.js';
 
+// Decks
+export { DecksCatalog, SelectedDecks } from './types/decks.js';
+
 // Round
 export {
   IRound,

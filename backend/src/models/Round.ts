@@ -19,6 +19,7 @@ export class Round implements IRound {
     relancesUsed: number; // Nombre de relances utilisées par le pilier
     revealedIndices: number[]; // Indices des réponses révélées en phase REVEAL
     similarityCorrections: number[]; // Indices corrigés par similarité
+    proposedCards: GameCard[]; // Les 3 cartes proposées au pilier pour la sélection
     shownGameCards: GameCard[]; // Cartes déjà montrées au pilier (pour éviter les doublons)
     shuffledAnswerIds: string[]; // Ordre des réponses mélangées pour la reconnexion
 
@@ -40,6 +41,7 @@ export class Round implements IRound {
         this.relancesUsed = 0;
         this.revealedIndices = [];
         this.similarityCorrections = [];
+        this.proposedCards = [];
         this.shownGameCards = [];
         this.shuffledAnswerIds = [];
     }

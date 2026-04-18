@@ -21,6 +21,9 @@ export enum RoundPhase {
  * Carte de jeu contenant une catégorie et des questions
  */
 export interface GameCard {
+  /** Catégorie de la carte (ex: "ICEBREAKERS", "FUN", "DEEP") */
+  category: string;
+
   /** Thème de la carte (ex: "QUOTIDIEN", "ENTRE NOUS") */
   theme: string;
 
@@ -82,6 +85,9 @@ export interface IRound {
 
   /** Nombre de relances utilisées par le pilier en phase QUESTION_SELECTION */
   relancesUsed?: number;
+
+  /** Les 3 cartes proposées au pilier pour la sélection */
+  proposedCards?: GameCard[];
 
   /** Cartes déjà montrées au pilier (pour éviter les doublons lors des relances) */
   shownGameCards?: GameCard[];

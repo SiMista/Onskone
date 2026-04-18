@@ -1,11 +1,12 @@
 import { randomInt } from 'crypto';
 import {Game} from "../models/Game.js";
-import type { ILobby, GameCard } from '@onskone/shared';
+import type { ILobby, GameCard, DecksCatalog, SelectedDecks } from '@onskone/shared';
 import * as fsSync from 'fs';
 import * as path from 'path';
 import logger from '../utils/logger';
 
 let questionsPool: GameCard[] = [];
+let decksCatalog: DecksCatalog = {};
 let isLoaded = false;
 
 /**
@@ -13,13 +14,30 @@ let isLoaded = false;
  */
 const loadGameCardsSync = (questionsFilePath: string): void => {
     try {
-        const questions = fsSync.readFileSync(questionsFilePath, 'utf-8');
-        questionsPool = JSON.parse(questions) as GameCard[];
+        const raw = fsSync.readFileSync(questionsFilePath, 'utf-8');
+        const data = JSON.parse(raw) as Record<string, Record<string, { subject: string; questions: string[] }[]>>;
+        questionsPool = [];
+        decksCatalog = {};
+        for (const [category, themes] of Object.entries(data)) {
+            decksCatalog[category] = [];
+            for (const [theme, subjects] of Object.entries(themes)) {
+                decksCatalog[category].push(theme);
+                for (const entry of subjects) {
+                    questionsPool.push({
+                        category,
+                        theme,
+                        subject: entry.subject,
+                        questions: entry.questions,
+                    });
+                }
+            }
+        }
         isLoaded = true;
         logger.info('Game cards loaded (sync)', { count: questionsPool.length });
     } catch (error) {
         logger.error('Error loading game cards (sync)', { error: String(error) });
         questionsPool = [];
+        decksCatalog = {};
     }
 };
 
@@ -27,11 +45,48 @@ const loadGameCardsSync = (questionsFilePath: string): void => {
 const questionsPath = path.join(process.cwd(), 'src/data/questions.json');
 loadGameCardsSync(questionsPath);
 
+export const getDecksCatalog = (): DecksCatalog => decksCatalog;
+
+export const getDefaultSelectedDecks = (): SelectedDecks => {
+    const selected: SelectedDecks = {};
+    for (const [category, themes] of Object.entries(decksCatalog)) {
+        selected[category] = [...themes];
+    }
+    return selected;
+};
+
+/**
+ * Filtre une sélection en supprimant les catégories/thèmes inconnus du catalogue.
+ */
+export const sanitizeSelectedDecks = (selected: SelectedDecks): SelectedDecks => {
+    const clean: SelectedDecks = {};
+    for (const [category, themes] of Object.entries(decksCatalog)) {
+        const requested = selected[category];
+        if (!Array.isArray(requested)) {
+            clean[category] = [];
+            continue;
+        }
+        clean[category] = requested.filter(t => themes.includes(t));
+    }
+    return clean;
+};
+
+const filterPoolBySelection = (selected: SelectedDecks): GameCard[] => {
+    return questionsPool.filter(card => {
+        const themes = selected[card.category];
+        return Array.isArray(themes) && themes.includes(card.theme);
+    });
+};
+
 export const createGame = (lobby: ILobby): Game => {
     if (!isLoaded || questionsPool.length === 0) {
         throw new Error('Game cards not loaded');
     }
-    const game = new Game(lobby, questionsPool);
+    const filtered = filterPoolBySelection(lobby.selectedDecks);
+    if (filtered.length === 0) {
+        throw new Error('Aucun deck sélectionné');
+    }
+    const game = new Game(lobby, filtered);
     game.start();
     return game;
 };
@@ -46,22 +101,22 @@ const areCardsEqual = (card1: GameCard, card2: GameCard): boolean => {
     return card1.questions.every((q, i) => q === card2.questions[i]);
 };
 
-export const getRandomQuestions = (count: number, excludeCards: GameCard[] = []): GameCard[] => {
-    if (questionsPool.length === 0) {
+export const getRandomQuestions = (count: number, excludeCards: GameCard[] = [], pool: GameCard[] = questionsPool): GameCard[] => {
+    if (pool.length === 0) {
         return [];
     }
 
     // Filtrer les cartes déjà vues
-    let availableCards = questionsPool;
+    let availableCards = pool;
     if (excludeCards.length > 0) {
-        availableCards = questionsPool.filter(card =>
+        availableCards = pool.filter(card =>
             !excludeCards.some(excluded => areCardsEqual(card, excluded))
         );
     }
 
     // Si toutes les cartes ont été vues, reset et utiliser tout le pool
     if (availableCards.length === 0) {
-        availableCards = questionsPool;
+        availableCards = pool;
     }
 
     // Créer une copie pour ne pas modifier le tableau filtré
