@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { Icon } from '@iconify/react';
 import socket from '../utils/socket';
 import { IPlayer, LeaderboardEntry, RoundData } from '@onskone/shared';
 import Button from '../components/Button';
@@ -79,15 +80,21 @@ const EndGame: React.FC = () => {
 
   const getPodiumPosition = (index: number) => {
     // Position physique sur le podium (2ème = gauche, 1er = centre, 3ème = droite)
-    if (index === 0) return { order: 2, height: 'h-32 md:h-64', medal: '🥇', color: 'from-yellow-400 to-yellow-600', rank: '1er' };
-    if (index === 1) return { order: 1, height: 'h-24 md:h-48', medal: '🥈', color: 'from-gray-300 to-gray-500', rank: '2ème' };
-    if (index === 2) return { order: 3, height: 'h-20 md:h-40', medal: '🥉', color: 'from-orange-400 to-orange-600', rank: '3ème' };
+    if (index === 0) return { order: 2, height: 'h-32 md:h-64', medal: 'fluent-emoji-flat:1st-place-medal', color: 'from-yellow-400 to-yellow-600', rank: '1er' };
+    if (index === 1) return { order: 1, height: 'h-24 md:h-48', medal: 'fluent-emoji-flat:2nd-place-medal', color: 'from-gray-300 to-gray-500', rank: '2ème' };
+    if (index === 2) return { order: 3, height: 'h-20 md:h-40', medal: 'fluent-emoji-flat:3rd-place-medal', color: 'from-orange-400 to-orange-600', rank: '3ème' };
     return null;
   };
 
   // Pre-generate stable random values for confetti animation (prevents re-renders issues)
   const confettiItems = useMemo(() => {
-    const emojis = ['🎉', '🎊', '⭐', '✨', '🏆'];
+    const emojis = [
+      'fluent-emoji-flat:party-popper',
+      'fluent-emoji-flat:confetti-ball',
+      'fluent-emoji-flat:star',
+      'fluent-emoji-flat:sparkles',
+      'fluent-emoji-flat:trophy',
+    ];
     return Array.from({ length: 50 }, (_, i) => ({
       id: i,
       left: Math.random() * 100,
@@ -114,9 +121,7 @@ const EndGame: React.FC = () => {
                 animationDuration: `${item.duration}s`,
               }}
             >
-              <span className="text-2xl md:text-4xl">
-                {item.emoji}
-              </span>
+              <Icon icon={item.emoji} className="text-2xl md:text-4xl" width="1em" height="1em" aria-hidden />
             </div>
           ))}
         </div>
@@ -131,7 +136,7 @@ const EndGame: React.FC = () => {
         {/* Header */}
         <div className="text-center mb-4 md:mb-8">
           <p className="text-base md:text-2xl text-white/90 font-display">
-            <span className="inline-block animate-wiggle">🏆</span>{' '}
+            <Icon icon="fluent-emoji-flat:trophy" className="inline-block animate-wiggle align-middle" width="1.2em" height="1.2em" aria-hidden />{' '}
             <strong className="text-yellow-300 drop-shadow-[0_2px_0_rgba(0,0,0,0.35)]">{leaderboard[0]?.player.name}</strong> est celui qui vous connaît le mieux !
           </p>
         </div>
@@ -155,7 +160,9 @@ const EndGame: React.FC = () => {
                   >
                     {/* Joueur */}
                     <div className={`mb-2 md:mb-4 text-center`}>
-                      <div className="text-3xl md:text-6xl mb-1 md:mb-2">{podium.medal}</div>
+                      <div className="mb-1 md:mb-2 flex justify-center">
+                        <Icon icon={podium.medal} className="text-3xl md:text-6xl" width="1em" height="1em" aria-hidden />
+                      </div>
 
                       <div className={`bg-white/20 backdrop-blur-md rounded-lg px-2 md:px-8 py-2 md:py-5 ${isCurrentPlayer ? 'ring-2 md:ring-4 ring-yellow-500 ring-offset-0' : ''
                         }`}>
@@ -217,8 +224,17 @@ const EndGame: React.FC = () => {
                   style={{ animationDelay: `${1100 + index * 80}ms` }}
                 >
                   <div className="flex items-center gap-2 md:gap-4 min-w-0">
-                    <span className="text-xl md:text-3xl w-8 md:w-12 text-center flex-shrink-0">
-                      {index < 3 ? ['🥇', '🥈', '🥉'][index] : `${index + 1}.`}
+                    <span className="text-xl md:text-3xl w-8 md:w-12 text-center flex-shrink-0 flex items-center justify-center">
+                      {index < 3 ? (
+                        <Icon
+                          icon={['fluent-emoji-flat:1st-place-medal', 'fluent-emoji-flat:2nd-place-medal', 'fluent-emoji-flat:3rd-place-medal'][index]}
+                          width="1em"
+                          height="1em"
+                          aria-hidden
+                        />
+                      ) : (
+                        `${index + 1}.`
+                      )}
                     </span>
                     {/* Avatar */}
                     <Avatar avatarId={entry.player.avatarId} name={entry.player.name} size="sm" className="flex-shrink-0 md:hidden" />

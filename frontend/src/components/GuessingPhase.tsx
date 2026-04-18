@@ -1,4 +1,6 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import { Icon } from '@iconify/react';
+import { LuX } from 'react-icons/lu';
 import socket from '../utils/socket';
 import Timer from './Timer';
 import Button from './Button';
@@ -230,7 +232,7 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <div className="animate-spin text-4xl md:text-6xl mb-4">⏳</div>
+          <Icon icon="fluent-emoji-flat:hourglass-not-done" className="animate-spin text-4xl md:text-6xl mb-4" width="1em" height="1em" aria-hidden />
           <p className="text-base md:text-xl text-gray-800">Chargement des réponses...</p>
         </div>
       </div>
@@ -346,9 +348,10 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
                                   e.stopPropagation();
                                   handleRemoveGuess(answer.id);
                                 }}
-                                className="ml-1 md:ml-2 text-red-500 hover:text-red-600 font-bold text-sm"
+                                className="ml-1 md:ml-2 text-red-500 hover:text-red-600 font-bold text-sm inline-flex items-center"
+                                aria-label="Retirer"
                               >
-                                ✕
+                                <LuX size={14} />
                               </button>
                             )}
                           </div>

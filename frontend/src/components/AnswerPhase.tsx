@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
+import { LuCheck } from 'react-icons/lu';
 import socket from '../utils/socket';
 import Timer from './Timer';
 import Button from './Button';
@@ -148,7 +149,7 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
               >
                 <span className="flex items-center gap-1.5 md:gap-2">
                   <Avatar avatarId={player.avatarId} name={player.name} size="sm" />
-                  {!isDisconnected && hasAnswered && <span>✓</span>}
+                  {!isDisconnected && hasAnswered && <LuCheck className="inline" aria-hidden />}
                   <span className="max-w-[80px] md:max-w-none truncate">{player.name}{isDisconnected && ' (déconnecté)'}</span>
                 </span>
               </div>
@@ -216,7 +217,7 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
                 >
                   <span className="flex items-center gap-1.5 md:gap-2">
                     <Avatar avatarId={player.avatarId} name={player.name} size="sm" />
-                    {!isDisconnected && hasAnswered && <span>✓</span>}
+                    {!isDisconnected && hasAnswered && <LuCheck className="inline" aria-hidden />}
                     <span className="max-w-[80px] md:max-w-none truncate">{player.name}{isDisconnected && ' (déconnecté)'}</span>
                   </span>
                 </div>

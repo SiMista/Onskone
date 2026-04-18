@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
+import { Icon } from '@iconify/react';
 import socket from '../utils/socket';
 import Timer from './Timer';
 import { GameCard, RoundPhase } from '@onskone/shared';
@@ -116,7 +117,7 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
           </p>
         </div>
 
-        <div className="text-4xl md:text-5xl animate-bounce">🤔</div>
+        <Icon icon="fluent-emoji-flat:thinking-face" className="text-4xl md:text-5xl animate-bounce" width="1em" height="1em" aria-hidden />
       </div>
     );
   }
@@ -125,7 +126,7 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <div className="text-4xl md:text-5xl mb-3 md:mb-4 animate-spin">⏳</div>
+          <Icon icon="fluent-emoji-flat:hourglass-not-done" className="text-4xl md:text-5xl mb-3 md:mb-4 animate-spin" width="1em" height="1em" aria-hidden />
           <p className="text-base md:text-lg text-gray-800">Chargement des questions...</p>
         </div>
       </div>

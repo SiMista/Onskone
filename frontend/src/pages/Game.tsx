@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { Icon } from '@iconify/react';
 import socket from '../utils/socket';
 import QuestionSelection from '../components/QuestionSelection';
 import AnswerPhase from '../components/AnswerPhase';
@@ -326,8 +327,9 @@ const GamePage: React.FC = () => {
       {/* Notification message (round skipped, etc.) */}
       {notification && (
         <div className="w-full max-w-4xl mx-auto px-2">
-          <div className="bg-amber-500 text-white p-3 md:p-4 rounded-lg mb-3 md:mb-4 text-sm md:text-base text-center">
-            ⚠️ {notification}
+          <div className="bg-amber-500 text-white p-3 md:p-4 rounded-lg mb-3 md:mb-4 text-sm md:text-base text-center flex items-center justify-center gap-2">
+            <Icon icon="fluent-emoji-flat:warning" width="1.2em" height="1.2em" aria-hidden />
+            <span>{notification}</span>
           </div>
         </div>
       )}
@@ -343,8 +345,11 @@ const GamePage: React.FC = () => {
           {/* Game info header inside main container */}
           <div className="flex justify-center md:justify-between items-center mb-2 md:mb-4 pb-2 md:pb-3 border-b-2 border-gray-200">
             <div className="text-gray-800 text-center md:text-right">
-              <p className="text-xs md:text-sm font-display font-semibold tracking-wide">
-                Round {game?.currentRound?.roundNumber || 0}/{players.length} • 👑 {game?.currentRound?.leader.name || '...'}
+              <p className="text-xs md:text-sm font-display font-semibold tracking-wide flex items-center gap-1.5">
+                <span>Round {game?.currentRound?.roundNumber || 0}/{players.length}</span>
+                <span>•</span>
+                <Icon icon="fluent-emoji-flat:crown" width="1.1em" height="1.1em" aria-hidden />
+                <span>{game?.currentRound?.leader.name || '...'}</span>
               </p>
             </div>
           </div>
