@@ -12,6 +12,7 @@ interface PlayerCardProps {
   currentPlayerIsHost: boolean;
   isActive?: boolean;
   isFirstPlayer?: boolean;
+  variant?: 'row' | 'square';
   onKick?: (id: string) => void;
   onPromote?: (id: string) => void;
 }
@@ -25,6 +26,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   currentPlayerIsHost,
   isActive = true,
   isFirstPlayer = false,
+  variant = 'row',
   onKick,
   onPromote,
 }) => {
@@ -53,6 +55,59 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isOpen]);
+
+  if (variant === 'square') {
+    return (
+      <div className={`relative aspect-square flex flex-col items-center justify-center gap-1 p-2 rounded-[10px] border-2 border-[#ddd] shadow-[0_2px_6px_rgba(0,0,0,0.1)] w-full transition-all duration-300 ${
+        isActive ? 'bg-[#f9f4ee]' : 'bg-gray-200'
+      }`}>
+        {/* Couronne ou menu en haut à droite */}
+        <div className="absolute top-1 right-1">
+          {isHost ? (
+            <FaCrown color="#fcad11" size={18} />
+          ) : currentPlayerIsHost ? (
+            <>
+              <span
+                ref={buttonRef}
+                className="cursor-pointer inline-flex p-1"
+                onClick={() => setIsOpen(!isOpen)}
+              >
+                <FaEllipsisV size={14} />
+              </span>
+              {isOpen && (
+                <div
+                  ref={menuRef}
+                  className={`absolute right-0 bg-white border-2 border-dashed border-[#b0b0b0] rounded-2xl shadow-[0_6px_16px_rgba(0,0,0,0.15)] z-[100] text-right min-w-[160px] overflow-hidden animate-menu-open ${
+                    isFirstPlayer ? 'top-full mt-1 origin-top-right' : 'bottom-full mb-1 origin-bottom-right'
+                  }`}
+                >
+                  <div
+                    className="py-3 px-4 cursor-pointer text-[15px] font-semibold text-[#333333] border-b border-[#d0d0d0] transition-[background,transform] duration-200 hover:bg-[#fff8e1]"
+                    onClick={() => { setIsOpen(false); onPromote && onPromote(id); }}
+                  >
+                    Promouvoir hôte
+                  </div>
+                  <div
+                    className="py-3 px-4 cursor-pointer text-[15px] font-semibold text-[#d32f2f] transition-[background,transform] duration-200 hover:bg-[#fce4e4]"
+                    onClick={() => { setIsOpen(false); onKick && onKick(id); }}
+                  >
+                    Expulser
+                  </div>
+                </div>
+              )}
+            </>
+          ) : null}
+        </div>
+
+        <div className={`flex flex-col items-center gap-1 min-w-0 w-full ${!isActive ? 'opacity-50 grayscale' : ''}`}>
+          <Avatar avatarId={avatarId} name={name} size="md" />
+          <span className={`text-xs text-center truncate w-full px-1 ${isCurrentPlayer ? "font-bold" : "font-normal"}`}>
+            {name}{isCurrentPlayer && " (vous)"}
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`flex items-center justify-between py-2 px-[15px] my-2 rounded-[10px] border-2 border-[#ddd] shadow-[0_2px_6px_rgba(0,0,0,0.1)] w-[95%] transition-all duration-300 ${

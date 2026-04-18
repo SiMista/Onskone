@@ -19,7 +19,7 @@ export function useSyncedTimer(defaultDuration: number, options: UseSyncedTimerO
   const [isRunning, setIsRunning] = useState(false);
   const [endTime, setEndTime] = useState<number | null>(null);
 
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const onExpireRef = useRef(onExpire);
   const hasExpiredRef = useRef(false);
 

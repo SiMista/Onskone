@@ -18,6 +18,7 @@ const Home = () => {
   const [isInfoOpen, setIsInfoOpen] = useState(false);
   const [hostName, setHostName] = useState<string | null>(null);
   const [lobbyExists, setLobbyExists] = useState<boolean | null>(null);
+  const [lobbyExpired, setLobbyExpired] = useState(false);
   const queryParams = useQueryParams();
   const navigate = useNavigate();
 
@@ -71,8 +72,11 @@ const Home = () => {
     setLobbyExists(data.exists);
     if (data.exists && data.hostName) {
       setHostName(data.hostName);
+    } else if (!data.exists) {
+      setLobbyExpired(true);
+      navigate('/', { replace: true });
     }
-  }, []);
+  }, [navigate]);
 
   useSocketEvent('lobbyInfo', handleLobbyInfo, [handleLobbyInfo]);
   useSocketEvent('lobbyCreated', handleLobbyCreated, [handleLobbyCreated]);
@@ -146,17 +150,20 @@ const Home = () => {
                 />
               </div>
               {!lobbyCode ? (
-                <div>
-                  <Button text="Créer un salon" variant="primary" size="md" onClick={createLobby} />
+                <div className="text-center space-y-2">
+                  {lobbyExpired && (
+                    <p className="text-sm text-red-600">Ce salon n'existe plus ou a expiré.</p>
+                  )}
+                  <Button
+                    text={lobbyExpired ? "Créer un nouveau salon" : "Créer un salon"}
+                    variant="primary"
+                    size="md"
+                    onClick={createLobby}
+                  />
                 </div>
               ) : lobbyExists === null ? (
                 <div className="text-center">
                   <span className="text-sm text-gray-500">Vérification du salon...</span>
-                </div>
-              ) : lobbyExists === false ? (
-                <div className="text-center space-y-2">
-                  <p className="text-sm text-red-600">Ce salon n'existe plus ou a expiré.</p>
-                  <Button text="Créer un nouveau salon" variant="primary" size="md" onClick={createLobby} />
                 </div>
               ) : (
                 <div>
