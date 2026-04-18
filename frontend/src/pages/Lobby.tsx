@@ -344,6 +344,14 @@ const Lobby = () => {
                                         />
                                     </li>
                                 ))}
+                                {players.length < GAME_CONFIG.MAX_PLAYERS && (
+                                    <li className="min-w-0">
+                                        <div className="relative aspect-square flex flex-col items-center justify-center gap-1 p-2 rounded-[10px] w-full border-2 border-dashed border-gray-300 bg-gray-50/50">
+                                            <div className="w-10 h-10 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-300 text-lg">?</div>
+                                            <span className="text-[10px] text-gray-400 italic text-center truncate w-full px-1">...</span>
+                                        </div>
+                                    </li>
+                                )}
                             </ul>
 
                             {/* Liste des joueurs - desktop: rangées */}
@@ -365,6 +373,14 @@ const Lobby = () => {
                                         />
                                     </li>
                                 ))}
+                                {players.length < GAME_CONFIG.MAX_PLAYERS && (
+                                    <li>
+                                        <div className="flex items-center gap-3.5 py-3 px-5 my-2.5 rounded-[12px] w-full border-2 border-dashed border-gray-300 bg-gray-50/50">
+                                            <div className="w-11 h-11 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-300 text-xl">?</div>
+                                            <span className="text-base md:text-lg text-gray-400 italic">…</span>
+                                        </div>
+                                    </li>
+                                )}
                             </ul>
 
                             {/* Actions - responsive layout */}

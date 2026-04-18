@@ -82,6 +82,8 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
     };
   }, [isLeader, lobbyCode]);
 
+  const locked = selectedQuestion !== null;
+
   const handleSelectQuestion = (question: string) => {
     if (!isLeader || selectedQuestion !== null) return;
 
@@ -90,10 +92,64 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
   };
 
   const handleTimerExpire = () => {
-    // Seul le leader doit appeler timerExpired pour éviter les appels multiples
-    if (isLeader) {
-      socket.emit('timerExpired', { lobbyCode });
+    if (!isLeader) return;
+    // Si pas de sélection, choisir une question au hasard dans la carte active
+    // et l'émettre en premier, avant que le serveur ne pioche depuis une autre carte.
+    if (selectedQuestion === null && currentCard && currentCard.questions.length > 0) {
+      const q = currentCard.questions[Math.floor(Math.random() * currentCard.questions.length)];
+      setSelectedQuestion(q);
+      socket.emit('selectQuestion', { lobbyCode, selectedQuestion: q });
+      return;
     }
+    socket.emit('timerExpired', { lobbyCode });
+  };
+
+  const goToCard = (idx: number) => {
+    if (locked) return;
+    const total = cards.length;
+    if (total === 0) return;
+    const next = ((idx % total) + total) % total;
+    setCurrentCardIndex(next);
+  };
+
+  const goPrev = () => goToCard(currentCardIndex - 1);
+  const goNext = () => goToCard(currentCardIndex + 1);
+
+  const touchStartXRef = useRef<number | null>(null);
+  const touchStartYRef = useRef<number | null>(null);
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartXRef.current = e.touches[0].clientX;
+    touchStartYRef.current = e.touches[0].clientY;
+  };
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartXRef.current === null || touchStartYRef.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartXRef.current;
+    const dy = e.changedTouches[0].clientY - touchStartYRef.current;
+    touchStartXRef.current = null;
+    touchStartYRef.current = null;
+    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy)) return;
+    if (dx > 0) goPrev(); else goNext();
+  };
+
+  const mouseStartXRef = useRef<number | null>(null);
+  const mouseStartYRef = useRef<number | null>(null);
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (locked) return;
+    mouseStartXRef.current = e.clientX;
+    mouseStartYRef.current = e.clientY;
+  };
+  const handleMouseUp = (e: React.MouseEvent) => {
+    if (mouseStartXRef.current === null || mouseStartYRef.current === null) return;
+    const dx = e.clientX - mouseStartXRef.current;
+    const dy = e.clientY - mouseStartYRef.current;
+    mouseStartXRef.current = null;
+    mouseStartYRef.current = null;
+    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy)) return;
+    if (dx > 0) goPrev(); else goNext();
+  };
+  const handleMouseLeave = () => {
+    mouseStartXRef.current = null;
+    mouseStartYRef.current = null;
   };
 
   if (!isLeader) {
@@ -133,33 +189,40 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
     );
   }
 
-  const locked = selectedQuestion !== null;
-
   const handleCardClick = (idx: number) => {
     if (locked) return;
     if (idx === currentCardIndex) return;
     setCurrentCardIndex(idx);
   };
 
+
   return (
     <div className="flex flex-col h-full p-2 md:p-4">
       {currentCard && (
         <div className="flex-1 flex flex-col items-center justify-center">
-          <div className="bg-primary text-base md:text-xl font-semibold px-3 md:px-6 py-2 md:py-3 rounded-2xl mb-3 md:mb-4 w-full text-center">
-            <p className="m-0 mb-1.5 md:mb-2">Vous êtes le pilier de cette manche !</p>
+          <div className="bg-primary text-base md:text-xl px-3 md:px-6 py-2 md:py-3 rounded-2xl mb-3 md:mb-4 w-full text-center">
+            <p className="font-display text-lg md:text-2xl m-0 mb-1.5 md:mb-2 tracking-tight">Vous êtes le pilier de cette manche !</p>
             <Timer duration={GAME_CONFIG.TIMERS.QUESTION_SELECTION} onExpire={handleTimerExpire} phase={RoundPhase.QUESTION_SELECTION} lobbyCode={lobbyCode} />
           </div>
 
           <div className="flex flex-col items-center gap-2 w-full">
-            <p className="text-sm md:text-base font-medium text-center leading-tight">
+            <p className="font-display text-base md:text-lg text-center leading-tight tracking-tight">
               Choisis une question pour cette manche
-              <span className="block text-xs md:text-sm text-gray-500 italic font-normal">
-                (clique sur une carte à l’arrière pour la faire passer devant)
+              <span className="flex md:hidden items-center justify-center gap-1.5 mt-1 text-xs text-gray-500 italic font-sans font-normal">
+                <Icon icon="ph:hand-swipe-left-duotone" className="text-base animate-wiggle" aria-hidden />
+                swipe pour changer de carte
               </span>
             </p>
 
             {/* Main de cartes - hauteur stable, indépendante du contenu */}
-            <div className="card-hand relative w-full max-w-xl mx-auto pt-6 md:pt-10 min-h-[420px] md:min-h-[480px]">
+            <div
+              className="card-hand relative w-full max-w-xl mx-auto pt-6 md:pt-10 min-h-[420px] md:min-h-[480px] touch-pan-y select-none"
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+              onMouseDown={handleMouseDown}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseLeave}
+            >
               {cards.map((card, idx) => {
                 const total = cards.length;
                 let offset = idx - currentCardIndex;
@@ -182,10 +245,14 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
                   ? 'translate(-50%, 0) rotate(0deg) scale(1)'
                   : `translate(calc(-50% + ${scatterX}%), ${scatterY}px) rotate(${tilt}deg) scale(${backScale})`;
 
+                const cardShadow = isActive
+                  ? '0 14px 36px rgba(0,0,0,0.28)'
+                  : `0 10px 22px rgba(0,0,0,0.22), 0 0 22px ${color}55`;
+
                 return (
                   <div
                     key={`${card.theme}-${idx}`}
-                    className={`card-hand-item w-[78%] sm:w-[68%] md:w-[60%] absolute top-10 md:top-14 left-1/2 ${isActive ? 'is-active' : 'is-side'} ${isActive && locked ? 'animate-card-pick' : ''}`}
+                    className={`card-hand-item w-[78%] sm:w-[68%] md:w-[60%] absolute top-10 md:top-14 left-1/2 ${isActive ? 'is-active' : 'is-side'} ${isActive && locked ? 'animate-card-lift' : ''}`}
                     style={{
                       transform: transformStyle,
                       pointerEvents: locked ? 'none' : 'auto',
@@ -196,23 +263,23 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
                     aria-label={!isActive ? `Voir la carte ${card.theme}` : undefined}
                   >
                     <div
-                      className="bg-[#f9f4ee] border-4 md:border-[6px] rounded-2xl md:rounded-3xl p-3 md:p-5 shadow-[0_10px_30px_rgba(0,0,0,0.25)] relative overflow-hidden min-h-[360px] md:min-h-[400px] flex flex-col"
-                      style={{ borderColor: color }}
+                      className="bg-[#f9f4ee] border-4 md:border-[6px] rounded-2xl md:rounded-3xl p-3 md:p-5 relative overflow-hidden min-h-[360px] md:min-h-[400px] flex flex-col transition-shadow duration-500"
+                      style={{ borderColor: color, boxShadow: cardShadow }}
                     >
                       <div
-                        className="absolute top-2 left-2 md:top-3 md:left-3 text-[10px] md:text-xs font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full text-black"
+                        className="font-display absolute top-2 left-2 md:top-3 md:left-3 text-[11px] md:text-sm font-bold uppercase tracking-[0.08em] px-2.5 py-0.5 rounded-full shadow-[0_2px_0_0_rgba(0,0,0,0.15)] text-white"
                         style={{ backgroundColor: color }}
                       >
                         {card.category}
                       </div>
 
-                      <div className="pt-5 md:pt-6 flex-1 flex flex-col">
-                        <p className="text-lg md:text-2xl font-bold text-center !mt-0 !mb-2 md:!mb-3 leading-tight">{card.theme}</p>
+                      <div className="pt-8 md:pt-10 flex-1 flex flex-col">
+                        <p className="font-display text-xl md:text-2xl font-bold text-center !mt-0 !mb-2 md:!mb-3 leading-tight tracking-tight">{card.theme}</p>
                         <p className="text-sm md:text-base text-gray-600 text-center italic !mt-0 !mb-1.5 md:!mb-2 leading-tight">
                           <span className="font-semibold not-italic text-gray-700">Sujet :</span> {card.subject}
                         </p>
 
-                        <div className="flex-1 flex flex-col gap-2 md:gap-3 justify-center">
+                        <div className="flex flex-col gap-2 md:gap-3 justify-start pb-6 md:pb-8">
                           {card.questions.map((question, qi) => {
                             const isSelected = selectedQuestion === question;
                             const dimmed = locked && !isSelected;
@@ -253,20 +320,67 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
               })}
             </div>
 
-            {/* Indicateur de carte sous le carousel */}
-            <div className="flex justify-center gap-2 mt-3">
-              {cards.map((_, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => handleCardClick(idx)}
-                  disabled={locked}
-                  aria-label={`Aller à la carte ${idx + 1}`}
-                  className={`h-2 rounded-full transition-all ${
-                    idx === currentCardIndex ? 'bg-white w-6' : 'bg-white/50 w-2 hover:bg-white/80'
-                  } ${locked ? 'cursor-not-allowed' : 'cursor-pointer'}`}
-                />
-              ))}
-            </div>
+            {/* Navigation : flèches rondes + dots colorés */}
+            {(() => {
+              const activeColor = currentCard ? getCategoryColor(currentCard.category) : '#18bbed';
+              const navDisabled = locked || cards.length < 2;
+              return (
+                <div className="flex items-center justify-center gap-4 md:gap-6 -mt-4 md:-mt-6 w-full px-2 max-w-xl mx-auto relative z-40">
+                  <button
+                    type="button"
+                    onClick={goPrev}
+                    disabled={navDisabled}
+                    aria-label="Carte précédente"
+                    className="group w-11 h-11 md:w-14 md:h-14 rounded-full bg-[#f9f4ee] border-[3px] md:border-4 flex items-center justify-center shadow-[0_4px_0_0_rgba(0,0,0,0.18)] hover:-translate-y-0.5 hover:shadow-[0_6px_0_0_rgba(0,0,0,0.2)] active:translate-y-0.5 active:shadow-[0_1px_0_0_rgba(0,0,0,0.2)] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-[0_4px_0_0_rgba(0,0,0,0.18)]"
+                    style={{ borderColor: activeColor }}
+                  >
+                    <Icon
+                      icon="ph:arrow-left-bold"
+                      className="text-xl md:text-2xl transition-transform duration-200 group-hover:-translate-x-0.5"
+                      style={{ color: activeColor }}
+                      aria-hidden
+                    />
+                  </button>
+
+                  <div className="flex items-center gap-1.5 md:gap-2 py-2">
+                    {cards.map((card, idx) => {
+                      const active = idx === currentCardIndex;
+                      const c = getCategoryColor(card.category);
+                      return (
+                        <button
+                          key={`${card.theme}-dot-${idx}`}
+                          type="button"
+                          onClick={() => !locked && goToCard(idx)}
+                          disabled={locked}
+                          aria-label={`Aller à la carte ${idx + 1}`}
+                          className={`rounded-full transition-all duration-300 ease-out ${active ? 'w-7 h-2.5 md:w-9 md:h-3' : 'w-2.5 h-2.5 md:w-3 md:h-3 hover:scale-125'}`}
+                          style={{
+                            backgroundColor: active ? c : 'rgba(255,255,255,0.55)',
+                            boxShadow: active ? '0 2px 0 0 rgba(0,0,0,0.18)' : 'inset 0 0 0 1.5px rgba(0,0,0,0.15)',
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={goNext}
+                    disabled={navDisabled}
+                    aria-label="Carte suivante"
+                    className="group w-11 h-11 md:w-14 md:h-14 rounded-full bg-[#f9f4ee] border-[3px] md:border-4 flex items-center justify-center shadow-[0_4px_0_0_rgba(0,0,0,0.18)] hover:-translate-y-0.5 hover:shadow-[0_6px_0_0_rgba(0,0,0,0.2)] active:translate-y-0.5 active:shadow-[0_1px_0_0_rgba(0,0,0,0.2)] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-[0_4px_0_0_rgba(0,0,0,0.18)]"
+                    style={{ borderColor: activeColor }}
+                  >
+                    <Icon
+                      icon="ph:arrow-right-bold"
+                      className="text-xl md:text-2xl transition-transform duration-200 group-hover:translate-x-0.5"
+                      style={{ color: activeColor }}
+                      aria-hidden
+                    />
+                  </button>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Message de confirmation */}

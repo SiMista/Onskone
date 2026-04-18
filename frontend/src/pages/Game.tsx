@@ -9,7 +9,7 @@ import RevealPhase from '../components/RevealPhase';
 import Logo from '../components/Logo';
 import { useLeavePrompt } from '../hooks';
 import { getCurrentPlayerFromStorage } from '../utils/playerHelpers';
-import { IPlayer, IRound, IGame, RoundPhase, GameStatus, RevealResult } from '@onskone/shared';
+import { IPlayer, IRound, IGame, RoundPhase, GameStatus, RevealResult, GameCard } from '@onskone/shared';
 
 const GamePage: React.FC = () => {
   const { lobbyCode } = useParams<{ lobbyCode: string }>();
@@ -121,13 +121,14 @@ const GamePage: React.FC = () => {
       setGame(data.game);
     });
 
-    socket.on('questionSelected', (data: { question: string; phase: RoundPhase; auto?: boolean }) => {
+    socket.on('questionSelected', (data: { question: string; phase: RoundPhase; auto?: boolean; card?: GameCard }) => {
       setGame(prev => prev ? {
         ...prev,
         currentRound: prev.currentRound ? {
           ...prev.currentRound,
           selectedQuestion: data.question,
-          phase: data.phase
+          phase: data.phase,
+          gameCard: data.card ?? prev.currentRound.gameCard
         } : null
       } : null);
     });
@@ -266,6 +267,7 @@ const GamePage: React.FC = () => {
             key={`answer-phase-${game.currentRound.roundNumber}`}
             lobbyCode={lobbyCode!}
             question={game.currentRound.selectedQuestion || 'Chargement...'}
+            card={game.currentRound.gameCard}
             isLeader={isLeader}
             currentPlayerId={currentPlayer.id}
             players={players}

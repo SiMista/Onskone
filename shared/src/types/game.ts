@@ -34,7 +34,7 @@ export interface RoundData {
   /** Numéro du round */
   roundNumber: number;
 
-  /** Chef du round */
+  /** Pilier du round */
   leader: { name: string };
 
   /** Scores des joueurs pour ce round */

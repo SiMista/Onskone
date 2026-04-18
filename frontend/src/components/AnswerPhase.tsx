@@ -4,13 +4,14 @@ import socket from '../utils/socket';
 import Timer from './Timer';
 import Button from './Button';
 import Avatar from './Avatar';
-import { GAME_CONFIG } from '../constants/game';
-import { IPlayer, RoundPhase } from '@onskone/shared';
+import { GAME_CONFIG, getCategoryColor } from '../constants/game';
+import { IPlayer, RoundPhase, GameCard } from '@onskone/shared';
 import { playSound } from '../utils/sounds';
 
 interface AnswerPhaseProps {
   lobbyCode: string;
   question: string;
+  card?: GameCard;
   isLeader: boolean;
   currentPlayerId: string;
   players: IPlayer[];
@@ -22,6 +23,7 @@ interface AnswerPhaseProps {
 const AnswerPhase: React.FC<AnswerPhaseProps> = ({
   lobbyCode,
   question,
+  card,
   isLeader,
   currentPlayerId,
   players,
@@ -29,6 +31,34 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
   initialAnsweredPlayerIds,
   initialMyAnswer
 }) => {
+  const leader = players.find(p => p.id === leaderId);
+  const leaderName = leader?.name ?? '';
+  const subtitle = isLeader
+    ? 'Question posée aux autres joueurs'
+    : leaderName
+      ? `Question posée par ${leaderName}`
+      : '';
+  const cardColor = card ? getCategoryColor(card.category) : '#000';
+  const questionCard = card ? (
+    <div
+      className="bg-[#f9f4ee] border-[3px] md:border-4 rounded-xl px-5 md:px-7 py-3 md:py-4 shadow-md relative overflow-hidden max-w-2xl mx-auto w-full"
+      style={{ borderColor: cardColor }}
+    >
+      <span
+        className="font-display absolute top-2 left-2 md:top-2.5 md:left-2.5 text-[10px] md:text-xs font-bold uppercase tracking-[0.08em] px-2 py-0.5 rounded-full text-white"
+        style={{ backgroundColor: cardColor }}
+      >
+        {card.category}
+      </span>
+      <p className="font-display text-base md:text-lg font-bold leading-tight tracking-tight text-center !mt-0 !mb-2 whitespace-nowrap pt-5 md:pt-6">
+        {card.theme}
+      </p>
+      <p className="text-[11px] md:text-xs text-gray-600 italic leading-tight !mt-0 !mb-2 text-center">
+        <span className="font-semibold not-italic text-gray-700">Sujet :</span> {card.subject}
+      </p>
+      <p className="text-base md:text-xl font-semibold text-center !mt-1 !mb-0">{question}</p>
+    </div>
+  ) : null;
   // Initialiser avec les données de reconnexion si disponibles
   const [answer, setAnswer] = useState(initialMyAnswer || '');
   const [submitted, setSubmitted] = useState(!!initialMyAnswer);
@@ -114,10 +144,14 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
     return (
       <div className="flex flex-col items-center justify-center h-full p-3 md:p-6 space-y-4">
         <div className="text-center mb-2 md:mb-4 w-full ">
-          <div className="bg-primary-light rounded-lg px-3 md:px-4 py-2 max-w-2xl mx-auto ">
-            <p className="text-gray-600 mb-2 md:mb-4 text-sm md:text-base">Question posée aux autres joueurs:</p>
-            <p className="text-lg md:text-2xl font-semibold">{question}</p>
-          </div>
+          {questionCard ?? (
+            <div className="bg-primary-light rounded-lg px-3 md:px-4 py-2 max-w-2xl mx-auto ">
+              <p className="text-lg md:text-2xl font-semibold">{question}</p>
+            </div>
+          )}
+          {subtitle && (
+            <p className="mt-2 md:mt-3 text-sm md:text-base text-gray-600 italic">{subtitle}</p>
+          )}
         </div>
 
         <div className="w-full max-w-md">
@@ -162,8 +196,15 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
 
   return (
     <div className="flex flex-col h-full p-3 md:p-4 max-w-4xl mx-auto">
-      <div className="bg-primary-light rounded-lg px-3 md:px-4 pb-3 md:pb-4 mb-3 md:mb-4">
-        <p className="text-lg md:text-2xl font-semibold text-black text-center">{question}</p>
+      {questionCard ?? (
+        <div className="bg-primary-light rounded-lg px-3 md:px-4 pb-3 md:pb-4">
+          <p className="text-lg md:text-2xl font-semibold text-black text-center">{question}</p>
+        </div>
+      )}
+      {subtitle && (
+        <p className="mt-2 text-center text-sm md:text-base text-gray-600 italic">{subtitle}</p>
+      )}
+      <div className="mt-3 md:mt-4 mb-3 md:mb-4">
         <Timer duration={GAME_CONFIG.TIMERS.ANSWERING} onExpire={handleTimerExpire} phase={RoundPhase.ANSWERING} lobbyCode={lobbyCode} />
       </div>
 
