@@ -33,6 +33,9 @@ const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
             )}
           </section>
         ))}
+        <p className="text-xs text-gray-400 text-center pt-4 border-t border-gray-200">
+          Version {__APP_VERSION__}
+        </p>
       </div>
     </Modal>
   );
