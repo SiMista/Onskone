@@ -296,6 +296,7 @@ const GamePage: React.FC = () => {
             lobbyCode={lobbyCode!}
             isLeader={isLeader}
             leaderName={game.currentRound.leader.name}
+            currentPlayerId={currentPlayer.id}
             isGameOver={isGameOver}
             results={revealResults}
             question={game.currentRound.selectedQuestion || ''}
