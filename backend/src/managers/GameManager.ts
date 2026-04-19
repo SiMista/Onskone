@@ -91,27 +91,17 @@ export const createGame = (lobby: ILobby): Game => {
     return game;
 };
 
-/**
- * Compare deux GameCards pour vérifier si elles sont identiques
- * (basé sur la catégorie et les questions)
- */
-const areCardsEqual = (card1: GameCard, card2: GameCard): boolean => {
-    if (card1.theme !== card2.theme || card1.subject !== card2.subject) return false;
-    if (card1.questions.length !== card2.questions.length) return false;
-    return card1.questions.every((q, i) => q === card2.questions[i]);
-};
-
 export const getRandomQuestions = (count: number, excludeCards: GameCard[] = [], pool: GameCard[] = questionsPool): GameCard[] => {
     if (pool.length === 0) {
         return [];
     }
 
-    // Filtrer les cartes déjà vues
+    // Filtrer les cartes déjà vues (Set de signatures pour O(1) lookup)
     let availableCards = pool;
     if (excludeCards.length > 0) {
-        availableCards = pool.filter(card =>
-            !excludeCards.some(excluded => areCardsEqual(card, excluded))
-        );
+        const cardSignature = (c: GameCard) => `${c.theme}|${c.subject}|${c.questions.join('§')}`;
+        const excludedSignatures = new Set(excludeCards.map(cardSignature));
+        availableCards = pool.filter(card => !excludedSignatures.has(cardSignature(card)));
     }
 
     // Si toutes les cartes ont été vues, reset et utiliser tout le pool

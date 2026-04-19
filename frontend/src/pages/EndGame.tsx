@@ -9,45 +9,28 @@ import Logo from '../components/Logo';
 import { getCurrentPlayerFromStorage } from '../utils/playerHelpers';
 import { buildShareCard, shareBlob } from '../utils/shareCard';
 
-interface Verdict {
+interface Tier {
+  max: number;
+  midPct: number;
   title: string;
   message: string;
   color: string;
   icon: string;
 }
 
-const getVerdict = (pct: number): Verdict => {
-  if (pct <= 20) return {
-    title: 'Étrangers',
-    message: 'Vous partagez le wifi, pas les secrets.',
-    color: '#ff4f4f',
-    icon: 'fluent-emoji-flat:dotted-line-face',
-  };
-  if (pct <= 40) return {
-    title: 'Connaissances',
-    message: 'Vous savez vous dire bonjour, et c\'est déjà ça.',
-    color: '#ff8c3a',
-    icon: 'fluent-emoji-flat:grimacing-face',
-  };
-  if (pct <= 60) return {
-    title: 'Potes corrects',
-    message: 'Pas mal, mais y\'a des zones d\'ombre…',
-    color: '#ffc700',
-    icon: 'fluent-emoji-flat:slightly-smiling-face',
-  };
-  if (pct <= 80) return {
-    title: 'Bonne team',
-    message: 'Vous vous captez. Un peu trop peut-être.',
-    color: '#8bd94d',
-    icon: 'fluent-emoji-flat:handshake',
-  };
-  return {
-    title: 'Télépathes',
-    message: 'Cabinet d\'espionnage ou vrais amis ? On sait plus.',
-    color: '#30c94d',
-    icon: 'fluent-emoji-flat:crystal-ball',
-  };
+const TIERS: Tier[] = [
+  { max: 20,  midPct: 10, title: 'C\'est gênant là...',      color: '#ff4f4f', icon: 'fluent-emoji-flat:neutral-face',           message: 'Vous partagez le wifi, pas vos vies.' },
+  { max: 40,  midPct: 30, title: 'Pas encore ça',  color: '#ff8c3a', icon: 'fluent-emoji-flat:pinching-hand',          message: 'Vous savez vous dire bonjour, et c\'est déjà ça.' },
+  { max: 60,  midPct: 50, title: 'Pas mal, pas mal', color: '#ffc700', icon: 'fluent-emoji-flat:handshake',              message: 'Les bases sont là, reste à creuser un peu.' },
+  { max: 80,  midPct: 70, title: 'Super team',     color: '#8bd94d', icon: 'fluent-emoji-flat:sparkles',              message: 'Vous vous captez presque sans parler.' },
+  { max: 100, midPct: 90, title: 'Inséparables',   color: '#30c94d', icon: 'fluent-emoji-flat:people-hugging',         message: 'À ce stade c\'est plus de l\'amitié, c\'est de la fusion.' },
+];
+
+const getTierIndex = (pct: number) => {
+  const idx = TIERS.findIndex(t => pct <= t.max);
+  return idx === -1 ? TIERS.length - 1 : idx;
 };
+const getVerdict = (pct: number): Tier => TIERS[getTierIndex(pct)];
 
 const EndGame: React.FC = () => {
   const { lobbyCode } = useParams<{ lobbyCode: string }>();
@@ -100,6 +83,7 @@ const EndGame: React.FC = () => {
   }, [leaderboard, rounds]);
 
   const verdict = useMemo(() => getVerdict(pct), [pct]);
+  const liveVerdict = useMemo(() => getVerdict(displayPct), [displayPct]);
 
   useEffect(() => {
     if (!leaderboard.length) return;
@@ -262,8 +246,8 @@ const EndGame: React.FC = () => {
             Vous vous connaissez à
           </p>
 
-          <div className="relative w-[240px] h-[240px] md:w-[300px] md:h-[300px]">
-            <svg className="w-full h-full -rotate-90" viewBox="0 0 240 240">
+          <div className="relative w-[360px] h-[360px] md:w-[440px] md:h-[440px] max-w-full">
+            <svg className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[240px] h-[240px] md:w-[300px] md:h-[300px] -rotate-90" viewBox="0 0 240 240">
               <circle
                 cx="120"
                 cy="120"
@@ -277,18 +261,18 @@ const EndGame: React.FC = () => {
                 cy="120"
                 r={ringRadius}
                 fill="none"
-                stroke={verdict.color}
+                stroke={liveVerdict.color}
                 strokeWidth="18"
                 strokeLinecap="round"
                 strokeDasharray={ringCircumference}
                 strokeDashoffset={ringOffset}
                 style={{
                   transition: 'stroke 0.5s ease',
-                  filter: revealed ? `drop-shadow(0 0 14px ${verdict.color})` : 'none',
+                  filter: revealed ? `drop-shadow(0 0 14px ${liveVerdict.color})` : 'none',
                 }}
               />
             </svg>
-            <div className="absolute inset-0 flex items-center justify-center">
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="flex items-baseline">
                 <span
                   className="font-display font-bold text-white text-6xl md:text-8xl leading-none tabular-nums"
@@ -298,29 +282,62 @@ const EndGame: React.FC = () => {
                 </span>
                 <span
                   className="font-display font-bold text-4xl md:text-5xl ml-1"
-                  style={{ color: verdict.color }}
+                  style={{ color: liveVerdict.color, transition: 'color 0.5s ease' }}
                 >
                   %
                 </span>
               </div>
             </div>
+
+            {TIERS.map((tier, idx) => {
+              const currentIdx = displayPct <= 0 ? -1 : getTierIndex(displayPct);
+              const isActive = idx === currentIdx;
+              const isPassed = currentIdx > idx;
+              const a = (tier.midPct / 100) * 360 * Math.PI / 180;
+              const radius = 40;
+              const x = 50 + Math.sin(a) * radius;
+              const y = 50 - Math.cos(a) * radius;
+              return (
+                <div
+                  key={tier.title}
+                  className="absolute flex flex-col items-center text-center whitespace-nowrap"
+                  style={{
+                    left: `${x}%`,
+                    top: `${y}%`,
+                    transform: `translate(-50%, -50%) scale(${isActive ? 1.15 : isPassed ? 0.92 : 0.8})`,
+                    opacity: isActive ? 1 : isPassed ? 0.7 : 0.28,
+                    transition: 'transform 0.45s cubic-bezier(0.34,1.56,0.64,1), opacity 0.4s ease, filter 0.4s ease',
+                    filter: isActive ? `drop-shadow(0 0 10px ${tier.color}) drop-shadow(0 0 4px ${tier.color})` : 'none',
+                  }}
+                >
+                  <Icon
+                    icon={tier.icon}
+                    className={isActive ? 'text-3xl md:text-4xl' : 'text-lg md:text-xl'}
+                    width="1em"
+                    height="1em"
+                    aria-hidden
+                  />
+                  <span
+                    className={`font-display font-bold mt-0.5 md:mt-1 ${isActive ? 'text-sm md:text-base' : 'text-[10px] md:text-xs'}`}
+                    style={{
+                      color: isActive || isPassed ? tier.color : 'rgba(255,255,255,0.75)',
+                      textShadow: isActive ? '0 1px 3px rgba(0,0,0,0.5)' : 'none',
+                      letterSpacing: isActive ? '0.02em' : '0',
+                    }}
+                  >
+                    {tier.title}
+                  </span>
+                </div>
+              );
+            })}
           </div>
 
           <div
-            className={`mt-4 md:mt-6 text-center px-4 transition-all duration-500 ${
+            className={`mt-3 md:mt-4 text-center px-4 transition-all duration-500 ${
               revealed ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'
             }`}
           >
-            <div
-              className="inline-flex items-center gap-2 md:gap-3 px-4 md:px-6 py-1.5 md:py-2 rounded-full border-2 border-black shadow-[0_2px_10px_rgba(0,0,0,0.25)]"
-              style={{ backgroundColor: verdict.color }}
-            >
-              <Icon icon={verdict.icon} width="1.5em" height="1.5em" aria-hidden />
-              <span className="font-display font-bold text-xl md:text-2xl text-black">
-                {verdict.title}
-              </span>
-            </div>
-            <p className="mt-2 md:mt-3 text-white text-sm md:text-base font-display italic max-w-md mx-auto">
+            <p className="text-white text-sm md:text-base font-display italic max-w-md mx-auto">
               « {verdict.message} »
             </p>
           </div>

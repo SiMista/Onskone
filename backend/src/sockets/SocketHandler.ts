@@ -1454,30 +1454,29 @@ export class SocketHandler {
                     if (!lobby) return; // Type narrowing for lobby
                     const currentRound = game!.currentRound!;
 
-                    // Valider et filtrer les guesses
-                    const answerIds = Object.keys(currentRound.answers);
-                    const playerIds = lobby.players
-                        .filter(p => p.id !== currentRound.leader.id)
-                        .map(p => p.id);
+                    // Valider et filtrer les guesses (Sets pour lookups O(1))
+                    const answerIds = new Set(Object.keys(currentRound.answers));
+                    const playerIds = new Set(
+                        lobby.players
+                            .filter(p => p.id !== currentRound.leader.id)
+                            .map(p => p.id)
+                    );
 
                     const validGuesses: Record<string, string> = {};
                     for (const [answerId, guessedPlayerId] of Object.entries(data.guesses)) {
-                        // Ignorer les guesses null/undefined
-                        if (guessedPlayerId === null || guessedPlayerId === undefined) continue;
+                        if (typeof guessedPlayerId !== 'string') continue;
 
-                        // Vérifier que l'answerId correspond à une vraie réponse
-                        if (!answerIds.includes(answerId)) {
+                        if (!answerIds.has(answerId)) {
                             logger.warn(`Guess invalide: answerId ${answerId} inexistant`);
                             continue;
                         }
 
-                        // Vérifier que le playerId deviné est un joueur valide (pas le pilier)
-                        if (!playerIds.includes(guessedPlayerId as string)) {
+                        if (!playerIds.has(guessedPlayerId)) {
                             logger.warn(`Guess invalide: playerId ${guessedPlayerId} inexistant ou est le pilier`);
                             continue;
                         }
 
-                        validGuesses[answerId] = guessedPlayerId as string;
+                        validGuesses[answerId] = guessedPlayerId;
                     }
 
                     // Enregistrer les attributions finales et calculer les scores
