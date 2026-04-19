@@ -4,6 +4,7 @@ import socket from '../utils/socket';
 import Timer from './Timer';
 import Button from './Button';
 import Avatar from './Avatar';
+import QuestionCard from './QuestionCard';
 import { GAME_CONFIG, getCategoryColor } from '../constants/game';
 import { IPlayer, RoundPhase, GameCard } from '@onskone/shared';
 import { playSound } from '../utils/sounds';
@@ -38,27 +39,7 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
     : leaderName
       ? `Question posée par ${leaderName}`
       : '';
-  const cardColor = card ? getCategoryColor(card.category) : '#000';
-  const questionCard = card ? (
-    <div
-      className="bg-[#f9f4ee] border-[3px] md:border-4 rounded-xl px-5 md:px-7 py-3 md:py-4 shadow-md relative overflow-hidden max-w-2xl mx-auto w-full"
-      style={{ borderColor: cardColor }}
-    >
-      <span
-        className="font-display absolute top-2 left-2 md:top-2.5 md:left-2.5 text-[10px] md:text-xs font-bold uppercase tracking-[0.08em] px-2 py-0.5 rounded-full text-white"
-        style={{ backgroundColor: cardColor }}
-      >
-        {card.category}
-      </span>
-      <p className="font-display text-base md:text-lg font-bold leading-tight tracking-tight text-center !mt-0 !mb-2 whitespace-nowrap pt-5 md:pt-6">
-        {card.theme}
-      </p>
-      <p className="text-[11px] md:text-xs text-gray-600 italic leading-tight !mt-0 !mb-2 text-center">
-        <span className="font-semibold not-italic text-gray-700">Sujet :</span> {card.subject}
-      </p>
-      <p className="text-base md:text-xl font-semibold text-center !mt-1 !mb-0">{question}</p>
-    </div>
-  ) : null;
+  const cardColor = card ? getCategoryColor(card.category) : '#18bbed';
   // Initialiser avec les données de reconnexion si disponibles
   const [answer, setAnswer] = useState(initialMyAnswer || '');
   const [submitted, setSubmitted] = useState(!!initialMyAnswer);
@@ -141,28 +122,45 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
   };
 
   if (isLeader) {
+    const ringProgress = expectedAnswers > 0 ? (answersCount / expectedAnswers) * 100 : 0;
+    const ringCircumference = 2 * Math.PI * 42;
+    const ringOffset = ringCircumference * (1 - ringProgress / 100);
+
     return (
       <div className="flex flex-col items-center justify-center h-full p-3 md:p-6 space-y-4">
-        <div className="text-center mb-2 md:mb-4 w-full ">
-          {questionCard ?? (
-            <div className="bg-primary-light rounded-lg px-3 md:px-4 py-2 max-w-2xl mx-auto ">
-              <p className="text-lg md:text-2xl font-semibold">{question}</p>
-            </div>
-          )}
-          {subtitle && (
-            <p className="mt-2 md:mt-3 text-sm md:text-base text-gray-600 italic">{subtitle}</p>
-          )}
-        </div>
+        <QuestionCard question={question} card={card} subtitle={subtitle} variant="compact" />
 
         <div className="w-full max-w-md">
           <Timer duration={GAME_CONFIG.TIMERS.ANSWERING} onExpire={handleTimerExpire} phase={RoundPhase.ANSWERING} lobbyCode={lobbyCode} />
         </div>
 
-        <div className="text-center">
-          <p className="text-3xl md:text-4xl font-bold text-gray-800 mb-1 md:mb-2">
-            {answersCount} / {expectedAnswers}
-          </p>
-          <p className="text-base md:text-lg text-gray-600">Réponses reçues</p>
+        <div className="flex flex-col items-center">
+          <div className="relative w-24 h-24 md:w-28 md:h-28">
+            <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+              <circle
+                cx="50" cy="50" r="42"
+                fill="none"
+                stroke="#e5e7eb"
+                strokeWidth="8"
+              />
+              <circle
+                cx="50" cy="50" r="42"
+                fill="none"
+                stroke={cardColor}
+                strokeWidth="8"
+                strokeLinecap="round"
+                strokeDasharray={ringCircumference}
+                strokeDashoffset={ringOffset}
+                className="transition-[stroke-dashoffset] duration-500 ease-out"
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <p className="font-display text-2xl md:text-3xl font-bold text-gray-800 leading-none">
+                {answersCount}<span className="text-gray-400">/{expectedAnswers}</span>
+              </p>
+            </div>
+          </div>
+          <p className="text-xs md:text-sm text-gray-600 mt-2 uppercase tracking-wide font-semibold">Réponses reçues</p>
         </div>
 
         <div className="flex flex-wrap justify-center gap-2 md:gap-3 max-w-2xl px-2">
@@ -196,14 +194,8 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
 
   return (
     <div className="flex flex-col h-full p-3 md:p-4 max-w-4xl mx-auto">
-      {questionCard ?? (
-        <div className="bg-primary-light rounded-lg px-3 md:px-4 pb-3 md:pb-4">
-          <p className="text-lg md:text-2xl font-semibold text-black text-center">{question}</p>
-        </div>
-      )}
-      {subtitle && (
-        <p className="mt-2 text-center text-sm md:text-base text-gray-600 italic">{subtitle}</p>
-      )}
+      <QuestionCard question={question} card={card} subtitle={subtitle} variant="compact" />
+
       <div className="mt-3 md:mt-4 mb-3 md:mb-4">
         <Timer duration={GAME_CONFIG.TIMERS.ANSWERING} onExpire={handleTimerExpire} phase={RoundPhase.ANSWERING} lobbyCode={lobbyCode} />
       </div>
@@ -237,8 +229,12 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
         </div>
       ) : (
         <div className="flex-1 flex flex-col items-center justify-center space-y-4 md:space-y-6">
-          <p className="text-gray-600 text-center text-sm md:text-base">
-            En attente des autres joueurs...
+          <div className="bg-gray-100 rounded-lg p-4 md:p-6 max-w-md w-full border-2 border-gray-300">
+            <p className="text-gray-600 text-xs md:text-sm mb-2">Votre réponse :</p>
+            <p className="text-gray-800 text-base md:text-lg font-medium break-words whitespace-pre-wrap">{answer}</p>
+          </div>
+          <p className="text-gray-600 text-center text-sm md:text-base italic">
+            En attente des autres joueurs…
           </p>
           <div className="flex flex-wrap justify-center gap-2 md:gap-3 max-w-2xl px-2">
             {respondingPlayers.map((player) => {
@@ -264,10 +260,6 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
                 </div>
               );
             })}
-          </div>
-          <div className="bg-gray-100 rounded-lg p-4 md:p-6 max-w-md w-full border-2 border-gray-300">
-            <p className="text-gray-600 text-xs md:text-sm mb-2">Votre réponse :</p>
-            <p className="text-gray-800 text-base md:text-lg font-medium break-words whitespace-pre-wrap">{answer}</p>
           </div>
         </div>
       )}

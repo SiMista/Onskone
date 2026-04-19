@@ -292,6 +292,45 @@ button {
   animation: card-lift-out 0.65s cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
 }
 
+/* Pop quand une réponse est révélée dans RevealPhase */
+@keyframes reveal-pop {
+  0% {
+    transform: scale(0.92) rotate(-1deg);
+    filter: brightness(1.1);
+  }
+  55% {
+    transform: scale(1.04) rotate(0.5deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    filter: brightness(1);
+  }
+}
+
+.animate-reveal-pop {
+  animation: reveal-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* Bounce soft pour le CTA final de RevealPhase */
+@keyframes reveal-cta-in {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-3px) scale(1.03);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-reveal-cta {
+  animation: reveal-cta-in 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
 /* Animation bounce pour le popover de similarité */
 @keyframes popover-bounce {
   0% {

@@ -5,7 +5,8 @@ import socket from '../utils/socket';
 import Timer from './Timer';
 import Button from './Button';
 import Avatar from './Avatar';
-import { IPlayer, RoundPhase } from '@onskone/shared';
+import QuestionCard from './QuestionCard';
+import { IPlayer, RoundPhase, GameCard } from '@onskone/shared';
 import { isNoResponse, getDisplayText } from '../utils/answerHelpers';
 
 interface Answer {
@@ -18,12 +19,13 @@ interface GuessingPhaseProps {
   isLeader: boolean;
   leaderName: string;
   question: string;
+  card?: GameCard;
   initialGuesses?: Record<string, string>;
   playerCount: number; // Nombre total de joueurs (pour calculer la durée du timer)
   roundNumber: number; // Numéro du round actuel (pour éviter les race conditions)
 }
 
-const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, leaderName, question, initialGuesses, playerCount, roundNumber }) => {
+const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, leaderName, question, card, initialGuesses, playerCount, roundNumber }) => {
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [players, setPlayers] = useState<IPlayer[]>([]);
   const [guesses, setGuesses] = useState<Record<string, string>>(initialGuesses || {});
@@ -206,7 +208,6 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
     const allAssigned = answers.every(answer => guesses[answer.id]);
 
     if (!allAssigned) {
-      alert('Vous devez attribuer toutes les réponses avant de valider!');
       return;
     }
 
@@ -241,20 +242,18 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
 
   return (
     <div className="flex flex-col h-full p-2 md:p-4">
-      <div className="mb-2 md:mb-4">
-        <h2 className="text-lg md:text-2xl font-bold text-gray-800 mb-1 md:mb-2 text-center">
+      <div className="mb-2 md:mb-3">
+        <QuestionCard question={question} card={card} variant="compact" />
+        <h2 className="text-sm md:text-lg font-bold text-gray-800 mt-2 md:mt-3 mb-1 md:mb-2 text-center">
           {isLeader ? (
             <>
               <span className="md:hidden">Tapez une réponse puis un joueur</span>
-              <span className="hidden md:inline">Glissez-déposez chaque réponse vers le joueur</span>
+              <span className="hidden md:inline">Glissez chaque réponse vers son auteur présumé</span>
             </>
           ) : (
-            `${leaderName} devine...`
+            <span className="italic text-gray-700">{leaderName} devine…</span>
           )}
         </h2>
-        <div className="bg-primary-light rounded-lg px-3 py-2 mb-2 md:mb-3">
-          <p className="text-sm md:text-base text-gray-800 text-center font-medium">{question}</p>
-        </div>
         <Timer duration={timerDuration} onExpire={handleTimerExpire} phase={RoundPhase.GUESSING} lobbyCode={lobbyCode} />
       </div>
 
@@ -375,7 +374,7 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
       {isLeader && (
         <div className="mt-3 md:mt-6 text-center">
           {unassignedAnswers.length > 0 && (
-            <p className="text-gray-500 mb-2 text-xs md:text-sm">
+            <p className="mb-2 text-xs md:text-sm font-medium text-gray-500">
               Il reste {unassignedAnswers.length} réponse(s) à attribuer
             </p>
           )}

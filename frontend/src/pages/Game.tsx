@@ -285,6 +285,7 @@ const GamePage: React.FC = () => {
             isLeader={isLeader}
             leaderName={game.currentRound.leader.name}
             question={game.currentRound.selectedQuestion || ''}
+            card={game.currentRound.gameCard}
             initialGuesses={reconnectionData?.currentGuesses}
             playerCount={players.length}
             roundNumber={game.currentRound.roundNumber}
@@ -301,6 +302,7 @@ const GamePage: React.FC = () => {
             isGameOver={isGameOver}
             results={revealResults}
             question={game.currentRound.selectedQuestion || ''}
+            card={game.currentRound.gameCard}
             initialRevealedIndices={reconnectionData?.revealedIndices}
           />
         );

@@ -274,9 +274,19 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
                       </div>
 
                       <div className="pt-8 md:pt-10 flex-1 flex flex-col">
-                        <p className="font-display text-xl md:text-2xl font-bold text-center !mt-0 !mb-2 md:!mb-3 leading-tight tracking-tight">{card.theme}</p>
-                        <p className="text-sm md:text-base text-gray-600 text-center italic !mt-0 !mb-1.5 md:!mb-2 leading-tight">
-                          <span className="font-semibold not-italic text-gray-700">Sujet :</span> {card.subject}
+                        {/* Thème : titre héros de la carte */}
+                        <p className="font-display text-xl md:text-2xl font-bold text-center !mt-0 !mb-1.5 md:!mb-2 leading-tight tracking-tight">{card.theme}</p>
+                        {/* Séparateur */}
+                        <div
+                          className="mx-auto rounded-full !mb-1.5 md:!mb-2"
+                          style={{ width: 36, height: 2, backgroundColor: color, opacity: 0.35 }}
+                        />
+                        {/* Sujet : eyebrow tracké, couleur catégorie */}
+                        <p
+                          className="text-center !mt-0 !mb-3 md:!mb-4 text-[10px] md:text-[11px] uppercase font-semibold tracking-[0.14em] leading-tight"
+                          style={{ color }}
+                        >
+                          {card.subject}
                         </p>
 
                         <div className="flex flex-col gap-2 md:gap-3 justify-start pb-6 md:pb-8">

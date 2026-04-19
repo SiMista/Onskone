@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import socket from '../utils/socket';
 import Button from './Button';
 import Avatar from './Avatar';
+import QuestionCard from './QuestionCard';
 import SimilarityPopover from './SimilarityPopover';
-import { RevealResult, LeaderboardEntry } from '@onskone/shared';
+import { RevealResult, LeaderboardEntry, GameCard } from '@onskone/shared';
 import { isNoResponse, getDisplayText } from '../utils/answerHelpers';
 
 interface RevealPhaseProps {
@@ -13,10 +14,11 @@ interface RevealPhaseProps {
   isGameOver: boolean;
   results: RevealResult[];
   question: string;
+  card?: GameCard;
   initialRevealedIndices?: number[];
 }
 
-const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderName, isGameOver, results, question, initialRevealedIndices }) => {
+const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderName, isGameOver, results, question, card, initialRevealedIndices }) => {
   // Indices des réponses révélées (synchronisé via socket)
   const [revealedIndices, setRevealedIndices] = useState<Set<number>>(
     new Set(initialRevealedIndices || [])
@@ -103,13 +105,8 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
   return (
     <div className="flex flex-col h-full p-2 max-w-2xl mx-auto">
       {/* Header - Question */}
-      <div className="bg-primary-light rounded-lg px-2 py-2 max-w-2xl text-center mb-2 md:mb-3">
-        <p className="text-xs md:text-sm text-gray-500 mb-1 md:mb-2">
-          Question posée durant cette manche:
-        </p>
-        <p className="text-base md:text-2xl font-semibold text-gray-800">
-          {question}
-        </p>
+      <div className="mb-2 md:mb-3">
+        <QuestionCard question={question} card={card} variant="compact" />
       </div>
 
       {/* Instruction en haut */}
@@ -150,12 +147,12 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
               <div key={result.playerId}>
                 <div
                   className={`
-                    rounded-lg p-2 md:p-4 transform transition-all duration-500 border-2 md:border-[3px]
+                    rounded-lg p-2 md:p-4 transform transition-all duration-500 border-2 md:border-[3px] border-black
                     ${isRevealed
                       ? (result.correct || correctedIndices.has(index))
-                        ? 'bg-[#30c94d] border-black shadow-[0_2px_10px_rgba(0,0,0,0.3)]'
-                        : 'bg-[#ff6b6b] border-black shadow-[0_2px_10px_rgba(0,0,0,0.3)]'
-                      : 'bg-white border-gray-300 shadow-[0_2px_10px_rgba(0,0,0,0.1)]'
+                        ? 'bg-[#30c94d] shadow-[0_2px_10px_rgba(0,0,0,0.3)] animate-reveal-pop'
+                        : 'bg-[#ff6b6b] shadow-[0_2px_10px_rgba(0,0,0,0.3)] animate-reveal-pop'
+                      : 'bg-white shadow-[0_2px_10px_rgba(0,0,0,0.1)]'
                     }
                   `}
                 >
@@ -265,7 +262,7 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
 
       {/* Boutons - seulement quand tout est révélé */}
       {allRevealed && (
-        <div className="flex flex-col items-center gap-2 md:gap-3">
+        <div className="flex flex-col items-center gap-2 md:gap-3 animate-reveal-cta">
           {isLeader ? (
             <>
               <p className="text-base md:text-lg font-semibold">
