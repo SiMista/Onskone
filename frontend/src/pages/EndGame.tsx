@@ -13,17 +13,57 @@ interface Tier {
   max: number;
   midPct: number;
   title: string;
-  message: string;
+  messages: string[];
   color: string;
   icon: string;
 }
 
 const TIERS: Tier[] = [
-  { max: 20,  midPct: 10, title: 'C\'est gênant là...',      color: '#ff4f4f', icon: 'fluent-emoji-flat:neutral-face',           message: 'Vous partagez le wifi, pas vos vies.' },
-  { max: 40,  midPct: 30, title: 'Pas encore ça',  color: '#ff8c3a', icon: 'fluent-emoji-flat:pinching-hand',          message: 'Vous savez vous dire bonjour, et c\'est déjà ça.' },
-  { max: 60,  midPct: 50, title: 'Pas mal, pas mal', color: '#ffc700', icon: 'fluent-emoji-flat:handshake',              message: 'Les bases sont là, reste à creuser un peu.' },
-  { max: 80,  midPct: 70, title: 'Super team',     color: '#8bd94d', icon: 'fluent-emoji-flat:sparkles',              message: 'Vous vous captez presque sans parler.' },
-  { max: 100, midPct: 90, title: 'Inséparables',   color: '#30c94d', icon: 'fluent-emoji-flat:people-hugging',         message: 'À ce stade c\'est plus de l\'amitié, c\'est de la fusion.' },
+  {
+    max: 20, midPct: 10, title: 'C\'est gênant là...', color: '#ff4f4f', icon: 'fluent-emoji-flat:neutral-face',
+    messages: [
+      'Vous savez dire bonjour, c\'est déjà une belle étape.',
+      'Vous partagez le wifi, c\'est déjà une base solide.',
+      'Faut peut-être commencer par un café ensemble, non ?',
+      'Tranquille, vous apprendrez à vous connaître… un jour.',
+    ],
+  },
+  {
+    max: 40, midPct: 30, title: 'Pas encore ça', color: '#ff8c3a', icon: 'fluent-emoji-flat:pinching-hand',
+    messages: [
+      'Vous savez dire bonjour, c\'est déjà une belle étape.',
+      'Les bases sont là, reste juste à construire au-dessus.',
+      'Vous avancez, doucement mais sûrement… enfin surtout doucement.',
+      'Un apéro ou deux et ça devrait décoller.',
+    ],
+  },
+  {
+    max: 60, midPct: 50, title: 'Pas mal, pas mal', color: '#ffc700', icon: 'fluent-emoji-flat:handshake',
+    messages: [
+      'Un pas de plus et vous êtes une vraie team.',
+      'C\'est solide, mais pas encore fusionnel.',
+      'Vous vous captez bien, la surprise reste possible.',
+      'Pas mal du tout, y\'a clairement de quoi faire.',
+    ],
+  },
+  {
+    max: 80, midPct: 70, title: 'Super team', color: '#8bd94d', icon: 'fluent-emoji-flat:sparkles',
+    messages: [
+      'Vous vous captez presque sans parler, c\'est beau à voir.',
+      'Les vibes sont là, la complicité aussi.',
+      'Vous êtes déjà relous pour les autres.',
+      'Clairement, vous avez vécu des trucs ensemble.',
+    ],
+  },
+  {
+    max: 100, midPct: 90, title: 'Inséparables', color: '#30c94d', icon: 'fluent-emoji-flat:people-hugging',
+    messages: [
+      'À ce stade c\'est plus de l\'amitié, c\'est de la famille.',
+      'Chaque moment ensemble devient une anecdote.',
+      'Séparés à la naissance, clairement.',
+      'Personne ne vous connaît mieux que vous-mêmes.',
+    ],
+  },
 ];
 
 const getTierIndex = (pct: number) => {
@@ -44,6 +84,7 @@ const EndGame: React.FC = () => {
   const [showConfetti, setShowConfetti] = useState(false);
   const [displayPct, setDisplayPct] = useState(0);
   const [revealed, setRevealed] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [shareToast, setShareToast] = useState<string | null>(null);
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -57,9 +98,12 @@ const EndGame: React.FC = () => {
     const parsedPlayer = getCurrentPlayerFromStorage();
     if (parsedPlayer) setCurrentPlayer(parsedPlayer);
 
+    // On ne prend en compte que la première réception : si un joueur quitte
+    // ensuite, le serveur peut ré-émettre un gameEnded mis à jour, mais on veut
+    // que le classement reste figé tel qu'affiché à la fin de la partie.
     socket.on('gameEnded', (data: { leaderboard: LeaderboardEntry[]; rounds: RoundData[] }) => {
-      setLeaderboard(data.leaderboard);
-      setRounds(data.rounds || []);
+      setLeaderboard(prev => (prev.length ? prev : data.leaderboard));
+      setRounds(prev => (prev.length ? prev : data.rounds || []));
     });
 
     if (lobbyCode) {
@@ -83,35 +127,53 @@ const EndGame: React.FC = () => {
   }, [leaderboard, rounds]);
 
   const verdict = useMemo(() => getVerdict(pct), [pct]);
+  // Sélection déterministe basée sur lobbyCode + pct + nb de rounds pour que
+  // tous les clients de la même partie voient le même message.
+  const verdictMessage = useMemo(() => {
+    const seed = `${lobbyCode ?? ''}|${pct}|${rounds.length}`;
+    let h = 0;
+    for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) | 0;
+    const idx = Math.abs(h) % verdict.messages.length;
+    return verdict.messages[idx];
+  }, [verdict, lobbyCode, pct, rounds.length]);
   const liveVerdict = useMemo(() => getVerdict(displayPct), [displayPct]);
 
   useEffect(() => {
     if (!leaderboard.length) return;
-    const duration = 5500;
+    const duration = 8500;
     const start = performance.now();
 
-    // Montée globale ease-out + 2 très légères hésitations (petits dips).
-    // Ça donne un feel "suspens" sans être brutal.
-    const rand = (min: number, max: number) => min + Math.random() * (max - min);
+    // Feinte douce, sans à-coups :
+    //  - pct > 50 : on monte jusqu'à pct, petit dip sous pct, puis remonte à pct.
+    //  - pct ≤ 50 : on monte au-dessus de pct (peak), puis on redescend lentement à pct.
     const clamp = (v: number) => Math.max(0, Math.min(100, v));
-    const easeOut = (t: number) => 1 - Math.pow(1 - t, 2.4);
+    // Quadratique : accélère/décélère plus doucement que cubique → sensation de
+    // vitesse plus constante, plus lente à traverser.
+    const easeInOut = (t: number) =>
+      t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 
-    const dipAt1 = rand(0.35, 0.45);
-    const dipAt2 = rand(0.65, 0.78);
-    const dipAmp1 = rand(2, 4);
-    const dipAmp2 = rand(1.5, 3);
-
-    const dipAround = (t: number, center: number, amp: number) => {
-      const width = 0.08;
-      const d = Math.abs(t - center);
-      if (d > width) return 0;
-      return -amp * (1 - d / width) * Math.sin((1 - d / width) * Math.PI);
-    };
-
-    const interpolate = (progress: number) => {
-      const base = easeOut(progress) * pct;
-      const dip = dipAround(progress, dipAt1, dipAmp1) + dipAround(progress, dipAt2, dipAmp2);
-      return clamp(base + dip);
+    const interpolate = (progress: number): number => {
+      if (pct > 50) {
+        // Amplitude du dip : plus le score est haut, plus il est petit (évite le "bug" à 100).
+        const dip = Math.max(3, Math.min(8, (100 - pct) * 0.25 + 3));
+        // Montée lente (ease-in-out) sur 70% de la durée, puis dip, puis recovery.
+        if (progress < 0.7) {
+          return clamp(easeInOut(progress / 0.7) * pct);
+        }
+        if (progress < 0.88) {
+          const u = (progress - 0.7) / 0.18;
+          return clamp(pct - dip * easeInOut(u));
+        }
+        const u = (progress - 0.88) / 0.12;
+        return clamp(pct - dip + dip * easeInOut(u));
+      }
+      // pct ≤ 50 : peak toujours bien au-dessus, descente lente et smooth
+      const peak = Math.min(85, pct + Math.max(18, (55 - pct) * 0.8));
+      if (progress < 0.55) {
+        return clamp(easeInOut(progress / 0.55) * peak);
+      }
+      const u = (progress - 0.55) / 0.45;
+      return clamp(peak + (pct - peak) * easeInOut(u));
     };
 
     const animate = (now: number) => {
@@ -122,7 +184,8 @@ const EndGame: React.FC = () => {
         rafRef.current = requestAnimationFrame(animate);
       } else {
         setRevealed(true);
-        if (pct >= 61) {
+        setTimeout(() => setShowLeaderboard(true), 900);
+        if (pct > 80) {
           setShowConfetti(true);
           confettiTimeoutRef.current = setTimeout(() => setShowConfetti(false), 5000);
         }
@@ -155,7 +218,7 @@ const EndGame: React.FC = () => {
     buildShareCard({
       pct,
       verdictTitle: verdict.title,
-      verdictMessage: verdict.message,
+      verdictMessage: verdictMessage,
       color: verdict.color,
       topPlayers: leaderboard.slice(0, 3).map(e => ({
         name: e.player.name,
@@ -165,7 +228,7 @@ const EndGame: React.FC = () => {
       .then(blob => { if (!cancelled) preparedBlobRef.current = blob; })
       .catch(err => console.error('buildShareCard failed', err));
     return () => { cancelled = true; };
-  }, [revealed, leaderboard, pct, verdict]);
+  }, [revealed, leaderboard, pct, verdict, verdictMessage]);
 
   const showToast = (msg: string) => {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
@@ -180,7 +243,7 @@ const EndGame: React.FC = () => {
       showToast('Image en cours de préparation…');
       return;
     }
-    const text = `${verdict.title} — ${pct}% · ${verdict.message}`;
+    const text = `${verdict.title} — ${pct}% · ${verdictMessage}`;
     setIsSharing(true);
     try {
       const result = await shareBlob(blob, text);
@@ -217,6 +280,15 @@ const EndGame: React.FC = () => {
 
   return (
     <div className="min-h-screen p-3 md:p-6 relative overflow-hidden">
+      <div
+        className="pointer-events-none fixed inset-0 z-0 transition-opacity duration-1000"
+        style={{
+          background:
+            'radial-gradient(circle 600px at 50% 35%, transparent 0%, rgba(0,0,0,0.70) 35%, rgba(0,0,0,1) 100%)',
+          opacity: revealed ? 0 : 1,
+        }}
+        aria-hidden
+      />
       {showConfetti && (
         <div className="absolute inset-0 pointer-events-none z-50">
           {confettiItems.map((item) => (
@@ -242,12 +314,12 @@ const EndGame: React.FC = () => {
         </div>
 
         <div className="flex flex-col items-center mb-5 md:mb-8">
-          <p className="text-white/80 font-display text-sm md:text-lg uppercase tracking-[0.25em] mb-2 md:mb-4">
+          <p className="text-white/80 font-display text-sm md:text-lg uppercase tracking-[0.25em]">
             Vous vous connaissez à
           </p>
 
-          <div className="relative w-[360px] h-[360px] md:w-[440px] md:h-[440px] max-w-full">
-            <svg className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[240px] h-[240px] md:w-[300px] md:h-[300px] -rotate-90" viewBox="0 0 240 240">
+          <div className="relative w-[320px] h-[320px] md:w-[380px] md:h-[380px] max-w-full -mt-6 md:-mt-8">
+            <svg className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[200px] h-[200px] md:w-[250px] md:h-[250px] -rotate-90" viewBox="0 0 240 240">
               <circle
                 cx="120"
                 cy="120"
@@ -333,17 +405,17 @@ const EndGame: React.FC = () => {
           </div>
 
           <div
-            className={`mt-3 md:mt-4 text-center px-4 transition-all duration-500 ${
+            className={`-mt-2 md:-mt-4 text-center px-4 transition-all duration-500 ${
               revealed ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'
             }`}
           >
             <p className="text-white text-sm md:text-base font-display italic max-w-md mx-auto">
-              « {verdict.message} »
+              « {verdictMessage} »
             </p>
           </div>
         </div>
 
-        <div className="bg-white/10 backdrop-blur-md rounded-lg p-3 md:p-5 mb-4 md:mb-6 border-2 border-white/15">
+        <div className={`bg-white/10 backdrop-blur-md rounded-lg p-3 md:p-5 mb-4 md:mb-6 border-2 border-white/15 transition-all duration-500 ${showLeaderboard ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
           <h2 className="text-base md:text-xl font-display font-bold text-white mb-2 md:mb-3 text-center uppercase tracking-wider">
             Scores individuels
           </h2>
@@ -353,8 +425,8 @@ const EndGame: React.FC = () => {
               return (
                 <div
                   key={entry.player.id}
-                  className="flex items-center justify-between p-2 md:p-3 rounded-lg bg-white/10 animate-player-pop"
-                  style={{ animationDelay: `${(revealed ? 0 : 1500) + index * 80}ms` }}
+                  className={`flex items-center justify-between p-2 md:p-3 rounded-lg animate-player-pop ${isCurrentPlayer ? 'bg-blue-400/25 border border-blue-300/50' : 'bg-white/10'}`}
+                  style={{ animationDelay: `${(showLeaderboard ? 0 : 99999) + index * 80}ms` }}
                 >
                   <div className="flex items-center gap-2 md:gap-3 min-w-0">
                     <span className="text-sm md:text-base w-6 md:w-8 text-center flex-shrink-0 font-bold tabular-nums text-white/70">
@@ -364,11 +436,6 @@ const EndGame: React.FC = () => {
                     <Avatar avatarId={entry.player.avatarId} name={entry.player.name} size="md" className="flex-shrink-0 hidden md:block" />
                     <span className="text-sm md:text-lg font-semibold truncate text-white">
                       {entry.player.name}
-                      {isCurrentPlayer && (
-                        <span className="ml-2 text-[10px] md:text-xs bg-yellow-400 text-black px-1.5 py-0.5 rounded-full uppercase tracking-wider font-bold">
-                          Vous
-                        </span>
-                      )}
                     </span>
                   </div>
                   <span className="text-base md:text-xl font-display font-bold flex-shrink-0 ml-2 tabular-nums text-white">

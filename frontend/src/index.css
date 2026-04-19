@@ -212,6 +212,25 @@ button {
   animation: wiggle 0.4s ease-in-out;
 }
 
+/* Swipe hint : icône qui fait un va-et-vient horizontal */
+@keyframes swipe-hint {
+  0%, 100% { transform: translateX(-22px) rotate(-6deg); }
+  50% { transform: translateX(22px) rotate(6deg); }
+}
+
+.animate-swipe-hint {
+  animation: swipe-hint 1.4s ease-in-out infinite;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
 /* Carousel "main de cartes" pour la sélection de question */
 .card-hand {
   perspective: 1400px;

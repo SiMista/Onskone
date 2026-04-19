@@ -24,6 +24,9 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
   // Ref pour éviter de démarrer le timer plusieurs fois (React Strict Mode, re-renders)
   const timerStartedRef = useRef(false);
 
+  const [showSwipeHint, setShowSwipeHint] = useState(false);
+  const hasInteractedRef = useRef(false);
+
   const currentCard = cards.length > 0 ? cards[currentCardIndex] : null;
 
   // Jouer le son au début de la phase
@@ -114,9 +117,25 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
   const goPrev = () => goToCard(currentCardIndex - 1);
   const goNext = () => goToCard(currentCardIndex + 1);
 
+  // Affiche un indice de swipe si le pilier ne swipe pas dans les 3 premières secondes (mobile)
+  useEffect(() => {
+    if (!isLeader || loading || locked || cards.length < 2) return;
+    if (hasInteractedRef.current) return;
+    const t = setTimeout(() => {
+      if (!hasInteractedRef.current) setShowSwipeHint(true);
+    }, 3000);
+    return () => clearTimeout(t);
+  }, [isLeader, loading, locked, cards.length]);
+
+  const dismissSwipeHint = () => {
+    hasInteractedRef.current = true;
+    setShowSwipeHint(false);
+  };
+
   const touchStartXRef = useRef<number | null>(null);
   const touchStartYRef = useRef<number | null>(null);
   const handleTouchStart = (e: React.TouchEvent) => {
+    dismissSwipeHint();
     touchStartXRef.current = e.touches[0].clientX;
     touchStartYRef.current = e.touches[0].clientY;
   };
@@ -134,6 +153,7 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
   const mouseStartYRef = useRef<number | null>(null);
   const handleMouseDown = (e: React.MouseEvent) => {
     if (locked) return;
+    dismissSwipeHint();
     mouseStartXRef.current = e.clientX;
     mouseStartYRef.current = e.clientY;
   };
@@ -222,6 +242,28 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseLeave}
             >
+              {/* Indice de swipe (mobile uniquement) */}
+              {showSwipeHint && !locked && (
+                <div
+                  className="md:hidden absolute inset-0 z-50 flex flex-col items-center justify-center rounded-2xl bg-black/50 backdrop-blur-sm animate-fade-in pointer-events-auto"
+                  onClick={dismissSwipeHint}
+                  onTouchStart={dismissSwipeHint}
+                  aria-hidden
+                >
+                  <Icon
+                    icon="ph:hand-swipe-left-duotone"
+                    className="text-8xl text-white animate-swipe-hint drop-shadow-lg"
+                    aria-hidden
+                  />
+                  <p className="mt-4 text-white text-xl font-display tracking-tight uppercase drop-shadow">
+                    Swipe
+                  </p>
+                  <p className="mt-1 text-white/85 text-sm italic px-6 text-center">
+                    pour changer de carte
+                  </p>
+                </div>
+              )}
+
               {cards.map((card, idx) => {
                 const total = cards.length;
                 let offset = idx - currentCardIndex;
