@@ -51,7 +51,6 @@ const TIERS: Tier[] = [
     messages: [
       'Vous vous captez presque sans parler, c\'est beau à voir.',
       'Les vibes sont là, la complicité aussi.',
-      'Vous êtes déjà relous pour les autres.',
       'Clairement, vous avez vécu des trucs ensemble.',
     ],
   },

@@ -1479,6 +1479,13 @@ export class SocketHandler {
                         validGuesses[answerId] = guessedPlayerId;
                     }
 
+                    // Contrainte : un joueur peut être attribué à au plus une réponse
+                    const guessedIds = Object.values(validGuesses);
+                    if (new Set(guessedIds).size !== guessedIds.length) {
+                        socket.emit('error', { message: 'Un joueur ne peut être attribué qu\'à une seule réponse.' });
+                        return;
+                    }
+
                     // Enregistrer les attributions finales et calculer les scores
                     currentRound.submitGuesses(validGuesses);
                     currentRound.calculateScores();

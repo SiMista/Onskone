@@ -208,10 +208,14 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
             placeholder="Écrivez votre réponse ici..."
             maxLength={GAME_CONFIG.MAX_ANSWER_LENGTH}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') {
+              if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
+                if (answer.trim()) {
+                  handleSubmit();
+                }
               }
             }}
+            enterKeyHint="send"
             className="flex-1 min-h-[120px] md:min-h-[150px] bg-gray-100 text-gray-800 text-base md:text-lg p-4 md:p-6 rounded-lg
               border-2 border-gray-300 focus:border-primary outline-none resize-none
               placeholder-gray-400"

@@ -190,6 +190,7 @@ const Home = () => {
                   placeholder="Ton pseudo"
                   borderColor="#1AAFDA"
                   maxLength={GAME_CONFIG.MAX_NAME_LENGTH}
+                  onSubmit={lobbyCode ? (lobbyExists ? joinLobby : undefined) : createLobby}
                 />
               </div>
               {!lobbyCode ? (
