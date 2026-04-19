@@ -17,19 +17,19 @@ const HOW_TO_PLAY_STEPS = [
   {
     n: '1',
     icon: 'fluent-emoji-flat:crown',
-    text: (<>Un <b>pilier</b> est tiré au sort et pioche une question parmi trois propositions.</>),
+    text: (<>Un <b>pilier</b> est designé aléatoirement et choisit une question parmi trois cartes.</>),
     rot: '-1deg',
   },
   {
     n: '2',
     icon: 'fluent-emoji-flat:memo',
-    text: (<>Tout le monde répond <b>anonymement</b>, et le pilier devine qui a écrit quoi.</>),
+    text: (<>Tout le monde répond <b>anonymement</b> et le pilier devine qui a écrit quelle réponse.</>),
     rot: '0.8deg',
   },
   {
     n: '3',
     icon: 'fluent-emoji-flat:party-popper',
-    text: (<>On révèle les prénoms, le pilier marque des points et on passe au suivant.</>),
+    text: (<>On révèle les prénoms, le pilier marque des points pour l'équipe et on passe au suivant.</>),
     rot: '-0.6deg',
   },
 ] as const;
