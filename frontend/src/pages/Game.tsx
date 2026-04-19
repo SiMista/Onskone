@@ -32,7 +32,6 @@ const GamePage: React.FC = () => {
     answeredPlayerIds: string[];
     myAnswer?: string;
     currentGuesses?: Record<string, string>;
-    relancesUsed?: number;
     revealResults?: RevealResult[];
     revealedIndices?: number[];
   } | null>(null);
@@ -101,7 +100,6 @@ const GamePage: React.FC = () => {
         answeredPlayerIds: string[];
         myAnswer?: string;
         currentGuesses?: Record<string, string>;
-        relancesUsed?: number;
         revealResults?: RevealResult[];
         revealedIndices?: number[];
       };
@@ -257,7 +255,6 @@ const GamePage: React.FC = () => {
             lobbyCode={lobbyCode!}
             isLeader={isLeader}
             leaderName={game.currentRound.leader.name}
-            initialRelancesUsed={reconnectionData?.relancesUsed}
           />
         );
 
@@ -367,17 +364,6 @@ const GamePage: React.FC = () => {
         </div>
       </div>
 
-      {/* Debug info
-      {process.env.NODE_ENV === 'development' && (
-        <div className="w-full max-w-4xl mx-auto px-2 mt-4">
-          <div className="bg-black/50 text-white p-4 rounded-lg text-xs">
-            <p>Phase: {game?.currentRound?.phase || 'N/A'}</p>
-            <p>Leader: {isLeader ? 'Oui' : 'Non'}</p>
-            <p>Players: {players.length}</p>
-          </div>
-        </div>
-      )}
-        */}
     </div>
   );
 };

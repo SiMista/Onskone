@@ -11,7 +11,6 @@ interface QuestionSelectionProps {
   lobbyCode: string;
   isLeader: boolean;
   leaderName: string;
-  initialRelancesUsed?: number;
 }
 
 const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLeader, leaderName }) => {
