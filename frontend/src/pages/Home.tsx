@@ -46,7 +46,7 @@ const HowToPlaySteps = ({ size = 'md' }: { size?: 'md' | 'lg' }) => {
             style={{ animationDelay: `${300 + i * 520}ms` }}
           >
             <div
-              className="flex items-center gap-3 bg-[#f9f4ee] border-2 border-black rounded-xl p-3 shadow-[3px_3px_0_0_rgba(0,0,0,0.18)] hover:-translate-y-0.5 hover:shadow-[4px_5px_0_0_rgba(0,0,0,0.2)] transition-all"
+              className="flex items-center gap-3 bg-cream-player border-2 border-black rounded-xl p-3 shadow-[3px_3px_0_0_rgba(0,0,0,0.18)] hover:-translate-y-0.5 hover:shadow-[4px_5px_0_0_rgba(0,0,0,0.2)] transition-all"
               style={{ transform: `rotate(${rot})` }}
             >
               <div className={`flex-shrink-0 ${isLg ? 'w-11 h-11 text-lg' : 'w-10 h-10 text-base'} rounded-full flex items-center justify-center text-gray-700 bg-[#f3ece2] border-2 border-black font-display`}>

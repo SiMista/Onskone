@@ -6,6 +6,7 @@ import Timer from './Timer';
 import Button from './Button';
 import Avatar from './Avatar';
 import QuestionCard from './QuestionCard';
+import PlayerAnswerCard from './PlayerAnswerCard';
 import { IPlayer, RoundPhase, GameCard } from '@onskone/shared';
 import { isNoResponse, getDisplayText } from '../utils/answerHelpers';
 
@@ -18,6 +19,7 @@ interface GuessingPhaseProps {
   lobbyCode: string;
   isLeader: boolean;
   leaderName: string;
+  currentPlayerId: string;
   question: string;
   card?: GameCard;
   initialGuesses?: Record<string, string>;
@@ -25,7 +27,7 @@ interface GuessingPhaseProps {
   roundNumber: number; // Numéro du round actuel (pour éviter les race conditions)
 }
 
-const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, leaderName, question, card, initialGuesses, playerCount, roundNumber }) => {
+const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, leaderName, currentPlayerId, question, card, initialGuesses, playerCount, roundNumber }) => {
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [players, setPlayers] = useState<IPlayer[]>([]);
   const [guesses, setGuesses] = useState<Record<string, string>>(initialGuesses || {});
@@ -220,6 +222,28 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
     }
   };
 
+  // Trouver la réponse attribuée au joueur courant (pour la vue non-pilier)
+  const myAssignedAnswer = useMemo(() => {
+    if (isLeader) return null;
+    const myAnswerId = Object.keys(guesses).find(answerId => guesses[answerId] === currentPlayerId);
+    if (!myAnswerId) return null;
+    return answers.find(a => a.id === myAnswerId) || null;
+  }, [isLeader, guesses, currentPlayerId, answers]);
+
+  // Vibration lorsque le joueur reçoit (ou change) une réponse attribuée
+  const lastVibratedAnswerIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (isLeader) return;
+    if (myAssignedAnswer && myAssignedAnswer.id !== lastVibratedAnswerIdRef.current) {
+      lastVibratedAnswerIdRef.current = myAssignedAnswer.id;
+      if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+        navigator.vibrate([120, 60, 120]);
+      }
+    } else if (!myAssignedAnswer) {
+      lastVibratedAnswerIdRef.current = null;
+    }
+  }, [isLeader, myAssignedAnswer]);
+
   // Memoize filtered arrays to prevent unnecessary re-renders
   const unassignedAnswers = useMemo(() => {
     return answers.filter(answer => !guesses[answer.id]);
@@ -240,6 +264,41 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
     );
   }
 
+  // ============================================================
+  // VUE JOUEUR (non-pilier) — seule la réponse attribuée est affichée
+  // ============================================================
+  if (!isLeader) {
+    const assignedText = myAssignedAnswer ? getDisplayText(myAssignedAnswer.text) : '';
+    const noResponse = myAssignedAnswer ? isNoResponse(myAssignedAnswer.text) : false;
+
+    return (
+      <div className="flex flex-col h-full p-2 max-w-2xl mx-auto">
+        <div className="mb-2 md:mb-3">
+          <h2 className="text-sm md:text-lg font-bold text-gray-800 mb-1 md:mb-2 text-center">
+            <span className="italic text-gray-700">{leaderName} devine…</span>
+          </h2>
+          <Timer duration={timerDuration} onExpire={handleTimerExpire} phase={RoundPhase.GUESSING} lobbyCode={lobbyCode} hidden />
+        </div>
+
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 md:gap-6 px-2">
+          {myAssignedAnswer ? (
+            <PlayerAnswerCard
+              key={myAssignedAnswer.id}
+              answer={assignedText}
+              isNoResponse={noResponse}
+              pulse
+            />
+          ) : (
+            <PlayerAnswerCard
+              answer={`En attente que ${leaderName} t'attribue une réponse…`}
+              placeholder
+            />
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full p-2 md:p-4">
       <div className="mb-2 md:mb-3">
@@ -254,7 +313,7 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
             <span className="italic text-gray-700">{leaderName} devine…</span>
           )}
         </h2>
-        <Timer duration={timerDuration} onExpire={handleTimerExpire} phase={RoundPhase.GUESSING} lobbyCode={lobbyCode} />
+        <Timer duration={timerDuration} onExpire={handleTimerExpire} phase={RoundPhase.GUESSING} lobbyCode={lobbyCode} hidden />
       </div>
 
       {/* Layout responsive: colonnes sur desktop, empilé sur mobile */}
@@ -312,7 +371,7 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
                 onDrop={() => handleDrop(player.id)}
                 onClick={() => handlePlayerTap(player.id)}
                 className={`
-                  bg-[#f9f4ee] rounded-lg p-2 md:p-3 flex gap-2 md:gap-3
+                  bg-cream-player rounded-lg p-2 md:p-3 flex gap-2 md:gap-3
                   border-2 shadow-[0_2px_6px_rgba(0,0,0,0.1)] transition-all border-[#ddd] hover:border-primary-dark
                   ${selectedAnswerId && isLeader && !hasAnswer ? 'cursor-pointer hover:bg-blue-100' : ''}
                 `}

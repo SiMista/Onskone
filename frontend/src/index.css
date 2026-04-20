@@ -6,6 +6,9 @@
   --font-display: 'Fredoka', 'Nunito', sans-serif;
   --color-gradient-start: #1f5d90;
   --color-gradient-end: #18bbed;
+  --color-cream-player: #f9f4ee; /* Cartes joueurs (lobby, tuiles guessing) */
+  --color-cream-question: #f9f4ee; /* Carte de question */
+  --color-cream-answer: #f7f0e2; /* Carte réponse montrée au joueur (guessing / reveal) */
 }
 
 .font-display {
@@ -120,7 +123,7 @@ button {
 }
 
 .animate-halo-pulse {
-  animation: halo-pulse 1.5s ease-out forwards;
+  animation: halo-pulse 1.5s ease-out;
   -webkit-backface-visibility: hidden;
 }
 
@@ -397,6 +400,17 @@ button {
 
 .animate-card-light-shake {
   animation: card-light-shake 0.9s ease-in-out infinite;
+}
+
+/* Wobble cartoon pour le timer en phase critique */
+@keyframes timer-wobble {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.012); }
+}
+
+.animate-timer-wobble {
+  animation: timer-wobble 1s ease-in-out infinite;
+  transform-origin: center;
 }
 
 

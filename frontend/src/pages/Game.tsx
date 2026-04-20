@@ -7,6 +7,8 @@ import AnswerPhase from '../components/AnswerPhase';
 import GuessingPhase from '../components/GuessingPhase';
 import RevealPhase from '../components/RevealPhase';
 import Logo from '../components/Logo';
+import Timer from '../components/Timer';
+import { GAME_CONFIG } from '../constants/game';
 import { useLeavePrompt } from '../hooks';
 import { getCurrentPlayerFromStorage } from '../utils/playerHelpers';
 import { IPlayer, IRound, IGame, RoundPhase, GameStatus, RevealResult, GameCard } from '@onskone/shared';
@@ -281,6 +283,7 @@ const GamePage: React.FC = () => {
             lobbyCode={lobbyCode!}
             isLeader={isLeader}
             leaderName={game.currentRound.leader.name}
+            currentPlayerId={currentPlayer.id}
             question={game.currentRound.selectedQuestion || ''}
             card={game.currentRound.gameCard}
             initialGuesses={reconnectionData?.currentGuesses}
@@ -345,7 +348,7 @@ const GamePage: React.FC = () => {
       }`}>
         <div className="bg-white rounded-lg p-2 md:p-4 min-h-[400px] md:min-h-[500px] flex flex-col shadow-[0_2px_10px_rgba(0,0,0,0.3)]">
           {/* Game info header inside main container */}
-          <div className="flex justify-center md:justify-between items-center mb-2 md:mb-4 pb-2 md:pb-3 border-b-2 border-gray-200">
+          <div className="flex flex-col items-center md:items-stretch mb-2 md:mb-4 pb-2 md:pb-3 border-b-2 border-gray-200 gap-1">
             <div className="text-gray-800 text-center md:text-right">
               <p className="text-xs md:text-sm font-display font-semibold tracking-wide flex items-center gap-1.5">
                 <span>Round {game?.currentRound?.roundNumber || 0}/{players.length}</span>
@@ -354,6 +357,19 @@ const GamePage: React.FC = () => {
                 <span>{game?.currentRound?.leader.name || '...'}</span>
               </p>
             </div>
+            {/* Timer bar (toutes phases sauf reveal) */}
+            {(() => {
+              const phase = game?.currentRound?.phase;
+              const phaseDuration =
+                phase === RoundPhase.QUESTION_SELECTION ? GAME_CONFIG.TIMERS.QUESTION_SELECTION :
+                phase === RoundPhase.ANSWERING ? GAME_CONFIG.TIMERS.ANSWERING :
+                phase === RoundPhase.GUESSING ? GAME_CONFIG.TIMERS.GUESSING :
+                null;
+              if (!phase || phaseDuration === null) return null;
+              return (
+                <Timer key={`top-timer-${game?.currentRound?.roundNumber}-${phase}`} duration={phaseDuration} phase={phase} lobbyCode={lobbyCode} />
+              );
+            })()}
           </div>
 
           <div

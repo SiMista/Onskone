@@ -37,6 +37,7 @@ const Lobby = () => {
     const [decksCatalog, setDecksCatalog] = useState<DecksCatalog>({});
     const [selectedDecks, setSelectedDecks] = useState<SelectedDecks>({});
     const copiedMessageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const initialPlayerIdsRef = useRef<Set<string> | null>(null);
     const [playerName] = useState<string>(() => {
         const urlPlayerName = queryParams.get('playerName');
         if (urlPlayerName) {
@@ -213,6 +214,9 @@ const Lobby = () => {
     }, [lobbyCode, playerName, avatarId]);
 
     const handleUpdatePlayersList = useCallback((data: { players: IPlayer[] }) => {
+        if (initialPlayerIdsRef.current === null && data.players.length > 0) {
+            initialPlayerIdsRef.current = new Set(data.players.map(p => p.id));
+        }
         setPlayers(data.players);
         const potentialCurrentPlayer = data.players.find((p: IPlayer) => p.socketId === socket.id);
         if (potentialCurrentPlayer) {
@@ -283,7 +287,7 @@ const Lobby = () => {
     const canStartGame = enoughPlayers && hasThemeSelected;
 
     return (
-        <div className="min-h-screen flex flex-col">
+        <div className="min-h-screen flex flex-col animate-phase-enter">
             {/* Contenu principal */}
             <div className="flex-1 w-full max-w-screen-xl mx-auto px-3 md:px-4 py-3 md:py-6">
                 {/* Logo */}
@@ -328,7 +332,7 @@ const Lobby = () => {
                             {/* Liste des joueurs - mobile: grille carrés 3/ligne */}
                             <ul className="md:hidden list-none w-full m-0 p-0 grid grid-cols-3 gap-2 max-h-[40vh] overflow-y-auto">
                                 {players.map((player, index) => (
-                                    <li key={player.id} className="min-w-0 animate-player-pop" style={{ animationDelay: `${Math.min(index, 6) * 50}ms` }}>
+                                    <li key={player.id} className={`min-w-0 ${initialPlayerIdsRef.current?.has(player.id) ? '' : 'animate-player-pop'}`} style={initialPlayerIdsRef.current?.has(player.id) ? undefined : { animationDelay: `${Math.min(index, 6) * 50}ms` }}>
                                         <PlayerCard
                                             id={player.id}
                                             name={player.name}
@@ -357,7 +361,7 @@ const Lobby = () => {
                             {/* Liste des joueurs - desktop: rangées */}
                             <ul className="hidden md:block list-none w-full m-0 p-0 max-h-[45vh] overflow-y-auto">
                                 {players.map((player, index) => (
-                                    <li key={player.id} className="animate-player-pop" style={{ animationDelay: `${Math.min(index, 6) * 50}ms` }}>
+                                    <li key={player.id} className={initialPlayerIdsRef.current?.has(player.id) ? '' : 'animate-player-pop'} style={initialPlayerIdsRef.current?.has(player.id) ? undefined : { animationDelay: `${Math.min(index, 6) * 50}ms` }}>
                                         <PlayerCard
                                             id={player.id}
                                             name={player.name}
@@ -465,7 +469,7 @@ const Lobby = () => {
                         Ohhhhhh mince ! La partie a déjà été lancée et tu ne peux pas la rejoindre en cours de route...
                     </p>
                     <p className="text-sm text-gray-500 italic">
-                        Petit conseil de ma part : changer d’amis.
+                        Petit conseil : changer d’amis.
                     </p>
                 </div>
             </InfoModal>

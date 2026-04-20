@@ -151,7 +151,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   if (variant === 'square') {
     return (
       <div className={`relative aspect-square flex flex-col items-center justify-center gap-1 p-2 rounded-[10px] shadow-[0_2px_6px_rgba(0,0,0,0.1)] w-full transition-all duration-300 ${currentBorder} ${
-        isActive ? 'bg-[#f9f4ee]' : 'bg-gray-200'
+        isActive ? 'bg-cream-player' : 'bg-gray-200'
       }`}>
         {/* Couronne ou menu en haut à droite */}
         <div className="absolute top-1 right-1">
@@ -192,7 +192,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   return (
     <div className={`flex items-center justify-between py-3 px-5 my-2.5 rounded-[12px] shadow-[0_2px_6px_rgba(0,0,0,0.1)] w-full transition-all duration-300 ${currentBorder} ${
       isActive
-        ? 'bg-[#f9f4ee]'
+        ? 'bg-cream-player'
         : 'bg-gray-200'
     }`}>
       {/* Partie gauche → Avatar + nom */}

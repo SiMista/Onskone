@@ -137,6 +137,7 @@ export function useSyncedTimer(defaultDuration: number, options: UseSyncedTimerO
   return {
     timeLeft,
     isRunning,
+    endTime,
     reset,
   };
 }
