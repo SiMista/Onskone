@@ -3,6 +3,7 @@ import socket from '../utils/socket';
 import Button from './Button';
 import Avatar from './Avatar';
 import QuestionCard from './QuestionCard';
+import PlayerAnswerCard from './PlayerAnswerCard';
 import SimilarityPopover from './SimilarityPopover';
 import { RevealResult, LeaderboardEntry, GameCard } from '@onskone/shared';
 import { isNoResponse, getDisplayText } from '../utils/answerHelpers';
@@ -116,31 +117,12 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
         <div className="flex-1 flex flex-col items-center justify-center gap-4 md:gap-6 px-2">
           {myResult ? (
             <>
-              <p className="text-gray-900 text-base md:text-xl font-semibold text-center">
-                Montre ton écran à tout le monde !
-              </p>
-
-              <div
-                className={`
-                  w-full max-w-md rounded-xl p-6 md:p-8 border-2 md:border-[3px] border-black
-                  transition-colors duration-500
-                  ${myRevealed
-                    ? myCorrect
-                      ? 'bg-[#30c94d]'
-                      : 'bg-[#ff6b6b]'
-                    : 'bg-white'
-                  }
-                  shadow-[0_2px_10px_rgba(0,0,0,0.2)]
-                `}
-              >
-                <p
-                  className={`text-lg md:text-2xl font-bold text-center break-words ${
-                    isNoResponse(myResult.answer) ? 'italic text-gray-500 font-normal' : 'text-black'
-                  }`}
-                >
-                  {getDisplayText(myResult.answer)}
-                </p>
-              </div>
+              <PlayerAnswerCard
+                answer={getDisplayText(myResult.answer)}
+                isNoResponse={isNoResponse(myResult.answer)}
+                bgClass={myRevealed ? (myCorrect ? 'bg-[#30c94d]' : 'bg-[#ff6b6b]') : 'bg-cream-answer'}
+                className="transition-colors duration-500"
+              />
 
               {/* Avatar de l'auteur réel (vide avant reveal, fade-in au reveal) */}
               <div className="flex flex-col items-center gap-2">
@@ -173,14 +155,10 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
               </div>
             </>
           ) : (
-            <>
-              <p className="text-gray-900 text-lg md:text-2xl font-bold text-center">
-                Le pilier ne t'a attribué aucune réponse.
-              </p>
-              <p className="text-gray-700 text-sm md:text-base text-center">
-                Regarde les écrans des autres joueurs.
-              </p>
-            </>
+            <PlayerAnswerCard
+              answer="Le pilier ne t'a attribué aucune réponse"
+              placeholder
+            />
           )}
 
           {allRevealed && (

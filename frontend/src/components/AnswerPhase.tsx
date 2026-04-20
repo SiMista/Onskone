@@ -130,9 +130,7 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
       <div className="flex flex-col items-center justify-center h-full p-3 md:p-6 space-y-4">
         <QuestionCard question={question} card={card} subtitle={subtitle} variant="compact" />
 
-        <div className="w-full max-w-md">
-          <Timer duration={GAME_CONFIG.TIMERS.ANSWERING} onExpire={handleTimerExpire} phase={RoundPhase.ANSWERING} lobbyCode={lobbyCode} />
-        </div>
+        <Timer duration={GAME_CONFIG.TIMERS.ANSWERING} onExpire={handleTimerExpire} phase={RoundPhase.ANSWERING} lobbyCode={lobbyCode} hidden />
 
         <div className="flex flex-col items-center">
           <div className="relative w-24 h-24 md:w-28 md:h-28">
@@ -196,9 +194,7 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
     <div className="flex flex-col h-full p-3 md:p-4 max-w-4xl mx-auto">
       <QuestionCard question={question} card={card} subtitle={subtitle} variant="compact" />
 
-      <div className="mt-3 md:mt-4 mb-3 md:mb-4">
-        <Timer duration={GAME_CONFIG.TIMERS.ANSWERING} onExpire={handleTimerExpire} phase={RoundPhase.ANSWERING} lobbyCode={lobbyCode} />
-      </div>
+      <Timer duration={GAME_CONFIG.TIMERS.ANSWERING} onExpire={handleTimerExpire} phase={RoundPhase.ANSWERING} lobbyCode={lobbyCode} hidden />
 
       {!submitted ? (
         <div className="flex-1 flex flex-col">

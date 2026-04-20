@@ -283,7 +283,7 @@ const EndGame: React.FC = () => {
         className="pointer-events-none fixed inset-0 z-0 transition-opacity duration-1000"
         style={{
           background:
-            'radial-gradient(circle 600px at 50% 35%, transparent 0%, rgba(0,0,0,0.70) 35%, rgba(0,0,0,1) 100%)',
+            'radial-gradient(circle at 50% 35%, transparent 0%, rgba(0,0,0,0.70) 30%, rgba(0,0,0,1) 70%)',
           opacity: revealed ? 0 : 1,
         }}
         aria-hidden
@@ -318,7 +318,7 @@ const EndGame: React.FC = () => {
           </p>
 
           <div className="relative w-[320px] h-[320px] md:w-[380px] md:h-[380px] max-w-full -mt-6 md:-mt-8">
-            <svg className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[200px] h-[200px] md:w-[250px] md:h-[250px] -rotate-90" viewBox="0 0 240 240">
+            <svg className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[200px] h-[200px] md:w-[250px] md:h-[250px] -rotate-90 overflow-visible" viewBox="0 0 240 240" style={{ overflow: 'visible' }}>
               <circle
                 cx="120"
                 cy="120"

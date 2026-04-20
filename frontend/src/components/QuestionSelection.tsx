@@ -178,7 +178,7 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
           <div className="bg-primary-light rounded-lg px-3 md:px-4 py-2 max-w-2xl">
             <p className="text-lg md:text-2xl ">Le pilier de cette manche est <strong>{leaderName}</strong></p>
             <p className="text-center mb-2 md:mb-4 text-sm md:text-base">En attente de sa sélection de question…</p>
-            <Timer duration={GAME_CONFIG.TIMERS.QUESTION_SELECTION} onExpire={handleTimerExpire} phase={RoundPhase.QUESTION_SELECTION} lobbyCode={lobbyCode} />
+            <Timer duration={GAME_CONFIG.TIMERS.QUESTION_SELECTION} onExpire={handleTimerExpire} phase={RoundPhase.QUESTION_SELECTION} lobbyCode={lobbyCode} hidden />
           </div>
         </div>
 
@@ -221,7 +221,7 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
         <div className="flex-1 flex flex-col items-center justify-center">
           <div className="bg-primary text-base md:text-xl px-3 md:px-6 py-2 md:py-3 rounded-2xl mb-3 md:mb-4 w-full text-center">
             <p className="font-display text-lg md:text-2xl m-0 mb-1.5 md:mb-2 tracking-tight">Vous êtes le pilier de cette manche !</p>
-            <Timer duration={GAME_CONFIG.TIMERS.QUESTION_SELECTION} onExpire={handleTimerExpire} phase={RoundPhase.QUESTION_SELECTION} lobbyCode={lobbyCode} />
+            <Timer duration={GAME_CONFIG.TIMERS.QUESTION_SELECTION} onExpire={handleTimerExpire} phase={RoundPhase.QUESTION_SELECTION} lobbyCode={lobbyCode} hidden />
           </div>
 
           <div className="flex flex-col items-center gap-2 w-full">
@@ -246,8 +246,26 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
               {showSwipeHint && !locked && (
                 <div
                   className="md:hidden absolute inset-0 z-50 flex flex-col items-center justify-center rounded-2xl bg-black/50 backdrop-blur-sm animate-fade-in pointer-events-auto"
-                  onClick={dismissSwipeHint}
-                  onTouchStart={dismissSwipeHint}
+                  onClick={(e) => { e.stopPropagation(); dismissSwipeHint(); }}
+                  onTouchStart={(e) => {
+                    e.stopPropagation();
+                    touchStartXRef.current = e.touches[0].clientX;
+                    touchStartYRef.current = e.touches[0].clientY;
+                  }}
+                  onTouchEnd={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    if (touchStartXRef.current !== null && touchStartYRef.current !== null) {
+                      const dx = e.changedTouches[0].clientX - touchStartXRef.current;
+                      const dy = e.changedTouches[0].clientY - touchStartYRef.current;
+                      touchStartXRef.current = null;
+                      touchStartYRef.current = null;
+                      if (Math.abs(dx) >= 50 && Math.abs(dx) > Math.abs(dy)) {
+                        if (dx > 0) goPrev(); else goNext();
+                      }
+                    }
+                    dismissSwipeHint();
+                  }}
                   aria-hidden
                 >
                   <Icon
@@ -304,7 +322,7 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
                     aria-label={!isActive ? `Voir la carte ${card.theme}` : undefined}
                   >
                     <div
-                      className="bg-[#f9f4ee] border-4 md:border-[6px] rounded-2xl md:rounded-3xl p-3 md:p-5 relative overflow-hidden min-h-[360px] md:min-h-[400px] flex flex-col transition-shadow duration-500"
+                      className="bg-cream-question border-4 md:border-[6px] rounded-2xl md:rounded-3xl p-3 md:p-5 relative overflow-hidden min-h-[360px] md:min-h-[400px] flex flex-col transition-shadow duration-500"
                       style={{ borderColor: color, boxShadow: cardShadow }}
                     >
                       <div
@@ -382,7 +400,7 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
                     onClick={goPrev}
                     disabled={navDisabled}
                     aria-label="Carte précédente"
-                    className="group w-11 h-11 md:w-14 md:h-14 rounded-full bg-[#f9f4ee] border-[3px] md:border-4 flex items-center justify-center shadow-[0_4px_0_0_rgba(0,0,0,0.18)] hover:-translate-y-0.5 hover:shadow-[0_6px_0_0_rgba(0,0,0,0.2)] active:translate-y-0.5 active:shadow-[0_1px_0_0_rgba(0,0,0,0.2)] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-[0_4px_0_0_rgba(0,0,0,0.18)]"
+                    className="group w-11 h-11 md:w-14 md:h-14 rounded-full bg-cream-question border-[3px] md:border-4 flex items-center justify-center shadow-[0_4px_0_0_rgba(0,0,0,0.18)] hover:-translate-y-0.5 hover:shadow-[0_6px_0_0_rgba(0,0,0,0.2)] active:translate-y-0.5 active:shadow-[0_1px_0_0_rgba(0,0,0,0.2)] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-[0_4px_0_0_rgba(0,0,0,0.18)]"
                     style={{ borderColor: activeColor }}
                   >
                     <Icon
@@ -419,7 +437,7 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
                     onClick={goNext}
                     disabled={navDisabled}
                     aria-label="Carte suivante"
-                    className="group w-11 h-11 md:w-14 md:h-14 rounded-full bg-[#f9f4ee] border-[3px] md:border-4 flex items-center justify-center shadow-[0_4px_0_0_rgba(0,0,0,0.18)] hover:-translate-y-0.5 hover:shadow-[0_6px_0_0_rgba(0,0,0,0.2)] active:translate-y-0.5 active:shadow-[0_1px_0_0_rgba(0,0,0,0.2)] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-[0_4px_0_0_rgba(0,0,0,0.18)]"
+                    className="group w-11 h-11 md:w-14 md:h-14 rounded-full bg-cream-question border-[3px] md:border-4 flex items-center justify-center shadow-[0_4px_0_0_rgba(0,0,0,0.18)] hover:-translate-y-0.5 hover:shadow-[0_6px_0_0_rgba(0,0,0,0.2)] active:translate-y-0.5 active:shadow-[0_1px_0_0_rgba(0,0,0,0.2)] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-[0_4px_0_0_rgba(0,0,0,0.18)]"
                     style={{ borderColor: activeColor }}
                   >
                     <Icon
