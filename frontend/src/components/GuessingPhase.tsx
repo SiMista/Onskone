@@ -7,6 +7,7 @@ import Button from './Button';
 import Avatar from './Avatar';
 import QuestionCard from './QuestionCard';
 import PlayerAnswerCard from './PlayerAnswerCard';
+import ShowScreenFrame from './ShowScreenFrame';
 import { IPlayer, RoundPhase, GameCard } from '@onskone/shared';
 import { isNoResponse, getDisplayText } from '../utils/answerHelpers';
 
@@ -274,26 +275,27 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
     return (
       <div className="flex flex-col h-full p-2 max-w-2xl mx-auto">
         <div className="mb-2 md:mb-3">
-          <h2 className="text-sm md:text-lg font-bold text-gray-800 mb-1 md:mb-2 text-center">
-            <span className="italic text-gray-700">{leaderName} devine…</span>
-          </h2>
           <Timer duration={timerDuration} onExpire={handleTimerExpire} phase={RoundPhase.GUESSING} lobbyCode={lobbyCode} hidden />
         </div>
 
         <div className="flex-1 flex flex-col items-center justify-center gap-4 md:gap-6 px-2">
-          {myAssignedAnswer ? (
-            <PlayerAnswerCard
-              key={myAssignedAnswer.id}
-              answer={assignedText}
-              isNoResponse={noResponse}
-              pulse
-            />
-          ) : (
-            <PlayerAnswerCard
-              answer={`En attente que ${leaderName} t'attribue une réponse…`}
-              placeholder
-            />
-          )}
+          <ShowScreenFrame>
+            {myAssignedAnswer ? (
+              <PlayerAnswerCard
+                key={myAssignedAnswer.id}
+                answer={assignedText}
+                isNoResponse={noResponse}
+                pulse
+                heading={null}
+              />
+            ) : (
+              <PlayerAnswerCard
+                answer={`En attente que ${leaderName} t'attribue une réponse…`}
+                placeholder
+                heading={null}
+              />
+            )}
+          </ShowScreenFrame>
         </div>
       </div>
     );
@@ -303,16 +305,12 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
     <div className="flex flex-col h-full p-2 md:p-4">
       <div className="mb-2 md:mb-3">
         <QuestionCard question={question} card={card} variant="compact" />
-        <h2 className="text-sm md:text-lg font-bold text-gray-800 mt-2 md:mt-3 mb-1 md:mb-2 text-center">
-          {isLeader ? (
-            <>
-              <span className="md:hidden">Tapez une réponse puis un joueur</span>
-              <span className="hidden md:inline">Glissez chaque réponse vers son auteur présumé</span>
-            </>
-          ) : (
-            <span className="italic text-gray-700">{leaderName} devine…</span>
-          )}
-        </h2>
+        {isLeader && (
+          <h2 className="text-sm md:text-lg font-bold text-gray-800 mt-2 md:mt-3 mb-1 md:mb-2 text-center">
+            <span className="md:hidden">Tapez une réponse puis un joueur</span>
+            <span className="hidden md:inline">Glissez chaque réponse vers son auteur présumé</span>
+          </h2>
+        )}
         <Timer duration={timerDuration} onExpire={handleTimerExpire} phase={RoundPhase.GUESSING} lobbyCode={lobbyCode} hidden />
       </div>
 
