@@ -201,7 +201,6 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <Icon icon="fluent-emoji-flat:hourglass-not-done" className="text-4xl md:text-5xl mb-3 md:mb-4 animate-spin" width="1em" height="1em" aria-hidden />
           <p className="text-base md:text-lg text-gray-800">Chargement des questions...</p>
         </div>
       </div>

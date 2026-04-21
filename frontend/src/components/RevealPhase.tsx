@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import socket from '../utils/socket';
 import Button from './Button';
 import Avatar from './Avatar';
-import QuestionCard from './QuestionCard';
 import PlayerAnswerCard from './PlayerAnswerCard';
 import SimilarityPopover from './SimilarityPopover';
+import ShowScreenFrame from './ShowScreenFrame';
 import { RevealResult, LeaderboardEntry, GameCard } from '@onskone/shared';
 import { isNoResponse, getDisplayText } from '../utils/answerHelpers';
 
@@ -20,7 +20,10 @@ interface RevealPhaseProps {
   initialRevealedIndices?: number[];
 }
 
-const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderName, currentPlayerId, isGameOver, results, question, card, initialRevealedIndices }) => {
+const isPersonneGuess = (r: RevealResult) =>
+  !r.guessedPlayerId || !r.guessedPlayerName || r.guessedPlayerName === 'Aucun' || r.guessedPlayerName === 'Personne';
+
+const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderName, currentPlayerId, isGameOver, results, initialRevealedIndices }) => {
   const [revealedIndices, setRevealedIndices] = useState<Set<number>>(
     new Set(initialRevealedIndices || [])
   );
@@ -29,17 +32,43 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
     guessedPlayerName: string;
   } | null>(null);
   const [correctedIndices, setCorrectedIndices] = useState<Set<number>>(new Set());
-  // Index en cours d'attente côté pilier (pendant le délai de 2s avant affichage couleur)
-  const [pendingIndex, setPendingIndex] = useState<number | null>(null);
+
+  // Curseur pilier : index de la réponse actuellement affichée au pilier
+  const findFirstDisplayable = useCallback((fromIdx: number, alreadyRevealed: Set<number>) => {
+    for (let i = fromIdx; i < results.length; i++) {
+      if (alreadyRevealed.has(i)) continue;
+      if (isPersonneGuess(results[i])) continue;
+      return i;
+    }
+    return -1;
+  }, [results]);
+
+  const [pilierCursor, setPilierCursor] = useState<number>(() =>
+    findFirstDisplayable(0, new Set(initialRevealedIndices || []))
+  );
+  const [pilierPhase, setPilierPhase] = useState<'prompt' | 'revealed'>('prompt');
+  // Le bouton "Suivant" apparaît 1s après la révélation
+  const [showNextButton, setShowNextButton] = useState(false);
+  // Joueur sans réponse attribuée : bascule en rouge après un court délai
+  const [noAnswerLitRed, setNoAnswerLitRed] = useState(false);
+
+  // Afficher le bouton Suivant 1s après passage en phase revealed
+  useEffect(() => {
+    if (pilierPhase !== 'revealed') {
+      setShowNextButton(false);
+      return;
+    }
+    const t = setTimeout(() => setShowNextButton(true), 1000);
+    return () => clearTimeout(t);
+  }, [pilierPhase, pilierCursor]);
 
   useEffect(() => {
     socket.on('answerRevealed', (data: { revealedIndex: number; revealedIndices: number[] }) => {
       setRevealedIndices(new Set(data.revealedIndices));
-      setPendingIndex(data.revealedIndex);
-      // Libère le verrou après la fin du fondu (2s délai + 0.4s fade)
-      setTimeout(() => {
-        setPendingIndex(prev => (prev === data.revealedIndex ? null : prev));
-      }, 2400);
+      setPilierPhase(prev => {
+        // Si c'est l'index affiché au pilier qui vient d'être révélé, on passe en phase Suivant
+        return data.revealedIndex === pilierCursor ? 'revealed' : prev;
+      });
     });
 
     socket.on('similarityDetected', (data: { answerIndex: number; guessedPlayerName: string }) => {
@@ -64,12 +93,34 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
       socket.off('similarityConfirmed');
       socket.off('similarityDismissed');
     };
-  }, []);
+  }, [pilierCursor]);
 
-  const handleReveal = (index: number) => {
-    if (isLeader && index === nextRevealIndex && !similarityModal && pendingIndex === null) {
-      socket.emit('revealAnswer', { lobbyCode, answerIndex: index });
+  // Auto-reveal silencieux de toutes les réponses où le pilier avait ciblé "Personne".
+  // Ces réponses ne sont jamais affichées sur son écran mais doivent être marquées
+  // revealed côté backend pour que allRevealed devienne vrai.
+  useEffect(() => {
+    if (!isLeader) return;
+    results.forEach((r, idx) => {
+      if (isPersonneGuess(r) && !revealedIndices.has(idx)) {
+        socket.emit('revealAnswer', { lobbyCode, answerIndex: idx });
+      }
+    });
+  }, [isLeader, results, revealedIndices, lobbyCode]);
+
+  const handleReveal = () => {
+    if (pilierCursor < 0 || similarityModal) return;
+    if (revealedIndices.has(pilierCursor)) {
+      setPilierPhase('revealed');
+      return;
     }
+    socket.emit('revealAnswer', { lobbyCode, answerIndex: pilierCursor });
+  };
+
+  const handleNext = () => {
+    const next = findFirstDisplayable(pilierCursor + 1, revealedIndices);
+    setPilierCursor(next);
+    setPilierPhase('prompt');
+    setShowNextButton(false);
   };
 
   const handleConfirmSimilarity = () => {
@@ -92,22 +143,24 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
     socket.emit('nextRound', { lobbyCode });
   };
 
-  const truncateName = (name: string, maxLength: number = 8) => {
-    return name.length > maxLength ? name.substring(0, maxLength) + '...' : name;
-  };
-
   const totalAnswers = results.length;
   const revealedCount = revealedIndices.size;
   const allRevealed = revealedCount >= totalAnswers;
-  const nextRevealIndex = results.findIndex((_, index) => !revealedIndices.has(index));
 
   // ============================================================
   // VUE JOUEUR (non-pilier) — carte unique de la réponse attribuée
   // ============================================================
+  const myIndex = !isLeader ? results.findIndex(r => r.guessedPlayerId === currentPlayerId) : -1;
+  const myResult = myIndex >= 0 ? results[myIndex] : null;
+
+  useEffect(() => {
+    if (isLeader) return;
+    if (myResult) return;
+    const t = setTimeout(() => setNoAnswerLitRed(true), 1200);
+    return () => clearTimeout(t);
+  }, [isLeader, myResult]);
+
   if (!isLeader) {
-    const myIndex = results.findIndex(r => r.guessedPlayerId === currentPlayerId);
-    const myResult = myIndex >= 0 ? results[myIndex] : null;
-    // Révélation bloquée pendant le popup de similarité pour cette ligne
     const myAwaitingSimilarity = myIndex >= 0 && similarityModal?.answerIndex === myIndex;
     const myRevealed = myIndex >= 0 && revealedIndices.has(myIndex) && !myAwaitingSimilarity;
     const myCorrect = myResult ? (myResult.correct || correctedIndices.has(myIndex)) : false;
@@ -117,18 +170,20 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
         <div className="flex-1 flex flex-col items-center justify-center gap-4 md:gap-6 px-2">
           {myResult ? (
             <>
-              <PlayerAnswerCard
-                answer={getDisplayText(myResult.answer)}
-                isNoResponse={isNoResponse(myResult.answer)}
-                bgClass={myRevealed ? (myCorrect ? 'bg-[#30c94d]' : 'bg-[#ff6b6b]') : 'bg-cream-answer'}
-                className="transition-colors duration-500"
-              />
+              <ShowScreenFrame>
+                <PlayerAnswerCard
+                  answer={getDisplayText(myResult.answer)}
+                  isNoResponse={isNoResponse(myResult.answer)}
+                  bgClass={myRevealed ? (myCorrect ? 'bg-[#30c94d]' : 'bg-[#ff6b6b]') : 'bg-cream-answer'}
+                  className="transition-colors duration-500"
+                  heading={null}
+                />
+              </ShowScreenFrame>
 
               {/* Avatar de l'auteur réel (vide avant reveal, fade-in au reveal) */}
               <div className="flex flex-col items-center gap-2">
                 <p className="text-gray-700 text-xs md:text-sm font-semibold uppercase">Écrit par</p>
                 <div className="relative w-16 h-16 md:w-20 md:h-20">
-                  {/* Placeholder vide */}
                   <div
                     className={`absolute inset-0 rounded-full bg-gray-200 border-2 border-dashed border-gray-400 flex items-center justify-center text-gray-500 font-bold text-xl md:text-2xl shadow-md transition-opacity duration-500 ${
                       myRevealed ? 'opacity-0' : 'opacity-100'
@@ -136,7 +191,6 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
                   >
                     ?
                   </div>
-                  {/* Avatar réel qui se dévoile */}
                   <div
                     className={`absolute inset-0 flex items-center justify-center transition-opacity duration-500 ${
                       myRevealed ? 'opacity-100' : 'opacity-0'
@@ -155,10 +209,16 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
               </div>
             </>
           ) : (
-            <PlayerAnswerCard
-              answer="Le pilier ne t'a attribué aucune réponse"
-              placeholder
-            />
+            <>
+              <ShowScreenFrame>
+                <PlayerAnswerCard
+                  answer="Le pilier ne t'a attribué aucune réponse"
+                  bgClass={noAnswerLitRed ? 'bg-[#ff6b6b]' : 'bg-cream-answer'}
+                  className="transition-colors duration-500"
+                  heading={null}
+                />
+              </ShowScreenFrame>
+            </>
           )}
 
           {allRevealed && (
@@ -177,169 +237,152 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
   }
 
   // ============================================================
-  // VUE PILIER — tableau complet, fondu 3s sur chaque révélation
+  // VUE PILIER — une seule carte à la fois, avatar du joueur ciblé
   // ============================================================
+  const currentResult = pilierCursor >= 0 ? results[pilierCursor] : null;
+  // Position "humaine" du curseur parmi les cartes affichables (hors Personne déjà filtrées)
+  const displayableTotal = results.filter(r => !isPersonneGuess(r)).length;
+  const displayablePosition = currentResult
+    ? results.slice(0, pilierCursor + 1).filter(r => !isPersonneGuess(r)).length
+    : displayableTotal;
+
+  const showSimilarity = !!(currentResult && similarityModal?.answerIndex === pilierCursor);
+  const nextDisplayableIdx =
+    pilierCursor >= 0 ? findFirstDisplayable(pilierCursor + 1, revealedIndices) : -1;
+  const isLastDisplayable = pilierCursor >= 0 && nextDisplayableIdx === -1;
+  const nextResult = nextDisplayableIdx >= 0 ? results[nextDisplayableIdx] : null;
+  const showEndButton =
+    isLastDisplayable && pilierPhase === 'revealed' && showNextButton && !showSimilarity;
+
   return (
     <div className="flex flex-col h-full p-2 max-w-2xl mx-auto">
-      <div className="mb-2 md:mb-3">
-        <QuestionCard question={question} card={card} variant="compact" />
-      </div>
+      <div className="flex-1 flex flex-col items-center justify-between gap-4 md:gap-6 px-2 py-4">
+        {currentResult ? (
+          <>
+            <div className="flex-1 flex flex-col items-center justify-center gap-3 md:gap-4 w-full">
+              <div className="flex items-center justify-center gap-3 md:gap-5 w-full">
+                {/* Spacer miroir pour que la carte reste centrée */}
+                <div className="w-14 md:w-20 shrink-0" aria-hidden />
 
-      {!allRevealed && (
-        <div className="text-center mb-2 md:mb-3">
-          <p className="text-gray-900 text-sm md:text-base font-semibold">
-            Regardez les autres écrans, puis clique pour révéler ({revealedCount}/{totalAnswers})
-          </p>
-        </div>
-      )}
-
-      <div className="flex-1 overflow-auto mb-3 md:mb-4">
-        <div className="space-y-2 md:space-y-3 px-2 md:px-4">
-          {/* En-têtes de colonnes */}
-          <div className="px-2 md:px-4 pt-0 pb-0 border-2 md:border-[3px] border-transparent">
-            <div className="grid grid-cols-[1fr_4.5rem_0.5rem_4.5rem] md:grid-cols-[1fr_5rem_0.5rem_5rem] gap-1 md:gap-2 items-center">
-              <p className="text-black text-[11px] md:text-xs font-bold uppercase">Réponse</p>
-              <p className="text-black text-[11px] md:text-xs font-bold uppercase text-center whitespace-nowrap">Pilier a dit</p>
-              <p className="text-black text-[11px] md:text-xs font-bold text-center">|</p>
-              <p className="text-black text-[11px] md:text-xs font-bold uppercase text-center whitespace-nowrap">Écrit par</p>
-            </div>
-          </div>
-          {results.map((result, index) => {
-            const isRevealed = revealedIndices.has(index);
-            const noResponse = isNoResponse(result.answer);
-            const showSimilarityPopover = similarityModal?.answerIndex === index;
-            const isCorrect = result.correct || correctedIndices.has(index);
-            const isClickable = !isRevealed && index === nextRevealIndex && !similarityModal && pendingIndex === null;
-
-            return (
-              <div key={result.playerId}>
-                <div
-                  className={`relative rounded-lg border-2 md:border-[3px] border-black shadow-[0_2px_10px_rgba(0,0,0,0.1)] transition-transform ${
-                    isClickable
-                      ? 'animate-card-soft-pulse hover:-translate-y-0.5 active:translate-y-0'
-                      : pendingIndex === index && similarityModal?.answerIndex !== index
-                        ? 'bg-white animate-card-light-shake'
-                        : 'bg-white'
-                  }`}
-                >
-                  {/* Couche colorée en fondu (délai 2s) — bloquée pendant le popup de similarité */}
-                  {isRevealed && similarityModal?.answerIndex !== index && (
+                <div className="relative isolate">
+                  {nextResult && (
                     <div
-                      key={`overlay-${index}-${isCorrect ? 'g' : 'r'}`}
-                      className={`absolute inset-0 rounded-lg animate-reveal-fade ${
-                        isCorrect ? 'bg-[#30c94d]' : 'bg-[#ff6b6b]'
-                      }`}
-                    />
-                  )}
-
-                  {/* Contenu au-dessus de la couche */}
-                  <div className="relative p-2 md:p-4">
-                    <div className="grid grid-cols-[1fr_4.5rem_0.5rem_4.5rem] md:grid-cols-[1fr_5rem_0.5rem_5rem] gap-1 md:gap-2 items-center">
-                      <p
-                        className={`text-xs md:text-base line-clamp-2 ${noResponse ? 'italic text-gray-500 font-normal' : 'font-bold text-black'}`}
-                        title={getDisplayText(result.answer)}
-                      >
-                        {getDisplayText(result.answer)}
-                      </p>
-
-                      {/* Pilier a dit */}
-                      <div className="flex flex-col items-center">
-                        {result.guessedPlayerName && result.guessedPlayerName !== 'Personne' ? (
-                          <>
-                            <Avatar avatarId={result.guessedPlayerAvatarId ?? 0} name={result.guessedPlayerName} size="sm" className="md:hidden" />
-                            <Avatar avatarId={result.guessedPlayerAvatarId ?? 0} name={result.guessedPlayerName} size="md" className="hidden md:block" />
-                            <span className="text-[10px] md:text-xs font-semibold mt-0.5 md:mt-1 text-black" title={result.guessedPlayerName}>
-                              {truncateName(result.guessedPlayerName, 6)}
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gray-300 border-2 border-black flex items-center justify-center text-gray-600 font-bold text-sm md:text-lg shadow-md">
-                              ?
-                            </div>
-                            <span className="text-[10px] md:text-xs font-semibold mt-0.5 md:mt-1 text-black">
-                              Aucun
-                            </span>
-                          </>
-                        )}
-                      </div>
-
-                      <div></div>
-
-                      {/* Écrit par / bouton révéler */}
-                      <div className="flex flex-col items-center">
-                        {isRevealed ? (
-                          <>
-                            <Avatar avatarId={result.playerAvatarId ?? 0} name={result.playerName} size="sm" className="md:hidden" />
-                            <Avatar avatarId={result.playerAvatarId ?? 0} name={result.playerName} size="md" className="hidden md:block" />
-                            <span className="text-[10px] md:text-xs font-semibold text-black mt-0.5 md:mt-1" title={result.playerName}>
-                              {truncateName(result.playerName, 6)}
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gray-200 border-2 border-dashed border-gray-400 flex items-center justify-center text-gray-500 font-bold text-base md:text-xl shadow-md">
-                              ?
-                            </div>
-                            <span className="text-[10px] md:text-xs font-semibold text-gray-500 mt-0.5 md:mt-1">
-                              ???
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Zone de clic couvrant toute la carte (vue pilier) */}
-                  {isClickable && (
-                    <button
-                      type="button"
-                      onClick={() => handleReveal(index)}
-                      aria-label="Révéler cette réponse"
-                      className="absolute inset-0 z-10 rounded-lg cursor-pointer hover:bg-yellow-400/10 active:bg-yellow-400/20 focus:outline-none focus-visible:ring-4 focus-visible:ring-yellow-500"
-                    />
-                  )}
-
-                  {/* Icône main (Fluent emoji) qui apparaît avec 2s de délai + tap doux */}
-                  {isClickable && (
-                    <div
-                      aria-hidden="true"
-                      className="absolute -top-2 left-[30%] md:-top-1 md:left-[28%] z-20 pointer-events-none animate-hand-appear"
+                      key={`pilier-stack-${nextDisplayableIdx}`}
+                      aria-hidden
+                      className="absolute inset-0 translate-x-[22%] translate-y-3 md:translate-x-[28%] md:translate-y-4 rotate-[5deg] scale-[0.82] opacity-40 -z-10 pointer-events-none bg-cream-player rounded-2xl border-2 md:border-[3px] border-black shadow-[0_2px_10px_rgba(0,0,0,0.08)] px-8 py-6 md:px-12 md:py-8 flex flex-col items-center gap-3"
                     >
-                      <span className="text-3xl md:text-4xl select-none drop-shadow-[2px_3px_0_rgba(0,0,0,0.25)]">
-                        👇
+                      <Avatar
+                        avatarId={nextResult.guessedPlayerAvatarId ?? 0}
+                        name={nextResult.guessedPlayerName}
+                        size="xl"
+                      />
+                      <span className="text-base md:text-lg font-bold text-black">
+                        {nextResult.guessedPlayerName}
                       </span>
                     </div>
                   )}
+                  <div
+                    key={`pilier-card-${pilierCursor}`}
+                    className="relative bg-cream-player rounded-2xl border-2 md:border-[3px] border-black shadow-[0_2px_10px_rgba(0,0,0,0.1)] px-8 py-6 md:px-12 md:py-8 flex flex-col items-center gap-3 animate-reveal-card-swap"
+                  >
+                    <Avatar
+                      avatarId={currentResult.guessedPlayerAvatarId ?? 0}
+                      name={currentResult.guessedPlayerName}
+                      size="xl"
+                    />
+                    <span className="text-base md:text-lg font-bold text-black">
+                      {currentResult.guessedPlayerName}
+                    </span>
+                  </div>
                 </div>
 
-                {showSimilarityPopover && (
-                  <SimilarityPopover
-                    guessedPlayerName={similarityModal.guessedPlayerName}
-                    isLeader={isLeader}
-                    onConfirm={handleConfirmSimilarity}
-                    onDismiss={handleDismissSimilarity}
-                  />
-                )}
+                {/* Bouton Suivant à droite de la carte — apparaît 1s après le reveal (sauf dernier) */}
+                <div className="w-14 md:w-20 shrink-0 flex justify-start">
+                  {showNextButton && !showSimilarity && !isLastDisplayable && (
+                    <button
+                      key={`next-${pilierCursor}`}
+                      type="button"
+                      onClick={handleNext}
+                      aria-label="Suivant"
+                      className="animate-next-pop group flex flex-col items-center gap-0.5 text-black hover:text-[#1AAFDA] transition-colors cursor-pointer"
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="w-10 h-10 md:w-12 md:h-12 transition-transform group-hover:translate-x-1"
+                        aria-hidden
+                      >
+                        <path d="M5 12h14" />
+                        <path d="M13 5l7 7-7 7" />
+                      </svg>
+                      <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">
+                        Suivant
+                      </span>
+                    </button>
+                  )}
+                </div>
               </div>
-            );
-          })}
-        </div>
-      </div>
 
-      {allRevealed && (
-        <div className="flex flex-col items-center gap-2 md:gap-3">
-          <p className="text-base md:text-lg font-semibold">
-            {isGameOver ? 'Partie terminée !' : 'Prêt pour la suite ?'}
-          </p>
-          <Button
-            text={isGameOver ? 'Voir les résultats finaux' : 'Manche suivante'}
-            variant='success'
-            rotateEffect={true}
-            onClick={handleNextRound}
-          />
-        </div>
-      )}
+              <div className="text-center px-2 mt-1 md:mt-2">
+                <p className="text-gray-900 text-sm md:text-base font-semibold">
+                  Regarde l'écran de <span className="text-[#1AAFDA]">{currentResult.guessedPlayerName}</span> !
+                </p>
+                <p className="text-gray-700 text-xs md:text-sm mt-0.5">
+                  {displayablePosition}/{displayableTotal}
+                </p>
+              </div>
+            </div>
+
+            {showSimilarity && (
+              <SimilarityPopover
+                guessedPlayerName={similarityModal!.guessedPlayerName}
+                isLeader={true}
+                onConfirm={handleConfirmSimilarity}
+                onDismiss={handleDismissSimilarity}
+              />
+            )}
+
+            {!showSimilarity && !showEndButton && (
+              <Button
+                text="Révéler sur son téléphone"
+                variant="primary"
+                size="lg"
+                rotateEffect
+                disabled={pilierPhase === 'revealed'}
+                onClick={handleReveal}
+              />
+            )}
+
+            {showEndButton && (
+              <div className="animate-fade-in">
+                <Button
+                  text={isGameOver ? 'Voir les résultats finaux' : 'Manche suivante'}
+                  variant="success"
+                  size="lg"
+                  rotateEffect
+                  onClick={handleNextRound}
+                />
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="flex flex-col items-center gap-2 md:gap-3">
+            <p className="text-base md:text-lg font-semibold">
+              {isGameOver ? 'Partie terminée !' : 'Prêt pour la suite ?'}
+            </p>
+            <Button
+              text={isGameOver ? 'Voir les résultats finaux' : 'Manche suivante'}
+              variant="success"
+              rotateEffect
+              onClick={handleNextRound}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 };

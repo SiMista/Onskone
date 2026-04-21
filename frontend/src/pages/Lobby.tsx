@@ -413,7 +413,7 @@ const Lobby = () => {
                                     </div>
                                 ) : (
                                     <div className="flex items-center gap-2 px-4 py-2 text-gray-500">
-                                        <Icon icon="fluent-emoji-flat:hourglass-not-done" className="animate-pulse" width="1.25em" height="1.25em" aria-hidden />
+                                        <Icon icon="fluent-emoji-flat:hourglass-not-done" className="animate-spin-slow" width="1.25em" height="1.25em" aria-hidden />
                                         <span className="text-sm italic ">Seul {hostName} peut lancer le jeu</span>
                                     </div>
                                 )}
