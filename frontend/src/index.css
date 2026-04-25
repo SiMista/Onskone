@@ -215,6 +215,20 @@ button {
   -webkit-backface-visibility: hidden;
 }
 
+/* Rebond léger quand un joueur reçoit sa carte (n'écrase pas box-shadow) */
+@keyframes card-receive-bounce {
+  0%   { transform: translateY(0) scale(1); }
+  20%  { transform: translateY(-10px) scale(1.03) rotate(-1deg); }
+  40%  { transform: translateY(-4px) scale(1.01) rotate(0.5deg); }
+  60%  { transform: translateY(-7px) scale(1.02) rotate(-0.5deg); }
+  80%  { transform: translateY(-2px) scale(1.005) rotate(0deg); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+.animate-card-receive {
+  animation: card-receive-bounce 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
 /* Pop-in pour arrivée des joueurs dans le lobby */
 @keyframes player-pop-in {
   0% {
@@ -731,19 +745,6 @@ button {
 }
 .animate-target-magnetic {
   animation: target-magnetic 1.6s ease-in-out infinite;
-}
-.animate-target-magnetic::before {
-  content: "";
-  position: absolute;
-  inset: -6px;
-  border-radius: inherit;
-  border: 2.5px dashed rgba(255, 199, 0, 0.85);
-  pointer-events: none;
-  animation: target-magnetic-ring 1.6s ease-in-out infinite;
-}
-@keyframes target-magnetic-ring {
-  0%, 100% { opacity: 0.7; transform: scale(1); }
-  50%      { opacity: 0.2; transform: scale(1.04); }
 }
 
 /* Snap bounce après drop */

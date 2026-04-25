@@ -16,9 +16,9 @@ const PseudoPlate = ({
   onSubmit,
 }: PseudoPlateProps) => {
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && onSubmit) {
+    if (e.key === 'Enter') {
       e.preventDefault();
-      onSubmit();
+      onSubmit?.();
     }
   };
 

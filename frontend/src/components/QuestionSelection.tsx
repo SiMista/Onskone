@@ -240,19 +240,24 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
     <div className="flex flex-col h-full p-2 md:p-4">
       {currentCard && (
         <div className="flex-1 flex flex-col items-center justify-center">
-          <div className="bg-primary text-base md:text-xl px-3 md:px-6 pt-2 md:py-3 rounded-2xl md:mb-2 w-full text-center">
-            <p className="font-display text-lg md:text-2xl m-0 tracking-tight">Vous êtes le pilier de cette manche !</p>
-            <Timer duration={GAME_CONFIG.TIMERS.QUESTION_SELECTION} onExpire={handleTimerExpire} phase={RoundPhase.QUESTION_SELECTION} lobbyCode={lobbyCode} hidden />
-          </div>
+        <div className="bg-primary text-base md:text-xl px-3 md:px-6 py-1.5 rounded-2xl mb-0 w-full text-center">
+          <p className="font-display text-lg md:text-2xl m-0 tracking-tight leading-tight">
+            Tu es le pilier, choisis une question !
+          </p>
+          <Timer
+            duration={GAME_CONFIG.TIMERS.QUESTION_SELECTION}
+            onExpire={handleTimerExpire}
+            phase={RoundPhase.QUESTION_SELECTION}
+            lobbyCode={lobbyCode}
+            hidden
+          />
+        </div>
 
-          <div className="flex flex-col items-center gap-1 w-full">
-            <p className="font-display text-base md:text-lg text-center leading-tight tracking-tight m-0">
-              Choisis une question pour cette manche
-              <span className="flex md:hidden items-center justify-center gap-1.5 mt-1 text-xs text-gray-500 italic font-sans font-normal">
-                <Icon icon="ph:hand-swipe-left-duotone" className="text-base animate-wiggle" aria-hidden />
-                swipe pour changer de carte
-              </span>
-            </p>
+        <div className="flex flex-col items-center gap-0 w-full">
+          <span className="flex md:hidden items-center justify-center gap-1 text-[10px] text-gray-500 italic font-sans mt-0.5 mb-2">
+            <Icon icon="ph:hand-swipe-left-duotone" className="text-sm animate-wiggle" aria-hidden />
+            swipe pour changer de carte
+          </span>
 
             {/* Main de cartes - hauteur stable, indépendante du contenu */}
             <div

@@ -389,7 +389,7 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
         </div>
 
         {/* Joueurs avec leurs réponses attribuées */}
-        <div className="space-y-2 md:space-y-3 overflow-auto flex-1">
+        <div className="space-y-2 md:space-y-3 overflow-y-auto overflow-x-visible flex-1 px-1 py-1">
           {players.map((player) => {
             const assignedAnswers = getAssignedAnswers(player.id);
             const hasAnswer = assignedAnswers.length > 0;

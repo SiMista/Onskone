@@ -87,7 +87,7 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
     <ToastContext.Provider value={value}>
       {children}
       <div
-        className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] flex flex-col items-center gap-2 px-3 w-full max-w-md pointer-events-none"
+        className="fixed top-12 left-1/2 -translate-x-1/2 z-[100] flex flex-col items-center gap-2 px-3 w-full max-w-md pointer-events-none"
         style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
       >
         {toasts.map(t => {
@@ -105,7 +105,7 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
               <button
                 type="button"
                 onClick={() => dismiss(t.id)}
-                className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg bg-white border-2 border-black hover:bg-gray-50 active:scale-95 transition-transform text-gray-800 cursor-pointer"
+                className="shrink-0 w-7 h-7 flex items-center justify-center active:scale-95 transition-transform text-gray-600 cursor-pointer"
                 aria-label="Fermer"
               >
                 <LuX size={14} />
