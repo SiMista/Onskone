@@ -267,26 +267,29 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
                 {/* Spacer miroir pour que la carte reste centrée */}
                 <div className="w-14 md:w-20 shrink-0" aria-hidden />
 
-                <div className="relative isolate">
-                  {nextResult && (
+                <div className="relative">
+                  {/* Tranche d'une "prochaine" carte qui dépasse à droite, inclinée et fondue */}
+                  {!isLastDisplayable && (
                     <div
-                      key={`pilier-stack-${nextDisplayableIdx}`}
                       aria-hidden
-                      className="absolute inset-0 translate-x-[22%] translate-y-3 md:translate-x-[28%] md:translate-y-4 rotate-[5deg] scale-[0.82] opacity-40 -z-10 pointer-events-none bg-cream-player rounded-2xl border border-black stack-shadow-sm texture-paper px-8 py-6 md:px-12 md:py-8 flex flex-col items-center gap-3"
-                    >
-                      <Avatar
-                        avatarId={nextResult.guessedPlayerAvatarId ?? 0}
-                        name={nextResult.guessedPlayerName}
-                        size="xl"
-                      />
-                      <span className="text-base md:text-lg font-bold text-black">
-                        {nextResult.guessedPlayerName}
-                      </span>
-                    </div>
+                      className="absolute top-3 bottom-3 bg-cream-player rounded-r-2xl border border-black border-l-0 pointer-events-none"
+                      style={{
+                        left: 'calc(100% - 0.75rem)',
+                        width: '2.5rem',
+                        zIndex: 0,
+                        transform: 'rotate(5deg)',
+                        transformOrigin: 'left center',
+                        WebkitMaskImage:
+                          'linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 30%, rgba(0,0,0,0.4) 75%, rgba(0,0,0,0) 100%)',
+                        maskImage:
+                          'linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 30%, rgba(0,0,0,0.4) 75%, rgba(0,0,0,0) 100%)',
+                      }}
+                    />
                   )}
+
                   <div
                     key={`pilier-card-${pilierCursor}`}
-                    className="relative bg-cream-player rounded-2xl border border-black stack-shadow-sm texture-paper px-8 py-6 md:px-12 md:py-8 flex flex-col items-center gap-3 animate-reveal-card-swap"
+                    className="relative z-10 bg-cream-player rounded-2xl border border-black stack-shadow-sm texture-paper px-8 py-6 md:px-12 md:py-8 flex flex-col items-center gap-3 animate-reveal-card-swap"
                   >
                     <Avatar
                       avatarId={currentResult.guessedPlayerAvatarId ?? 0}
