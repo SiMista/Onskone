@@ -250,7 +250,6 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
   const nextDisplayableIdx =
     pilierCursor >= 0 ? findFirstDisplayable(pilierCursor + 1, revealedIndices) : -1;
   const isLastDisplayable = pilierCursor >= 0 && nextDisplayableIdx === -1;
-  const nextResult = nextDisplayableIdx >= 0 ? results[nextDisplayableIdx] : null;
   const showEndButton =
     isLastDisplayable && pilierPhase === 'revealed' && showNextButton && !showSimilarity;
 
