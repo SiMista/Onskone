@@ -5,6 +5,7 @@ import Lobby from './pages/Lobby';
 import Game from './pages/Game';
 import EndGame from './pages/EndGame';
 import { initSounds } from './utils/sounds';
+import { ToastProvider } from './components/Toast';
 
 const App = () => {
   const soundsInitialized = useRef(false);
@@ -30,14 +31,16 @@ const App = () => {
   }, []);
 
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/lobby/:lobbyCode" element={<Lobby />} />
-        <Route path="/game/:lobbyCode" element={<Game />} />
-        <Route path="/endgame/:lobbyCode" element={<EndGame />} />
-      </Routes>
-    </Router>
+    <ToastProvider>
+      <Router>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/lobby/:lobbyCode" element={<Lobby />} />
+          <Route path="/game/:lobbyCode" element={<Game />} />
+          <Route path="/endgame/:lobbyCode" element={<EndGame />} />
+        </Routes>
+      </Router>
+    </ToastProvider>
   );
 };
 

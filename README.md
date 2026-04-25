@@ -1,6 +1,6 @@
-# Onksoné? 🎭
+# Onskoné? 🎭
 
-**Onksoné?** est un jeu multijoueur en ligne simple, amusant et intuitif, conçu pour apprendre à mieux connaître les autres joueurs de manière ludique et surprenante.
+**Onskoné?** est un jeu multijoueur en ligne simple, amusant et intuitif, conçu pour apprendre à mieux connaître les autres joueurs de manière ludique et surprenante.
 
 Le but du jeu est d’apprendre à mieux connaître les autres joueurs de manière ludique et surprenante. Chaque joueur partage une partie de lui-même en répondant à des questions personnelles, comme ses goûts, ses habitudes ou ses défauts. Le pilier de la manche, qui doit deviner quelle réponse correspond à quel joueur, explore ses capacités de déduction et son intuition tout en essayant de comprendre la personnalité des autres, tout en s'amusant avec les surprises et les erreurs de déduction du pilier.
 

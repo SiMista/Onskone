@@ -7,7 +7,7 @@ import AnswerPhase from '../components/AnswerPhase';
 import GuessingPhase from '../components/GuessingPhase';
 import RevealPhase from '../components/RevealPhase';
 import Logo from '../components/Logo';
-import Timer from '../components/Timer';
+import HourglassTimer from '../components/HourglassTimer';
 import { GAME_CONFIG } from '../constants/game';
 import { useLeavePrompt } from '../hooks';
 import { getCurrentPlayerFromStorage } from '../utils/playerHelpers';
@@ -316,7 +316,7 @@ const GamePage: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col px-2 md:px-0">
       {/* Logo */}
-      <div className="flex justify-center py-2 md:py-4">
+      <div className="flex justify-center pt-5 md:pt-7 pb-2 md:pb-4">
         <Logo size="small" />
       </div>
 
@@ -340,24 +340,28 @@ const GamePage: React.FC = () => {
       )}
 
       {/* Main game area - centered */}
-      <div className={`flex-1 w-full max-w-4xl mx-auto px-2 pb-7 md:pb-10 flex flex-col md:pt-0 ${
-        (game?.currentRound?.phase === RoundPhase.GUESSING ||
-         (game?.currentRound?.phase === RoundPhase.QUESTION_SELECTION && isLeader))
-          ? 'pt-0'
-          : 'pt-[5vh]'
-      }`}>
-        <div className="bg-white rounded-lg p-2 md:p-4 min-h-[400px] md:min-h-[500px] flex flex-col shadow-[0_2px_10px_rgba(0,0,0,0.3)]">
-          {/* Game info header inside main container */}
-          <div className="flex flex-col items-center md:items-stretch mb-2 md:mb-4 pb-2 md:pb-3 border-b-2 border-gray-200 gap-1">
-            <div className="text-gray-800 text-center md:text-right">
-              <p className="text-xs md:text-sm font-display font-semibold tracking-wide flex items-center gap-1.5">
-                <span>Round {game?.currentRound?.roundNumber || 0}/{players.length}</span>
-                <span>•</span>
-                <Icon icon="fluent-emoji-flat:crown" width="1.1em" height="1.1em" aria-hidden />
-                <span>{game?.currentRound?.leader.name || '...'}</span>
-              </p>
+      <div
+        className={`flex-1 w-full max-w-4xl mx-auto px-2 pb-7 md:pb-10 flex flex-col md:pt-0 ${
+          (game?.currentRound?.phase === RoundPhase.GUESSING ||
+           (game?.currentRound?.phase === RoundPhase.QUESTION_SELECTION && isLeader))
+            ? 'pt-0'
+            : 'pt-[5vh]'
+        }`}
+        style={{ paddingBottom: 'calc(1.75rem + env(safe-area-inset-bottom, 0px))' }}
+      >
+        <div className="bg-white rounded-xl p-2 md:p-4 min-h-[400px] md:min-h-[500px] flex flex-col border-[2.5px] border-black stack-shadow texture-paper">
+          {/* Game info header : round + host à gauche, sablier à droite */}
+          <div className="flex items-center justify-between gap-3 mb-2 md:mb-4 pb-2 md:pb-3 border-b-[2.5px] border-dashed border-black/30">
+            <div className="flex items-center gap-1.5 flex-wrap text-gray-800 text-left">
+              <span className="text-xs md:text-sm font-display font-bold tracking-wide">
+                Round {game?.currentRound?.roundNumber || 0}<span className="text-gray-400">/{players.length}</span>
+              </span>
+              <span className="text-gray-300">•</span>
+              <Icon icon="fluent-emoji-flat:crown" width="1.1em" height="1.1em" aria-hidden />
+              <span className="text-xs md:text-sm font-display font-semibold tracking-wide truncate max-w-[140px] md:max-w-[220px]">
+                {game?.currentRound?.leader.name || '...'}
+              </span>
             </div>
-            {/* Timer bar (toutes phases sauf reveal) */}
             {(() => {
               const phase = game?.currentRound?.phase;
               const phaseDuration =
@@ -365,9 +369,15 @@ const GamePage: React.FC = () => {
                 phase === RoundPhase.ANSWERING ? GAME_CONFIG.TIMERS.ANSWERING :
                 phase === RoundPhase.GUESSING ? GAME_CONFIG.TIMERS.GUESSING :
                 null;
-              if (!phase || phaseDuration === null) return null;
+              if (!phase || phaseDuration === null) return <div className="w-[56px]" aria-hidden />;
               return (
-                <Timer key={`top-timer-${game?.currentRound?.roundNumber}-${phase}`} duration={phaseDuration} phase={phase} lobbyCode={lobbyCode} />
+                <HourglassTimer
+                  key={`top-timer-${game?.currentRound?.roundNumber}-${phase}`}
+                  duration={phaseDuration}
+                  phase={phase}
+                  lobbyCode={lobbyCode}
+                  size="sm"
+                />
               );
             })()}
           </div>

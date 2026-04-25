@@ -597,6 +597,38 @@ export class SocketHandler {
                 }
             });
 
+            // Réactions emoji dans le lobby (diffusées à tous les joueurs du lobby)
+            socket.on('sendLobbyReaction', (data) => {
+                try {
+                    if (!rateLimiters.lobbyReaction.isAllowed(socket.id)) {
+                        // Silencieux : on n'émet pas d'erreur pour éviter de spammer le client
+                        return;
+                    }
+
+                    const codeValidation = validateLobbyCode(data.lobbyCode);
+                    if (!codeValidation.isValid) return;
+
+                    const lobby = LobbyManager.getLobby(data.lobbyCode);
+                    if (!lobby) return;
+
+                    const player = lobby.players.find(p => p.socketId === socket.id);
+                    if (!player) return;
+
+                    // Whitelist stricte d'emojis autorisés pour éviter toute injection
+                    const ALLOWED_EMOJIS = new Set(['👍', '😂', '🔥', '❤️', '🤡']);
+                    if (typeof data.emoji !== 'string' || !ALLOWED_EMOJIS.has(data.emoji)) return;
+
+                    this.io.to(lobby.code).emit('lobbyReaction', {
+                        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                        playerId: player.id,
+                        playerName: player.name,
+                        emoji: data.emoji,
+                    });
+                } catch (error) {
+                    logger.error('Error broadcasting lobby reaction', { error: (error as Error).message });
+                }
+            });
+
             // Check player name before joining lobby
             socket.on('checkPlayerName', (data) => {
                 try {

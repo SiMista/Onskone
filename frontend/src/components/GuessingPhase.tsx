@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { Icon } from '@iconify/react';
 import { LuX } from 'react-icons/lu';
 import socket from '../utils/socket';
-import Timer from './Timer';
+import HourglassTimer from './HourglassTimer';
 import Button from './Button';
 import Avatar from './Avatar';
 import QuestionCard from './QuestionCard';
@@ -36,6 +36,9 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
   const [selectedAnswerId, setSelectedAnswerId] = useState<string | null>(null); // Pour mobile
   const [loading, setLoading] = useState(true);
   const [highlightedAnswerId, setHighlightedAnswerId] = useState<string | null>(null);
+  // Cartes qui viennent d'être attribuées (leader view) : déclenche snap-bounce
+  const [justAssignedAnswerId, setJustAssignedAnswerId] = useState<string | null>(null);
+  const justAssignedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Refs pour les cartes joueurs (pour le scroll)
   const playerCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -134,12 +137,26 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
       clearTimeout(startTimerTimeout);
       socket.off('shuffledAnswersReceived');
       socket.off('guessUpdated');
+      if (justAssignedTimeoutRef.current) clearTimeout(justAssignedTimeoutRef.current);
     };
   }, [lobbyCode, isLeader, timerDuration, roundNumber]);
+
+  const haptic = (pattern: number | number[]) => {
+    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+      navigator.vibrate(pattern);
+    }
+  };
+
+  const flashJustAssigned = (answerId: string) => {
+    setJustAssignedAnswerId(answerId);
+    if (justAssignedTimeoutRef.current) clearTimeout(justAssignedTimeoutRef.current);
+    justAssignedTimeoutRef.current = setTimeout(() => setJustAssignedAnswerId(null), 500);
+  };
 
   const handleDragStart = (answerId: string) => {
     if (!isLeader) return;
     setDraggedAnswerId(answerId);
+    haptic(15);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -162,6 +179,8 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
       playerId
     });
 
+    flashJustAssigned(draggedAnswerId);
+    haptic([25, 40, 15]);
     setDraggedAnswerId(null);
   };
 
@@ -169,6 +188,7 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
   const handleAnswerTap = (answerId: string) => {
     if (!isLeader) return;
     setSelectedAnswerId(selectedAnswerId === answerId ? null : answerId);
+    haptic(10);
   };
 
   // Gestion mobile: tap sur un joueur pour assigner la réponse sélectionnée
@@ -188,6 +208,8 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
       playerId
     });
 
+    flashJustAssigned(selectedAnswerId);
+    haptic([25, 40, 15]);
     setSelectedAnswerId(null);
   };
 
@@ -274,9 +296,13 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
 
     return (
       <div className="flex flex-col h-full p-2 max-w-2xl mx-auto">
-        <div className="mb-2 md:mb-3">
-          <Timer duration={timerDuration} onExpire={handleTimerExpire} phase={RoundPhase.GUESSING} lobbyCode={lobbyCode} hidden />
-        </div>
+        <HourglassTimer
+          duration={timerDuration}
+          onExpire={handleTimerExpire}
+          phase={RoundPhase.GUESSING}
+          lobbyCode={lobbyCode}
+          hidden
+        />
 
         <div className="flex-1 flex flex-col items-center justify-center gap-4 md:gap-6 px-2">
           <ShowScreenFrame>
@@ -311,34 +337,44 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
             <span className="hidden md:inline">Glissez chaque réponse vers son auteur présumé</span>
           </h2>
         )}
-        <Timer duration={timerDuration} onExpire={handleTimerExpire} phase={RoundPhase.GUESSING} lobbyCode={lobbyCode} hidden />
+        <HourglassTimer
+          duration={timerDuration}
+          onExpire={handleTimerExpire}
+          phase={RoundPhase.GUESSING}
+          lobbyCode={lobbyCode}
+          hidden
+        />
       </div>
 
       {/* Layout responsive: colonnes sur desktop, empilé sur mobile */}
       <div className="flex-1 flex flex-col md:grid md:grid-cols-2 gap-2 md:gap-4 overflow-auto">
         {/* Réponses non attribuées */}
-        <div className="bg-gray-100 rounded-lg p-2 md:p-4 border-2 border-gray-300 max-h-[35vh] md:max-h-none overflow-y-auto">
-          <h3 className="text-base md:text-xl font-bold text-gray-800 mb-2 md:mb-4">Réponses</h3>
-          <div className="space-y-2 md:space-y-3">
-            {unassignedAnswers.map((answer) => {
+        <div className="bg-gray-100 rounded-lg p-2 md:p-3 border-2 border-gray-300 max-h-[35vh] md:max-h-none overflow-y-auto">
+          <h3 className="text-sm md:text-base font-bold text-gray-800 mb-1.5 md:mb-2 m-0 uppercase tracking-wider">Réponses</h3>
+          <div className="space-y-1.5 md:space-y-2 pr-1 md:pr-2">
+            {unassignedAnswers.map((answer, i) => {
               const noResponse = isNoResponse(answer.text);
               const isSelected = selectedAnswerId === answer.id;
+              const isDragging = draggedAnswerId === answer.id;
               return (
                 <div
                   key={answer.id}
                   draggable={isLeader}
                   onDragStart={() => handleDragStart(answer.id)}
+                  onDragEnd={() => setDraggedAnswerId(null)}
                   onClick={() => handleAnswerTap(answer.id)}
                   className={`
-                    border-2 rounded-lg p-2 md:p-4 break-words whitespace-pre-wrap
-                    ${noResponse ? 'bg-gray-100 border-gray-200' : 'bg-white border-gray-300'}
-                    ${isLeader ? 'cursor-pointer md:cursor-move hover:border-primary hover:bg-blue-50' : 'cursor-default'}
-                    ${isSelected ? 'ring-2 ring-primary border-primary bg-blue-100' : ''}
+                    relative border rounded-lg px-2.5 md:px-3 py-1.5 md:py-2 break-words whitespace-pre-wrap
+                    animate-answer-drop-in
+                    ${noResponse ? 'bg-gray-100 border-gray-300' : isSelected ? 'bg-[#FFF3C4] border-black' : 'bg-white border-black stack-shadow-sm texture-paper'}
+                    ${isLeader ? 'cursor-pointer md:cursor-grab active:cursor-grabbing select-none' : 'cursor-default'}
+                    ${isSelected ? 'scale-[1.02] ring-4 ring-[#FFE680]/60 stack-shadow translate-x-1 -translate-y-1' : ''}
+                    ${isDragging ? 'card-dragging' : ''}
                     transition-all duration-200
-                    ${draggedAnswerId === answer.id ? 'opacity-50 scale-95' : ''}
                   `}
+                  style={{ animationDelay: `${Math.min(i, 8) * 70}ms` }}
                 >
-                  <p className={`text-xs md:text-sm ${noResponse ? 'text-gray-400 italic' : 'text-gray-800'}`}>
+                  <p className={`text-xs md:text-sm m-0 ${noResponse ? 'text-gray-400 italic' : 'text-gray-900'}`}>
                     {getDisplayText(answer.text)}
                   </p>
                 </div>
@@ -360,6 +396,9 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
             const displayName = player.name.length > 8
               ? player.name.substring(0, 8) + '...'
               : player.name;
+            // Target éligible : un answer est en cours de drag ou sélectionné, et ce joueur n'a pas encore de réponse
+            const isActiveAnswerChoice = !!(draggedAnswerId || selectedAnswerId);
+            const isEligibleTarget = isLeader && isActiveAnswerChoice && !hasAnswer;
 
             return (
               <div
@@ -369,9 +408,10 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
                 onDrop={() => handleDrop(player.id)}
                 onClick={() => handlePlayerTap(player.id)}
                 className={`
-                  bg-cream-player rounded-lg p-2 md:p-3 flex gap-2 md:gap-3
-                  border-2 shadow-[0_2px_6px_rgba(0,0,0,0.1)] transition-all border-[#ddd] hover:border-primary-dark
-                  ${selectedAnswerId && isLeader && !hasAnswer ? 'cursor-pointer hover:bg-blue-100' : ''}
+                  relative bg-cream-player rounded-xl p-2 md:p-3 flex gap-2 md:gap-3
+                  border border-black stack-shadow-sm texture-paper transition-transform duration-200
+                  ${isEligibleTarget ? 'animate-target-magnetic cursor-pointer' : ''}
+                  ${hasAnswer && isActiveAnswerChoice ? 'opacity-60' : ''}
                 `}
               >
                 {/* Avatar et nom */}
@@ -390,10 +430,11 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
                       {assignedAnswers.map((answer) => {
                         const noResponse = isNoResponse(answer.text);
                         const isHighlighted = highlightedAnswerId === answer.id;
+                        const isJustAssigned = justAssignedAnswerId === answer.id;
                         return (
                           <div
                             key={answer.id}
-                            className={`rounded-lg p-2 md:p-3 flex justify-between items-start border-2 ${noResponse ? 'bg-gray-100 border-gray-200' : 'bg-white border-gray-300'} ${isHighlighted ? 'animate-halo-pulse' : ''}`}
+                            className={`rounded-lg p-2 md:p-3 flex justify-between items-start border ${noResponse ? 'bg-gray-100 border-gray-200' : 'bg-white border-gray-300'} ${isHighlighted ? 'animate-halo-pulse' : ''} ${isJustAssigned ? 'animate-snap-bounce' : ''}`}
                           >
                             <p className={`text-xs md:text-sm flex-1 min-w-0 break-words whitespace-pre-wrap ${noResponse ? 'text-gray-400 italic' : 'text-gray-800'}`}>
                               {getDisplayText(answer.text)}
@@ -417,7 +458,7 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
                   ) : (
                     <div className="border-2 border-dashed border-gray-400 rounded-lg p-2 md:p-4 text-center bg-white h-full flex items-center justify-center min-h-[40px] md:min-h-[60px]">
                       <p className="text-gray-500 text-xs md:text-sm">
-                        {isLeader ? (selectedAnswerId ? 'Tapez pour assigner' : 'Déposez ici') : '—'}
+                        {isLeader ? (selectedAnswerId ? 'Déposez ici' : 'Tapez pour assigner') : '—'}
                       </p>
                     </div>
                   )}
@@ -429,7 +470,10 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
       </div>
 
       {isLeader && (
-        <div className="mt-3 md:mt-6 text-center">
+        <div
+          className="mt-3 md:mt-6 text-center"
+          style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        >
           {unassignedAnswers.length > 0 && (
             <p className="mb-2 text-xs md:text-sm font-medium text-gray-500">
               Il reste {unassignedAnswers.length} réponse(s) à attribuer

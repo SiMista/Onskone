@@ -1,5 +1,4 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { BsChevronDown } from 'react-icons/bs';
 import { Icon } from '@iconify/react';
 import type { DecksCatalog, SelectedDecks } from '@onskone/shared';
 import { getCategoryColor } from '../constants/game';
@@ -60,25 +59,37 @@ const hexToSoftBg = (hex: string): string => {
 };
 
 const DeckSelector: React.FC<Props> = ({ catalog, selected, readOnly, hostName, onChange }) => {
-    const [openCategory, setOpenCategory] = useState<string | null>(null);
-    const [displayCategory, setDisplayCategory] = useState<string | null>(null);
-    const containerRef = useRef<HTMLDivElement>(null);
+    const carouselRef = useRef<HTMLDivElement>(null);
+    const [activeSlide, setActiveSlide] = useState(0);
     const categories = useMemo(() => Object.keys(catalog), [catalog]);
 
+    // Mobile carousel: track active slide for dots indicator
     useEffect(() => {
-        if (openCategory) setDisplayCategory(openCategory);
-    }, [openCategory]);
-
-    useEffect(() => {
-        if (!openCategory) return;
-        const handleClickOutside = (event: MouseEvent) => {
-            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-                setOpenCategory(null);
-            }
+        const el = carouselRef.current;
+        if (!el) return;
+        let raf = 0;
+        const handleScroll = () => {
+            cancelAnimationFrame(raf);
+            raf = requestAnimationFrame(() => {
+                const slideWidth = (el.children[0] as HTMLElement | undefined)?.offsetWidth ?? el.clientWidth;
+                if (!slideWidth) return;
+                const idx = Math.round(el.scrollLeft / slideWidth);
+                setActiveSlide(Math.max(0, Math.min(categories.length - 1, idx)));
+            });
         };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [openCategory]);
+        el.addEventListener('scroll', handleScroll, { passive: true });
+        return () => {
+            el.removeEventListener('scroll', handleScroll);
+            cancelAnimationFrame(raf);
+        };
+    }, [categories.length]);
+
+    const goToSlide = (i: number) => {
+        const el = carouselRef.current;
+        if (!el) return;
+        const slideWidth = (el.children[0] as HTMLElement | undefined)?.offsetWidth ?? el.clientWidth;
+        el.scrollTo({ left: i * slideWidth, behavior: 'smooth' });
+    };
 
     const totalSelected = useMemo(
         () => Object.values(selected).reduce((acc, arr) => acc + arr.length, 0),
@@ -98,10 +109,6 @@ const DeckSelector: React.FC<Props> = ({ catalog, selected, readOnly, hostName, 
         );
     }
 
-    const toggleExpand = (cat: string) => {
-        setOpenCategory(prev => (prev === cat ? null : cat));
-    };
-
     const allChecked = totalSelected === totalThemes && totalThemes > 0;
     const noneChecked = totalSelected === 0;
 
@@ -110,7 +117,7 @@ const DeckSelector: React.FC<Props> = ({ catalog, selected, readOnly, hostName, 
     };
 
     return (
-        <div ref={containerRef} className="w-full flex flex-col gap-2">
+        <div className="w-full flex flex-col gap-2">
             {/* Barre globale */}
             {readOnly ? (
                 <div className="text-xs text-gray-600 italic w-full">
@@ -134,67 +141,73 @@ const DeckSelector: React.FC<Props> = ({ catalog, selected, readOnly, hostName, 
                 </div>
             )}
 
-            {/* Liste des catégories - vertical sur mobile, horizontal sur PC */}
-            <div className="relative flex flex-col md:grid md:grid-cols-3 gap-1.5">
-                {categories.map(cat => {
-                    const themes = catalog[cat];
-                    const selectedInCat = (selected[cat] || []).length;
-                    const isOpen = openCategory === cat;
-                    const color = getCategoryColor(cat);
-                    const catAllChecked = selectedInCat === themes.length && themes.length > 0;
-                    const catNoneChecked = selectedInCat === 0;
-                    const description = categoryDescriptions[cat] ?? '';
+            {/* ---------- Carousel snap horizontal (mobile & desktop) ---------- */}
+            <div>
+                <div
+                    ref={carouselRef}
+                    className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth px-[7%] md:px-[15%] pb-1"
+                    style={{ scrollbarWidth: 'none' }}
+                >
+                    {categories.map((cat, i) => {
+                        const themes = catalog[cat];
+                        const selectedInCat = (selected[cat] || []).length;
+                        const color = getCategoryColor(cat);
+                        const catAllChecked = selectedInCat === themes.length && themes.length > 0;
+                        const catNoneChecked = selectedInCat === 0;
+                        const description = categoryDescriptions[cat] ?? '';
+                        const isActive = i === activeSlide;
 
-                    return (
-                        <div key={cat} className={`border-2 border-black rounded-lg w-full bg-white/80 min-w-0 overflow-hidden shadow-[2px_2px_0_0_rgba(0,0,0,0.15)] transition-transform ${isOpen ? 'md:-translate-y-0.5' : ''}`}>
+                        const handleSlideClick = (e: React.MouseEvent) => {
+                            if (!isActive) {
+                                e.stopPropagation();
+                                goToSlide(i);
+                            }
+                        };
+
+                        return (
                             <div
-                                className="flex items-center gap-1.5 px-2 py-1.5 cursor-pointer select-none transition-all hover:brightness-[1.05]"
-                                style={{ backgroundColor: color }}
-                                onClick={() => toggleExpand(cat)}
+                                key={cat}
+                                className={`snap-center shrink-0 basis-[86%] md:basis-[70%] lg:basis-[55%] px-1.5 transition-opacity ${isActive ? '' : 'opacity-70 cursor-pointer'}`}
+                                onClickCapture={handleSlideClick}
                             >
-                                <BsChevronDown
-                                    size={12}
-                                    className={`transition-transform duration-300 flex-shrink-0 ${isOpen ? 'rotate-0' : '-rotate-90'}`}
-                                />
-                                <span className="font-display font-bold text-sm tracking-tight flex-1 truncate text-black">{cat}</span>
-                                <span className="font-display text-[10px] font-bold text-black/70 whitespace-nowrap flex-shrink-0 bg-white/70 rounded-full px-1.5 py-0.5">
-                                    {selectedInCat}/{themes.length}
-                                </span>
-                                {!readOnly && (
-                                    <label
-                                        className="flex items-center cursor-pointer flex-shrink-0"
-                                        onClick={e => e.stopPropagation()}
-                                    >
-                                        <input
-                                            type="checkbox"
-                                            className="w-3.5 h-3.5 cursor-pointer accent-black"
-                                            checked={catAllChecked}
-                                            ref={el => { if (el) el.indeterminate = !catAllChecked && !catNoneChecked; }}
-                                            onChange={() => onChange(setCategory(selected, cat, !catAllChecked, catalog))}
-                                        />
-                                    </label>
-                                )}
-                            </div>
-                            {/* Panel mobile uniquement - inline sous la catégorie, animation verticale */}
-                            <div
-                                className={`md:hidden grid transition-all duration-300 ease-out ${isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}
-                            >
-                                <div className="overflow-hidden">
+                                <div className="border-[2.5px] border-black rounded-xl bg-white overflow-hidden stack-shadow-sm">
+                                    {/* Header coloré */}
                                     <div
-                                        className="border-t-2 border-black max-h-[40vh] overflow-y-auto"
-                                        style={{ backgroundColor: hexToSoftBg(color) }}
+                                        className="flex items-center gap-2 px-3 py-2 border-b-[2.5px] border-black"
+                                        style={{ backgroundColor: color }}
                                     >
+                                        <Icon icon={categoryIcons[cat] ?? DEFAULT_DECK_ICON} width={22} height={22} aria-hidden className="flex-shrink-0" />
+                                        <span className="font-display font-bold text-base tracking-tight flex-1 truncate text-black">{cat}</span>
+                                        <span className="font-display text-[11px] font-bold text-black/80 whitespace-nowrap flex-shrink-0 bg-white/80 rounded-full px-2 py-0.5 border border-black/10">
+                                            {selectedInCat}/{themes.length}
+                                        </span>
+                                        {!readOnly && (
+                                            <label
+                                                className="flex items-center cursor-pointer flex-shrink-0"
+                                                onClick={e => e.stopPropagation()}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    className="w-4 h-4 cursor-pointer accent-black"
+                                                    checked={catAllChecked}
+                                                    ref={el => { if (el) el.indeterminate = !catAllChecked && !catNoneChecked; }}
+                                                    onChange={() => onChange(setCategory(selected, cat, !catAllChecked, catalog))}
+                                                />
+                                            </label>
+                                        )}
+                                    </div>
+                                    {/* Corps : description + pills */}
+                                    <div style={{ backgroundColor: hexToSoftBg(color) }}>
                                         {description && (
-                                            <div className="px-2 py-1.5 text-[11px] italic text-gray-600 border-b border-black/20 flex items-center gap-1.5">
-                                                <Icon icon={categoryIcons[cat] ?? DEFAULT_DECK_ICON} width={16} height={16} aria-hidden />
+                                            <div className="px-3 py-1.5 text-[11px] italic text-gray-600 border-b border-black/20">
                                                 {description}
                                             </div>
                                         )}
-                                        <div className="px-2 py-2 flex flex-wrap gap-1.5">
+                                        <div className="px-2.5 py-2 flex flex-wrap gap-1.5 max-h-[28vh] overflow-y-auto">
                                             {themes.map(theme => {
                                                 const active = isThemeSelected(selected, cat, theme);
                                                 const base = 'font-display text-xs px-2.5 py-1 rounded-full border-2 font-bold tracking-tight transition-colors';
-                                                const cursor = readOnly ? 'cursor-default' : 'cursor-pointer hover:scale-105';
+                                                const cursor = readOnly ? 'cursor-default' : 'cursor-pointer active:scale-95';
                                                 const inactiveStyle = 'bg-white text-gray-600 border-gray-400';
                                                 return (
                                                     <button
@@ -213,58 +226,30 @@ const DeckSelector: React.FC<Props> = ({ catalog, selected, readOnly, hostName, 
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    );
-                })}
-
-                {/* Panel desktop - partagé, inline dans la grille, pousse le contenu */}
-                {(() => {
-                    const cat = displayCategory;
-                    const themes = cat ? catalog[cat] : undefined;
-                    const color = cat ? getCategoryColor(cat) : '#ffffff';
-                    const description = cat ? (categoryDescriptions[cat] ?? '') : '';
-                    const isShown = !!openCategory;
-                    return (
-                        <div
-                            className={`hidden md:grid md:col-span-3 transition-all duration-300 ease-out ${isShown ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}
-                        >
-                            <div className="overflow-hidden">
-                                <div
-                                    className="border-2 border-black rounded-lg shadow-[2px_2px_0_0_rgba(0,0,0,0.15)] max-h-[55vh] overflow-y-auto"
-                                    style={{ backgroundColor: hexToSoftBg(color) }}
-                                >
-                                    {description && (
-                                        <div className="px-3 py-2 text-xs italic text-gray-600 border-b-2 border-dashed border-black/20 flex items-center gap-2">
-                                            <Icon icon={categoryIcons[cat ?? ''] ?? DEFAULT_DECK_ICON} width={20} height={20} aria-hidden />
-                                            {description}
-                                        </div>
-                                    )}
-                                    <div className="px-2 py-2 flex flex-wrap gap-1.5">
-                                        {themes?.map(theme => {
-                                            const active = cat ? isThemeSelected(selected, cat, theme) : false;
-                                            const base = 'font-display text-xs px-2.5 py-1 rounded-full border-2 font-bold tracking-tight transition-colors';
-                                            const cursor = readOnly ? 'cursor-default' : 'cursor-pointer hover:scale-105';
-                                            const inactiveStyle = 'bg-white text-gray-600 border-gray-400';
-                                            return (
-                                                <button
-                                                    key={theme}
-                                                    type="button"
-                                                    disabled={readOnly}
-                                                    className={`${base} ${active ? 'text-black border-black' : inactiveStyle} ${cursor}`}
-                                                    style={active ? { backgroundColor: color } : undefined}
-                                                    onClick={() => !readOnly && cat && onChange(toggleTheme(selected, cat, theme, catalog))}
-                                                >
-                                                    {theme}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    );
-                })()}
+                        );
+                    })}
+                </div>
+                {/* Dots indicator */}
+                <div className="flex items-center justify-center gap-2 mt-2">
+                    {categories.map((cat, i) => {
+                        const isActive = i === activeSlide;
+                        const color = getCategoryColor(cat);
+                        return (
+                            <button
+                                key={cat}
+                                type="button"
+                                onClick={() => goToSlide(i)}
+                                aria-label={`Aller à ${cat}`}
+                                className={`transition-all duration-300 border-2 border-black rounded-full cursor-pointer ${
+                                    isActive ? 'w-6 h-2.5' : 'w-2.5 h-2.5'
+                                }`}
+                                style={{ backgroundColor: isActive ? color : 'white' }}
+                            />
+                        );
+                    })}
+                </div>
             </div>
+
         </div>
     );
 };

@@ -4,10 +4,11 @@ import socket from '../utils/socket';
 import Logo from '../components/Logo';
 import Frame from '../components/Frame';
 import Button from '../components/Button';
-import InputText from '../components/InputText';
+import PseudoPlate from '../components/PseudoPlate';
 import Footer from '../components/Footer';
 import AvatarSelector from '../components/AvatarSelector';
 import InfoModal from '../components/InfoModal';
+import { useToast } from '../components/Toast';
 import { BsFillCaretLeftFill } from "react-icons/bs";
 import { Icon } from '@iconify/react';
 import { useSocketEvent, useQueryParams } from '../hooks';
@@ -46,10 +47,10 @@ const HowToPlaySteps = ({ size = 'md' }: { size?: 'md' | 'lg' }) => {
             style={{ animationDelay: `${300 + i * 520}ms` }}
           >
             <div
-              className="flex items-center gap-3 bg-cream-player border-2 border-black rounded-xl p-3 shadow-[3px_3px_0_0_rgba(0,0,0,0.18)] hover:-translate-y-0.5 hover:shadow-[4px_5px_0_0_rgba(0,0,0,0.2)] transition-all"
+              className="flex items-center gap-3 bg-cream-player border-[2.5px] border-black rounded-xl p-3 stack-shadow-sm texture-paper hover:-translate-y-0.5 transition-transform"
               style={{ transform: `rotate(${rot})` }}
             >
-              <div className={`flex-shrink-0 ${isLg ? 'w-11 h-11 text-lg' : 'w-10 h-10 text-base'} rounded-full flex items-center justify-center text-gray-700 bg-[#f3ece2] border-2 border-black font-display`}>
+              <div className={`flex-shrink-0 ${isLg ? 'w-11 h-11 text-lg' : 'w-10 h-10 text-base'} rounded-full flex items-center justify-center text-gray-800 bg-[#f3ece2] border-[2.5px] border-black font-display`}>
                 {n}
               </div>
               <Icon icon={icon} className="flex-shrink-0" width={isLg ? 30 : 26} height={isLg ? 30 : 26} aria-hidden />
@@ -77,6 +78,7 @@ const Home = () => {
   const [lobbyExpired, setLobbyExpired] = useState(false);
   const queryParams = useQueryParams();
   const navigate = useNavigate();
+  const showToast = useToast();
 
   const lobbyCode = queryParams.get('lobbyCode');
 
@@ -89,31 +91,31 @@ const Home = () => {
 
   const createLobby = useCallback(() => {
     if (!playerName.trim()) {
-      alert('Veuillez entrer un nom avant de créer un salon.');
+      showToast('Entre ton pseudo avant de créer un salon.', 'warning');
       return;
     }
     socket.emit('createLobby', { playerName, avatarId });
-  }, [playerName, avatarId]);
+  }, [playerName, avatarId, showToast]);
 
   const joinLobby = useCallback(() => {
     if (!playerName.trim()) {
-      alert('Veuillez entrer un nom avant de rejoindre un salon.');
+      showToast('Entre ton pseudo avant de rejoindre un salon.', 'warning');
       return;
     }
     if (!lobbyCode) {
-      alert('Code de salon invalide.');
+      showToast('Code de salon invalide.', 'error');
       return;
     }
     socket.emit('checkPlayerName', { lobbyCode, playerName });
-  }, [lobbyCode, playerName]);
+  }, [lobbyCode, playerName, showToast]);
 
   const handleLobbyCreated = useCallback((data: { lobbyCode: string }) => {
     navigate(`/lobby/${data.lobbyCode}?playerName=${encodeURIComponent(playerName)}&avatarId=${avatarId}`);
   }, [navigate, playerName, avatarId]);
 
   const handlePlayerNameExists = useCallback((data: { playerName: string }) => {
-    alert(`Le nom "${data.playerName}" est déjà utilisé dans le salon. Veuillez choisir un autre nom.`);
-  }, []);
+    showToast(`Le pseudo "${data.playerName}" est déjà pris dans ce salon.`, 'warning');
+  }, [showToast]);
 
   const handlePlayerNameValid = useCallback(() => {
     navigate(`/lobby/${lobbyCode}?playerName=${encodeURIComponent(playerName)}&avatarId=${avatarId}`);
@@ -121,8 +123,8 @@ const Home = () => {
 
   const handleError = useCallback((data: { message: string }) => {
     console.error('Erreur:', data.message);
-    alert(`Erreur: ${data.message}`);
-  }, []);
+    showToast(data.message, 'error');
+  }, [showToast]);
 
   const handleLobbyInfo = useCallback((data: { exists: boolean; hostName?: string | null }) => {
     setLobbyExists(data.exists);
@@ -183,12 +185,11 @@ const Home = () => {
                 selectedAvatarId={avatarId}
                 onSelect={setAvatarId}
               />
-              <div>
-                <InputText
+              <div className="w-full px-2">
+                <PseudoPlate
                   value={playerName}
                   onChange={(e) => setPlayerName(e.target.value)}
-                  placeholder="Ton pseudo"
-                  borderColor="#1AAFDA"
+                  placeholder="TON PSEUDO"
                   maxLength={GAME_CONFIG.MAX_NAME_LENGTH}
                   onSubmit={lobbyCode ? (lobbyExists ? joinLobby : undefined) : createLobby}
                 />

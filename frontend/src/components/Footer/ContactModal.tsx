@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Modal from '../Modal';
 import Button from '../Button';
+import { useToast } from '../Toast';
 import { LEGAL_CONTENT } from '../../constants/legal';
 
 interface ContactModalProps {
@@ -23,6 +24,7 @@ const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) => {
     message: ''
   });
   const [sent, setSent] = useState(false);
+  const showToast = useToast();
 
   // Cleanup timeout on unmount or when sent changes
   useEffect(() => {
@@ -54,7 +56,7 @@ const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) => {
     e.preventDefault();
 
     if (!validateEmail(contactForm.email)) {
-      alert('Veuillez entrer une adresse email valide.');
+      showToast('Adresse email invalide.', 'warning');
       return;
     }
 

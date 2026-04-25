@@ -8,6 +8,7 @@ import Avatar from '../components/Avatar';
 import Logo from '../components/Logo';
 import { getCurrentPlayerFromStorage } from '../utils/playerHelpers';
 import { buildShareCard, shareBlob } from '../utils/shareCard';
+import { useToast } from '../components/Toast';
 
 interface Tier {
   max: number;
@@ -85,9 +86,8 @@ const EndGame: React.FC = () => {
   const [revealed, setRevealed] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
-  const [shareToast, setShareToast] = useState<string | null>(null);
-  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const preparedBlobRef = useRef<Blob | null>(null);
+  const showToast = useToast();
 
   useEffect(() => {
     if (!lobbyCode) navigate('/');
@@ -113,7 +113,6 @@ const EndGame: React.FC = () => {
       socket.off('gameEnded');
       if (confettiTimeoutRef.current) clearTimeout(confettiTimeoutRef.current);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     };
   }, [lobbyCode]);
 
@@ -229,28 +228,22 @@ const EndGame: React.FC = () => {
     return () => { cancelled = true; };
   }, [revealed, leaderboard, pct, verdict, verdictMessage]);
 
-  const showToast = (msg: string) => {
-    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
-    setShareToast(msg);
-    toastTimeoutRef.current = setTimeout(() => setShareToast(null), 3000);
-  };
-
   const handleShare = async () => {
     if (isSharing) return;
     const blob = preparedBlobRef.current;
     if (!blob) {
-      showToast('Image en cours de préparation…');
+      showToast('Image en cours de préparation…', 'info');
       return;
     }
     const text = `${verdict.title} — ${pct}% · ${verdictMessage}`;
     setIsSharing(true);
     try {
       const result = await shareBlob(blob, text);
-      if (result === 'copied') showToast('Image copiée ! Colle-la où tu veux 📋');
-      else if (result === 'failed') showToast('Partage non supporté');
+      if (result === 'copied') showToast('Image copiée ! Colle-la où tu veux', 'success');
+      else if (result === 'failed') showToast('Partage non supporté', 'warning');
     } catch (err) {
       console.error('Share failed', err);
-      showToast('Oups, partage échoué');
+      showToast('Oups, partage échoué', 'error');
     } finally {
       setIsSharing(false);
     }
@@ -308,7 +301,7 @@ const EndGame: React.FC = () => {
       )}
 
       <div className="max-w-3xl mx-auto">
-        <div className="flex justify-center mb-2 md:mb-4">
+        <div className="flex justify-center mt-3 md:mt-4 mb-2 md:mb-4">
           <Logo size="small" />
         </div>
 
@@ -319,6 +312,11 @@ const EndGame: React.FC = () => {
 
           <div className="relative w-[320px] h-[320px] md:w-[380px] md:h-[380px] max-w-full -mt-6 md:-mt-8">
             <svg className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[200px] h-[200px] md:w-[250px] md:h-[250px] -rotate-90 overflow-visible" viewBox="0 0 240 240" style={{ overflow: 'visible' }}>
+              <defs>
+                <filter id="ring-glow" x="-50%" y="-50%" width="200%" height="200%">
+                  <feGaussianBlur in="SourceGraphic" stdDeviation="6" />
+                </filter>
+              </defs>
               <circle
                 cx="120"
                 cy="120"
@@ -327,6 +325,22 @@ const EndGame: React.FC = () => {
                 stroke="rgba(255,255,255,0.18)"
                 strokeWidth="18"
               />
+              {revealed && (
+                <circle
+                  cx="120"
+                  cy="120"
+                  r={ringRadius}
+                  fill="none"
+                  stroke={liveVerdict.color}
+                  strokeWidth="22"
+                  strokeLinecap="round"
+                  strokeDasharray={ringCircumference}
+                  strokeDashoffset={ringOffset}
+                  opacity="0.55"
+                  filter="url(#ring-glow)"
+                  style={{ transition: 'stroke 0.5s ease' }}
+                />
+              )}
               <circle
                 cx="120"
                 cy="120"
@@ -337,10 +351,7 @@ const EndGame: React.FC = () => {
                 strokeLinecap="round"
                 strokeDasharray={ringCircumference}
                 strokeDashoffset={ringOffset}
-                style={{
-                  transition: 'stroke 0.5s ease',
-                  filter: revealed ? `drop-shadow(0 0 14px ${liveVerdict.color})` : 'none',
-                }}
+                style={{ transition: 'stroke 0.5s ease' }}
               />
             </svg>
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -414,39 +425,7 @@ const EndGame: React.FC = () => {
           </div>
         </div>
 
-        <div className={`bg-white/10 backdrop-blur-md rounded-lg p-3 md:p-5 mb-4 md:mb-6 border-2 border-white/15 transition-all duration-500 ${showLeaderboard ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-          <h2 className="text-base md:text-xl font-display font-bold text-white mb-2 md:mb-3 text-center uppercase tracking-wider">
-            Scores individuels
-          </h2>
-          <div className="space-y-1.5 md:space-y-2">
-            {leaderboard.map((entry, index) => {
-              const isCurrentPlayer = entry.player.id === currentPlayer?.id;
-              return (
-                <div
-                  key={entry.player.id}
-                  className={`flex items-center justify-between p-2 md:p-3 rounded-lg animate-player-pop ${isCurrentPlayer ? 'bg-blue-400/25 border border-blue-300/50' : 'bg-white/10'}`}
-                  style={{ animationDelay: `${(showLeaderboard ? 0 : 99999) + index * 80}ms` }}
-                >
-                  <div className="flex items-center gap-2 md:gap-3 min-w-0">
-                    <span className="text-sm md:text-base w-6 md:w-8 text-center flex-shrink-0 font-bold tabular-nums text-white/70">
-                      {index + 1}
-                    </span>
-                    <Avatar avatarId={entry.player.avatarId} name={entry.player.name} size="sm" className="flex-shrink-0 md:hidden" />
-                    <Avatar avatarId={entry.player.avatarId} name={entry.player.name} size="md" className="flex-shrink-0 hidden md:block" />
-                    <span className="text-sm md:text-lg font-semibold truncate text-white">
-                      {entry.player.name}
-                    </span>
-                  </div>
-                  <span className="text-base md:text-xl font-display font-bold flex-shrink-0 ml-2 tabular-nums text-white">
-                    {entry.score} pt{entry.score > 1 ? 's' : ''}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="flex flex-col items-center gap-3">
+        <div className="flex flex-col items-center gap-3 mb-4 md:mb-6">
           <button
             type="button"
             onClick={handleShare}
@@ -472,22 +451,52 @@ const EndGame: React.FC = () => {
             </Button>
           </div>
         </div>
+
+        <div
+          className={`bg-white border-[2.5px] border-black rounded-2xl stack-shadow texture-paper p-3 md:p-5 transition-all duration-500 ${showLeaderboard ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+          style={{ marginBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        >
+          <h2 className="text-base md:text-xl font-display font-bold text-gray-900 mb-2 md:mb-3 text-center uppercase tracking-wider m-0">
+            Scores individuels
+          </h2>
+          <div className="space-y-1.5 md:space-y-2">
+            {leaderboard.map((entry, index) => {
+              const isCurrentPlayer = entry.player.id === currentPlayer?.id;
+              const isPodium = index < 3;
+              const podiumColors = ['#FFC700', '#C0C0C0', '#CD7F32'];
+              return (
+                <div
+                  key={entry.player.id}
+                  className={`flex items-center justify-between p-2 md:p-3 rounded-xl border-[2.5px] border-black animate-player-pop ${isCurrentPlayer ? 'bg-[#FFF3C4] stack-shadow-sm' : 'bg-cream-player'}`}
+                  style={{ animationDelay: `${(showLeaderboard ? 0 : 99999) + index * 80}ms` }}
+                >
+                  <div className="flex items-center gap-2 md:gap-3 min-w-0">
+                    <span
+                      className="flex items-center justify-center text-sm md:text-base w-7 h-7 md:w-9 md:h-9 flex-shrink-0 font-display font-bold tabular-nums rounded-full border-2 border-black"
+                      style={{
+                        backgroundColor: isPodium ? podiumColors[index] : '#ffffff',
+                        color: isPodium && index === 0 ? '#000' : '#1f2937',
+                      }}
+                    >
+                      {index + 1}
+                    </span>
+                    <Avatar avatarId={entry.player.avatarId} name={entry.player.name} size="sm" className="flex-shrink-0 md:hidden" />
+                    <Avatar avatarId={entry.player.avatarId} name={entry.player.name} size="md" className="flex-shrink-0 hidden md:block" />
+                    <span className="text-sm md:text-lg font-semibold truncate text-gray-900">
+                      {entry.player.name}
+                    </span>
+                  </div>
+                  <span className="text-base md:text-xl font-display font-bold flex-shrink-0 ml-2 tabular-nums text-gray-900">
+                    {entry.score} pt{entry.score > 1 ? 's' : ''}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
-      {shareToast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-black/80 text-white px-4 py-2 rounded-full text-sm font-display shadow-lg backdrop-blur-sm animate-toast-in">
-          {shareToast}
-        </div>
-      )}
-
       <style>{`
-        @keyframes toast-in {
-          from { opacity: 0; transform: translate(-50%, 20px); }
-          to { opacity: 1; transform: translate(-50%, 0); }
-        }
-        .animate-toast-in {
-          animation: toast-in 0.3s ease-out;
-        }
         @keyframes fall {
           to { transform: translateY(100vh) rotate(360deg); }
         }

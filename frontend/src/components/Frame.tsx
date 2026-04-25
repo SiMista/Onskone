@@ -20,7 +20,7 @@ const Frame = ({
 
   return (
     <div
-      className={`bg-white py-5 px-10 box-border rounded-lg shadow-[0_2px_10px_rgba(0,0,0,0.3)] m-0 flex flex-col items-center gap-3 ${textAlignClass}`}
+      className={`bg-white py-5 px-10 box-border rounded-lg border-2 border-black stack-shadow m-0 flex flex-col items-center gap-3 texture-paper ${textAlignClass}`}
       style={{ width }}
     >
       {children}

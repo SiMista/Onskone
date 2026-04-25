@@ -255,7 +255,10 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
     isLastDisplayable && pilierPhase === 'revealed' && showNextButton && !showSimilarity;
 
   return (
-    <div className="flex flex-col h-full p-2 max-w-2xl mx-auto">
+    <div
+      className="flex flex-col h-full p-2 max-w-2xl mx-auto"
+      style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom, 0px))' }}
+    >
       <div className="flex-1 flex flex-col items-center justify-between gap-4 md:gap-6 px-2 py-4">
         {currentResult ? (
           <>
@@ -269,7 +272,7 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
                     <div
                       key={`pilier-stack-${nextDisplayableIdx}`}
                       aria-hidden
-                      className="absolute inset-0 translate-x-[22%] translate-y-3 md:translate-x-[28%] md:translate-y-4 rotate-[5deg] scale-[0.82] opacity-40 -z-10 pointer-events-none bg-cream-player rounded-2xl border-2 md:border-[3px] border-black shadow-[0_2px_10px_rgba(0,0,0,0.08)] px-8 py-6 md:px-12 md:py-8 flex flex-col items-center gap-3"
+                      className="absolute inset-0 translate-x-[22%] translate-y-3 md:translate-x-[28%] md:translate-y-4 rotate-[5deg] scale-[0.82] opacity-40 -z-10 pointer-events-none bg-cream-player rounded-2xl border border-black stack-shadow-sm texture-paper px-8 py-6 md:px-12 md:py-8 flex flex-col items-center gap-3"
                     >
                       <Avatar
                         avatarId={nextResult.guessedPlayerAvatarId ?? 0}
@@ -283,7 +286,7 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
                   )}
                   <div
                     key={`pilier-card-${pilierCursor}`}
-                    className="relative bg-cream-player rounded-2xl border-2 md:border-[3px] border-black shadow-[0_2px_10px_rgba(0,0,0,0.1)] px-8 py-6 md:px-12 md:py-8 flex flex-col items-center gap-3 animate-reveal-card-swap"
+                    className="relative bg-cream-player rounded-2xl border border-black stack-shadow-sm texture-paper px-8 py-6 md:px-12 md:py-8 flex flex-col items-center gap-3 animate-reveal-card-swap"
                   >
                     <Avatar
                       avatarId={currentResult.guessedPlayerAvatarId ?? 0}
@@ -297,29 +300,29 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
                 </div>
 
                 {/* Bouton Suivant à droite de la carte — apparaît 1s après le reveal (sauf dernier) */}
-                <div className="w-14 md:w-20 shrink-0 flex justify-start">
+                <div className="w-16 md:w-24 shrink-0 flex justify-start">
                   {showNextButton && !showSimilarity && !isLastDisplayable && (
                     <button
                       key={`next-${pilierCursor}`}
                       type="button"
                       onClick={handleNext}
                       aria-label="Suivant"
-                      className="animate-next-pop group flex flex-col items-center gap-0.5 text-black hover:text-[#1AAFDA] transition-colors cursor-pointer"
+                      className="animate-next-pop group flex flex-col items-center gap-1 cursor-pointer text-black hover:text-[#1AAFDA] transition-colors"
                     >
                       <svg
                         viewBox="0 0 24 24"
                         fill="none"
                         stroke="currentColor"
-                        strokeWidth="3"
+                        strokeWidth="3.5"
                         strokeLinecap="round"
                         strokeLinejoin="round"
-                        className="w-10 h-10 md:w-12 md:h-12 transition-transform group-hover:translate-x-1"
+                        className="w-10 h-10 md:w-12 md:h-12 transition-transform group-hover:translate-x-1 group-active:scale-95"
                         aria-hidden
                       >
                         <path d="M5 12h14" />
                         <path d="M13 5l7 7-7 7" />
                       </svg>
-                      <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">
+                      <span className="font-display text-[11px] md:text-sm font-bold uppercase tracking-wider">
                         Suivant
                       </span>
                     </button>
