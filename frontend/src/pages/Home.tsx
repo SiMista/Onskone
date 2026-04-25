@@ -191,7 +191,7 @@ const Home = () => {
                   onChange={(e) => setPlayerName(e.target.value)}
                   placeholder="TON PSEUDO"
                   maxLength={GAME_CONFIG.MAX_NAME_LENGTH}
-                  onSubmit={lobbyCode ? (lobbyExists ? joinLobby : undefined) : createLobby}
+                  onSubmit={undefined}
                 />
               </div>
               {!lobbyCode ? (
@@ -220,6 +220,7 @@ const Home = () => {
             {/* Bouton Comment jouer - mobile uniquement */}
             <div className="md:hidden mt-4 text-center">
               <button
+                type="button"
                 onClick={() => setIsInfoOpen(true)}
                 className="text-white text-sm underline underline-offset-2 hover:text-white/80 transition-colors cursor-pointer"
               >

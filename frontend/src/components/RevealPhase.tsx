@@ -278,10 +278,7 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
                         zIndex: 0,
                         transform: 'rotate(5deg)',
                         transformOrigin: 'left center',
-                        WebkitMaskImage:
-                          'linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 30%, rgba(0,0,0,0.4) 75%, rgba(0,0,0,0) 100%)',
-                        maskImage:
-                          'linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 30%, rgba(0,0,0,0.4) 75%, rgba(0,0,0,0) 100%)',
+                        opacity: 0.45,
                       }}
                     />
                   )}

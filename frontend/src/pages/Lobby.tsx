@@ -39,6 +39,7 @@ const Lobby = () => {
     const [selectedDecks, setSelectedDecks] = useState<SelectedDecks>({});
     const [lobbyTab, setLobbyTab] = useState<'themes' | 'players'>('themes');
     const initialPlayerIdsRef = useRef<Set<string> | null>(null);
+    const prevHostIdRef = useRef<string | null>(null);
     const [playerName] = useState<string>(() => {
         const urlPlayerName = queryParams.get('playerName');
         if (urlPlayerName) {
@@ -204,12 +205,25 @@ const Lobby = () => {
         if (initialPlayerIdsRef.current === null && data.players.length > 0) {
             initialPlayerIdsRef.current = new Set(data.players.map(p => p.id));
         }
+
+        const newHost = data.players.find(p => p.isHost);
+        const newHostId = newHost?.id ?? null;
+        if (prevHostIdRef.current !== null && newHostId !== null && prevHostIdRef.current !== newHostId) {
+            const me = data.players.find(p => p.socketId === socket.id);
+            if (me?.isHost) {
+                showToast('Tu es maintenant le chef du salon !', 'success', 4000);
+            } else if (newHost) {
+                showToast(`${newHost.name} est maintenant le chef du salon`, 'info', 4000);
+            }
+        }
+        prevHostIdRef.current = newHostId;
+
         setPlayers(data.players);
         const potentialCurrentPlayer = data.players.find((p: IPlayer) => p.socketId === socket.id);
         if (potentialCurrentPlayer) {
             setCurrentPlayer(potentialCurrentPlayer);
         }
-    }, []);
+    }, [showToast]);
 
     const handleJoinedLobby = useCallback((data: { player: IPlayer }) => {
         setCurrentPlayer(data.player);
@@ -275,6 +289,11 @@ const Lobby = () => {
 
     // Liste des joueurs — mobile : grille 3/ligne
     const playersListMobile = (
+        <div className="flex flex-col gap-2">
+        <div className="flex items-baseline gap-2">
+            <p className="m-0 font-display font-bold text-sm text-gray-800">Dans le salon</p>
+            <p className="m-0 text-xs text-gray-400">{activePlayers.length} joueur{activePlayers.length > 1 ? 's' : ''} connecté{activePlayers.length > 1 ? 's' : ''}</p>
+        </div>
         <ul className="list-none w-full m-0 p-0 grid grid-cols-3 gap-2 max-h-[55vh] overflow-y-auto">
             {players.map((player, index) => (
                 <li key={player.id} className={`min-w-0 ${initialPlayerIdsRef.current?.has(player.id) ? '' : 'animate-player-pop'}`} style={initialPlayerIdsRef.current?.has(player.id) ? undefined : { animationDelay: `${Math.min(index, 6) * 50}ms` }}>
@@ -302,6 +321,7 @@ const Lobby = () => {
                 </li>
             )}
         </ul>
+        </div>
     );
 
     const deckSelectorEl = (
@@ -428,7 +448,7 @@ const Lobby = () => {
                             ) : (
                                 <div className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white/85 border-[2.5px] border-black stack-shadow-sm text-gray-700">
                                     <Icon icon="fluent-emoji-flat:hourglass-not-done" className="animate-spin-slow" width="1.1em" height="1.1em" aria-hidden />
-                                    <span className="text-sm font-display italic truncate">En attente de {hostName}…</span>
+                                    <span className="text-sm font-display italic truncate">Seul {hostName} peut démarrer la partie</span>
                                 </div>
                             )}
                             <Button

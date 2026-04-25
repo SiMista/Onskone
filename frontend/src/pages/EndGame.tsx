@@ -306,6 +306,10 @@ const EndGame: React.FC = () => {
         </div>
 
         <div className="flex flex-col items-center mb-5 md:mb-8">
+          <div
+            className="relative flex flex-col items-center rounded-3xl border border-white/20 bg-white/[0.07] backdrop-blur-md px-5 pt-5 pb-4 shadow-[0_4px_30px_rgba(0,0,0,0.15)]"
+            style={{ overflow: 'visible' }}
+          >
           <p className="text-white/80 font-display text-sm md:text-lg uppercase tracking-[0.25em]">
             Vous vous connaissez à
           </p>
@@ -423,9 +427,14 @@ const EndGame: React.FC = () => {
               « {verdictMessage} »
             </p>
           </div>
+          </div>
         </div>
 
-        <div className="flex flex-col items-center gap-3 mb-4 md:mb-6">
+        <div
+          className={`flex flex-col items-center gap-3 mb-4 md:mb-6 transition-all duration-700 ${
+            revealed ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+          }`}
+        >
           <button
             type="button"
             onClick={handleShare}

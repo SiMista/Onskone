@@ -37,7 +37,7 @@ const PlayerAnswerCard: React.FC<PlayerAnswerCardProps> = ({
             ? 'border-dashed border-gray-400 bg-gray-50 shadow-none'
             : `border-black stack-shadow-sm texture-paper ${bgClass}`
           }
-          ${pulse ? 'animate-halo-pulse' : ''}
+          ${pulse ? 'animate-card-receive' : ''}
           ${className}
         `}
       >

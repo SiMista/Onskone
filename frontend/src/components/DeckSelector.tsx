@@ -63,6 +63,22 @@ const DeckSelector: React.FC<Props> = ({ catalog, selected, readOnly, hostName, 
     const [activeSlide, setActiveSlide] = useState(0);
     const categories = useMemo(() => Object.keys(catalog), [catalog]);
 
+    // Local state to avoid stale prop on rapid clicks
+    const [localSelected, setLocalSelected] = useState<SelectedDecks>(selected);
+    const localSelectedRef = useRef<SelectedDecks>(localSelected);
+    useEffect(() => {
+        setLocalSelected(selected);
+        localSelectedRef.current = selected;
+    }, [selected]);
+
+    const handleThemeToggle = (cat: string, theme: string) => {
+        if (readOnly) return;
+        const next = toggleTheme(localSelectedRef.current, cat, theme, catalog);
+        localSelectedRef.current = next;
+        setLocalSelected(next);
+        onChange(next);
+    };
+
     // Mobile carousel: track active slide for dots indicator
     useEffect(() => {
         const el = carouselRef.current;
@@ -92,8 +108,8 @@ const DeckSelector: React.FC<Props> = ({ catalog, selected, readOnly, hostName, 
     };
 
     const totalSelected = useMemo(
-        () => Object.values(selected).reduce((acc, arr) => acc + arr.length, 0),
-        [selected]
+        () => Object.values(localSelected).reduce((acc, arr) => acc + arr.length, 0),
+        [localSelected]
     );
 
     const totalThemes = useMemo(
@@ -113,7 +129,10 @@ const DeckSelector: React.FC<Props> = ({ catalog, selected, readOnly, hostName, 
     const noneChecked = totalSelected === 0;
 
     const toggleGlobal = () => {
-        onChange(setAllGlobal(!allChecked, catalog));
+        const next = setAllGlobal(!allChecked, catalog);
+        localSelectedRef.current = next;
+        setLocalSelected(next);
+        onChange(next);
     };
 
     return (
@@ -124,21 +143,26 @@ const DeckSelector: React.FC<Props> = ({ catalog, selected, readOnly, hostName, 
                     Seul <strong className="not-italic">{hostName}</strong> peut choisir les thèmes.
                 </div>
             ) : (
-                <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs text-gray-500">
-                        {totalSelected} thème{totalSelected > 1 ? 's' : ''} sélectionné{totalSelected > 1 ? 's' : ''}
-                    </span>
-                    <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold select-none">
-                        <input
-                            type="checkbox"
-                            className="w-4 h-4 cursor-pointer accent-black"
-                            checked={allChecked}
-                            ref={el => { if (el) el.indeterminate = !allChecked && !noneChecked; }}
-                            onChange={toggleGlobal}
-                        />
-                        Tout
-                    </label>
-                </div>
+                <>
+                    <div className="text-sm font-display font-bold text-gray-700">
+                        Clique sur les thèmes pour les ajouter
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs text-gray-500">
+                            {totalSelected} thème{totalSelected > 1 ? 's' : ''} sélectionné{totalSelected > 1 ? 's' : ''}
+                        </span>
+                        <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold select-none">
+                            <input
+                                type="checkbox"
+                                className="w-4 h-4 cursor-pointer accent-black"
+                                checked={allChecked}
+                                ref={el => { if (el) el.indeterminate = !allChecked && !noneChecked; }}
+                                onChange={toggleGlobal}
+                            />
+                            Tout
+                        </label>
+                    </div>
+                </>
             )}
 
             {/* ---------- Carousel snap horizontal (mobile & desktop) ---------- */}
@@ -150,7 +174,7 @@ const DeckSelector: React.FC<Props> = ({ catalog, selected, readOnly, hostName, 
                 >
                     {categories.map((cat, i) => {
                         const themes = catalog[cat];
-                        const selectedInCat = (selected[cat] || []).length;
+                        const selectedInCat = (localSelected[cat] || []).length;
                         const color = getCategoryColor(cat);
                         const catAllChecked = selectedInCat === themes.length && themes.length > 0;
                         const catNoneChecked = selectedInCat === 0;
@@ -191,7 +215,12 @@ const DeckSelector: React.FC<Props> = ({ catalog, selected, readOnly, hostName, 
                                                     className="w-4 h-4 cursor-pointer accent-black"
                                                     checked={catAllChecked}
                                                     ref={el => { if (el) el.indeterminate = !catAllChecked && !catNoneChecked; }}
-                                                    onChange={() => onChange(setCategory(selected, cat, !catAllChecked, catalog))}
+                                                    onChange={() => {
+                                                        const next = setCategory(localSelectedRef.current, cat, !catAllChecked, catalog);
+                                                        localSelectedRef.current = next;
+                                                        setLocalSelected(next);
+                                                        onChange(next);
+                                                    }}
                                                 />
                                             </label>
                                         )}
@@ -205,7 +234,7 @@ const DeckSelector: React.FC<Props> = ({ catalog, selected, readOnly, hostName, 
                                         )}
                                         <div className="px-2.5 py-2 flex flex-wrap gap-1.5 max-h-[28vh] overflow-y-auto">
                                             {themes.map(theme => {
-                                                const active = isThemeSelected(selected, cat, theme);
+                                                const active = isThemeSelected(localSelected, cat, theme);
                                                 const base = 'font-display text-xs px-2.5 py-1 rounded-full border-2 font-bold tracking-tight transition-colors';
                                                 const cursor = readOnly ? 'cursor-default' : 'cursor-pointer active:scale-95';
                                                 const inactiveStyle = 'bg-white text-gray-600 border-gray-400';
@@ -216,7 +245,7 @@ const DeckSelector: React.FC<Props> = ({ catalog, selected, readOnly, hostName, 
                                                         disabled={readOnly}
                                                         className={`${base} ${active ? 'text-black border-black' : inactiveStyle} ${cursor}`}
                                                         style={active ? { backgroundColor: color } : undefined}
-                                                        onClick={() => !readOnly && onChange(toggleTheme(selected, cat, theme, catalog))}
+                                                        onClick={() => handleThemeToggle(cat, theme)}
                                                     >
                                                         {theme}
                                                     </button>
