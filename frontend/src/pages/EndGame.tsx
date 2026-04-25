@@ -332,11 +332,11 @@ const EndGame: React.FC = () => {
                   r={ringRadius}
                   fill="none"
                   stroke={liveVerdict.color}
-                  strokeWidth="22"
+                  strokeWidth="18"
                   strokeLinecap="round"
                   strokeDasharray={ringCircumference}
                   strokeDashoffset={ringOffset}
-                  opacity="0.55"
+                  opacity="0.7"
                   filter="url(#ring-glow)"
                   style={{ transition: 'stroke 0.5s ease' }}
                 />
