@@ -134,6 +134,9 @@ export const rateLimiters = {
 
   // General events: 60 per minute
   general: new RateLimiter({ windowMs: 60000, maxRequests: 60 }),
+
+  // Lobby reactions (emojis): 40 per minute (~1 toutes les 1.5s)
+  lobbyReaction: new RateLimiter({ windowMs: 60000, maxRequests: 40 }),
 };
 
 /**

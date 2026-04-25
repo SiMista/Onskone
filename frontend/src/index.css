@@ -1,9 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Fredoka:wght@500;600;700&family=Nunito:wght@400;700;800&display=swap');
 @import "tailwindcss";
 
 @theme {
   --font-sans: 'Nunito', sans-serif;
   --font-display: 'Fredoka', 'Nunito', sans-serif;
+  --font-hand: 'Caveat', 'Fredoka', cursive;
   --color-gradient-start: #1f5d90;
   --color-gradient-end: #18bbed;
   --color-cream-player: #f9f4ee; /* Cartes joueurs (lobby, tuiles guessing) */
@@ -15,6 +16,83 @@
   font-family: var(--font-display);
   letter-spacing: -0.01em;
 }
+
+.font-hand {
+  font-family: var(--font-hand);
+  letter-spacing: 0;
+}
+
+/* --- Safe areas iOS/Android --- */
+/* Utilitaires pour respecter les zones natives (encoche, home indicator, gestures) */
+.safe-pb { padding-bottom: env(safe-area-inset-bottom, 0px); }
+.safe-pt { padding-top: env(safe-area-inset-top, 0px); }
+.safe-pl { padding-left: env(safe-area-inset-left, 0px); }
+.safe-pr { padding-right: env(safe-area-inset-right, 0px); }
+.safe-mb { margin-bottom: env(safe-area-inset-bottom, 0px); }
+.safe-mt { margin-top: env(safe-area-inset-top, 0px); }
+
+/* --- Identité visuelle : texture "papier cartonné" --- */
+/* Grain subtil appliqué sur les cartes cream pour casser l'aspect "plat numérique" */
+.texture-paper {
+  position: relative;
+  isolation: isolate;
+}
+.texture-paper::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  opacity: 0.55;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.3  0 0 0 0 0.25  0 0 0 0 0.2  0 0 0 0.08 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  background-size: 160px 160px;
+}
+
+/* --- Stack shadow : empile 3 ombres décalées sous un élément --- */
+/* Effet "carte posée sur une pile" — meilleur rendu avec bordure noire */
+.stack-shadow {
+  box-shadow:
+    3px 3px 0 0 rgba(0, 0, 0, 1),
+    6px 6px 0 0 rgba(0, 0, 0, 0.18),
+    9px 9px 0 0 rgba(0, 0, 0, 0.08);
+}
+.stack-shadow-sm {
+  box-shadow:
+    2px 2px 0 0 rgba(0, 0, 0, 1),
+    4px 4px 0 0 rgba(0, 0, 0, 0.18),
+    6px 6px 0 0 rgba(0, 0, 0, 0.08);
+}
+.stack-shadow-lg {
+  box-shadow:
+    4px 4px 0 0 rgba(0, 0, 0, 1),
+    8px 8px 0 0 rgba(0, 0, 0, 0.22),
+    12px 12px 0 0 rgba(0, 0, 0, 0.10);
+}
+
+/* --- Motifs d'arrière-plan par phase/catégorie --- */
+/* Dots discrets — ambiance "lobby / answer" */
+.bg-pattern-dots {
+  background-image: radial-gradient(rgba(0,0,0,0.12) 1.2px, transparent 1.2px);
+  background-size: 16px 16px;
+}
+/* Diagonales — ambiance "guessing / reveal" */
+.bg-pattern-diagonal {
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(0,0,0,0.07) 0,
+    rgba(0,0,0,0.07) 1px,
+    transparent 1px,
+    transparent 10px
+  );
+}
+/* Zigzag — ambiance "fun / party" */
+.bg-pattern-zigzag {
+  background-image:
+    linear-gradient(135deg, rgba(0,0,0,0.06) 25%, transparent 25%) 0 0 / 14px 14px,
+    linear-gradient(225deg, rgba(0,0,0,0.06) 25%, transparent 25%) 0 0 / 14px 14px;
+}
+
 
 html, body {
   @apply h-full;
@@ -282,6 +360,8 @@ button {
   will-change: transform, opacity, filter;
   transform-origin: center center;
   backface-visibility: hidden;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
 }
 
 .card-hand-item.is-active {
@@ -447,6 +527,63 @@ button {
 }
 
 
+/* Réaction emoji flottante dans le lobby */
+@keyframes emoji-float {
+  0% {
+    opacity: 0;
+    transform: translate(var(--ex, 0px), 20px) scale(0.5) rotate(var(--rot, 0deg));
+  }
+  18% {
+    opacity: 1;
+    transform: translate(var(--ex, 0px), 0px) scale(1.15) rotate(var(--rot, 0deg));
+  }
+  85% {
+    opacity: 1;
+    transform: translate(var(--dx, 0px), -110px) scale(1) rotate(var(--rot, 0deg));
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx, 0px), -140px) scale(0.85) rotate(var(--rot, 0deg));
+  }
+}
+
+.animate-emoji-float {
+  animation: emoji-float 2s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* Toast : entrée depuis le haut avec un léger bounce */
+@keyframes toast-drop {
+  0% {
+    opacity: 0;
+    transform: translateY(-16px) scale(0.95);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(2px) scale(1.01);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-toast-drop {
+  animation: toast-drop 320ms cubic-bezier(0.34, 1.3, 0.64, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* Toast : sortie en fondu vers le haut */
+@keyframes toast-fade-out {
+  0%   { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-8px) scale(0.97); }
+}
+.animate-toast-out {
+  animation: toast-fade-out 280ms cubic-bezier(0.4, 0, 0.6, 1) forwards;
+  will-change: transform, opacity;
+  pointer-events: none;
+}
+
 /* Animation bounce pour le popover de similarité */
 @keyframes popover-bounce {
   0% {
@@ -468,5 +605,179 @@ button {
 
 .animate-popover-bounce {
   animation: popover-bounce 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* ========================================================================
+   PHASE 5 — ANSWER : papier ligné, tampon "ENVOYÉ", pliage, sablier
+   ======================================================================== */
+
+/* Feuille de carnet : lignes horizontales + marge rouge verticale */
+.surface-notebook {
+  background-color: #fdfaf0;
+  background-image:
+    /* Marge rouge verticale à gauche */
+    linear-gradient(90deg, transparent 0, transparent 28px, rgba(230, 95, 95, 0.45) 28px, rgba(230, 95, 95, 0.45) 29px, transparent 29px),
+    /* Lignes horizontales bleu pâle */
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 35px,
+      rgba(90, 155, 210, 0.22) 35px,
+      rgba(90, 155, 210, 0.22) 36px
+    );
+  background-attachment: local;
+}
+
+/* Shake léger quand le joueur clique submit */
+@keyframes paper-shake {
+  0%, 100% { transform: translateX(0) rotate(0); }
+  20% { transform: translateX(-3px) rotate(-0.4deg); }
+  40% { transform: translateX(3px) rotate(0.4deg); }
+  60% { transform: translateX(-2px) rotate(-0.2deg); }
+  80% { transform: translateX(2px) rotate(0.2deg); }
+}
+
+.animate-paper-shake {
+  animation: paper-shake 0.28s ease-in-out;
+}
+
+/* Flash jaune sur submit */
+@keyframes flash-warm {
+  0% { background-color: transparent; }
+  20% { background-color: rgba(255, 199, 0, 0.55); }
+  100% { background-color: transparent; }
+}
+.animate-flash-warm {
+  animation: flash-warm 0.5s ease-out;
+}
+
+/* Sablier : chute continue des grains */
+@keyframes grain-fall {
+  0% {
+    transform: translateY(-12px) scale(0.6);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(-6px) scale(1);
+  }
+  85% {
+    opacity: 1;
+    transform: translateY(28px) scale(1);
+  }
+  100% {
+    transform: translateY(36px) scale(0.6);
+    opacity: 0;
+  }
+}
+
+.hourglass-grain {
+  animation: grain-fall 0.9s linear infinite;
+}
+
+/* Retournement sablier quand tic tac final */
+@keyframes hourglass-nudge {
+  0%, 100% { transform: rotate(0); }
+  50% { transform: rotate(2deg); }
+}
+.animate-hourglass-nudge {
+  animation: hourglass-nudge 0.6s ease-in-out infinite;
+}
+
+/* ========================================================================
+   PHASE 6 — GUESSING : drag tactile premium
+   ======================================================================== */
+
+/* Carte réponse en drag : lift 3D + shadow intense */
+@keyframes card-lift-in {
+  0%   { transform: scale(1) rotate(0); }
+  100% { transform: scale(1.06) rotate(-2deg); }
+}
+.card-dragging {
+  animation: card-lift-in 0.18s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  box-shadow:
+    0 18px 32px rgba(0, 0, 0, 0.28),
+    0 6px 12px rgba(0, 0, 0, 0.2),
+    0 0 0 3px rgba(24, 187, 237, 0.4);
+  z-index: 40;
+  cursor: grabbing !important;
+}
+
+/* Carte sélectionnée (mobile tap) : pulse + border glow */
+@keyframes answer-selected-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(24, 187, 237, 0.6), 0 6px 14px rgba(0, 0, 0, 0.12);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(24, 187, 237, 0), 0 10px 22px rgba(0, 0, 0, 0.18);
+    transform: scale(1.02);
+  }
+}
+.animate-answer-selected {
+  animation: answer-selected-pulse 1.4s ease-in-out infinite;
+}
+
+/* Targets éligibles : pulse magnétique doux */
+@keyframes target-magnetic {
+  0%, 100% {
+    box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 1), 6px 6px 0 0 rgba(0, 0, 0, 0.18), 0 0 0 0 rgba(255, 199, 0, 0);
+    transform: translateY(0);
+  }
+  50% {
+    box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 1), 6px 6px 0 0 rgba(0, 0, 0, 0.18), 0 0 0 10px rgba(255, 199, 0, 0);
+    transform: translateY(-2px);
+  }
+}
+.animate-target-magnetic {
+  animation: target-magnetic 1.6s ease-in-out infinite;
+}
+.animate-target-magnetic::before {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: inherit;
+  border: 2.5px dashed rgba(255, 199, 0, 0.85);
+  pointer-events: none;
+  animation: target-magnetic-ring 1.6s ease-in-out infinite;
+}
+@keyframes target-magnetic-ring {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50%      { opacity: 0.2; transform: scale(1.04); }
+}
+
+/* Snap bounce après drop */
+@keyframes snap-bounce {
+  0%   { transform: scale(0.97); opacity: 0.6; }
+  60%  { transform: scale(1.015); opacity: 1; }
+  100% { transform: scale(1); }
+}
+.animate-snap-bounce {
+  animation: snap-bounce 0.3s ease-out forwards;
+}
+
+/* Reveal staggered des réponses à l'arrivée (leader) */
+@keyframes answer-drop-in {
+  0%   { opacity: 0; transform: translateY(-14px) rotate(-4deg); }
+  60%  { opacity: 1; transform: translateY(3px) rotate(1deg); }
+  100% { opacity: 1; transform: translateY(0) rotate(0); }
+}
+.animate-answer-drop-in {
+  animation: answer-drop-in 0.45s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+
+/* Deal-in : la carte arrive en douceur depuis le haut */
+@keyframes card-deal-in {
+  0% {
+    opacity: 0;
+    transform: translate(-6%, -18%) rotate(-4deg) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0) scale(1);
+  }
+}
+.animate-card-deal-in {
+  animation: card-deal-in 0.55s cubic-bezier(0.22, 0.61, 0.36, 1) both;
 }
 

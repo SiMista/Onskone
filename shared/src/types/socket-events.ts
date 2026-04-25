@@ -65,6 +65,14 @@ export interface ServerToClientEvents {
   /** Catalogue des decks disponibles + sélection actuelle du lobby */
   lobbyDecksState: (data: { catalog: DecksCatalog; selected: SelectedDecks }) => void;
 
+  /** Réaction emoji d'un joueur diffusée dans le lobby */
+  lobbyReaction: (data: {
+    id: string;
+    playerId: string;
+    playerName: string;
+    emoji: string;
+  }) => void;
+
   // ===== GAME EVENTS =====
 
   /** Notification de démarrage du jeu */
@@ -244,6 +252,12 @@ export interface ClientToServerEvents {
   updateSelectedDecks: (data: {
     lobbyCode: string;
     selected: SelectedDecks;
+  }) => void;
+
+  /** Envoyer une réaction emoji dans le lobby */
+  sendLobbyReaction: (data: {
+    lobbyCode: string;
+    emoji: string;
   }) => void;
 
   // ===== GAME EVENTS =====

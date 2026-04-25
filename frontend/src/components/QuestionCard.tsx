@@ -15,7 +15,7 @@ const QuestionCard: React.FC<QuestionCardProps> = ({ question, card, variant = '
   return (
     <div className="w-full max-w-2xl mx-auto">
       <div
-        className={`bg-cream-question border-[3px] md:border-4 rounded-xl relative overflow-hidden shadow-[0_4px_14px_rgba(0,0,0,0.18)] ${
+        className={`bg-cream-question border-[3px] md:border-4 rounded-xl relative overflow-hidden stack-shadow-sm texture-paper ${
           isCompact ? 'px-3 md:px-4 py-2 md:py-2.5' : 'px-5 md:px-7 py-3 md:py-4'
         }`}
         style={{ borderColor: color }}

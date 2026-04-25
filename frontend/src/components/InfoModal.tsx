@@ -13,19 +13,19 @@ const InfoModal = ({ isOpen, onClose, title, children }: InfoModalProps) => {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl max-w-md w-full max-h-[80vh] overflow-y-auto shadow-2xl animate-modal-content"
+        className="bg-white border-[2.5px] border-black rounded-2xl stack-shadow-lg texture-paper max-w-md w-full max-h-[82vh] overflow-hidden animate-modal-content flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-gray-800 m-0">{title}</h2>
+        <div className="flex items-center justify-between px-4 py-3 border-b-[2.5px] border-black bg-cream-player">
+          <h2 className="text-lg md:text-xl font-display font-bold text-gray-900 m-0 tracking-tight">{title}</h2>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors text-gray-600 cursor-pointer"
+            className="w-8 h-8 flex items-center justify-center rounded-lg bg-white border-2 border-black hover:bg-gray-100 active:scale-95 transition-transform text-gray-800 cursor-pointer shrink-0"
             aria-label="Fermer"
           >
             <LuX size={18} />
@@ -33,7 +33,7 @@ const InfoModal = ({ isOpen, onClose, title, children }: InfoModalProps) => {
         </div>
 
         {/* Content */}
-        <div className="p-4 text-gray-700">
+        <div className="p-4 text-gray-800 overflow-y-auto">
           {children}
         </div>
       </div>

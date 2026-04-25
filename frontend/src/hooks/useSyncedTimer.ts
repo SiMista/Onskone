@@ -18,6 +18,7 @@ export function useSyncedTimer(defaultDuration: number, options: UseSyncedTimerO
   const [timeLeft, setTimeLeft] = useState(defaultDuration);
   const [isRunning, setIsRunning] = useState(false);
   const [endTime, setEndTime] = useState<number | null>(null);
+  const [serverDuration, setServerDuration] = useState<number | null>(null);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const onExpireRef = useRef(onExpire);
@@ -39,6 +40,7 @@ export function useSyncedTimer(defaultDuration: number, options: UseSyncedTimerO
       // Calculer le temps de fin basé sur le timestamp serveur
       const serverEndTime = data.startedAt + data.duration * 1000;
       setEndTime(serverEndTime);
+      setServerDuration(data.duration);
       setIsRunning(true);
       hasExpiredRef.current = false;
 
@@ -127,6 +129,7 @@ export function useSyncedTimer(defaultDuration: number, options: UseSyncedTimerO
     setTimeLeft(defaultDuration);
     setIsRunning(false);
     setEndTime(null);
+    setServerDuration(null);
     hasExpiredRef.current = false;
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
@@ -138,6 +141,7 @@ export function useSyncedTimer(defaultDuration: number, options: UseSyncedTimerO
     timeLeft,
     isRunning,
     endTime,
+    serverDuration,
     reset,
   };
 }

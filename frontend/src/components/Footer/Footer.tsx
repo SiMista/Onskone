@@ -17,7 +17,10 @@ const Footer: React.FC = () => {
 
   return (
     <>
-      <footer className="w-full py-5 text-center text-white/60 text-xs select-none">
+      <footer
+        className="w-full py-5 text-center text-white/60 text-xs select-none"
+        style={{ paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom, 0px))' }}
+      >
         <div className="mb-2">
           Onskone &copy; {currentYear}
         </div>

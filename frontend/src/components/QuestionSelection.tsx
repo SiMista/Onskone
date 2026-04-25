@@ -26,6 +26,8 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
 
   const [showSwipeHint, setShowSwipeHint] = useState(false);
   const hasInteractedRef = useRef(false);
+  // Indices des cartes déjà retournées (dos -> face). Stagger reveal au démarrage.
+  const [revealedIdx, setRevealedIdx] = useState<Set<number>>(new Set());
 
   const currentCard = cards.length > 0 ? cards[currentCardIndex] : null;
 
@@ -83,6 +85,26 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
       socket.off('questionsReceived');
     };
   }, [isLeader, lobbyCode]);
+
+  // Stagger reveal : retourne la carte active d'abord, puis les autres dans l'ordre
+  useEffect(() => {
+    if (cards.length === 0) return;
+    setRevealedIdx(new Set());
+    const timeouts: ReturnType<typeof setTimeout>[] = [];
+    const order = [currentCardIndex, ...cards.map((_, i) => i).filter(i => i !== currentCardIndex)];
+    order.forEach((idx, pos) => {
+      const delay = 250 + pos * 220;
+      timeouts.push(setTimeout(() => {
+        setRevealedIdx(prev => {
+          const next = new Set(prev);
+          next.add(idx);
+          return next;
+        });
+      }, delay));
+    });
+    return () => timeouts.forEach(clearTimeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cards]);
 
   const locked = selectedQuestion !== null;
 
@@ -218,13 +240,13 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
     <div className="flex flex-col h-full p-2 md:p-4">
       {currentCard && (
         <div className="flex-1 flex flex-col items-center justify-center">
-          <div className="bg-primary text-base md:text-xl px-3 md:px-6 py-2 md:py-3 rounded-2xl mb-3 md:mb-4 w-full text-center">
-            <p className="font-display text-lg md:text-2xl m-0 mb-1.5 md:mb-2 tracking-tight">Vous êtes le pilier de cette manche !</p>
+          <div className="bg-primary text-base md:text-xl px-3 md:px-6 pt-2 md:py-3 rounded-2xl md:mb-2 w-full text-center">
+            <p className="font-display text-lg md:text-2xl m-0 tracking-tight">Vous êtes le pilier de cette manche !</p>
             <Timer duration={GAME_CONFIG.TIMERS.QUESTION_SELECTION} onExpire={handleTimerExpire} phase={RoundPhase.QUESTION_SELECTION} lobbyCode={lobbyCode} hidden />
           </div>
 
-          <div className="flex flex-col items-center gap-2 w-full">
-            <p className="font-display text-base md:text-lg text-center leading-tight tracking-tight">
+          <div className="flex flex-col items-center gap-1 w-full">
+            <p className="font-display text-base md:text-lg text-center leading-tight tracking-tight m-0">
               Choisis une question pour cette manche
               <span className="flex md:hidden items-center justify-center gap-1.5 mt-1 text-xs text-gray-500 italic font-sans font-normal">
                 <Icon icon="ph:hand-swipe-left-duotone" className="text-base animate-wiggle" aria-hidden />
@@ -321,7 +343,7 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
                     aria-label={!isActive ? `Voir la carte ${card.theme}` : undefined}
                   >
                     <div
-                      className="bg-cream-question border-4 md:border-[6px] rounded-2xl md:rounded-3xl p-3 md:p-5 relative overflow-hidden min-h-[360px] md:min-h-[400px] flex flex-col transition-shadow duration-500"
+                      className={`bg-cream-question border-4 md:border-[6px] rounded-2xl md:rounded-3xl p-3 md:p-5 relative overflow-hidden min-h-[360px] md:min-h-[400px] flex flex-col transition-shadow duration-500 ${revealedIdx.has(idx) ? 'animate-card-deal-in' : 'opacity-0'}`}
                       style={{ borderColor: color, boxShadow: cardShadow }}
                     >
                       <div

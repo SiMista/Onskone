@@ -32,10 +32,10 @@ const PlayerAnswerCard: React.FC<PlayerAnswerCardProps> = ({
       )}
       <div
         className={`
-          w-full max-w-md rounded-xl p-6 md:p-8 border-2 md:border-[3px]
+          w-full max-w-md rounded-xl p-6 md:p-8 border
           ${placeholder
             ? 'border-dashed border-gray-400 bg-gray-50 shadow-none'
-            : `border-black shadow-[0_4px_14px_rgba(0,0,0,0.22)] ${bgClass}`
+            : `border-black stack-shadow-sm texture-paper ${bgClass}`
           }
           ${pulse ? 'animate-halo-pulse' : ''}
           ${className}
