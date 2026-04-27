@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import socket from '../utils/socket';
-import { IPlayer, LeaderboardEntry, RoundData } from '@onskone/shared';
+import { IPlayer, LeaderboardEntry, IRound } from '@onskone/shared';
 import Button from '../components/Button';
 import Avatar from '../components/Avatar';
 import Logo from '../components/Logo';
@@ -79,15 +79,71 @@ const EndGame: React.FC = () => {
   const rafRef = useRef<number | null>(null);
 
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [rounds, setRounds] = useState<RoundData[]>([]);
+  const [rounds, setRounds] = useState<IRound[]>([]);
   const [currentPlayer, setCurrentPlayer] = useState<IPlayer | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
   const [displayPct, setDisplayPct] = useState(0);
   const [revealed, setRevealed] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
+  const [openPopoverFor, setOpenPopoverFor] = useState<string | null>(null);
+  const [renderedPopoverFor, setRenderedPopoverFor] = useState<string | null>(null);
+  const [popoverVisible, setPopoverVisible] = useState(false);
+  const popoverRef = useRef<HTMLDivElement | null>(null);
   const preparedBlobRef = useRef<Blob | null>(null);
   const showToast = useToast();
+
+  // Pour chaque joueur, retrouver le round où il a été pilier (sa question)
+  const roundByLeaderId = useMemo(() => {
+    const map = new Map<string, IRound>();
+    rounds.forEach(r => {
+      const id = r.leader?.id;
+      if (id && !map.has(id)) map.set(id, r);
+    });
+    return map;
+  }, [rounds]);
+
+  const playerNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    leaderboard.forEach(e => map.set(e.player.id, e.player.name));
+    return map;
+  }, [leaderboard]);
+
+  // Gestion mount/unmount différé pour permettre l'animation de fermeture
+  useEffect(() => {
+    if (openPopoverFor) {
+      setRenderedPopoverFor(openPopoverFor);
+      // Double rAF pour s'assurer que l'état "closed" est peint avant le passage à "open"
+      let r2 = 0;
+      const r1 = requestAnimationFrame(() => {
+        r2 = requestAnimationFrame(() => setPopoverVisible(true));
+      });
+      return () => {
+        cancelAnimationFrame(r1);
+        if (r2) cancelAnimationFrame(r2);
+      };
+    }
+    setPopoverVisible(false);
+    if (renderedPopoverFor) {
+      const t = setTimeout(() => setRenderedPopoverFor(null), 220);
+      return () => clearTimeout(t);
+    }
+  }, [openPopoverFor, renderedPopoverFor]);
+
+  // Fermeture sur clic en dehors
+  useEffect(() => {
+    if (!openPopoverFor) return;
+    const handler = (e: MouseEvent) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+        setOpenPopoverFor(null);
+      }
+    };
+    const t = setTimeout(() => document.addEventListener('mousedown', handler), 0);
+    return () => {
+      clearTimeout(t);
+      document.removeEventListener('mousedown', handler);
+    };
+  }, [openPopoverFor]);
 
   useEffect(() => {
     if (!lobbyCode) navigate('/');
@@ -100,7 +156,7 @@ const EndGame: React.FC = () => {
     // On ne prend en compte que la première réception : si un joueur quitte
     // ensuite, le serveur peut ré-émettre un gameEnded mis à jour, mais on veut
     // que le classement reste figé tel qu'affiché à la fin de la partie.
-    socket.on('gameEnded', (data: { leaderboard: LeaderboardEntry[]; rounds: RoundData[] }) => {
+    socket.on('gameEnded', (data: { leaderboard: LeaderboardEntry[]; rounds: IRound[] }) => {
       setLeaderboard(prev => (prev.length ? prev : data.leaderboard));
       setRounds(prev => (prev.length ? prev : data.rounds || []));
     });
@@ -273,7 +329,7 @@ const EndGame: React.FC = () => {
   return (
     <div className="min-h-screen p-3 md:p-6 relative overflow-hidden">
       <div
-        className="pointer-events-none fixed inset-0 z-0 transition-opacity duration-1000"
+        className="pointer-events-none fixed inset-0 z-10 transition-opacity duration-1000"
         style={{
           background:
             'radial-gradient(circle at 50% 35%, transparent 0%, rgba(0,0,0,0.70) 30%, rgba(0,0,0,1) 70%)',
@@ -307,14 +363,20 @@ const EndGame: React.FC = () => {
 
         <div className="flex flex-col items-center mb-5 md:mb-8">
           <div
-            className="relative flex flex-col items-center rounded-3xl border border-white/20 bg-white/[0.07] backdrop-blur-md px-5 pt-5 pb-4 shadow-[0_4px_30px_rgba(0,0,0,0.15)]"
+            className="relative flex flex-col items-center px-5 pt-5 pb-4"
             style={{ overflow: 'visible' }}
           >
-          <p className="text-white/80 font-display text-sm md:text-lg uppercase tracking-[0.25em]">
+          {/* Fond glass derrière le halo dark (z-0 < halo z-10 < contenu z-20) */}
+          <div
+            className="absolute inset-0 rounded-3xl border border-white/20 bg-white/[0.07] backdrop-blur-md shadow-[0_4px_30px_rgba(0,0,0,0.15)]"
+            style={{ zIndex: 0 }}
+            aria-hidden
+          />
+          <p className="relative z-20 text-white/80 font-display text-sm md:text-lg uppercase tracking-[0.25em]">
             Vous vous connaissez à
           </p>
 
-          <div className="relative w-[320px] h-[320px] md:w-[380px] md:h-[380px] max-w-full -mt-6 md:-mt-8">
+          <div className="relative z-20 w-[320px] h-[320px] md:w-[380px] md:h-[380px] max-w-full -mt-6 md:-mt-8">
             <svg className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[200px] h-[200px] md:w-[250px] md:h-[250px] -rotate-90 overflow-visible" viewBox="0 0 240 240" style={{ overflow: 'visible' }}>
               <defs>
                 <filter id="ring-glow" x="-50%" y="-50%" width="200%" height="200%">
@@ -419,7 +481,7 @@ const EndGame: React.FC = () => {
           </div>
 
           <div
-            className={`-mt-2 md:-mt-4 text-center px-4 transition-all duration-500 ${
+            className={`relative z-20 -mt-2 md:-mt-4 text-center px-4 transition-all duration-500 ${
               revealed ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'
             }`}
           >
@@ -473,6 +535,16 @@ const EndGame: React.FC = () => {
               const isCurrentPlayer = entry.player.id === currentPlayer?.id;
               const isPodium = index < 3;
               const podiumColors = ['#FFC700', '#C0C0C0', '#CD7F32'];
+              const round = roundByLeaderId.get(entry.player.id);
+              const hasQuestion = !!(round && round.selectedQuestion);
+              const isOpen = openPopoverFor === entry.player.id;
+              const isRendered = renderedPopoverFor === entry.player.id;
+              const respondentNames = round
+                ? Object.keys(round.answers || {})
+                    .filter(id => id !== entry.player.id)
+                    .map(id => playerNameById.get(id))
+                    .filter((n): n is string => !!n)
+                : [];
               return (
                 <div
                   key={entry.player.id}
@@ -495,9 +567,55 @@ const EndGame: React.FC = () => {
                       {entry.player.name}
                     </span>
                   </div>
-                  <span className="text-base md:text-xl font-display font-bold flex-shrink-0 ml-2 tabular-nums text-gray-900">
-                    {entry.score} pt{entry.score > 1 ? 's' : ''}
-                  </span>
+                  <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                    {hasQuestion && (
+                      <div className="relative">
+                        <button
+                          type="button"
+                          aria-label="Voir la question reçue"
+                          aria-expanded={isOpen}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenPopoverFor(isOpen ? null : entry.player.id);
+                          }}
+                          className="flex items-center justify-center w-7 h-7 md:w-8 md:h-8 rounded-full border-[2px] border-black bg-white hover:bg-gray-100 active:scale-95 transition-transform cursor-pointer text-gray-800"
+                        >
+                          <Icon icon="mdi:message-question-outline" width="1.05em" height="1.05em" aria-hidden />
+                        </button>
+                        {isRendered && round && (
+                          <div
+                            ref={isOpen ? popoverRef : undefined}
+                            data-state={isOpen && popoverVisible ? 'open' : 'closed'}
+                            className="absolute right-0 bottom-full mb-2 w-60 md:w-72 z-30 bg-white border-[2.5px] border-black rounded-xl stack-shadow p-3 md:p-3.5 popover-anim text-left"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <p className="text-xs font-display font-bold uppercase tracking-wider text-gray-500 leading-tight">
+                              Question reçue
+                            </p>
+                            <p className="text-sm md:text-base font-semibold text-gray-900 mb-2.5 leading-snug">
+                              « {round.selectedQuestion} »
+                            </p>
+                            <p className="text-xs font-display font-bold uppercase tracking-wider text-gray-500 leading-tight">
+                              Bonnes réponses
+                            </p>
+                            {respondentNames.length > 0 ? (
+                              <ul className="text-sm text-gray-900 leading-snug">
+                                {respondentNames.map(name => (
+                                  <li key={name} className="truncate">{name}</li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p className="text-sm text-gray-500 italic">Aucun joueur</p>
+                            )}
+                            <span className="popover-notch" aria-hidden />
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <span className="text-base md:text-xl font-display font-bold tabular-nums text-gray-900">
+                      {entry.score} pt{entry.score > 1 ? 's' : ''}
+                    </span>
+                  </div>
                 </div>
               );
             })}
@@ -511,6 +629,31 @@ const EndGame: React.FC = () => {
         }
         .animate-fall {
           animation: fall linear infinite;
+        }
+        .popover-anim {
+          transform-origin: bottom right;
+          transition: opacity 200ms ease-out, transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .popover-anim[data-state="closed"] {
+          opacity: 0;
+          transform: scale(0.7) translateY(8px);
+          pointer-events: none;
+        }
+        .popover-anim[data-state="open"] {
+          opacity: 1;
+          transform: scale(1) translateY(0);
+        }
+        .popover-notch {
+          position: absolute;
+          right: 14px;
+          bottom: -8px;
+          width: 14px;
+          height: 14px;
+          background: white;
+          border-right: 2.5px solid black;
+          border-bottom: 2.5px solid black;
+          transform: rotate(45deg);
+          border-bottom-right-radius: 3px;
         }
       `}</style>
     </div>

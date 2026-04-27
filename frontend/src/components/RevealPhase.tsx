@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import socket from '../utils/socket';
 import Button from './Button';
 import Avatar from './Avatar';
@@ -51,6 +51,9 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
   const [showNextButton, setShowNextButton] = useState(false);
   // Joueur sans réponse attribuée : bascule en rouge après un court délai
   const [noAnswerLitRed, setNoAnswerLitRed] = useState(false);
+  // Animation de reveal sur la carte joueur
+  const [revealAnimating, setRevealAnimating] = useState(false);
+  const prevMyRevealedRef = useRef(false);
 
   // Afficher le bouton Suivant 1s après passage en phase revealed
   useEffect(() => {
@@ -160,10 +163,24 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
     return () => clearTimeout(t);
   }, [isLeader, myResult]);
 
+  // Déclenche l'animation de reveal côté joueur quand sa carte est révélée
+  useEffect(() => {
+    if (isLeader) return;
+    const myRev = myIndex >= 0 && revealedIndices.has(myIndex);
+    if (myRev && !prevMyRevealedRef.current) {
+      setRevealAnimating(true);
+      const t = setTimeout(() => setRevealAnimating(false), 500);
+      prevMyRevealedRef.current = true;
+      return () => clearTimeout(t);
+    }
+    if (!myRev) prevMyRevealedRef.current = false;
+  }, [isLeader, myIndex, revealedIndices]);
+
   if (!isLeader) {
     const myAwaitingSimilarity = myIndex >= 0 && similarityModal?.answerIndex === myIndex;
     const myRevealed = myIndex >= 0 && revealedIndices.has(myIndex) && !myAwaitingSimilarity;
     const myCorrect = myResult ? (myResult.correct || correctedIndices.has(myIndex)) : false;
+    const isNextToReveal = !myRevealed && myIndex >= 0 && myIndex === findFirstDisplayable(0, revealedIndices);
 
     return (
       <div className="flex flex-col h-full p-2 max-w-2xl mx-auto">
@@ -175,7 +192,7 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
                   answer={getDisplayText(myResult.answer)}
                   isNoResponse={isNoResponse(myResult.answer)}
                   bgClass={myRevealed ? (myCorrect ? 'bg-[#30c94d]' : 'bg-[#ff6b6b]') : 'bg-cream-answer'}
-                  className="transition-colors duration-500"
+                  className={`transition-colors duration-500 ${isNextToReveal ? 'animate-card-soft-pulse' : ''} ${revealAnimating ? 'animate-reveal-pop' : ''}`}
                   heading={null}
                 />
               </ShowScreenFrame>
