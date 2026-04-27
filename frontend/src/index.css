@@ -507,14 +507,14 @@ button {
     hand-tap-soft 1.6s ease-in-out 2.4s infinite;
 }
 
-/* Clignotement très discret de la carte à révéler */
+/* Clignotement jaune de la carte à révéler */
 @keyframes card-soft-pulse {
-  0%, 100% { background-color: #ffffff; }
-  50%      { background-color: #fefce8; }
+  0%, 100% { background-color: #fffbeb; box-shadow: 4px 4px 0 #000; }
+  50%      { background-color: #fde047; box-shadow: 4px 4px 0 #000, 0 0 18px 4px rgba(253, 224, 71, 0.55); }
 }
 
 .animate-card-soft-pulse {
-  animation: card-soft-pulse 2.2s ease-in-out infinite;
+  animation: card-soft-pulse 1.4s ease-in-out infinite;
 }
 
 /* Léger tremblement sur la carte du joueur en attente */
@@ -732,19 +732,17 @@ button {
   animation: answer-selected-pulse 1.4s ease-in-out infinite;
 }
 
-/* Targets éligibles : pulse magnétique doux */
+/* Targets éligibles : léger clignotement jaune du fond de la carte */
 @keyframes target-magnetic {
   0%, 100% {
-    box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 1), 6px 6px 0 0 rgba(0, 0, 0, 0.18), 0 0 0 0 rgba(255, 199, 0, 0);
-    transform: translateY(0);
+    background-color: var(--color-cream-player, #f9f4ee);
   }
   50% {
-    box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 1), 6px 6px 0 0 rgba(0, 0, 0, 0.18), 0 0 0 10px rgba(255, 199, 0, 0);
-    transform: translateY(-2px);
+    background-color: #FFE680;
   }
 }
 .animate-target-magnetic {
-  animation: target-magnetic 1.6s ease-in-out infinite;
+  animation: target-magnetic 1.2s ease-in-out infinite;
 }
 
 /* Snap bounce après drop */

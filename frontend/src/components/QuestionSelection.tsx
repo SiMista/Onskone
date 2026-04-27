@@ -195,26 +195,26 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
 
   if (!isLeader) {
     return (
-      <div className="flex flex-col items-center justify-center h-full w-full gap-4 md:gap-6 px-2">
-        <div className="text-center mb-2 md:mb-4 w-full max-w-2xl">
-          <div className="bg-primary-light rounded-lg px-3 md:px-4 py-2 max-w-2xl">
-            <p className="text-lg md:text-2xl ">Le pilier de cette manche est <strong>{leaderName}</strong></p>
-            <p className="text-center mb-2 md:mb-4 text-sm md:text-base">En attente de sa sélection de question…</p>
+      <div className="flex flex-col items-center justify-center h-full w-full gap-2 md:gap-6 px-2 overflow-hidden">
+        <div className="text-center w-full max-w-2xl">
+          <div className="bg-primary-light rounded-lg px-3 md:px-4 py-1.5 md:py-2 max-w-2xl">
+            <p className="text-base md:text-2xl">Le pilier de cette manche est <strong>{leaderName}</strong></p>
+            <p className="text-center text-xs md:text-base">En attente de sa sélection de question…</p>
             <Timer duration={GAME_CONFIG.TIMERS.QUESTION_SELECTION} onExpire={handleTimerExpire} phase={RoundPhase.QUESTION_SELECTION} lobbyCode={lobbyCode} hidden />
           </div>
         </div>
 
         {/* Fait insolite */}
-        <div className="max-w-md text-center px-4">
-          <p className="text-[10px] md:text-xs text-gray-500 uppercase font-semibold mb-1 md:mb-2">Le saviez-vous ?</p>
+        <div className="w-full max-w-md text-center px-3">
+          <p className="text-[10px] md:text-xs text-gray-500 uppercase font-semibold mb-1">Le saviez-vous ?</p>
           <p
-            className={`text-gray-700 text-sm md:text-base italic transition-opacity duration-300 ${factFading ? 'opacity-0' : 'opacity-100'}`}
+            className={`text-gray-700 text-xs md:text-base italic leading-snug transition-opacity duration-300 ${factFading ? 'opacity-0' : 'opacity-100'}`}
           >
             {funFact}
           </p>
         </div>
 
-        <Icon icon="fluent-emoji-flat:thinking-face" className="text-4xl md:text-5xl animate-bounce" width="1em" height="1em" aria-hidden />
+        <Icon icon="fluent-emoji-flat:thinking-face" className="text-3xl md:text-5xl animate-bounce" width="1em" height="1em" aria-hidden />
       </div>
     );
   }
@@ -426,7 +426,7 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
                     onClick={goPrev}
                     disabled={navDisabled}
                     aria-label="Carte précédente"
-                    className="group w-11 h-11 md:w-14 md:h-14 rounded-full bg-cream-question border-[3px] md:border-4 flex items-center justify-center shadow-[0_4px_0_0_rgba(0,0,0,0.18)] hover:-translate-y-0.5 hover:shadow-[0_6px_0_0_rgba(0,0,0,0.2)] active:translate-y-0.5 active:shadow-[0_1px_0_0_rgba(0,0,0,0.2)] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-[0_4px_0_0_rgba(0,0,0,0.18)]"
+                    className="hidden md:flex group w-14 h-14 rounded-full bg-cream-question border-4 items-center justify-center shadow-[0_4px_0_0_rgba(0,0,0,0.18)] hover:-translate-y-0.5 hover:shadow-[0_6px_0_0_rgba(0,0,0,0.2)] active:translate-y-0.5 active:shadow-[0_1px_0_0_rgba(0,0,0,0.2)] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-[0_4px_0_0_rgba(0,0,0,0.18)]"
                     style={{ borderColor: activeColor }}
                   >
                     <Icon
@@ -463,7 +463,7 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
                     onClick={goNext}
                     disabled={navDisabled}
                     aria-label="Carte suivante"
-                    className="group w-11 h-11 md:w-14 md:h-14 rounded-full bg-cream-question border-[3px] md:border-4 flex items-center justify-center shadow-[0_4px_0_0_rgba(0,0,0,0.18)] hover:-translate-y-0.5 hover:shadow-[0_6px_0_0_rgba(0,0,0,0.2)] active:translate-y-0.5 active:shadow-[0_1px_0_0_rgba(0,0,0,0.2)] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-[0_4px_0_0_rgba(0,0,0,0.18)]"
+                    className="hidden md:flex group w-14 h-14 rounded-full bg-cream-question border-4 items-center justify-center shadow-[0_4px_0_0_rgba(0,0,0,0.18)] hover:-translate-y-0.5 hover:shadow-[0_6px_0_0_rgba(0,0,0,0.2)] active:translate-y-0.5 active:shadow-[0_1px_0_0_rgba(0,0,0,0.2)] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-[0_4px_0_0_rgba(0,0,0,0.18)]"
                     style={{ borderColor: activeColor }}
                   >
                     <Icon

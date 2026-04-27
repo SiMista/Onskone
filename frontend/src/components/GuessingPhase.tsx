@@ -445,10 +445,10 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
                                   e.stopPropagation();
                                   handleRemoveGuess(answer.id);
                                 }}
-                                className="ml-1 md:ml-2 text-red-500 hover:text-red-600 font-bold text-sm inline-flex items-center"
+                                className="ml-1.5 md:ml-2 shrink-0 inline-flex items-center justify-center w-7 h-7 md:w-8 md:h-8 rounded-md bg-[#FF4D4D] hover:bg-[#FF3333] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none text-white border-2 border-black stack-shadow-sm transition-all"
                                 aria-label="Retirer"
                               >
-                                <LuX size={14} />
+                                <LuX size={18} strokeWidth={3} />
                               </button>
                             )}
                           </div>
