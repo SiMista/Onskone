@@ -10,8 +10,8 @@ const Logo = ({
 }: LogoProps) => {
   // Tailles responsive: plus grand sur mobile, plus petit sur desktop
   const sizeClasses = size === 'large'
-    ? 'w-[60%] md:w-[25%]'  // Large: 60% mobile, 25% desktop
-    : 'w-[45%] md:w-[18%]'; // Small: 45% mobile, 18% desktop
+    ? 'w-[60%] md:w-72'
+    : 'w-[45%] md:w-56';
 
   return (
     <img

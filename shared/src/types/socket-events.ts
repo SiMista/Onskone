@@ -2,6 +2,7 @@ import { IPlayer } from './player.js';
 import { IGame, LeaderboardEntry } from './game.js';
 import { IRound, GameCard, RoundPhase } from './round.js';
 import { DecksCatalog, SelectedDecks } from './decks.js';
+import { GameMode } from './lobby.js';
 
 /**
  * Résultat d'une réponse dans la phase de révélation
@@ -63,7 +64,7 @@ export interface ServerToClientEvents {
   gameAlreadyStarted: (data: { message: string }) => void;
 
   /** Catalogue des decks disponibles + sélection actuelle du lobby */
-  lobbyDecksState: (data: { catalog: DecksCatalog; selected: SelectedDecks }) => void;
+  lobbyDecksState: (data: { catalog: DecksCatalog; selected: SelectedDecks; gameMode: GameMode }) => void;
 
   /** Réaction emoji d'un joueur diffusée dans le lobby */
   lobbyReaction: (data: {
@@ -171,6 +172,9 @@ export interface ServerToClientEvents {
     answerIndex: number;
   }) => void;
 
+  /** Le pilier avance au prochain joueur dans la révélation (mode remote) */
+  revealCursorAdvanced: (data: { nextIndex: number }) => void;
+
   /** Démarrage d'un timer */
   timerStarted: (data: {
     phase: RoundPhase;
@@ -252,6 +256,12 @@ export interface ClientToServerEvents {
   updateSelectedDecks: (data: {
     lobbyCode: string;
     selected: SelectedDecks;
+  }) => void;
+
+  /** Mettre à jour le mode de jeu (réservé à l'hôte) */
+  updateGameMode: (data: {
+    lobbyCode: string;
+    gameMode: GameMode;
   }) => void;
 
   /** Envoyer une réaction emoji dans le lobby */
@@ -349,6 +359,12 @@ export interface ClientToServerEvents {
   /** Passer au round suivant (ou terminer le jeu) */
   nextRound: (data: {
     lobbyCode: string;
+  }) => void;
+
+  /** Avancer le curseur de révélation pour les spectateurs (mode remote, pilier seulement) */
+  advanceRevealCursor: (data: {
+    lobbyCode: string;
+    nextIndex: number;
   }) => void;
 
   /** Récupérer les résultats finaux */

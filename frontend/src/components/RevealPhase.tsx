@@ -5,7 +5,7 @@ import Avatar from './Avatar';
 import PlayerAnswerCard from './PlayerAnswerCard';
 import SimilarityPopover from './SimilarityPopover';
 import ShowScreenFrame from './ShowScreenFrame';
-import { RevealResult, LeaderboardEntry, GameCard } from '@onskone/shared';
+import { RevealResult, LeaderboardEntry, GameCard, GameMode } from '@onskone/shared';
 import { isNoResponse, getDisplayText } from '../utils/answerHelpers';
 
 interface RevealPhaseProps {
@@ -18,12 +18,13 @@ interface RevealPhaseProps {
   question: string;
   card?: GameCard;
   initialRevealedIndices?: number[];
+  gameMode: GameMode;
 }
 
 const isPersonneGuess = (r: RevealResult) =>
   !r.guessedPlayerId || !r.guessedPlayerName || r.guessedPlayerName === 'Aucun' || r.guessedPlayerName === 'Personne';
 
-const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderName, currentPlayerId, isGameOver, results, initialRevealedIndices }) => {
+const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderName, currentPlayerId, isGameOver, results, initialRevealedIndices, gameMode }) => {
   const [revealedIndices, setRevealedIndices] = useState<Set<number>>(
     new Set(initialRevealedIndices || [])
   );
@@ -69,7 +70,6 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
     socket.on('answerRevealed', (data: { revealedIndex: number; revealedIndices: number[] }) => {
       setRevealedIndices(new Set(data.revealedIndices));
       setPilierPhase(prev => {
-        // Si c'est l'index affiché au pilier qui vient d'être révélé, on passe en phase Suivant
         return data.revealedIndex === pilierCursor ? 'revealed' : prev;
       });
     });
@@ -90,13 +90,23 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
       setSimilarityModal(null);
     });
 
+    // Mode remote : spectateurs avancent en sync avec le pilier
+    socket.on('revealCursorAdvanced', (data: { nextIndex: number }) => {
+      if (!isLeader && gameMode === 'remote') {
+        setPilierCursor(data.nextIndex);
+        setPilierPhase('prompt');
+        setShowNextButton(false);
+      }
+    });
+
     return () => {
       socket.off('answerRevealed');
       socket.off('similarityDetected');
       socket.off('similarityConfirmed');
       socket.off('similarityDismissed');
+      socket.off('revealCursorAdvanced');
     };
-  }, [pilierCursor]);
+  }, [pilierCursor, isLeader, gameMode]);
 
   // Auto-reveal silencieux de toutes les réponses où le pilier avait ciblé "Personne".
   // Ces réponses ne sont jamais affichées sur son écran mais doivent être marquées
@@ -124,6 +134,9 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
     setPilierCursor(next);
     setPilierPhase('prompt');
     setShowNextButton(false);
+    if (gameMode === 'remote') {
+      socket.emit('advanceRevealCursor', { lobbyCode, nextIndex: next });
+    }
   };
 
   const handleConfirmSimilarity = () => {
@@ -176,7 +189,7 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
     if (!myRev) prevMyRevealedRef.current = false;
   }, [isLeader, myIndex, revealedIndices]);
 
-  if (!isLeader) {
+  if (!isLeader && gameMode === 'local') {
     const myAwaitingSimilarity = myIndex >= 0 && similarityModal?.answerIndex === myIndex;
     const myRevealed = myIndex >= 0 && revealedIndices.has(myIndex) && !myAwaitingSimilarity;
     const myCorrect = myResult ? (myResult.correct || correctedIndices.has(myIndex)) : false;
@@ -300,24 +313,44 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
                     />
                   )}
 
-                  <div
-                    key={`pilier-card-${pilierCursor}`}
-                    className="relative z-10 bg-cream-player rounded-2xl border border-black stack-shadow-sm texture-paper px-8 py-6 md:px-12 md:py-8 flex flex-col items-center gap-3 animate-reveal-card-swap"
-                  >
-                    <Avatar
-                      avatarId={currentResult.guessedPlayerAvatarId ?? 0}
-                      name={currentResult.guessedPlayerName}
-                      size="xl"
-                    />
-                    <span className="text-base md:text-lg font-bold text-black">
-                      {currentResult.guessedPlayerName}
-                    </span>
-                  </div>
+                  {(() => {
+                    const isRemoteRevealed = gameMode === 'remote' && pilierPhase === 'revealed';
+                    const isRemoteCorrect = currentResult.correct || correctedIndices.has(pilierCursor);
+                    const cardBgClass = isRemoteRevealed
+                      ? (isRemoteCorrect ? 'bg-[#30c94d]' : 'bg-[#ff6b6b]')
+                      : 'bg-cream-player';
+                    return (
+                      <div
+                        key={`pilier-card-${pilierCursor}`}
+                        className={`relative z-10 ${cardBgClass} rounded-2xl border border-black stack-shadow-sm texture-paper px-8 py-6 md:px-12 md:py-8 flex flex-col items-center gap-3 animate-reveal-card-swap transition-colors duration-500`}
+                      >
+                        <Avatar
+                          avatarId={currentResult.guessedPlayerAvatarId ?? 0}
+                          name={currentResult.guessedPlayerName}
+                          size="xl"
+                        />
+                        <span className="text-base md:text-lg font-bold text-black">
+                          {currentResult.guessedPlayerName}
+                        </span>
+                        {/* En mode remote, la réponse attribuée est toujours visible ; l'auteur réel n'apparaît qu'au reveal */}
+                        {gameMode === 'remote' && (
+                          <div className="mt-1 border-t-2 border-black/15 pt-3 text-center max-w-[16rem]">
+                            <p className={`text-sm md:text-base font-semibold ${isNoResponse(currentResult.answer) ? 'text-gray-500 italic' : 'text-black'}`}>
+                              {getDisplayText(currentResult.answer)}
+                            </p>
+                            <p className={`text-[11px] mt-1 transition-opacity duration-500 ${pilierPhase === 'revealed' ? 'opacity-100' : 'opacity-0'} text-black/70`}>
+                              écrit par <span className="font-semibold">{currentResult.playerName}</span>
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
 
-                {/* Bouton Suivant à droite de la carte — apparaît 1s après le reveal (sauf dernier) */}
+                {/* Bouton Suivant à droite de la carte — pilier uniquement */}
                 <div className="w-16 md:w-24 shrink-0 flex justify-start">
-                  {showNextButton && !showSimilarity && !isLastDisplayable && (
+                  {isLeader && showNextButton && !showSimilarity && !isLastDisplayable && (
                     <button
                       key={`next-${pilierCursor}`}
                       type="button"
@@ -347,9 +380,18 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
               </div>
 
               <div className="text-center px-2 mt-1 md:mt-2">
-                <p className="text-gray-900 text-sm md:text-base font-semibold">
-                  Regarde l'écran de <span className="text-[#1AAFDA]">{currentResult.guessedPlayerName}</span> !
-                </p>
+                {!isLeader && gameMode === 'remote' ? (
+                  <p className="text-gray-500 text-xs italic">
+                    {leaderName} révèle les résultats…
+                  </p>
+                ) : (
+                  <p className="text-gray-900 text-sm md:text-base font-semibold">
+                    {gameMode === 'remote'
+                      ? `Révèle la réponse de ${currentResult.guessedPlayerName}`
+                      : <>Regarde l'écran de <span className="text-[#1AAFDA]">{currentResult.guessedPlayerName}</span> !</>
+                    }
+                  </p>
+                )}
                 <p className="text-gray-700 text-xs md:text-sm mt-0.5">
                   {displayablePosition}/{displayableTotal}
                 </p>
@@ -365,9 +407,9 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
               />
             )}
 
-            {!showSimilarity && !showEndButton && (
+            {isLeader && !showSimilarity && !showEndButton && (
               <Button
-                text="Révéler sur son téléphone"
+                text={gameMode === 'remote' ? 'Révéler' : 'Révéler sur son téléphone'}
                 variant="primary"
                 size="lg"
                 rotateEffect
@@ -376,7 +418,7 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
               />
             )}
 
-            {showEndButton && (
+            {isLeader && showEndButton && (
               <div className="animate-fade-in">
                 <Button
                   text={isGameOver ? 'Voir les résultats finaux' : 'Manche suivante'}

@@ -169,7 +169,7 @@ const DeckSelector: React.FC<Props> = ({ catalog, selected, readOnly, hostName, 
             <div>
                 <div
                     ref={carouselRef}
-                    className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth px-[7%] md:px-[15%] pb-1"
+                    className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth px-[7%] md:px-[8%] pb-1"
                     style={{ scrollbarWidth: 'none' }}
                 >
                     {categories.map((cat, i) => {
@@ -191,7 +191,7 @@ const DeckSelector: React.FC<Props> = ({ catalog, selected, readOnly, hostName, 
                         return (
                             <div
                                 key={cat}
-                                className={`snap-center shrink-0 basis-[86%] md:basis-[70%] lg:basis-[55%] px-1.5 transition-opacity ${isActive ? '' : 'opacity-70 cursor-pointer'}`}
+                                className={`snap-center shrink-0 basis-[86%] md:basis-[84%] px-1.5 transition-opacity ${isActive ? '' : 'opacity-70 cursor-pointer'}`}
                                 onClickCapture={handleSlideClick}
                             >
                                 <div className="border-[2.5px] border-black rounded-xl bg-white overflow-hidden stack-shadow-sm">

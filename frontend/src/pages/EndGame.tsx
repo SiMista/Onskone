@@ -32,7 +32,6 @@ const TIERS: Tier[] = [
   {
     max: 40, midPct: 30, title: 'Pas encore ça', color: '#ff8c3a', icon: 'fluent-emoji-flat:pinching-hand',
     messages: [
-      'Vous savez dire bonjour, c\'est déjà une belle étape.',
       'Les bases sont là, reste juste à construire au-dessus.',
       'Vous avancez, doucement mais sûrement… enfin surtout doucement.',
       'Un apéro ou deux et ça devrait décoller.',

@@ -1,6 +1,5 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { Icon } from '@iconify/react';
-import { LuX } from 'react-icons/lu';
 import socket from '../utils/socket';
 import HourglassTimer from './HourglassTimer';
 import Button from './Button';
@@ -8,7 +7,7 @@ import Avatar from './Avatar';
 import QuestionCard from './QuestionCard';
 import PlayerAnswerCard from './PlayerAnswerCard';
 import ShowScreenFrame from './ShowScreenFrame';
-import { IPlayer, RoundPhase, GameCard } from '@onskone/shared';
+import { IPlayer, RoundPhase, GameCard, GameMode } from '@onskone/shared';
 import { isNoResponse, getDisplayText } from '../utils/answerHelpers';
 
 interface Answer {
@@ -24,11 +23,12 @@ interface GuessingPhaseProps {
   question: string;
   card?: GameCard;
   initialGuesses?: Record<string, string>;
-  playerCount: number; // Nombre total de joueurs (pour calculer la durée du timer)
-  roundNumber: number; // Numéro du round actuel (pour éviter les race conditions)
+  playerCount: number;
+  roundNumber: number;
+  gameMode: GameMode;
 }
 
-const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, leaderName, currentPlayerId, question, card, initialGuesses, playerCount, roundNumber }) => {
+const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, leaderName, currentPlayerId, question, card, initialGuesses, playerCount, roundNumber, gameMode }) => {
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [players, setPlayers] = useState<IPlayer[]>([]);
   const [guesses, setGuesses] = useState<Record<string, string>>(initialGuesses || {});
@@ -106,7 +106,6 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
     });
 
     socket.on('guessUpdated', (data: { answerId: string; playerId: string | null }) => {
-      // Mise à jour locale basée sur le delta (économie de bande passante)
       setGuesses(prev => {
         const updated = { ...prev };
         if (data.playerId === null) {
@@ -117,19 +116,18 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
         return updated;
       });
 
-      // Scroll et animation halo quand une réponse est assignée (seulement pour les non-piliers)
       if (data.playerId && !isLeader) {
-        // Scroll vers la carte du joueur
         const playerCard = playerCardRefs.current[data.playerId];
         if (playerCard) {
-          playerCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          playerCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
-
-        // Déclencher l'animation halo sur la zone de réponse
         setHighlightedAnswerId(data.answerId);
-        setTimeout(() => {
-          setHighlightedAnswerId(null);
-        }, 1500); // Durée de l'animation
+        setTimeout(() => setHighlightedAnswerId(null), 1500);
+
+        // En mode remote, les spectateurs voient aussi l'animation snap-bounce
+        if (gameMode === 'remote') {
+          flashJustAssigned(data.answerId);
+        }
       }
     });
 
@@ -288,9 +286,9 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
   }
 
   // ============================================================
-  // VUE JOUEUR (non-pilier) — seule la réponse attribuée est affichée
+  // VUE JOUEUR (non-pilier, mode local) — seule la réponse attribuée
   // ============================================================
-  if (!isLeader) {
+  if (!isLeader && gameMode === 'local') {
     const assignedText = myAssignedAnswer ? getDisplayText(myAssignedAnswer.text) : '';
     const noResponse = myAssignedAnswer ? isNoResponse(myAssignedAnswer.text) : false;
 
@@ -331,11 +329,16 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
     <div className="flex flex-col h-full p-2 md:p-4">
       <div className="mb-2 md:mb-3">
         <QuestionCard question={question} card={card} variant="compact" />
-        {isLeader && (
+        {isLeader ? (
           <h2 className="text-sm md:text-lg font-bold text-gray-800 mt-2 md:mt-3 mb-1 md:mb-2 text-center">
             <span className="md:hidden">Tapez une réponse puis un joueur</span>
             <span className="hidden md:inline">Glissez chaque réponse vers son auteur présumé</span>
           </h2>
+        ) : (
+          <p className="text-xs text-center text-gray-500 italic mt-1.5">
+            <Icon icon="fluent-emoji-flat:satellite" width={14} height={14} className="inline mr-1" aria-hidden />
+            {leaderName} assigne les réponses…
+          </p>
         )}
         <HourglassTimer
           duration={timerDuration}
@@ -440,16 +443,40 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
                               {getDisplayText(answer.text)}
                             </p>
                             {isLeader && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleRemoveGuess(answer.id);
-                                }}
-                                className="ml-1.5 md:ml-2 shrink-0 inline-flex items-center justify-center w-7 h-7 md:w-8 md:h-8 rounded-md bg-[#FF4D4D] hover:bg-[#FF3333] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none text-white border-2 border-black stack-shadow-sm transition-all"
-                                aria-label="Retirer"
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveGuess(answer.id);
+                              }}
+                              className="ml-1.5 md:ml-2 shrink-0 flex items-center justify-center group"
+                              aria-label="Retirer"
+                            >
+                              <svg
+                                width="22"
+                                height="22"
+                                viewBox="0 0 24 24"
+                                className="transition-transform group-active:translate-x-[1px] group-active:translate-y-[1px] drop-shadow-[1px_1px_0_rgba(0,0,0,0.3)]"
                               >
-                                <LuX size={18} strokeWidth={3} />
-                              </button>
+                                {/* Bordure noire (tracée en premier, plus épaisse) */}
+                                <path
+                                  d="M6 6 L18 18 M18 6 L6 18"
+                                  stroke="black"
+                                  strokeWidth="6"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  fill="none"
+                                />
+                                {/* Croix rouge par-dessus */}
+                                <path
+                                  d="M6 6 L18 18 M18 6 L6 18"
+                                  stroke="#ef4444"
+                                  strokeWidth="3.5"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  fill="none"
+                                />
+                              </svg>
+                            </button>
                             )}
                           </div>
                         );
@@ -458,7 +485,7 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
                   ) : (
                     <div className="border-2 border-dashed border-gray-400 rounded-lg p-2 md:p-4 text-center bg-white h-full flex items-center justify-center min-h-[40px] md:min-h-[60px]">
                       <p className="text-gray-500 text-xs md:text-sm">
-                        {isLeader ? (selectedAnswerId ? 'Déposez ici' : 'Tapez pour assigner') : '—'}
+                        {isLeader ? (selectedAnswerId ? 'Déposez ici' : 'Tapez pour assigner') : '…'}
                       </p>
                     </div>
                   )}
