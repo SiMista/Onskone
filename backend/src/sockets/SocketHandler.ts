@@ -356,6 +356,7 @@ export class SocketHandler {
                     socket.emit('lobbyDecksState', {
                         catalog: GameManager.getDecksCatalog(),
                         selected: lobby!.selectedDecks,
+                        gameMode: lobby!.gameMode,
                     });
                     logger.game.created(lobbyCode, sanitizedName);
                 } catch (error) {
@@ -420,13 +421,14 @@ export class SocketHandler {
                         socket.emit('lobbyDecksState', {
                             catalog: GameManager.getDecksCatalog(),
                             selected: lobby.selectedDecks,
+                            gameMode: lobby.gameMode,
                         });
                         this.io.to(lobby.code).emit('updatePlayersList', { players: lobby.players });
 
                         // Si une partie est en cours, envoyer gameStarted pour rediriger vers la page de jeu
                         if (lobby.game && lobby.game.status === 'IN_PROGRESS') {
                             const gameData = {
-                                lobby: { code: lobby.code, players: lobby.players, selectedDecks: lobby.selectedDecks },
+                                lobby: { code: lobby.code, players: lobby.players, selectedDecks: lobby.selectedDecks, gameMode: lobby.gameMode },
                                 currentRound: lobby.game.currentRound,
                                 status: lobby.game.status,
                                 rounds: lobby.game.rounds
@@ -473,13 +475,14 @@ export class SocketHandler {
                             socket.emit('lobbyDecksState', {
                                 catalog: GameManager.getDecksCatalog(),
                                 selected: lobby.selectedDecks,
+                                gameMode: lobby.gameMode,
                             });
                             this.io.to(lobby.code).emit('updatePlayersList', { players: lobby.players });
 
                             // Si une partie est en cours, envoyer gameStarted pour rediriger vers la page de jeu
                             if (lobby.game && lobby.game.status === 'IN_PROGRESS') {
                                 const gameData = {
-                                    lobby: { code: lobby.code, players: lobby.players, selectedDecks: lobby.selectedDecks },
+                                    lobby: { code: lobby.code, players: lobby.players, selectedDecks: lobby.selectedDecks, gameMode: lobby.gameMode },
                                     currentRound: lobby.game.currentRound,
                                     status: lobby.game.status,
                                     rounds: lobby.game.rounds
@@ -511,6 +514,7 @@ export class SocketHandler {
                     socket.emit('lobbyDecksState', {
                         catalog: GameManager.getDecksCatalog(),
                         selected: lobby.selectedDecks,
+                        gameMode: lobby.gameMode,
                     });
                     this.io.to(lobby.code).emit('updatePlayersList', { players: lobby.players });
                     logger.info(`${sanitizedName} a rejoint le lobby ${lobby.code}`, { playerCount: lobby.players.length });
@@ -590,9 +594,55 @@ export class SocketHandler {
                     this.io.to(lobby.code).emit('lobbyDecksState', {
                         catalog: GameManager.getDecksCatalog(),
                         selected: lobby.selectedDecks,
+                        gameMode: lobby.gameMode,
                     });
                 } catch (error) {
                     logger.error('Error updating selected decks', { error: (error as Error).message });
+                    socket.emit('error', { message: (error as Error).message });
+                }
+            });
+
+            // Update Game Mode (host only)
+            socket.on('updateGameMode', (data) => {
+                try {
+                    if (!rateLimiters.general.isAllowed(socket.id)) {
+                        socket.emit('error', { message: 'Trop de requêtes. Veuillez patienter.' });
+                        return;
+                    }
+
+                    const codeValidation = validateLobbyCode(data.lobbyCode);
+                    if (!codeValidation.isValid) {
+                        socket.emit('error', { message: codeValidation.error || 'Code invalide' });
+                        return;
+                    }
+
+                    const lobby = LobbyManager.getLobby(data.lobbyCode);
+                    if (!lobby) {
+                        socket.emit('error', { message: 'Salon introuvable' });
+                        return;
+                    }
+
+                    const host = lobby.players.find(p => p.isHost);
+                    if (!host || host.socketId !== socket.id) {
+                        socket.emit('error', { message: "Seul l'hôte peut modifier le mode de jeu" });
+                        return;
+                    }
+
+                    if (lobby.game && lobby.game.status === 'IN_PROGRESS') {
+                        socket.emit('error', { message: 'La partie est déjà en cours' });
+                        return;
+                    }
+
+                    lobby.gameMode = data.gameMode;
+                    lobby.updateActivity();
+
+                    this.io.to(lobby.code).emit('lobbyDecksState', {
+                        catalog: GameManager.getDecksCatalog(),
+                        selected: lobby.selectedDecks,
+                        gameMode: lobby.gameMode,
+                    });
+                } catch (error) {
+                    logger.error('Error updating game mode', { error: (error as Error).message });
                     socket.emit('error', { message: (error as Error).message });
                 }
             });
@@ -913,7 +963,8 @@ export class SocketHandler {
                         lobby: {
                             code: lobby.code,
                             players: lobby.players,
-                            selectedDecks: lobby.selectedDecks
+                            selectedDecks: lobby.selectedDecks,
+                            gameMode: lobby.gameMode
                         },
                         currentRound: game.currentRound,
                         status: game.status,
@@ -1201,7 +1252,8 @@ export class SocketHandler {
                         lobby: {
                             code: lobby.code,
                             players: lobby.players,
-                            selectedDecks: lobby.selectedDecks
+                            selectedDecks: lobby.selectedDecks,
+                            gameMode: lobby.gameMode
                         },
                         currentRound: game.currentRound,
                         status: game.status,
@@ -1422,12 +1474,17 @@ export class SocketHandler {
                         game.currentRound.shuffledAnswerIds = orderedAnswers.map(a => a.id);
                     }
 
-                    // Envoyer les réponses au joueur qui les demande uniquement
-                    socket.emit('shuffledAnswersReceived', {
+                    // En mode remote, broadcaster à toute la room; sinon seulement au pilier
+                    const shuffledPayload = {
                         answers: orderedAnswers,
                         players: lobby.players.filter(p => p.id !== game.currentRound!.leader.id),
                         roundNumber: game.currentRound.roundNumber
-                    });
+                    };
+                    if (lobby.gameMode === 'remote') {
+                        this.io.to(lobby.code).emit('shuffledAnswersReceived', shuffledPayload);
+                    } else {
+                        socket.emit('shuffledAnswersReceived', shuffledPayload);
+                    }
                 } catch (error) {
                     logger.error('Error requesting shuffled answers', { error: (error as Error).message });
                     socket.emit('error', {message: (error as Error).message});
@@ -1593,6 +1650,23 @@ export class SocketHandler {
                     }
                 } catch (error) {
                     logger.error('Error revealing answer', { error: (error as Error).message });
+                    socket.emit('error', {message: (error as Error).message});
+                }
+            });
+
+            // Advance Reveal Cursor (mode remote — relayer aux spectateurs)
+            socket.on('advanceRevealCursor', (data: { lobbyCode: string; nextIndex: number }) => {
+                try {
+                    if (!rateLimiters.gameAction.isAllowed(socket.id)) {
+                        socket.emit('error', { message: 'Trop de requêtes. Veuillez patienter.' });
+                        return;
+                    }
+                    const lobby = LobbyManager.getLobby(data.lobbyCode);
+                    const game = lobby?.game;
+                    if (!this.requireLeader(socket, game, 'avancer le curseur')) return;
+                    this.io.to(data.lobbyCode).emit('revealCursorAdvanced', { nextIndex: data.nextIndex });
+                } catch (error) {
+                    logger.error('Error advancing reveal cursor', { error: (error as Error).message });
                     socket.emit('error', {message: (error as Error).message});
                 }
             });

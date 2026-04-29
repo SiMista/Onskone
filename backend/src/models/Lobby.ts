@@ -1,4 +1,4 @@
-import { ILobby, IPlayer, GAME_CONSTANTS, SelectedDecks } from '@onskone/shared';
+import { ILobby, IPlayer, GAME_CONSTANTS, SelectedDecks, GameMode } from '@onskone/shared';
 import { IGame } from '../types/IGame';
 import { getDefaultSelectedDecks } from '../managers/GameManager';
 
@@ -8,6 +8,7 @@ export class Lobby implements ILobby {
     game: IGame | null;
     lastActivity: Date;
     selectedDecks: SelectedDecks;
+    gameMode: GameMode;
 
     constructor(lobbyCode: string) {
         this.code = lobbyCode;
@@ -15,6 +16,7 @@ export class Lobby implements ILobby {
         this.game = null;
         this.lastActivity = new Date();
         this.selectedDecks = getDefaultSelectedDecks();
+        this.gameMode = 'local';
     }
 
     updateActivity(): void {

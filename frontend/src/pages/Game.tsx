@@ -180,7 +180,8 @@ const GamePage: React.FC = () => {
           const minimalLobby: IGame['lobby'] = {
             code: lobbyCode || '',
             players: players,
-            selectedDecks: {}
+            selectedDecks: {},
+            gameMode: 'local'
           };
           return {
             lobby: minimalLobby,
@@ -245,6 +246,7 @@ const GamePage: React.FC = () => {
     }
 
     const phase = game.currentRound.phase;
+    const gameMode = game.lobby.gameMode ?? 'local';
     // Vérifier si c'est le dernier round (tous les joueurs ACTIFS ont été pilier une fois)
     const activePlayers = players.filter(p => p.isActive);
     const isGameOver = game.currentRound.roundNumber >= activePlayers.length;
@@ -289,6 +291,7 @@ const GamePage: React.FC = () => {
             initialGuesses={reconnectionData?.currentGuesses}
             playerCount={players.length}
             roundNumber={game.currentRound.roundNumber}
+            gameMode={gameMode}
           />
         );
 
@@ -305,6 +308,7 @@ const GamePage: React.FC = () => {
             question={game.currentRound.selectedQuestion || ''}
             card={game.currentRound.gameCard}
             initialRevealedIndices={reconnectionData?.revealedIndices}
+            gameMode={gameMode}
           />
         );
 

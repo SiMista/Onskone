@@ -11,7 +11,7 @@ export { GAME_CONSTANTS } from './constants.js';
 export { IPlayer } from './types/player.js';
 
 // Lobby
-export { ILobby } from './types/lobby.js';
+export { ILobby, GameMode } from './types/lobby.js';
 
 // Decks
 export { DecksCatalog, SelectedDecks } from './types/decks.js';

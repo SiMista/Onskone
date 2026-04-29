@@ -10,7 +10,7 @@ import { BsFillCaretLeftFill } from "react-icons/bs";
 import { Icon } from '@iconify/react';
 import PlayerCard from '../components/PlayerCard';
 import DeckSelector from '../components/DeckSelector';
-import { IPlayer, DecksCatalog, SelectedDecks } from '@onskone/shared';
+import { IPlayer, DecksCatalog, SelectedDecks, GameMode } from '@onskone/shared';
 import { useSocketEvent, useQueryParams, useLeavePrompt } from '../hooks';
 import { useToast } from '../components/Toast';
 import { GAME_CONFIG, AVATARS } from '../constants/game';
@@ -37,7 +37,8 @@ const Lobby = () => {
     const [fallbackLink, setFallbackLink] = useState<string | null>(null);
     const [decksCatalog, setDecksCatalog] = useState<DecksCatalog>({});
     const [selectedDecks, setSelectedDecks] = useState<SelectedDecks>({});
-    const [lobbyTab, setLobbyTab] = useState<'themes' | 'players'>('themes');
+    const [lobbyTab, setLobbyTab] = useState<'settings' | 'players'>('settings');
+    const [gameMode, setGameMode] = useState<GameMode>('local');
     const initialPlayerIdsRef = useRef<Set<string> | null>(null);
     const prevHostIdRef = useRef<string | null>(null);
     const [playerName] = useState<string>(() => {
@@ -260,15 +261,22 @@ const Lobby = () => {
         setShowGameAlreadyStarted(true);
     }, []);
 
-    const handleLobbyDecksState = useCallback((data: { catalog: DecksCatalog; selected: SelectedDecks }) => {
+    const handleLobbyDecksState = useCallback((data: { catalog: DecksCatalog; selected: SelectedDecks; gameMode: GameMode }) => {
         setDecksCatalog(data.catalog);
         setSelectedDecks(data.selected);
+        setGameMode(data.gameMode);
     }, []);
 
     const handleSelectedDecksChange = useCallback((next: SelectedDecks) => {
         setSelectedDecks(next);
         if (lobbyCode) {
             socket.emit('updateSelectedDecks', { lobbyCode, selected: next });
+        }
+    }, [lobbyCode]);
+
+    const handleGameModeChange = useCallback((next: GameMode) => {
+        if (lobbyCode) {
+            socket.emit('updateGameMode', { lobbyCode, gameMode: next });
         }
     }, [lobbyCode]);
 
@@ -324,14 +332,93 @@ const Lobby = () => {
         </div>
     );
 
-    const deckSelectorEl = (
-        <DeckSelector
-            catalog={decksCatalog}
-            selected={selectedDecks}
-            readOnly={!currentPlayer?.isHost}
-            hostName={hostName}
-            onChange={handleSelectedDecksChange}
-        />
+    const isHost = !!currentPlayer?.isHost;
+
+    const localActive = gameMode === 'local';
+
+    const settingsPanelEl = (
+        <div className="flex flex-col gap-4">
+            {/* Slider mode de jeu — tout en haut, sans titre de section */}
+            <div className={`flex items-start gap-3.5 ${!isHost ? 'opacity-60 pointer-events-none' : ''}`}>
+                <button
+                    type="button"
+                    role="switch"
+                    aria-checked={!localActive}
+                    aria-label={`Mode ${localActive ? 'sur place' : 'à distance'} — cliquer pour basculer`}
+                    disabled={!isHost}
+                    onClick={() => handleGameModeChange(localActive ? 'remote' : 'local')}
+                    className="relative inline-flex shrink-0 w-[7.25rem] h-12 border-[2.5px] border-black rounded-full overflow-hidden bg-[#f9f4ee] stack-shadow-sm texture-paper transition-transform duration-150 active:scale-[0.96] cursor-pointer"
+                >
+                    <span
+                        className={`absolute top-0.5 h-[2.25rem] w-[2.25rem] rounded-full border-[2.5px] border-black shadow-[1.5px_1.5px_0_0_rgba(0,0,0,0.85)] transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${
+                            localActive
+                                ? 'left-0.5 bg-[#FFC700]'
+                                : 'left-[calc(100%-2.5rem)] bg-[#1AAFDA]'
+                        }`}
+                        aria-hidden
+                    />
+                    <span className="relative z-10 flex w-full items-center justify-between px-2">
+                        <Icon
+                            icon="fluent-emoji-flat:busts-in-silhouette"
+                            width={26}
+                            height={26}
+                            className={`-translate-y-0.5 transition-all duration-300 ease-out ${localActive ? 'scale-110 rotate-[-6deg]' : 'scale-75 saturate-0 opacity-40'}`}
+                            aria-hidden
+                        />
+                        <Icon
+                            icon="fluent-emoji-flat:globe-with-meridians"
+                            width={26}
+                            height={26}
+                            className={`transition-all duration-300 ease-out ${!localActive ? 'scale-110 rotate-[6deg]' : 'scale-75 saturate-0 opacity-40'}`}
+                            aria-hidden
+                        />
+                    </span>
+                </button>
+<div className="flex items-center gap-3">
+    {/* Slider */}
+    <div className="flex items-center">
+        {/* ton slider ici */}
+    </div>
+
+    {/* Texte */}
+    <div
+        key={gameMode}
+        className="flex-1 min-w-0 animate-phase-enter translate-y-[7px]"
+    >
+        <div className="font-display text-sm md:text-base font-black uppercase tracking-tight text-black leading-none">
+            {localActive ? 'Sur place' : 'À distance'}
+        </div>
+
+        <div className="text-[11px] text-gray-600 leading-snug mt-1">
+            {localActive
+                ? 'Dans la même pièce, les joueurs sont proches pour montrer leur téléphone'
+                : 'Chacun chez soi, les joueurs suivent la partie en direct sur leur écran'}
+        </div>
+    </div>
+</div>
+            </div>
+
+            {!isHost && (
+                <p className="text-xs text-gray-500 italic -mt-2">
+                    Seul <strong className="not-italic">{hostName}</strong> peut changer le mode.
+                </p>
+            )}
+
+            {/* Section Thèmes */}
+            <div className="flex flex-col gap-2.5">
+                <div className="flex items-baseline gap-2">
+                    <span className="font-display text-base font-black uppercase tracking-tight text-black">Thèmes</span>
+                    <span className="flex-1 h-px bg-black/10" />
+                </div>
+                <DeckSelector
+                    catalog={decksCatalog}
+                    selected={selectedDecks}
+                    readOnly={!isHost}
+                    hostName={hostName}
+                    onChange={handleSelectedDecksChange}
+                />
+            </div>
+        </div>
     );
 
     return (
@@ -360,9 +447,9 @@ const Lobby = () => {
                     <div className="flex gap-1 md:gap-1.5 -mb-[2.5px] relative z-10 px-1">
                         {([
                             {
-                                id: 'themes' as const,
+                                id: 'settings' as const,
                                 color: '#FFC700',
-                                label: 'Thèmes',
+                                label: 'Paramètres',
                                 badge: totalThemesSelected > 0 ? String(totalThemesSelected) : null,
                                 outer: 'left' as const,
                             },
@@ -427,10 +514,10 @@ const Lobby = () => {
                         key={lobbyTab}
                         role="tabpanel"
                         className={`bg-white border-[2.5px] border-black rounded-b-2xl stack-shadow texture-paper p-3 md:p-4 animate-phase-enter ${
-                            lobbyTab === 'themes' ? 'rounded-tr-2xl rounded-tl-none' : 'rounded-tl-2xl rounded-tr-none'
+                            lobbyTab === 'settings' ? 'rounded-tr-2xl rounded-tl-none' : 'rounded-tl-2xl rounded-tr-none'
                         }`}
                     >
-                        {lobbyTab === 'themes' ? deckSelectorEl : playersListMobile}
+                        {lobbyTab === 'settings' ? settingsPanelEl : playersListMobile}
                     </div>
 
                     {/* ===================== ACTION ROW : Démarrer + Copier le lien ===================== */}
