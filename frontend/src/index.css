@@ -1,10 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Fredoka:wght@500;600;700&family=Nunito:wght@400;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;700;800&display=swap');
 @import "tailwindcss";
 
 @theme {
   --font-sans: 'Nunito', sans-serif;
   --font-display: 'Fredoka', 'Nunito', sans-serif;
-  --font-hand: 'Caveat', 'Fredoka', cursive;
   --color-gradient-start: #1f5d90;
   --color-gradient-end: #18bbed;
   --color-cream-player: #f9f4ee; /* Cartes joueurs (lobby, tuiles guessing) */
@@ -15,11 +14,6 @@
 .font-display {
   font-family: var(--font-display);
   letter-spacing: -0.01em;
-}
-
-.font-hand {
-  font-family: var(--font-hand);
-  letter-spacing: 0;
 }
 
 /* --- Safe areas iOS/Android --- */

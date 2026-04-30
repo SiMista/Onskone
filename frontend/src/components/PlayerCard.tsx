@@ -150,13 +150,13 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
 
   if (variant === 'square') {
     return (
-      <div className={`relative aspect-square flex flex-col items-center justify-center gap-1 p-2 rounded-[10px] shadow-[0_2px_6px_rgba(0,0,0,0.1)] w-full transition-all duration-300 ${currentBorder} ${
+      <div className={`relative aspect-square flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-[10px] shadow-[0_2px_6px_rgba(0,0,0,0.1)] w-full transition-all duration-300 ${currentBorder} ${
         isActive ? 'bg-cream-player' : 'bg-gray-200'
       }`}>
         {/* Couronne ou menu en haut à droite */}
         <div className="absolute top-1 right-1">
           {isHost ? (
-            <FaCrown color="#fcad11" size={18} />
+            <FaCrown color="#fcad11" size={22} />
           ) : currentPlayerIsHost ? (
             <>
               <span
@@ -164,7 +164,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
                 className="cursor-pointer inline-flex p-1"
                 onClick={() => setIsOpen(!isOpen)}
               >
-                <FaEllipsisV size={14} />
+                <FaEllipsisV size={18} />
               </span>
               {isOpen && (
                 <OptionsMenu
@@ -179,9 +179,9 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
           ) : null}
         </div>
 
-        <div className={`flex flex-col items-center gap-1 min-w-0 w-full ${!isActive ? 'opacity-50 grayscale' : ''}`}>
-          <Avatar avatarId={avatarId} name={name} size="md" />
-          <span className={`text-xs text-center truncate w-full px-1 ${isCurrentPlayer ? "font-bold" : "font-normal"}`}>
+        <div className={`flex flex-col items-center gap-1.5 min-w-0 w-full ${!isActive ? 'opacity-50 grayscale' : ''}`}>
+          <Avatar avatarId={avatarId} name={name} size="lg" />
+          <span className={`text-sm text-center truncate w-full px-1 ${isCurrentPlayer ? "font-bold" : "font-normal"}`}>
             {name}
           </span>
         </div>
