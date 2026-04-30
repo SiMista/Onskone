@@ -516,7 +516,7 @@ const EndGame: React.FC = () => {
             <Button variant="success" size="lg" onClick={handleBackToLobby}>
               Rejouer
             </Button>
-            <Button variant="secondary" size="lg" onClick={handleBackToHome}>
+            <Button variant="secondary" size="lg" onClick={handleBackToHome} className="!bg-gray-400 hover:!bg-gray-300">
               Quitter
             </Button>
           </div>

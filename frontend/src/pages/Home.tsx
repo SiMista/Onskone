@@ -9,7 +9,7 @@ import Footer from '../components/Footer';
 import AvatarSelector from '../components/AvatarSelector';
 import InfoModal from '../components/InfoModal';
 import { useToast } from '../components/Toast';
-import { BsFillCaretLeftFill } from "react-icons/bs";
+import BackButton from '../components/BackButton';
 import { Icon } from '@iconify/react';
 import { useSocketEvent, useQueryParams } from '../hooks';
 import { GAME_CONFIG, AVATARS } from '../constants/game';
@@ -166,16 +166,11 @@ const Home = () => {
           <div className="hidden md:block md:col-span-1" />
 
           {/* Bloc "Joue maintenant" */}
-          <div className="md:col-span-4">
+          <div className="md:col-span-4 flex flex-col gap-2">
+            {lobbyCode && (
+              <BackButton onClick={() => navigate('/')} label="Quitter" tone="danger" />
+            )}
             <Frame>
-              {lobbyCode && (
-                <div className="flex items-center cursor-pointer self-start" onClick={() => navigate('/')}>
-                  <span className="flex items-center mr-1.5">
-                    <BsFillCaretLeftFill size={15} />
-                  </span>
-                  <span className="text-sm md:text-base">Quitter</span>
-                </div>
-              )}
               {lobbyCode && lobbyExists ? (
                 <h3 className="text-lg md:text-xl">Vous êtes invité à rejoindre le salon de <b>{hostName || 'un ami'}</b></h3>
               ) : (

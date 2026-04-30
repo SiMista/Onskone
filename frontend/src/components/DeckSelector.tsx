@@ -7,7 +7,6 @@ type Props = {
     catalog: DecksCatalog;
     selected: SelectedDecks;
     readOnly: boolean;
-    hostName: string;
     onChange: (next: SelectedDecks) => void;
 };
 
@@ -58,7 +57,7 @@ const hexToSoftBg = (hex: string): string => {
     return `${hex}1f`;
 };
 
-const DeckSelector: React.FC<Props> = ({ catalog, selected, readOnly, hostName, onChange }) => {
+const DeckSelector: React.FC<Props> = ({ catalog, selected, readOnly, onChange }) => {
     const carouselRef = useRef<HTMLDivElement>(null);
     const [activeSlide, setActiveSlide] = useState(0);
     const categories = useMemo(() => Object.keys(catalog), [catalog]);
@@ -138,11 +137,7 @@ const DeckSelector: React.FC<Props> = ({ catalog, selected, readOnly, hostName, 
     return (
         <div className="w-full flex flex-col gap-2">
             {/* Barre globale */}
-            {readOnly ? (
-                <div className="text-xs text-gray-600 italic w-full">
-                    Seul <strong className="not-italic">{hostName}</strong> peut choisir les thèmes.
-                </div>
-            ) : (
+            {!readOnly && (
                 <>
                     <div className="text-sm font-display font-bold text-gray-700">
                         Clique sur les thèmes pour les ajouter
@@ -228,7 +223,7 @@ const DeckSelector: React.FC<Props> = ({ catalog, selected, readOnly, hostName, 
                                     {/* Corps : description + pills */}
                                     <div style={{ backgroundColor: hexToSoftBg(color) }}>
                                         {description && (
-                                            <div className="px-3 py-1.5 text-[11px] italic text-gray-600 border-b border-black/20">
+                                            <div className="font-sans px-3 py-1.5 text-[11px] italic text-gray-600 border-b border-black/20">
                                                 {description}
                                             </div>
                                         )}

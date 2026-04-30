@@ -6,10 +6,10 @@ import Button from '../components/Button';
 import Footer from '../components/Footer';
 import ConfirmModal from '../components/ConfirmModal';
 import InfoModal from '../components/InfoModal';
-import { BsFillCaretLeftFill } from "react-icons/bs";
 import { Icon } from '@iconify/react';
 import PlayerCard from '../components/PlayerCard';
 import DeckSelector from '../components/DeckSelector';
+import BackButton from '../components/BackButton';
 import { IPlayer, DecksCatalog, SelectedDecks, GameMode } from '@onskone/shared';
 import { useSocketEvent, useQueryParams, useLeavePrompt } from '../hooks';
 import { useToast } from '../components/Toast';
@@ -295,14 +295,14 @@ const Lobby = () => {
     const hasThemeSelected = totalThemesSelected > 0;
     const canStartGame = enoughPlayers && hasThemeSelected;
 
-    // Liste des joueurs — mobile : grille 3/ligne
+    // Liste des joueurs — mobile : 3/ligne, desktop : 4/ligne (même format carré)
     const playersListMobile = (
         <div className="flex flex-col gap-2">
         <div className="flex items-baseline gap-2">
             <p className="m-0 font-display font-bold text-sm text-gray-800">Dans le salon</p>
             <p className="m-0 text-xs text-gray-400">{activePlayers.length} joueur{activePlayers.length > 1 ? 's' : ''} connecté{activePlayers.length > 1 ? 's' : ''}</p>
         </div>
-        <ul className="list-none w-full m-0 p-0 grid grid-cols-3 gap-2 max-h-[55vh] overflow-y-auto">
+        <ul className="list-none w-full m-0 p-0 grid grid-cols-3 md:grid-cols-4 gap-2 max-h-[55vh] overflow-y-auto">
             {players.map((player, index) => (
                 <li key={player.id} className={`min-w-0 ${initialPlayerIdsRef.current?.has(player.id) ? '' : 'animate-player-pop'}`} style={initialPlayerIdsRef.current?.has(player.id) ? undefined : { animationDelay: `${Math.min(index, 6) * 50}ms` }}>
                     <PlayerCard
@@ -322,9 +322,9 @@ const Lobby = () => {
             ))}
             {players.length < GAME_CONFIG.MAX_PLAYERS && (
                 <li className="min-w-0">
-                    <div className="relative aspect-square flex flex-col items-center justify-center gap-1 p-2 rounded-[10px] w-full border-2 border-dashed border-gray-300 bg-gray-50/50">
-                        <div className="w-10 h-10 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-300 text-lg">?</div>
-                        <span className="text-[10px] text-gray-400 italic text-center truncate w-full px-1">...</span>
+                    <div className="relative aspect-square flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-[10px] w-full border-2 border-dashed border-gray-300 bg-gray-50/50">
+                        <div className="w-16 h-16 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-300 text-xl">?</div>
+                        <span className="text-xs text-gray-400 italic text-center truncate w-full px-1">...</span>
                     </div>
                 </li>
             )}
@@ -338,8 +338,35 @@ const Lobby = () => {
 
     const settingsPanelEl = (
         <div className="flex flex-col gap-4">
+            {!isHost && (
+                <div className="flex justify-center pt-4 pb-1">
+                    <div className="relative rotate-[-1.2deg] hover:rotate-0 transition-transform duration-300 ease-out">
+                        <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#FFF6D6] border-[2.5px] border-black rounded-lg stack-shadow-sm texture-paper">
+                            <span className="font-display text-[13px] tracking-tight text-black leading-snug whitespace-nowrap">
+                                Seul{' '}
+                                <span className="relative inline-block font-bold uppercase bg-black text-[#FFC700] px-1.5 py-0.5 rounded-md">
+                                    <Icon
+                                        icon="fluent-emoji-flat:crown"
+                                        width={20}
+                                        height={20}
+                                        aria-hidden
+                                        className="absolute -top-3.5 left-1/2 -translate-x-1/2 [filter:drop-shadow(1px_1.5px_0_rgba(0,0,0,0.5))]"
+                                    />
+                                    {hostName}
+                                </span>{' '}
+                                peut modifier les paramètres
+                            </span>
+                        </div>
+                        {/* ruban adhésif par dessus */}
+                        <span
+                            aria-hidden
+                            className="absolute -top-2 left-1/2 -translate-x-1/2 z-10 w-12 h-3.5 bg-[#FFC700]/80 border-[1.5px] border-black/60 rounded-[2px] rotate-[-3deg] [box-shadow:1px_1px_0_0_rgba(0,0,0,0.3)]"
+                        />
+                    </div>
+                </div>
+            )}
             {/* Slider mode de jeu — tout en haut, sans titre de section */}
-            <div className={`flex items-start gap-3.5 ${!isHost ? 'opacity-60 pointer-events-none' : ''}`}>
+            <div className={`flex items-start gap-3.5 ${!isHost ? 'opacity-65 pointer-events-none' : ''}`}>
                 <button
                     type="button"
                     role="switch"
@@ -353,23 +380,23 @@ const Lobby = () => {
                         className={`absolute top-0.5 h-[2.25rem] w-[2.25rem] rounded-full border-[2.5px] border-black shadow-[1.5px_1.5px_0_0_rgba(0,0,0,0.85)] transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${
                             localActive
                                 ? 'left-0.5 bg-[#FFC700]'
-                                : 'left-[calc(100%-2.5rem)] bg-[#1AAFDA]'
+                                : 'left-[calc(100%-2.5rem)] bg-[#7DD3F0]'
                         }`}
                         aria-hidden
                     />
                     <span className="relative z-10 flex w-full items-center justify-between px-2">
                         <Icon
                             icon="fluent-emoji-flat:busts-in-silhouette"
-                            width={26}
-                            height={26}
-                            className={`-translate-y-0.5 transition-all duration-300 ease-out ${localActive ? 'scale-110 rotate-[-6deg]' : 'scale-75 saturate-0 opacity-40'}`}
+                            width={22}
+                            height={22}
+                            className={`-translate-y-1 [filter:drop-shadow(1px_1.5px_0_rgba(0,0,0,0.55))] transition-all duration-300 ease-out ${localActive ? 'scale-110 rotate-[-6deg]' : 'scale-75 saturate-0 opacity-40'}`}
                             aria-hidden
                         />
                         <Icon
-                            icon="fluent-emoji-flat:globe-with-meridians"
-                            width={26}
-                            height={26}
-                            className={`transition-all duration-300 ease-out ${!localActive ? 'scale-110 rotate-[6deg]' : 'scale-75 saturate-0 opacity-40'}`}
+                            icon="fluent-emoji-flat:globe-showing-europe-africa"
+                            width={22}
+                            height={22}
+                            className={`-translate-x-0.5 -translate-y-0.5 [filter:drop-shadow(1px_1.5px_0_rgba(0,0,0,0.55))] transition-all duration-300 ease-out ${!localActive ? 'scale-110 rotate-[6deg]' : 'scale-75 saturate-0 opacity-40'}`}
                             aria-hidden
                         />
                     </span>
@@ -385,36 +412,29 @@ const Lobby = () => {
         key={gameMode}
         className="flex-1 min-w-0 animate-phase-enter translate-y-[7px]"
     >
-        <div className="font-display text-sm md:text-base font-black uppercase tracking-tight text-black leading-none">
+        <div className="font-display text-sm md:text-base font-bold uppercase tracking-tight text-black leading-none">
             {localActive ? 'Sur place' : 'À distance'}
         </div>
 
-        <div className="text-[11px] text-gray-600 leading-snug mt-1">
+        <div className="font-sans text-[11px] text-gray-600 leading-snug mt-1">
             {localActive
-                ? 'Dans la même pièce, les joueurs sont proches pour montrer leur téléphone'
+                ? 'Dans la même pièce, les joueurs sont à proximité  pour montrer leur téléphone'
                 : 'Chacun chez soi, les joueurs suivent la partie en direct sur leur écran'}
         </div>
     </div>
 </div>
             </div>
 
-            {!isHost && (
-                <p className="text-xs text-gray-500 italic -mt-2">
-                    Seul <strong className="not-italic">{hostName}</strong> peut changer le mode.
-                </p>
-            )}
-
             {/* Section Thèmes */}
-            <div className="flex flex-col gap-2.5">
+            <div className={`flex flex-col gap-2.5 ${!isHost ? 'opacity-65' : ''}`}>
                 <div className="flex items-baseline gap-2">
-                    <span className="font-display text-base font-black uppercase tracking-tight text-black">Thèmes</span>
+                    <span className="font-display text-base font-bold uppercase tracking-tight text-black">Thèmes</span>
                     <span className="flex-1 h-px bg-black/10" />
                 </div>
                 <DeckSelector
                     catalog={decksCatalog}
                     selected={selectedDecks}
                     readOnly={!isHost}
-                    hostName={hostName}
                     onChange={handleSelectedDecksChange}
                 />
             </div>
@@ -433,15 +453,7 @@ const Lobby = () => {
                 {/* ===================== LAYOUT UNIFIÉ ===================== */}
                 <div className="flex flex-col gap-3 md:gap-4">
                     {/* Bouton retour standalone, juste au-dessus des tabs */}
-                    <button
-                        type="button"
-                        onClick={leaveLobby}
-                        className="self-start inline-flex items-center gap-1 text-white text-sm md:text-base font-display font-bold tracking-wide cursor-pointer hover:-translate-x-0.5 transition-transform px-1 py-1 drop-shadow -mb-1"
-                        aria-label="Retour"
-                    >
-                        <BsFillCaretLeftFill size={15} />
-                        <span>Retour</span>
-                    </button>
+                    <BackButton onClick={leaveLobby} label="Retour" />
 
                     {/* Tabs : intercalaires cartonnés en éventail, coins asymétriques */}
                     <div className="flex gap-1 md:gap-1.5 -mb-[2.5px] relative z-10 px-1">
@@ -527,14 +539,15 @@ const Lobby = () => {
                                 <Button
                                     text="Démarrer"
                                     variant="success"
-                                    size="md"
-                                    rotateEffect
+                                    size="lg"
+                                    hero
                                     disabled={!canStartGame}
                                     onClick={startGame}
+                                    className="!rotate-0"
                                 />
                             ) : (
                                 <div className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white/85 border-[2.5px] border-black stack-shadow-sm text-gray-700">
-                                    <Icon icon="fluent-emoji-flat:hourglass-not-done" className="animate-spin-slow" width="1.1em" height="1.1em" aria-hidden />
+                                    <Icon icon="fluent-emoji-flat:hourglass-not-done" className="animate-spin-slow [filter:drop-shadow(1px_1.5px_0_rgba(0,0,0,0.5))]" width="1.1em" height="1.1em" aria-hidden />
                                     <span className="text-sm font-display italic truncate">Seul {hostName} peut démarrer la partie</span>
                                 </div>
                             )}
