@@ -32,7 +32,7 @@ const PlayerAnswerCard: React.FC<PlayerAnswerCardProps> = ({
       )}
       <div
         className={`
-          w-full max-w-md rounded-xl p-6 md:p-8 border
+          w-full p-5 md:p-7 max-md:landscape:p-3 rounded-xl border
           ${placeholder
             ? 'border-dashed border-gray-400 bg-gray-50 shadow-none'
             : `border-black stack-shadow-sm texture-paper ${bgClass}`
@@ -41,7 +41,14 @@ const PlayerAnswerCard: React.FC<PlayerAnswerCardProps> = ({
           ${className}
         `}
       >
-        <p className={`${placeholder ? 'text-sm md:text-base' : 'text-lg md:text-2xl'} font-bold text-center break-words ${textClass}`}>
+        <p
+          className={`font-bold text-center break-words ${textClass} ${
+            placeholder
+              ? 'text-sm md:text-base'
+              : 'text-xl md:text-3xl max-md:landscape:text-2xl'
+          }`}
+          style={placeholder ? undefined : { lineHeight: 1.15 }}
+        >
           {answer}
         </p>
       </div>

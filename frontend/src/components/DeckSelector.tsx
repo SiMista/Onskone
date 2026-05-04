@@ -162,6 +162,18 @@ const DeckSelector: React.FC<Props> = ({ catalog, selected, readOnly, onChange }
 
             {/* ---------- Carousel snap horizontal (mobile & desktop) ---------- */}
             <div>
+                <div className="relative">
+                    {/* Fondu blanc sur les bords pour adoucir les slides coupés */}
+                    <div
+                        aria-hidden
+                        className="pointer-events-none absolute inset-y-0 left-0 w-[4%] md:w-[5%] z-10"
+                        style={{ background: 'linear-gradient(to right, rgba(255,255,255,0.7), rgba(255,255,255,0))' }}
+                    />
+                    <div
+                        aria-hidden
+                        className="pointer-events-none absolute inset-y-0 right-0 w-[4%] md:w-[5%] z-10"
+                        style={{ background: 'linear-gradient(to left, rgba(255,255,255,0.7), rgba(255,255,255,0))' }}
+                    />
                 <div
                     ref={carouselRef}
                     className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth px-[7%] md:px-[8%] pb-1"
@@ -195,7 +207,7 @@ const DeckSelector: React.FC<Props> = ({ catalog, selected, readOnly, onChange }
                                         className="flex items-center gap-2 px-3 py-2 border-b-[2.5px] border-black"
                                         style={{ backgroundColor: color }}
                                     >
-                                        <Icon icon={categoryIcons[cat] ?? DEFAULT_DECK_ICON} width={22} height={22} aria-hidden className="flex-shrink-0" />
+                                        <Icon icon={categoryIcons[cat] ?? DEFAULT_DECK_ICON} width={22} height={22} aria-hidden className="flex-shrink-0 [filter:drop-shadow(2px_3px_0_rgba(0,0,0,0.55))_drop-shadow(0_0_2px_rgba(0,0,0,0.5))]" />
                                         <span className="font-display font-bold text-base tracking-tight flex-1 truncate text-black">{cat}</span>
                                         <span className="font-display text-[11px] font-bold text-black/80 whitespace-nowrap flex-shrink-0 bg-white/80 rounded-full px-2 py-0.5 border border-black/10">
                                             {selectedInCat}/{themes.length}
@@ -252,6 +264,7 @@ const DeckSelector: React.FC<Props> = ({ catalog, selected, readOnly, onChange }
                             </div>
                         );
                     })}
+                </div>
                 </div>
                 {/* Dots indicator */}
                 <div className="flex items-center justify-center gap-2 mt-2">

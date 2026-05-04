@@ -114,12 +114,6 @@
         ]
       },
       {
-        "subject": "Langue",
-        "questions": [
-          "Quelle est la langue que tu aimerais apprendre ?"
-        ]
-      },
-      {
         "subject": "Livres",
         "questions": [
           "Quel est le dernier livre que tu as lu ?",
@@ -180,12 +174,6 @@
         "questions": [
           "Quelle odeur tu ne supportes pas ?",
           "Quelle est la plus belle odeur du monde pour toi ?"
-        ]
-      },
-      {
-        "subject": "Petits Plaisirs",
-        "questions": [
-          "Quel est ton moment préféré de la journée ?"
         ]
       },
       {
@@ -287,7 +275,7 @@
         ]
       }
     ],
-    "PASSIONS & CREA": [
+    "PASSIONS & ACTIVITES": [
       {
         "subject": "Activité",
         "questions": [
@@ -727,6 +715,13 @@
         ]
       },
       {
+        "subject": "Duolingo",
+        "questions": [
+          "Quel est ton niveau en anglais/10 ?",
+          "Quelle est la langue que tu aimerais apprendre ?"
+        ]
+      },
+      {
         "subject": "Nature",
         "questions": [
           "Si tu devais vivre dans un environnement naturel précis (montagne, mer, forêt, désert…), lequel choisirais-tu ?",
@@ -813,6 +808,13 @@
     ],
     "QUI ES-TU ?": [
       {
+        "subject": "Astrologie",
+        "questions": [
+          "Quel est ton signe astrologique et est-ce que tu y crois ? Exemple de réponse : Scorpion/Oui",
+          "Quelle est la superstitition à laquelle tu crois ?"
+        ]
+      },
+      {
         "subject": "Comparaison",
         "questions": [
           "Dans quel domaine tu te compares encore trop aux autres, même si tu sais que c'est contre-productif ?",
@@ -824,12 +826,6 @@
         "questions": [
           "Qu'est-ce qui peut faire s'effondrer ta confiance en toi en quelques secondes ?",
           "Quelle est la chose qui peut instantanément faire gagner ta confiance à quelqu'un ?"
-        ]
-      },
-      {
-        "subject": "Contradictions",
-        "questions": [
-          "Quelle est la chose que tu possèdes (talent, trait, situation) et dont tu n'es pas assez fier(ère) ?"
         ]
       },
       {
@@ -872,6 +868,13 @@
         "questions": [
           "Quel est ton sujet de discussion préféré ?",
           "Un talent que tu admires chez les autres mais que tu ne possèdes pas ?"
+        ]
+      },
+      {
+        "subject": "First Date",
+        "questions": [
+          "Quel est ton endroit idéal pour un 1er date ?",
+          "Si tu pouvais vivre une histoire d’amour de film ou de série, laquelle choisirais-tu ?"
         ]
       },
       {
@@ -921,6 +924,78 @@
         "questions": [
           "Quelle note te mettrais-tu sur 10 en terme de beauté ?",
           "Sur quel style de vêtement que tu portes, ou apparence physique, t'a-t-on le + complimenté ?"
+        ]
+      }
+    ],
+    "MISE EN SITUATION": [
+      {
+        "subject": "Conflit d'amitié",
+        "questions": [
+          "Quelqu'un ne te souhaite pas ton anniversaire. Que fais-tu ?",
+          "Tu apprends que ton groupe d'amis organisait un event sans t'inviter. Que fais-tu ?"
+        ]
+      },
+      {
+        "subject": "Situation sociale",
+        "questions": [
+          "Tu vas croiser quelqu'un de la famille que tu n'apprécies pas du tout dans la rue, lui ne t'a pas encore vu. Que fais-tu ?",
+          "Tu croises ton ex dans la rue avec son nouveau partenaire. Comment tu gères la conversation ?"
+        ]
+      },
+      {
+        "subject": "Dilemme moral",
+        "questions": [
+          "Tu trouves un portefeuille avec 500€ et une carte d'identité dans le métro. Que fais-tu ?",
+          "Ton meilleur ami te révèle qu'il trompe sa copine depuis 6 mois et te demande de ne rien dire. Que fais-tu ?"
+        ]
+      },
+      {
+        "subject": "Imprévu voyage",
+        "questions": [
+          "Tu rates ton avion d'une minute pour un voyage très attendu. Que fais-tu ?",
+          "Tu arrives à l'étranger avec un téléphone mort et sans passeport. Que fais-tu ?"
+        ]
+      },
+      {
+        "subject": "Proches & confiance",
+        "questions": [
+          "Tu surprends un proche en train de mentir clairement sur quelque chose d'important. Que fais-tu ?",
+          "Dans un groupe, quelqu'un se moque ouvertement de toi, les autrent rient. Que fais-tu ?"
+        ]
+      },
+      {
+        "subject": "Amour & timing",
+        "questions": [
+          "Un( e ) amie( e ) proche qui t'es cher déclare qu'il a des sentiments pour toi. Que fais-tu ?",
+          "Tu es en couple depuis 3 ans et une personne que tu trouves incroyable te fait une déclaration soudaine. Que fais-tu ?"
+        ]
+      },
+      {
+        "subject": "Réputation & visibilité",
+        "questions": [
+          "Une vidéo de toi dans une situation embarrassante devient virale avec 2 millions de vues. Quelle est ta réaction ?",
+          "Une émission de téléréalité très populaire te contacte pour participer. Que fais-tu ?"
+        ]
+      },
+      {
+        "subject": "Responsabilité",
+        "questions": [
+          "Tu réalises que ton ami est trop saoul et veut rentrer en voiture. Tu fais quoi ?",
+          "Tu vois quelqu'un d'isolé et perdu dans une soirée. Tu fais quoi ?"
+        ]
+      },
+      {
+        "subject": "Intégrité pro",
+        "questions": [
+          "Tu te rends comptes que ton collègue gagne 20% de + que toi au même poste. Que fais-tu ?",
+          "Tu rates une présentation importante devant 50 personnes à cause d'un bug. Les 5 secondes de silence. Que fais-tu ?"
+        ]
+      },
+      {
+        "subject": "Situations absurdes",
+        "questions": [
+          "Tu reçois un message très intime d'un inconnu qui s'est trompé de destinataire. Qu'est-ce que tu fais ?",
+          "Tu te rends compte que tu as échangé ta valise avec quelqu'un à l'aéroport. Dans la sienne, quelque chose de très personnel. Tu fais quoi ?"
         ]
       }
     ]
@@ -1317,12 +1392,6 @@
         ]
       },
       {
-        "subject": "Langue",
-        "questions": [
-          "Quel est l'accent que tu imites le mieux ?"
-        ]
-      },
-      {
         "subject": "Manigances",
         "questions": [
           "Quelle chose as-tu déjà faite, ou t'y es tu intéressé, uniquement à tes propres fins pour manipuler quelqu'un ?",
@@ -1400,75 +1469,75 @@
         ]
       }
     ],
-    "AMOUR & SEDUCTION": [
+    "MES OPINIONS": [
       {
-        "subject": "Comportement",
+        "subject": "Ethnies",
         "questions": [
-          "Quel comportement tu as quand tu es vramient amoureux ?",
-          "Quel comportement pourrait te faire quitter le date en 10 secondes ?"
+          "Qu'est-ce que tu penses des arabes ?",
+          "Qu'est-ce que tu penses des indiens ?"
         ]
       },
       {
-        "subject": "Conseils",
+        "subject": "Personnalités politiques",
         "questions": [
-          "Quel est le conseil amoureux que tu donnerais à ton \"moi\" plus jeune ?",
-          "Quelle est ta maxime en amour ?"
+          "Qu'est-ce que tu penses de Macron ?",
+          "Qu'est-ce que tu penses de Donald Trump ?"
         ]
       },
       {
-        "subject": "Drague",
+        "subject": "Croyances",
         "questions": [
-          "Quelle est ta technique infaillible pour séduire quelqu’un ?",
-          "Comment décrirais-tu ton style de drague en trois mots ?"
+          "Qu'est-ce que tu penses de la religion ?",
+          "Qu'est-ce que tu penses du monde actuel ?"
         ]
       },
       {
-        "subject": "Films & Chansons",
+        "subject": "Influenceurs",
         "questions": [
-          "Quelle est ta chanson romantique préférée ?",
-          "Le film romantique qui te fait craquer ?"
+          "Qu'est-ce que tu penses des réseaux sociaux ?",
+          "Qu'est-ce que tu penses des influenceurs ?"
         ]
       },
       {
-        "subject": "First Date",
+        "subject": "Amour moderne",
         "questions": [
-          "Quel est ton endroit idéal pour un 1er date ?",
-          "Si tu pouvais vivre une histoire d’amour de film ou de série, laquelle choisirais-tu ?"
+          "Qu'est-ce que tu penses des gens qui cherchent leur partenaire uniquement sur des applis ?",
+          "Qu'est-ce que tu penses du mariage ?"
         ]
       },
       {
-        "subject": "Gestes d'amour",
+        "subject": "Argent & éthique",
         "questions": [
-          "Quel geste d'amour que tu as reçu, qui t'a marqué récemment ?",
-          "Quel est ton love language ?"
+          "Qu'est-ce que tu penses des gens très riches qui ne donnent pas ?",
+          "Qu'est-ce que tu penses du bonheur et de son lien supposé avec l'argent ?"
         ]
       },
       {
-        "subject": "Histoires insolites",
+        "subject": "Amitié & profondeur",
         "questions": [
-          "Quel endroit insolite as-tu déjà embrassé quelqu'un ou plus ?",
-          "Quelle est la chose la plus audacieuse que tu aies faite pour séduire quelqu'un ?"
+          "Qu'est-ce que tu penses des gens qui ont beaucoup d'amis mais peu de relations profondes ?",
+          "À partir de quand peut-on vraiment appeler quelqu'un son meilleur ami ?"
         ]
       },
       {
-        "subject": "Qualités & Défauts",
+        "subject": "Corps & Apparence",
         "questions": [
-          "Quel est le défaut que tu ne supportes/supporterais pas chez un partenaire ?",
-          "La qualité que tu recherche ou apprécie le plus chez un partenaire ?"
+          "Qu'est-ce que tu penses de la chirurgie esthétique ?",
+          "Qu'est-ce que tu penses des standards de beauté dans la société ?"
         ]
       },
       {
-        "subject": "Tombé",
+        "subject": "Tech & IA",
         "questions": [
-          "Quel trait de personnalité te fait craquer direct ?",
-          "Comment devrait-on s'y prendre pour te montrer que tu nous plais ?"
+          "Qu'est-ce que tu penses de l'intelligence artificielle ?",
+          "L'intelligence artificielle : chance pour l'humanité ou menace réelle ?"
         ]
       },
       {
-        "subject": "Fantasmes",
+        "subject": "Développement personnel",
         "questions": [
-          "Quel est le fantasme que tu avouerais devant ce groupe ?",
-          "Quel est le compliment le plus inattendu que tu aies reçu sur ton physique ou ta sensualité ?"
+          "Qu'est-ce que tu penses du développement personnel ?",
+          "Qu'est-ce que tu penses de la thérapie ?"
         ]
       }
     ]
@@ -1479,7 +1548,7 @@
         "subject": "Moments de vie",
         "questions": [
           "Y a-t-il un moment de ta vie dont tu n'as aucun souvenir mais qu'on t'a souvent raconté ?",
-          "Quel moment de vie prenais-tu pour acquis et ne te satisfaisit pas, avant de te rendre compte qu'il était vraiment unique ?"
+          "Quel moment de vie prenais-tu pour acquis et ne te satisfait pas, avant de te rendre compte qu'il était vraiment unique ?"
         ]
       },
       {
@@ -1823,6 +1892,27 @@
         ]
       },
       {
+        "subject": "Sous le charme",
+        "questions": [
+          "Quel comportement tu as quand tu es vramient amoureux ?",
+          "Quel comportement pourrait te faire quitter le date en 10 secondes ?"
+        ]
+      },
+      {
+        "subject": "Conseils amoureux",
+        "questions": [
+          "Quel est le conseil amoureux que tu donnerais à ton \"moi\" plus jeune ?",
+          "Quelle est ta maxime en amour ?"
+        ]
+      },
+      {
+        "subject": "Drague",
+        "questions": [
+          "Quelle est ta technique infaillible pour séduire quelqu’un ?",
+          "Comment décrirais-tu ton style de drague en trois mots ?"
+        ]
+      },
+      {
         "subject": "Fatigue",
         "questions": [
           "Quel est ton signal d'alarme quand tu sens que tu vas pas bien ?",
@@ -1830,10 +1920,24 @@
         ]
       },
       {
+        "subject": "Romance",
+        "questions": [
+          "Quelle est ta chanson romantique préférée ?",
+          "Le film romantique qui te fait craquer ?"
+        ]
+      },
+      {
         "subject": "Générosité",
         "questions": [
           "Quelle est la chose la plus généreuse qu'on ait jamais faite pour toi ?",
           "Qu'est-ce que tu fais anonyment et généreusement, sans attendre de retour ?"
+        ]
+      },
+      {
+        "subject": "Gestes d'amour",
+        "questions": [
+          "Quel geste d'amour que tu as reçu, qui t'a marqué récemment ?",
+          "Quel est ton love language ?"
         ]
       },
       {
@@ -1874,7 +1978,8 @@
       {
         "subject": "Petits Plaisirs",
         "questions": [
-          "Quelle est la chose qui te rend immédiatement heureux ?"
+          "Quelle est la chose qui te rend immédiatement heureux ?",
+          "Quel est ton moment préféré de la journée ?"
         ]
       },
       {
@@ -1934,6 +2039,13 @@
         ]
       },
       {
+        "subject": "Séduction",
+        "questions": [
+          "Quel trait de personnalité te fait craquer direct ?",
+          "Comment devrait-on s'y prendre pour te montrer que tu nous plais ?"
+        ]
+      },
+      {
         "subject": "Repli sur Soi",
         "questions": [
           "Quelle est la meilleure chose que tu aies découverte sur toi-même en restant seul(e) ?",
@@ -1949,13 +2061,6 @@
       }
     ],
     "FACE À TOI-MÊME": [
-      {
-        "subject": "Astrologie",
-        "questions": [
-          "Quel est ton signe astrologique et est-ce que tu y crois ? Exemple : Scorpion/Oui",
-          "Quelle est la superstitition à laquelle tu crois ?"
-        ]
-      },
       {
         "subject": "Cadeaux Reçus",
         "questions": [
@@ -1994,6 +2099,7 @@
       {
         "subject": "Contradictions",
         "questions": [
+          "Quelle est la chose que tu possèdes (talent, trait, situation) et dont tu n'es pas assez fier(ère) ?",
           "Qu'est-ce qui est le + contradictoire entre tes envies et ta vie de tous les jours ?"
         ]
       },
@@ -2014,12 +2120,7 @@
       {
         "subject": "Discussions Idéales",
         "questions": [
-          "Si tu pouvais recevoir un compliment parfait, que voudrais-tu entendre ?"
-        ]
-      },
-      {
-        "subject": "Discussions idéales",
-        "questions": [
+          "Si tu pouvais recevoir un compliment parfait, que voudrais-tu entendre ?",
           "Quelle est la question que tu aimerais qu’on te pose?"
         ]
       },
