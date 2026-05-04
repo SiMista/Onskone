@@ -1,10 +1,11 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { Icon } from '@iconify/react';
 import socket from '../utils/socket';
 import Button from './Button';
 import Avatar from './Avatar';
 import PlayerAnswerCard from './PlayerAnswerCard';
 import SimilarityPopover from './SimilarityPopover';
-import ShowScreenFrame from './ShowScreenFrame';
+import stickmanShowPhone from '../assets/images/game/stickman-show-phone-cropped.png';
 import { RevealResult, LeaderboardEntry, GameCard, GameMode } from '@onskone/shared';
 import { isNoResponse, getDisplayText } from '../utils/answerHelpers';
 
@@ -195,27 +196,49 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
     const myCorrect = myResult ? (myResult.correct || correctedIndices.has(myIndex)) : false;
     const isNextToReveal = !myRevealed && myIndex >= 0 && myIndex === findFirstDisplayable(0, revealedIndices);
 
-    return (
-      <div className="flex flex-col h-full p-2 max-w-2xl mx-auto">
-        <div className="flex-1 flex flex-col items-center justify-center gap-4 md:gap-6 px-2">
-          {myResult ? (
-            <>
-              <ShowScreenFrame>
-                <PlayerAnswerCard
-                  answer={getDisplayText(myResult.answer)}
-                  isNoResponse={isNoResponse(myResult.answer)}
-                  bgClass={myRevealed ? (myCorrect ? 'bg-[#30c94d]' : 'bg-[#ff6b6b]') : 'bg-cream-answer'}
-                  className={`transition-colors duration-500 ${isNextToReveal ? 'animate-card-soft-pulse' : ''} ${revealAnimating ? 'animate-reveal-pop' : ''}`}
-                  heading={null}
-                />
-              </ShowScreenFrame>
+    const waitingFooter = allRevealed ? (
+      <p className="text-gray-900 text-base md:text-lg font-semibold">
+        {isGameOver
+          ? `En attente que ${leaderName} révèle les résultats finaux...`
+          : `En attente que ${leaderName} lance la manche suivante...`}
+      </p>
+    ) : undefined;
 
-              {/* Avatar de l'auteur réel (vide avant reveal, fade-in au reveal) */}
-              <div className="flex flex-col items-center gap-2">
-                <p className="text-gray-700 text-xs md:text-sm font-semibold uppercase">Écrit par</p>
-                <div className="relative w-16 h-16 md:w-20 md:h-20">
+    const showHeader = (
+      <div className="flex items-center justify-center gap-3 shrink-0 max-md:landscape:gap-2">
+        <img
+          src={stickmanShowPhone}
+          alt=""
+          aria-hidden
+          draggable={false}
+          className="h-14 md:h-20 w-auto select-none pointer-events-none animate-float max-md:landscape:h-9"
+        />
+        <p className="text-gray-900 text-lg md:text-2xl font-semibold text-center max-md:landscape:text-sm">
+          Montre ton écran à tout le monde !
+        </p>
+      </div>
+    );
+
+    const rotateHint = (
+      <p className="landscape:hidden flex items-center gap-1.5 text-xs text-gray-500/80 shrink-0">
+        <Icon icon="mdi:phone-rotate-landscape" width={14} height={14} aria-hidden />
+        Tourne ton téléphone pour un affichage plus large
+      </p>
+    );
+
+    if (myResult) {
+      return (
+        <div className="flex flex-col h-full p-2 md:p-4 max-w-3xl mx-auto landscape:max-w-5xl">
+          <div className="flex flex-col items-center gap-4 md:gap-6 pt-4 md:pt-8 pb-3 px-2 max-md:landscape:gap-2 max-md:landscape:pt-2">
+            {showHeader}
+
+            <div className="w-full flex flex-row items-center justify-center gap-3 md:gap-5 max-md:landscape:gap-2">
+              {/* Bulle "Écrit par" — à gauche de la carte */}
+              <div className="flex flex-col items-center gap-1 md:gap-1.5 shrink-0 max-md:landscape:gap-0.5">
+                <p className="text-gray-700 text-[10px] md:text-xs font-semibold uppercase tracking-wide">Écrit par</p>
+                <div className="relative w-16 h-16 md:w-24 md:h-24 max-md:landscape:w-14 max-md:landscape:h-14">
                   <div
-                    className={`absolute inset-0 rounded-full bg-gray-200 border-2 border-dashed border-gray-400 flex items-center justify-center text-gray-500 font-bold text-xl md:text-2xl shadow-md transition-opacity duration-500 ${
+                    className={`absolute inset-0 rounded-full bg-gray-200 border-2 border-dashed border-gray-400 flex items-center justify-center text-gray-500 font-bold text-2xl md:text-3xl shadow-md transition-opacity duration-500 max-md:landscape:text-xl ${
                       myRevealed ? 'opacity-0' : 'opacity-100'
                     }`}
                   >
@@ -230,38 +253,72 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
                   </div>
                 </div>
                 <span
-                  className={`text-sm md:text-base font-semibold text-black transition-opacity duration-500 ${
+                  className={`text-xs md:text-sm font-semibold text-black transition-opacity duration-500 max-md:landscape:text-[11px] truncate max-w-[6rem] md:max-w-[7rem] ${
                     myRevealed ? 'opacity-100' : 'opacity-0'
                   }`}
                 >
                   {myResult.playerName}
                 </span>
               </div>
-            </>
-          ) : (
-            <>
-              <ShowScreenFrame>
+
+              {/* Carte */}
+              <div className="flex-1 min-w-0 max-w-lg landscape:max-w-3xl">
                 <PlayerAnswerCard
-                  answer="Le pilier ne t'a attribué aucune réponse"
-                  bgClass={noAnswerLitRed ? 'bg-[#ff6b6b]' : 'bg-cream-answer'}
-                  className="transition-colors duration-500"
+                  answer={getDisplayText(myResult.answer)}
+                  isNoResponse={isNoResponse(myResult.answer)}
+                  bgClass={myRevealed ? (myCorrect ? 'bg-[#30c94d]' : 'bg-[#ff6b6b]') : 'bg-cream-answer'}
+                  className={`transition-colors duration-500 ${isNextToReveal ? 'animate-card-soft-pulse' : ''} ${revealAnimating ? 'animate-reveal-pop' : ''}`}
                   heading={null}
                 />
-              </ShowScreenFrame>
-            </>
-          )}
+              </div>
+            </div>
 
-          {allRevealed && (
-            <div className="text-center mt-2">
-              <p className="text-gray-900 text-sm md:text-base font-semibold">
-                {isGameOver
-                  ? `En attente que ${leaderName} révèle les résultats finaux...`
-                  : `En attente que ${leaderName} lance la manche suivante...`
-                }
-              </p>
+            {waitingFooter && (
+              <div className="shrink-0 mt-1">
+                {waitingFooter}
+              </div>
+            )}
+            {rotateHint}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex flex-col h-full p-2 md:p-4 max-w-3xl mx-auto landscape:max-w-5xl">
+        <div className="flex flex-col items-center gap-4 md:gap-6 pt-4 md:pt-8 pb-3 px-2 max-md:landscape:gap-2 max-md:landscape:pt-2">
+          {showHeader}
+          <div className="w-full flex flex-row items-center justify-center gap-3 md:gap-4">
+            <div className="flex-1 min-w-0 max-w-lg landscape:max-w-3xl">
+              <PlayerAnswerCard
+                answer="Le pilier ne t'a attribué aucune réponse"
+                bgClass={noAnswerLitRed ? 'bg-[#ff6b6b]' : 'bg-cream-answer'}
+                className="transition-colors duration-500"
+                heading={null}
+              />
+            </div>
+          </div>
+          {waitingFooter && (
+            <div className="shrink-0 mt-1">
+              {waitingFooter}
             </div>
           )}
+          {rotateHint}
         </div>
+      </div>
+    );
+  }
+
+  if (!isLeader && gameMode === 'local' && false) {
+    return (
+      <div>
+        {(() => null)()}
+        {(
+          <div className="shrink-0 max-md:landscape:hidden">
+            {waitingFooter}
+          </div>
+        )}
+        {rotateHint}
       </div>
     );
   }

@@ -9,6 +9,8 @@
   --color-cream-player: #f9f4ee; /* Cartes joueurs (lobby, tuiles guessing) */
   --color-cream-question: #f9f4ee; /* Carte de question */
   --color-cream-answer: #f7f0e2; /* Carte réponse montrée au joueur (guessing / reveal) */
+  --color-quit: #9ca3af; /* Boutons de retrait neutres (Quitter, Attendre) */
+  --color-quit-hover: #d1d5db;
 }
 
 .font-display {

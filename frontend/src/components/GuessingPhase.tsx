@@ -6,7 +6,7 @@ import Button from './Button';
 import Avatar from './Avatar';
 import QuestionCard from './QuestionCard';
 import PlayerAnswerCard from './PlayerAnswerCard';
-import ShowScreenFrame from './ShowScreenFrame';
+import stickmanShowPhone from '../assets/images/game/stickman-show-phone-cropped.png';
 import { IPlayer, RoundPhase, GameCard, GameMode } from '@onskone/shared';
 import { isNoResponse, getDisplayText } from '../utils/answerHelpers';
 
@@ -293,7 +293,7 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
     const noResponse = myAssignedAnswer ? isNoResponse(myAssignedAnswer.text) : false;
 
     return (
-      <div className="flex flex-col h-full p-2 max-w-2xl mx-auto">
+      <div className="flex flex-col h-full p-2 md:p-4 max-w-3xl mx-auto landscape:max-w-5xl">
         <HourglassTimer
           duration={timerDuration}
           onExpire={handleTimerExpire}
@@ -302,24 +302,44 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
           hidden
         />
 
-        <div className="flex-1 flex flex-col items-center justify-center gap-4 md:gap-6 px-2">
-          <ShowScreenFrame>
-            {myAssignedAnswer ? (
-              <PlayerAnswerCard
-                key={myAssignedAnswer.id}
-                answer={assignedText}
-                isNoResponse={noResponse}
-                pulse
-                heading={null}
-              />
-            ) : (
-              <PlayerAnswerCard
-                answer={`En attente que ${leaderName} t'attribue une réponse…`}
-                placeholder
-                heading={null}
-              />
-            )}
-          </ShowScreenFrame>
+        <div className="flex flex-col items-center gap-4 md:gap-6 pt-4 md:pt-8 pb-3 px-2 max-md:landscape:gap-2 max-md:landscape:pt-2">
+          <div className="flex items-center justify-center gap-3 shrink-0 max-md:landscape:gap-2">
+            <img
+              src={stickmanShowPhone}
+              alt=""
+              aria-hidden
+              draggable={false}
+              className="h-14 md:h-20 w-auto select-none pointer-events-none animate-float max-md:landscape:h-9"
+            />
+            <p className="text-gray-900 text-lg md:text-2xl font-semibold text-center max-md:landscape:text-sm">
+              Montre ton écran à tout le monde !
+            </p>
+          </div>
+
+          <div className="w-full flex flex-row items-center justify-center gap-3 md:gap-4">
+            <div className="flex-1 min-w-0 max-w-lg landscape:max-w-3xl">
+              {myAssignedAnswer ? (
+                <PlayerAnswerCard
+                  key={myAssignedAnswer.id}
+                  answer={assignedText}
+                  isNoResponse={noResponse}
+                  pulse
+                  heading={null}
+                />
+              ) : (
+                <PlayerAnswerCard
+                  answer={`En attente que ${leaderName} t'attribue une réponse…`}
+                  placeholder
+                  heading={null}
+                />
+              )}
+            </div>
+          </div>
+
+          <p className="landscape:hidden flex items-center gap-1.5 text-xs text-gray-500/80 shrink-0 mt-1">
+            <Icon icon="mdi:phone-rotate-landscape" width={14} height={14} aria-hidden />
+            Tourne ton téléphone pour un affichage plus large
+          </p>
         </div>
       </div>
     );
@@ -336,7 +356,6 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
           </h2>
         ) : (
           <p className="text-xs text-center text-gray-500 italic mt-1.5">
-            <Icon icon="fluent-emoji-flat:satellite" width={14} height={14} className="inline mr-1" aria-hidden />
             {leaderName} assigne les réponses…
           </p>
         )}
@@ -455,13 +474,13 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
                                 width="22"
                                 height="22"
                                 viewBox="0 0 24 24"
-                                className="transition-transform group-active:translate-x-[1px] group-active:translate-y-[1px] drop-shadow-[1px_1px_0_rgba(0,0,0,0.3)]"
+                                className="transition-transform group-active:translate-x-[1px] group-active:translate-y-[1px]"
                               >
                                 {/* Bordure noire (tracée en premier, plus épaisse) */}
                                 <path
                                   d="M6 6 L18 18 M18 6 L6 18"
                                   stroke="black"
-                                  strokeWidth="6"
+                                  strokeWidth="7"
                                   strokeLinecap="round"
                                   strokeLinejoin="round"
                                   fill="none"

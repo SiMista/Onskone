@@ -525,9 +525,7 @@ const Lobby = () => {
                     <div
                         key={lobbyTab}
                         role="tabpanel"
-                        className={`bg-white border-[2.5px] border-black rounded-b-2xl stack-shadow texture-paper p-3 md:p-4 animate-phase-enter ${
-                            lobbyTab === 'settings' ? 'rounded-tr-2xl rounded-tl-none' : 'rounded-tl-2xl rounded-tr-none'
-                        }`}
+                        className="bg-white border-[2.5px] border-black rounded-2xl stack-shadow texture-paper p-3 md:p-4 animate-phase-enter"
                     >
                         {lobbyTab === 'settings' ? settingsPanelEl : playersListMobile}
                     </div>

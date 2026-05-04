@@ -59,6 +59,7 @@ const ConfirmModal = ({
             variant="secondary"
             size="sm"
             onClick={onClose}
+            className="!bg-quit hover:!bg-quit-hover"
           />
 
         </div>
