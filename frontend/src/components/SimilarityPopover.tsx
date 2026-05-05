@@ -37,6 +37,7 @@ const SimilarityPopover: React.FC<SimilarityPopoverProps> = ({
               variant="secondary"
               size="sm"
               onClick={onDismiss}
+              className="!bg-quit hover:!bg-quit-hover"
             />
           </div>
         ) : (

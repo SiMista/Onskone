@@ -295,7 +295,7 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
           >
             <p className="text-gray-500 text-xs uppercase tracking-[0.15em] font-bold m-0 mb-2">Ta réponse</p>
             <p className="text-base md:text-lg text-gray-600 leading-relaxed break-words whitespace-pre-wrap m-0">
-              {answer}
+              {answer.length > 250 ? `${answer.slice(0, 250)}…` : answer}
             </p>
           </div>
           <p className="text-gray-700 text-center text-sm md:text-base italic">
