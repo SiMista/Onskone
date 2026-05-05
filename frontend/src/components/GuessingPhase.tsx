@@ -302,37 +302,37 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
           hidden
         />
 
-        <div className="flex flex-col items-center gap-4 md:gap-6 pt-4 md:pt-8 pb-3 px-2 max-md:landscape:gap-2 max-md:landscape:pt-2">
-          <div className="flex items-center justify-center gap-3 shrink-0 max-md:landscape:gap-2">
-            <img
-              src={stickmanShowPhone}
-              alt=""
-              aria-hidden
-              draggable={false}
-              className="h-14 md:h-20 w-auto select-none pointer-events-none animate-float max-md:landscape:h-9"
-            />
-            <p className="text-gray-900 text-lg md:text-2xl font-semibold text-center max-md:landscape:text-sm">
-              Montre ton écran à tout le monde !
-            </p>
-          </div>
+        <div className="flex flex-col items-center gap-3 md:gap-4 pt-6 md:pt-12 pb-3 px-2 max-md:landscape:gap-2 max-md:landscape:pt-2">
+          <p className="text-gray-900 text-sm md:text-xl font-semibold text-center max-md:landscape:text-xs shrink-0 -translate-x-4 md:-translate-x-8 max-md:landscape:-translate-x-2">
+            Montre ton écran à tout le monde !
+          </p>
 
           <div className="w-full flex flex-row items-center justify-center gap-3 md:gap-4">
-            <div className="flex-1 min-w-0 max-w-lg landscape:max-w-3xl">
-              {myAssignedAnswer ? (
-                <PlayerAnswerCard
-                  key={myAssignedAnswer.id}
-                  answer={assignedText}
-                  isNoResponse={noResponse}
-                  pulse
-                  heading={null}
-                />
-              ) : (
-                <PlayerAnswerCard
-                  answer={`En attente que ${leaderName} t'attribue une réponse…`}
-                  placeholder
-                  heading={null}
-                />
-              )}
+            <div className="relative flex-1 min-w-0 max-w-lg landscape:max-w-3xl">
+              <img
+                src={stickmanShowPhone}
+                alt=""
+                aria-hidden
+                draggable={false}
+                className="absolute left-[78%] -translate-x-1/2 -top-16 md:-top-20 max-md:landscape:-top-10 h-32 md:h-40 max-md:landscape:h-20 w-auto select-none pointer-events-none animate-float z-0"
+              />
+              <div className="relative z-10">
+                {myAssignedAnswer ? (
+                  <PlayerAnswerCard
+                    key={myAssignedAnswer.id}
+                    answer={assignedText}
+                    isNoResponse={noResponse}
+                    pulse
+                    heading={null}
+                  />
+                ) : (
+                  <PlayerAnswerCard
+                    answer={`En attente que ${leaderName} t'attribue une réponse…`}
+                    placeholder
+                    heading={null}
+                  />
+                )}
+              </div>
             </div>
           </div>
 

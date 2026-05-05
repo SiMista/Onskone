@@ -204,19 +204,20 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
       </p>
     ) : undefined;
 
-    const showHeader = (
-      <div className="flex items-center justify-center gap-3 shrink-0 max-md:landscape:gap-2">
-        <img
-          src={stickmanShowPhone}
-          alt=""
-          aria-hidden
-          draggable={false}
-          className="h-14 md:h-20 w-auto select-none pointer-events-none animate-float max-md:landscape:h-9"
-        />
-        <p className="text-gray-900 text-lg md:text-2xl font-semibold text-center max-md:landscape:text-sm">
-          Montre ton écran à tout le monde !
-        </p>
-      </div>
+    const headerText = (
+      <p className="text-gray-900 text-sm md:text-xl font-semibold text-center max-md:landscape:text-xs shrink-0 -translate-x-4 md:-translate-x-8 max-md:landscape:-translate-x-2">
+        Montre ton écran à tout le monde !
+      </p>
+    );
+
+    const stickmanBehind = (
+      <img
+        src={stickmanShowPhone}
+        alt=""
+        aria-hidden
+        draggable={false}
+        className="absolute left-[78%] -translate-x-1/2 -top-16 md:-top-20 max-md:landscape:-top-10 h-32 md:h-40 max-md:landscape:h-20 w-auto select-none pointer-events-none animate-float z-0"
+      />
     );
 
     const rotateHint = (
@@ -229,8 +230,8 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
     if (myResult) {
       return (
         <div className="flex flex-col h-full p-2 md:p-4 max-w-3xl mx-auto landscape:max-w-5xl">
-          <div className="flex flex-col items-center gap-4 md:gap-6 pt-4 md:pt-8 pb-3 px-2 max-md:landscape:gap-2 max-md:landscape:pt-2">
-            {showHeader}
+          <div className="flex flex-col items-center gap-3 md:gap-4 pt-6 md:pt-12 pb-3 px-2 max-md:landscape:gap-2 max-md:landscape:pt-2">
+            {headerText}
 
             <div className="w-full flex flex-row items-center justify-center gap-3 md:gap-5 max-md:landscape:gap-2">
               {/* Bulle "Écrit par" — à gauche de la carte */}
@@ -261,15 +262,18 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
                 </span>
               </div>
 
-              {/* Carte */}
-              <div className="flex-1 min-w-0 max-w-lg landscape:max-w-3xl">
-                <PlayerAnswerCard
-                  answer={getDisplayText(myResult.answer)}
-                  isNoResponse={isNoResponse(myResult.answer)}
-                  bgClass={myRevealed ? (myCorrect ? 'bg-[#30c94d]' : 'bg-[#ff6b6b]') : 'bg-cream-answer'}
-                  className={`transition-colors duration-500 ${isNextToReveal ? 'animate-card-soft-pulse' : ''} ${revealAnimating ? 'animate-reveal-pop' : ''}`}
-                  heading={null}
-                />
+              {/* Carte avec stickman derrière */}
+              <div className="relative flex-1 min-w-0 max-w-lg landscape:max-w-3xl">
+                {stickmanBehind}
+                <div className="relative z-10">
+                  <PlayerAnswerCard
+                    answer={getDisplayText(myResult.answer)}
+                    isNoResponse={isNoResponse(myResult.answer)}
+                    bgClass={myRevealed ? (myCorrect ? 'bg-[#30c94d]' : 'bg-[#ff6b6b]') : 'bg-cream-answer'}
+                    className={`transition-colors duration-500 ${isNextToReveal ? 'animate-card-soft-pulse' : ''} ${revealAnimating ? 'animate-reveal-pop' : ''}`}
+                    heading={null}
+                  />
+                </div>
               </div>
             </div>
 
@@ -286,16 +290,19 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
 
     return (
       <div className="flex flex-col h-full p-2 md:p-4 max-w-3xl mx-auto landscape:max-w-5xl">
-        <div className="flex flex-col items-center gap-4 md:gap-6 pt-4 md:pt-8 pb-3 px-2 max-md:landscape:gap-2 max-md:landscape:pt-2">
-          {showHeader}
+        <div className="flex flex-col items-center gap-3 md:gap-4 pt-6 md:pt-12 pb-3 px-2 max-md:landscape:gap-2 max-md:landscape:pt-2">
+          {headerText}
           <div className="w-full flex flex-row items-center justify-center gap-3 md:gap-4">
-            <div className="flex-1 min-w-0 max-w-lg landscape:max-w-3xl">
-              <PlayerAnswerCard
-                answer="Le pilier ne t'a attribué aucune réponse"
-                bgClass={noAnswerLitRed ? 'bg-[#ff6b6b]' : 'bg-cream-answer'}
-                className="transition-colors duration-500"
-                heading={null}
-              />
+            <div className="relative flex-1 min-w-0 max-w-lg landscape:max-w-3xl">
+              {stickmanBehind}
+              <div className="relative z-10">
+                <PlayerAnswerCard
+                  answer="Le pilier ne t'a attribué aucune réponse"
+                  bgClass={noAnswerLitRed ? 'bg-[#ff6b6b]' : 'bg-cream-answer'}
+                  className="transition-colors duration-500"
+                  heading={null}
+                />
+              </div>
             </div>
           </div>
           {waitingFooter && (
@@ -305,20 +312,6 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
           )}
           {rotateHint}
         </div>
-      </div>
-    );
-  }
-
-  if (!isLeader && gameMode === 'local' && false) {
-    return (
-      <div>
-        {(() => null)()}
-        {(
-          <div className="shrink-0 max-md:landscape:hidden">
-            {waitingFooter}
-          </div>
-        )}
-        {rotateHint}
       </div>
     );
   }
@@ -406,7 +399,7 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
                 </div>
 
                 {/* Bouton Suivant à droite de la carte — pilier uniquement */}
-                <div className="w-16 md:w-24 shrink-0 flex justify-start">
+                <div className="relative z-20 w-16 md:w-24 shrink-0 flex justify-start">
                   {isLeader && showNextButton && !showSimilarity && !isLastDisplayable && (
                     <button
                       key={`next-${pilierCursor}`}

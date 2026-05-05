@@ -1,3 +1,25 @@
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+
+const SOFT_HYPHEN = '­';
+
+// Insère des soft hyphens dans les mots trop longs sans espaces,
+// pour que le texte puisse se couper avec un "-" quand l'auto-fit doit
+// rétrécir la police. Mots courts inchangés.
+const insertSoftHyphens = (text: string, threshold = 12, interval = 6): string => {
+  return text
+    .split(/(\s+)/)
+    .map(chunk => {
+      if (/^\s+$/.test(chunk) || chunk.length <= threshold) return chunk;
+      let result = '';
+      for (let i = 0; i < chunk.length; i += interval) {
+        result += chunk.slice(i, i + interval);
+        if (i + interval < chunk.length) result += SOFT_HYPHEN;
+      }
+      return result;
+    })
+    .join('');
+};
+
 interface PlayerAnswerCardProps {
   answer: string;
   isNoResponse?: boolean;
@@ -7,6 +29,9 @@ interface PlayerAnswerCardProps {
   heading?: string | null;
   placeholder?: boolean;
 }
+
+const FIT_MAX = 128;
+const FIT_MIN = 14;
 
 const PlayerAnswerCard: React.FC<PlayerAnswerCardProps> = ({
   answer,
@@ -23,6 +48,44 @@ const PlayerAnswerCard: React.FC<PlayerAnswerCardProps> = ({
       ? 'italic text-gray-500 font-normal'
       : 'text-black';
 
+  const fitBoxRef = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLParagraphElement>(null);
+  const [fontSize, setFontSize] = useState<number>(FIT_MAX);
+
+  const displayedAnswer = useMemo(
+    () => (placeholder ? answer : insertSoftHyphens(answer)),
+    [answer, placeholder]
+  );
+
+  useLayoutEffect(() => {
+    if (placeholder) return;
+    const fit = () => {
+      const box = fitBoxRef.current;
+      const txt = textRef.current;
+      if (!box || !txt) return;
+      const w = box.clientWidth;
+      const h = box.clientHeight;
+      if (w === 0 || h === 0) return;
+
+      let lo = FIT_MIN;
+      let hi = FIT_MAX;
+      while (lo < hi) {
+        const mid = Math.ceil((lo + hi) / 2);
+        txt.style.fontSize = `${mid}px`;
+        const fits = txt.scrollWidth <= w && txt.scrollHeight <= h;
+        if (fits) lo = mid;
+        else hi = mid - 1;
+      }
+      txt.style.fontSize = `${lo}px`;
+      setFontSize(lo);
+    };
+
+    fit();
+    const ro = new ResizeObserver(fit);
+    if (fitBoxRef.current) ro.observe(fitBoxRef.current);
+    return () => ro.disconnect();
+  }, [displayedAnswer, placeholder]);
+
   return (
     <>
       {heading && (
@@ -32,7 +95,9 @@ const PlayerAnswerCard: React.FC<PlayerAnswerCardProps> = ({
       )}
       <div
         className={`
-          w-full p-5 md:p-7 max-md:landscape:p-3 rounded-xl border
+          w-full h-32 md:h-48 max-md:landscape:h-40 md:landscape:h-56
+          p-4 md:p-6 max-md:landscape:p-3
+          rounded-xl border flex items-center justify-center
           ${placeholder
             ? 'border-dashed border-gray-400 bg-gray-50 shadow-none'
             : `border-black stack-shadow-sm texture-paper ${bgClass}`
@@ -41,16 +106,22 @@ const PlayerAnswerCard: React.FC<PlayerAnswerCardProps> = ({
           ${className}
         `}
       >
-        <p
-          className={`font-bold text-center break-words ${textClass} ${
-            placeholder
-              ? 'text-sm md:text-base'
-              : 'text-xl md:text-3xl max-md:landscape:text-2xl'
-          }`}
-          style={placeholder ? undefined : { lineHeight: 1.15 }}
-        >
-          {answer}
-        </p>
+        {placeholder ? (
+          <p className={`font-bold text-center break-words text-sm md:text-base ${textClass}`}>
+            {answer}
+          </p>
+        ) : (
+          <div ref={fitBoxRef} className="w-full h-full flex items-center justify-center overflow-hidden">
+            <p
+              ref={textRef}
+              lang="fr"
+              className={`font-bold text-center break-words hyphens-manual ${textClass}`}
+              style={{ fontSize: `${fontSize}px`, lineHeight: 1.15 }}
+            >
+              {displayedAnswer}
+            </p>
+          </div>
+        )}
       </div>
     </>
   );
