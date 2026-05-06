@@ -23,7 +23,7 @@ const TIERS: Tier[] = [
   {
     max: 20, midPct: 10, title: 'C\'est gênant là...', color: '#ff4f4f', icon: 'fluent-emoji-flat:neutral-face',
     messages: [
-      'Vous savez dire bonjour, c\'est déjà une belle étape.',
+      'Vous vous êtes croisés une fois dans un ascenseur en 2019, c\'est ça ?',
       'Vous partagez le wifi, c\'est déjà une base solide.',
       'Faut peut-être commencer par un café ensemble, non ?',
       'Tranquille, vous apprendrez à vous connaître… un jour.',
@@ -41,8 +41,8 @@ const TIERS: Tier[] = [
     max: 60, midPct: 50, title: 'Pas mal, pas mal', color: '#ffc700', icon: 'fluent-emoji-flat:handshake',
     messages: [
       'Un pas de plus et vous êtes une vraie team.',
-      'C\'est solide, mais pas encore fusionnel.',
-      'Vous vous captez bien, la surprise reste possible.',
+      'Vous pourriez covoiturer 3h sans tuer personne. C\'est déjà énorme.',
+      'Y\'a de la confiance, mais le mot de passe Netflix reste sacré.',
       'Pas mal du tout, y\'a clairement de quoi faire.',
     ],
   },
@@ -50,20 +50,32 @@ const TIERS: Tier[] = [
     max: 80, midPct: 70, title: 'Super team', color: '#8bd94d', icon: 'fluent-emoji-flat:sparkles',
     messages: [
       'Vous vous captez presque sans parler, c\'est beau à voir.',
-      'Les vibes sont là, la complicité aussi.',
+      'Vous finissez les phrases des autres, et aussi leurs frites.',
+      'Vous pourriez braquer une banque ensemble',
       'Clairement, vous avez vécu des trucs ensemble.',
     ],
   },
   {
-    max: 100, midPct: 90, title: 'Inséparables', color: '#30c94d', icon: 'fluent-emoji-flat:people-hugging',
+    max: 99, midPct: 90, title: 'Inséparables', color: '#30c94d', icon: 'fluent-emoji-flat:people-hugging',
     messages: [
       'À ce stade c\'est plus de l\'amitié, c\'est de la famille.',
       'Chaque moment ensemble devient une anecdote.',
-      'Séparés à la naissance, clairement.',
-      'Personne ne vous connaît mieux que vous-mêmes.',
+      'Vous avez clairement un groupe WhatsApp avec plus de memes que de mots.',
+      'Vos souvenirs communs pourraient remplir une saison Netflix.',
+    ],
+  },
+  {
+    max: 100, midPct: 100, title: 'Onskoné !', color: '#b46cff', icon: 'fluent-emoji-flat:partying-face',
+    messages: [
+      'Score parfait. Vous êtes la même personne en plusieurs exemplaires.',
+      'À ce stade vous partagez l\'ADN, le mot de passe Wi-Fi et la même vie',
+      'Vous finissez les phrases, les frites ET les rêves les uns des autres. Onskoné officiellement.',
     ],
   },
 ];
+
+const ONSKONE_INDEX = TIERS.length - 1;
+const PUBLIC_TIERS = TIERS.slice(0, ONSKONE_INDEX);
 
 const getTierIndex = (pct: number) => {
   const idx = TIERS.findIndex(t => pct <= t.max);
@@ -83,6 +95,7 @@ const EndGame: React.FC = () => {
   const [showConfetti, setShowConfetti] = useState(false);
   const [displayPct, setDisplayPct] = useState(0);
   const [revealed, setRevealed] = useState(false);
+  const [onskoneRevealed, setOnskoneRevealed] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [openPopoverFor, setOpenPopoverFor] = useState<string | null>(null);
@@ -189,7 +202,11 @@ const EndGame: React.FC = () => {
     const idx = Math.abs(h) % verdict.messages.length;
     return verdict.messages[idx];
   }, [verdict, lobbyCode, pct, rounds.length]);
-  const liveVerdict = useMemo(() => getVerdict(displayPct), [displayPct]);
+  const liveVerdict = useMemo(() => {
+    if (onskoneRevealed) return TIERS[ONSKONE_INDEX];
+    const idx = Math.min(ONSKONE_INDEX - 1, getTierIndex(displayPct));
+    return TIERS[idx];
+  }, [displayPct, onskoneRevealed]);
 
   useEffect(() => {
     if (!leaderboard.length) return;
@@ -206,6 +223,11 @@ const EndGame: React.FC = () => {
       t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 
     const interpolate = (progress: number): number => {
+      if (pct >= 100) {
+        // Score parfait : montée pure ease-out, pas de dip. On finit franchement à 100.
+        const easeOutQuart = (t: number) => 1 - Math.pow(1 - t, 4);
+        return clamp(easeOutQuart(progress) * 100);
+      }
       if (pct > 50) {
         // Amplitude du dip : plus le score est haut, plus il est petit (évite le "bug" à 100).
         const dip = Math.max(3, Math.min(8, (100 - pct) * 0.25 + 3));
@@ -238,7 +260,11 @@ const EndGame: React.FC = () => {
       } else {
         setRevealed(true);
         setTimeout(() => setShowLeaderboard(true), 900);
-        if (pct > 80) {
+        if (pct === 100) {
+          setTimeout(() => setOnskoneRevealed(true), 600);
+          setTimeout(() => setShowConfetti(true), 600);
+          confettiTimeoutRef.current = setTimeout(() => setShowConfetti(false), 7600);
+        } else if (pct > 80) {
           setShowConfetti(true);
           confettiTimeoutRef.current = setTimeout(() => setShowConfetti(false), 5000);
         }
@@ -436,10 +462,33 @@ const EndGame: React.FC = () => {
               </div>
             </div>
 
-            {TIERS.map((tier, idx) => {
-              const currentIdx = displayPct <= 0 ? -1 : getTierIndex(displayPct);
-              const isActive = idx === currentIdx;
-              const isPassed = currentIdx > idx;
+            {onskoneRevealed && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="absolute w-32 h-32 md:w-40 md:h-40 rounded-full border-2 animate-onskone-shockwave" style={{ borderColor: '#b46cff' }} />
+                <div className="absolute w-32 h-32 md:w-40 md:h-40 rounded-full border-2 animate-onskone-shockwave" style={{ borderColor: '#d9b3ff', animationDelay: '0.25s' }} />
+                <div
+                  className="relative flex flex-col items-center justify-center px-5 py-3 rounded-2xl animate-onskone-pop"
+                  style={{
+                    background: 'linear-gradient(135deg, #b46cff 0%, #8e3dff 100%)',
+                    boxShadow: '0 0 32px rgba(180,108,255,0.7), 0 0 64px rgba(180,108,255,0.35), 0 8px 24px rgba(0,0,0,0.35)',
+                  }}
+                >
+                  <Icon icon="fluent-emoji-flat:partying-face" className="text-4xl md:text-5xl" width="1em" height="1em" aria-hidden />
+                  <span
+                    className="font-display font-bold text-white text-xl md:text-2xl mt-1 tracking-wide"
+                    style={{ textShadow: '0 2px 8px rgba(0,0,0,0.35)' }}
+                  >
+                    Onskoné !
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {PUBLIC_TIERS.map((tier, idx) => {
+              const rawIdx = getTierIndex(displayPct);
+              const currentIdx = Math.min(ONSKONE_INDEX - 1, rawIdx);
+              const isActive = idx === currentIdx && !onskoneRevealed;
+              const isPassed = currentIdx > idx || onskoneRevealed;
               const a = (tier.midPct / 100) * 360 * Math.PI / 180;
               const radius = 40;
               const x = 50 + Math.sin(a) * radius;
@@ -467,8 +516,10 @@ const EndGame: React.FC = () => {
                   <span
                     className={`font-display font-bold mt-0.5 md:mt-1 ${isActive ? 'text-sm md:text-base' : 'text-[10px] md:text-xs'}`}
                     style={{
-                      color: isActive || isPassed ? tier.color : 'rgba(255,255,255,0.75)',
-                      textShadow: isActive ? '0 1px 3px rgba(0,0,0,0.5)' : 'none',
+                      color: isActive || isPassed ? tier.color : 'rgba(255,255,255,0.85)',
+                      textShadow: isActive
+                        ? '0 0 6px rgba(0,0,0,0.55), 0 0 12px rgba(0,0,0,0.45), 0 1px 2px rgba(0,0,0,0.6)'
+                        : '0 0 5px rgba(0,0,0,0.5), 0 0 10px rgba(0,0,0,0.35)',
                       letterSpacing: isActive ? '0.02em' : '0',
                     }}
                   >
