@@ -415,7 +415,7 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
               })}
             </div>
 
-            {/* Navigation : flèches rondes + dots colorés */}
+            {/* Navigation : flèches noires sobres + dots colorés */}
             {(() => {
               const activeColor = currentCard ? getCategoryColor(currentCard.category) : '#18bbed';
               const navDisabled = locked || cards.length < 2;
@@ -426,15 +426,23 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
                     onClick={goPrev}
                     disabled={navDisabled}
                     aria-label="Carte précédente"
-                    className="hidden md:flex group w-14 h-14 rounded-full bg-cream-question border-4 items-center justify-center shadow-[0_4px_0_0_rgba(0,0,0,0.18)] hover:-translate-y-0.5 hover:shadow-[0_6px_0_0_rgba(0,0,0,0.2)] active:translate-y-0.5 active:shadow-[0_1px_0_0_rgba(0,0,0,0.2)] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-[0_4px_0_0_rgba(0,0,0,0.18)]"
-                    style={{ borderColor: activeColor }}
+                    className="hidden md:flex group items-center justify-center text-black hover:-translate-x-0.5 active:translate-x-0 transition-transform duration-200 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:translate-x-0"
                   >
-                    <Icon
-                      icon="ph:arrow-left-bold"
-                      className="text-xl md:text-2xl transition-transform duration-200 group-hover:-translate-x-0.5"
-                      style={{ color: activeColor }}
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="w-10 h-10 md:w-12 md:h-12"
                       aria-hidden
-                    />
+                    >
+                      {/* Contour gris (tracé en premier, plus épais) */}
+                      <path d="M19 12H5" stroke="#9ca3af" strokeWidth="6" />
+                      <path d="M11 19l-7-7 7-7" stroke="#9ca3af" strokeWidth="6" />
+                      {/* Flèche blanche par-dessus */}
+                      <path d="M19 12H5" stroke="white" strokeWidth="3" />
+                      <path d="M11 19l-7-7 7-7" stroke="white" strokeWidth="3" />
+                    </svg>
                   </button>
 
                   <div className="flex items-center gap-1.5 md:gap-2 py-2">
@@ -463,15 +471,23 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
                     onClick={goNext}
                     disabled={navDisabled}
                     aria-label="Carte suivante"
-                    className="hidden md:flex group w-14 h-14 rounded-full bg-cream-question border-4 items-center justify-center shadow-[0_4px_0_0_rgba(0,0,0,0.18)] hover:-translate-y-0.5 hover:shadow-[0_6px_0_0_rgba(0,0,0,0.2)] active:translate-y-0.5 active:shadow-[0_1px_0_0_rgba(0,0,0,0.2)] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-[0_4px_0_0_rgba(0,0,0,0.18)]"
-                    style={{ borderColor: activeColor }}
+                    className="hidden md:flex group items-center justify-center text-black hover:translate-x-0.5 active:translate-x-0 transition-transform duration-200 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:translate-x-0"
                   >
-                    <Icon
-                      icon="ph:arrow-right-bold"
-                      className="text-xl md:text-2xl transition-transform duration-200 group-hover:translate-x-0.5"
-                      style={{ color: activeColor }}
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="w-10 h-10 md:w-12 md:h-12"
                       aria-hidden
-                    />
+                    >
+                      {/* Contour gris (tracé en premier, plus épais) */}
+                      <path d="M5 12h14" stroke="#9ca3af" strokeWidth="6" />
+                      <path d="M13 5l7 7-7 7" stroke="#9ca3af" strokeWidth="6" />
+                      {/* Flèche blanche par-dessus */}
+                      <path d="M5 12h14" stroke="white" strokeWidth="3" />
+                      <path d="M13 5l7 7-7 7" stroke="white" strokeWidth="3" />
+                    </svg>
                   </button>
                 </div>
               );

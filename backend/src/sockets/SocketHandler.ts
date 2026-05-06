@@ -833,7 +833,7 @@ export class SocketHandler {
                     lobby.removePlayer(kickedPlayer);
 
                     // Notifier le joueur kické AVANT de le retirer de la room
-                    this.io.to(kickedSocketId).emit('kickedFromLobby');
+                    this.io.to(kickedSocketId).emit('kickedFromLobby', { hostName: host.name });
 
                     // Retirer le socket de la room Socket.IO
                     const kickedSocket = this.io.sockets.sockets.get(kickedSocketId);
@@ -1627,27 +1627,33 @@ export class SocketHandler {
                     // Ajouter l'index aux révélations
                     currentRound.revealedIndices.push(data.answerIndex);
 
-                    // Broadcaster à tous les joueurs
+                    // Détecter la similarité AVANT d'émettre answerRevealed afin que le
+                    // client traite la similarité en premier (sinon la carte du joueur
+                    // s'allume brièvement et perd son clignotement avant que le modal
+                    // n'apparaisse).
+                    let similarityPayload: { answerIndex: number; guessedPlayerName: string } | null = null;
+                    const results = this.buildRevealResults(lobby, currentRound);
+                    const result = results[data.answerIndex];
+                    if (result && !result.correct) {
+                        const guessedPlayerAnswer = results.find(r => r.playerId === result.guessedPlayerId)?.answer;
+                        if (guessedPlayerAnswer && !guessedPlayerAnswer.startsWith('__NO_RESPONSE__') && !result.answer.startsWith('__NO_RESPONSE__')) {
+                            if (areAnswersSimilar(result.answer, guessedPlayerAnswer)) {
+                                similarityPayload = {
+                                    answerIndex: data.answerIndex,
+                                    guessedPlayerName: result.guessedPlayerName
+                                };
+                            }
+                        }
+                    }
+
+                    if (similarityPayload) {
+                        this.io.to(data.lobbyCode).emit('similarityDetected', similarityPayload);
+                    }
+
                     this.io.to(data.lobbyCode).emit('answerRevealed', {
                         revealedIndex: data.answerIndex,
                         revealedIndices: currentRound.revealedIndices
                     });
-
-                    // Détecter la similarité si la réponse est incorrecte
-                    const results = this.buildRevealResults(lobby, currentRound);
-                    const result = results[data.answerIndex];
-                    if (result && !result.correct) {
-                        // Trouver la réponse que le joueur deviné a réellement écrite
-                        const guessedPlayerAnswer = results.find(r => r.playerId === result.guessedPlayerId)?.answer;
-                        if (guessedPlayerAnswer && !guessedPlayerAnswer.startsWith('__NO_RESPONSE__') && !result.answer.startsWith('__NO_RESPONSE__')) {
-                            if (areAnswersSimilar(result.answer, guessedPlayerAnswer)) {
-                                this.io.to(data.lobbyCode).emit('similarityDetected', {
-                                    answerIndex: data.answerIndex,
-                                    guessedPlayerName: result.guessedPlayerName
-                                });
-                            }
-                        }
-                    }
                 } catch (error) {
                     logger.error('Error revealing answer', { error: (error as Error).message });
                     socket.emit('error', {message: (error as Error).message});
