@@ -224,9 +224,11 @@ const EndGame: React.FC = () => {
 
     const interpolate = (progress: number): number => {
       if (pct >= 100) {
-        // Score parfait : montée pure ease-out, pas de dip. On finit franchement à 100.
-        const easeOutQuart = (t: number) => 1 - Math.pow(1 - t, 4);
-        return clamp(easeOutQuart(progress) * 100);
+        // Score parfait : ease-in-out cubique → démarrage lent, atterrissage doux sur 100.
+        // Pas de dip : on finit franchement, le climax est gardé pour le pop d'Onskoné.
+        const easeInOutCubic = (t: number) =>
+          t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        return clamp(easeInOutCubic(progress) * 100);
       }
       if (pct > 50) {
         // Amplitude du dip : plus le score est haut, plus il est petit (évite le "bug" à 100).
