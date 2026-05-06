@@ -178,9 +178,11 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
   }, [isLeader, myResult]);
 
   // Déclenche l'animation de reveal côté joueur quand sa carte est révélée
+  // (mais pas tant qu'une similarité est en attente de validation par le pilier)
   useEffect(() => {
     if (isLeader) return;
-    const myRev = myIndex >= 0 && revealedIndices.has(myIndex);
+    const awaitingSim = myIndex >= 0 && similarityModal?.answerIndex === myIndex;
+    const myRev = myIndex >= 0 && revealedIndices.has(myIndex) && !awaitingSim;
     if (myRev && !prevMyRevealedRef.current) {
       setRevealAnimating(true);
       const t = setTimeout(() => setRevealAnimating(false), 500);
@@ -188,19 +190,25 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
       return () => clearTimeout(t);
     }
     if (!myRev) prevMyRevealedRef.current = false;
-  }, [isLeader, myIndex, revealedIndices]);
+  }, [isLeader, myIndex, revealedIndices, similarityModal]);
 
   if (!isLeader && gameMode === 'local') {
     const myAwaitingSimilarity = myIndex >= 0 && similarityModal?.answerIndex === myIndex;
     const myRevealed = myIndex >= 0 && revealedIndices.has(myIndex) && !myAwaitingSimilarity;
     const myCorrect = myResult ? (myResult.correct || correctedIndices.has(myIndex)) : false;
-    const isNextToReveal = !myRevealed && myIndex >= 0 && myIndex === findFirstDisplayable(0, revealedIndices);
+    // Tant qu'une similarité est en attente, on retire l'index concerné des "déjà révélés"
+    // pour TOUS les joueurs : le joueur ciblé garde son pulse, et les suivants n'avancent
+    // pas (ils ne deviennent pas "next" tant que le pilier n'a pas tranché).
+    const effectiveRevealed = similarityModal
+      ? new Set(Array.from(revealedIndices).filter(i => i !== similarityModal.answerIndex))
+      : revealedIndices;
+    const isNextToReveal = !myRevealed && myIndex >= 0 && myIndex === findFirstDisplayable(0, effectiveRevealed);
 
     const waitingFooter = allRevealed ? (
       <p className="text-gray-900 text-base md:text-lg font-semibold">
         {isGameOver
-          ? `En attente que ${leaderName} révèle les résultats finaux...`
-          : `En attente que ${leaderName} lance la manche suivante...`}
+          ? `En attente que ${leaderName} révèle les résultats finaux…`
+          : `En attente que ${leaderName} lance la manche suivante…`}
       </p>
     ) : undefined;
 
@@ -234,32 +242,39 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
             {headerText}
 
             <div className="w-full flex flex-row items-center justify-center gap-3 md:gap-5 max-md:landscape:gap-2">
-              {/* Bulle "Écrit par" — à gauche de la carte */}
-              <div className="flex flex-col items-center gap-1 md:gap-1.5 shrink-0 max-md:landscape:gap-0.5">
-                <p className="text-gray-700 text-[10px] md:text-xs font-semibold uppercase tracking-wide">Écrit par</p>
-                <div className="relative w-16 h-16 md:w-24 md:h-24 max-md:landscape:w-14 max-md:landscape:h-14">
-                  <div
-                    className={`absolute inset-0 rounded-full bg-gray-200 border-2 border-dashed border-gray-400 flex items-center justify-center text-gray-500 font-bold text-2xl md:text-3xl shadow-md transition-opacity duration-500 max-md:landscape:text-xl ${
-                      myRevealed ? 'opacity-0' : 'opacity-100'
-                    }`}
-                  >
-                    ?
+              {/* Bulle "Écrit par" : largeur prise dans le flux (rétrécit la carte), mais hauteur 0 pour ne pas décaler verticalement */}
+              <div className="shrink-0 self-center w-16 md:w-24 max-md:landscape:w-14 h-0 relative z-20">
+                <div className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 flex flex-col items-center gap-1 md:gap-1.5 max-md:landscape:gap-0.5">
+                  <p className="text-gray-700 text-[10px] md:text-xs font-semibold uppercase tracking-wide whitespace-nowrap">Écrit par</p>
+                  <div className="relative w-16 h-16 md:w-24 md:h-24 max-md:landscape:w-14 max-md:landscape:h-14">
+                    <div
+                      className={`absolute inset-0 rounded-full bg-gray-200 border-2 border-dashed border-gray-400 flex items-center justify-center text-gray-500 font-bold text-2xl md:text-3xl shadow-md transition-opacity duration-500 max-md:landscape:text-xl ${
+                        myRevealed ? 'opacity-0' : 'opacity-100'
+                      }`}
+                    >
+                      ?
+                    </div>
+                    <div
+                      className={`absolute inset-0 transition-opacity duration-500 ${
+                        myRevealed ? 'opacity-100' : 'opacity-0'
+                      }`}
+                    >
+                      <Avatar
+                        avatarId={myResult.playerAvatarId ?? 0}
+                        name={myResult.playerName}
+                        size="lg"
+                        className="!w-full !h-full"
+                      />
+                    </div>
                   </div>
-                  <div
-                    className={`absolute inset-0 flex items-center justify-center transition-opacity duration-500 ${
+                  <span
+                    className={`text-xs md:text-sm font-semibold text-black transition-opacity duration-500 max-md:landscape:text-[11px] truncate max-w-[6rem] md:max-w-[7rem] ${
                       myRevealed ? 'opacity-100' : 'opacity-0'
                     }`}
                   >
-                    <Avatar avatarId={myResult.playerAvatarId ?? 0} name={myResult.playerName} size="lg" />
-                  </div>
+                    {myResult.playerName}
+                  </span>
                 </div>
-                <span
-                  className={`text-xs md:text-sm font-semibold text-black transition-opacity duration-500 max-md:landscape:text-[11px] truncate max-w-[6rem] md:max-w-[7rem] ${
-                    myRevealed ? 'opacity-100' : 'opacity-0'
-                  }`}
-                >
-                  {myResult.playerName}
-                </span>
               </div>
 
               {/* Carte avec stickman derrière */}
@@ -297,7 +312,7 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leaderNa
               {stickmanBehind}
               <div className="relative z-10">
                 <PlayerAnswerCard
-                  answer="Le pilier ne t'a attribué aucune réponse"
+                  answer={`${leaderName} ne t'a attribué aucune réponse`}
                   bgClass={noAnswerLitRed ? 'bg-[#ff6b6b]' : 'bg-cream-answer'}
                   className="transition-colors duration-500"
                   heading={null}

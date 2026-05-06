@@ -56,7 +56,7 @@ const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) => {
     e.preventDefault();
 
     if (!validateEmail(contactForm.email)) {
-      showToast('Adresse email invalide.', 'warning');
+      showToast('Adresse email invalide', 'warning');
       return;
     }
 

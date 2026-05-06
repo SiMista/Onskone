@@ -230,8 +230,11 @@ const Lobby = () => {
         setCurrentPlayer(data.player);
     }, []);
 
-    const handleKickedFromLobby = useCallback(() => {
-        showToast('Tu as été expulsé du salon.', 'error', 4500);
+    const handleKickedFromLobby = useCallback((data?: { hostName?: string }) => {
+        const message = data?.hostName
+            ? `${data.hostName} t'a expulsé du salon`
+            : 'Tu as été expulsé du salon';
+        showToast(message, 'error', 4500);
         navigate('/');
     }, [navigate, showToast]);
 
@@ -462,7 +465,7 @@ const Lobby = () => {
                                 id: 'settings' as const,
                                 color: '#FFC700',
                                 label: 'Paramètres',
-                                badge: totalThemesSelected > 0 ? String(totalThemesSelected) : null,
+                                badge: null,
                                 outer: 'left' as const,
                             },
                             {

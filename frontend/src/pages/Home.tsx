@@ -91,7 +91,7 @@ const Home = () => {
 
   const createLobby = useCallback(() => {
     if (!playerName.trim()) {
-      showToast('Entre ton pseudo avant de créer un salon.', 'warning');
+      showToast('Entre ton pseudo avant de créer un salon', 'warning');
       return;
     }
     socket.emit('createLobby', { playerName, avatarId });
@@ -99,11 +99,11 @@ const Home = () => {
 
   const joinLobby = useCallback(() => {
     if (!playerName.trim()) {
-      showToast('Entre ton pseudo avant de rejoindre un salon.', 'warning');
+      showToast('Entre ton pseudo avant de rejoindre un salon', 'warning');
       return;
     }
     if (!lobbyCode) {
-      showToast('Code de salon invalide.', 'error');
+      showToast('Code de salon invalide', 'error');
       return;
     }
     socket.emit('checkPlayerName', { lobbyCode, playerName });
@@ -114,7 +114,7 @@ const Home = () => {
   }, [navigate, playerName, avatarId]);
 
   const handlePlayerNameExists = useCallback((data: { playerName: string }) => {
-    showToast(`Le pseudo "${data.playerName}" est déjà pris dans ce salon.`, 'warning');
+    showToast(`Le pseudo "${data.playerName}" est déjà pris dans ce salon`, 'warning');
   }, [showToast]);
 
   const handlePlayerNameValid = useCallback(() => {
