@@ -240,24 +240,24 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
     <div className="flex flex-col h-full p-2 md:p-4">
       {currentCard && (
         <div className="flex-1 flex flex-col items-center justify-center">
-        <div className="bg-primary text-base md:text-xl px-3 md:px-6 py-1.5 rounded-2xl mb-0 w-full text-center">
-          <p className="font-display text-lg md:text-2xl m-0 tracking-tight leading-tight">
-            Tu es le pilier, choisis une question !
-          </p>
-          <Timer
-            duration={GAME_CONFIG.TIMERS.QUESTION_SELECTION}
-            onExpire={handleTimerExpire}
-            phase={RoundPhase.QUESTION_SELECTION}
-            lobbyCode={lobbyCode}
-            hidden
-          />
-        </div>
+          <div className="bg-primary text-base md:text-xl px-3 md:px-6 py-1.5 rounded-2xl mb-0 w-full text-center">
+            <p className="font-display text-lg md:text-2xl m-0 tracking-tight leading-tight">
+              Tu es le pilier, choisis une question !
+            </p>
+            <Timer
+              duration={GAME_CONFIG.TIMERS.QUESTION_SELECTION}
+              onExpire={handleTimerExpire}
+              phase={RoundPhase.QUESTION_SELECTION}
+              lobbyCode={lobbyCode}
+              hidden
+            />
+          </div>
 
-        <div className="flex flex-col items-center gap-0 w-full">
-          <span className="flex md:hidden items-center justify-center gap-1 text-[10px] text-gray-500 italic font-sans mt-0.5 mb-2">
-            <Icon icon="ph:hand-swipe-left-duotone" className="text-sm animate-wiggle" aria-hidden />
-            swipe pour changer de carte
-          </span>
+          <div className="flex flex-col items-center gap-0 w-full">
+            <span className="flex md:hidden items-center justify-center gap-1 text-[10px] text-gray-500 italic font-sans mt-0.5 mb-2">
+              <Icon icon="ph:hand-swipe-left-duotone" className="text-sm animate-wiggle" aria-hidden />
+              swipe pour changer de carte
+            </span>
 
             {/* Main de cartes - hauteur stable, indépendante du contenu */}
             <div
@@ -417,7 +417,6 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
 
             {/* Navigation : flèches noires sobres + dots colorés */}
             {(() => {
-              const activeColor = currentCard ? getCategoryColor(currentCard.category) : '#18bbed';
               const navDisabled = locked || cards.length < 2;
               return (
                 <div className="flex items-center justify-center gap-4 md:gap-6 -mt-4 md:-mt-6 w-full px-2 max-w-xl mx-auto relative z-40">
