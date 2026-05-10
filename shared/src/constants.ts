@@ -23,7 +23,9 @@ export const GAME_CONSTANTS = {
   // Timer durations (in seconds)
   TIMERS: {
     QUESTION_SELECTION: 45,
+    SUBSTITUTE_SELECTION: 30,
     ANSWERING: 120,
+    SUBSTITUTE_ANSWERING: 120,
     GUESSING: 120,
   },
 

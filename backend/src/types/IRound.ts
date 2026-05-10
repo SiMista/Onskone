@@ -11,6 +11,9 @@ export interface IRound extends IRoundData {
   submitGuesses(guesses: Record<string, string>): void;
   addBonusScore(playerId: string, points: number): void;
   nextPhase(): void;
+  getGuessingAnswers(): Record<string, string>;
+  setSubstitutePlayer(playerId: string): void;
+  setSubstituteAnswer(answer: string): void;
 }
 
 // Re-export pour compatibilité

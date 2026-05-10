@@ -64,7 +64,23 @@ export interface ServerToClientEvents {
   gameAlreadyStarted: (data: { message: string }) => void;
 
   /** Catalogue des decks disponibles + sélection actuelle du lobby */
-  lobbyDecksState: (data: { catalog: DecksCatalog; selected: SelectedDecks; gameMode: GameMode }) => void;
+  lobbyDecksState: (data: { catalog: DecksCatalog; selected: SelectedDecks; gameMode: GameMode; guessMyAnswerMode: boolean }) => void;
+
+  /** Le mode "Devine ma réponse" a été mis à jour */
+  guessMyAnswerModeUpdated: (data: { guessMyAnswerMode: boolean }) => void;
+
+  /** Un substitut a été sélectionné par le pilier */
+  substituteSelected: (data: {
+    substitutePlayerId: string;
+    phase: RoundPhase;
+    auto?: boolean;
+  }) => void;
+
+  /** Le substitut a soumis sa réponse au nom du pilier */
+  substituteAnswerSubmitted: (data: {
+    phase: RoundPhase;
+    forced?: boolean;
+  }) => void;
 
   /** Réaction emoji d'un joueur diffusée dans le lobby */
   lobbyReaction: (data: {
@@ -262,6 +278,24 @@ export interface ClientToServerEvents {
   updateGameMode: (data: {
     lobbyCode: string;
     gameMode: GameMode;
+  }) => void;
+
+  /** Mettre à jour le mode "Devine ma réponse" (réservé à l'hôte) */
+  updateGuessMyAnswerMode: (data: {
+    lobbyCode: string;
+    guessMyAnswerMode: boolean;
+  }) => void;
+
+  /** Sélectionner le joueur substitut (réservé au pilier, mode "Devine ma réponse") */
+  selectSubstitute: (data: {
+    lobbyCode: string;
+    substitutePlayerId: string;
+  }) => void;
+
+  /** Soumettre la réponse du substitut au nom du pilier */
+  submitSubstituteAnswer: (data: {
+    lobbyCode: string;
+    answer: string;
   }) => void;
 
   /** Envoyer une réaction emoji dans le lobby */

@@ -11,7 +11,7 @@ const ShowScreenFrame: React.FC<ShowScreenFrameProps> = ({ children, showHeading
     <>
       {showHeading && (
         <p className="text-gray-900 text-base md:text-xl font-semibold text-center">
-          Montre ton écran à tout le monde !
+          Montre ton écran !
         </p>
       )}
       <div className="relative isolate w-full max-w-md pt-12 md:pt-16">
