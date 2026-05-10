@@ -76,7 +76,7 @@ export class SocketHandler {
     /**
      * Build reveal results from the current round's answers and guesses
      */
-    private buildRevealResults(lobby: ReturnType<typeof LobbyManager.getLobby>, round: { answers: Record<string, string>; guesses: Record<string, string>; similarityCorrections?: number[] } | null): Array<{
+    private buildRevealResults(lobby: ReturnType<typeof LobbyManager.getLobby>, round: { answers: Record<string, string>; guesses: Record<string, string>; similarityCorrections?: number[]; guessMyAnswerMode?: boolean; substituteAnswer?: string | null; leader?: { id: string } } | null): Array<{
         playerId: string;
         playerName: string;
         playerAvatarId: number;
@@ -90,7 +90,13 @@ export class SocketHandler {
 
         const corrections = round.similarityCorrections || [];
 
-        return Object.entries(round.answers).map(([playerId, answer], index) => {
+        // En mode "Devine ma réponse" inclure la réponse du substitut au nom du pilier
+        const answersForReveal: Record<string, string> = { ...round.answers };
+        if (round.guessMyAnswerMode && round.substituteAnswer && round.leader) {
+            answersForReveal[round.leader.id] = round.substituteAnswer;
+        }
+
+        return Object.entries(answersForReveal).map(([playerId, answer], index) => {
             const guessedPlayerId = round.guesses[playerId];
             const player = lobby.getPlayer(playerId);
             const guessedPlayer = guessedPlayerId ? lobby.getPlayer(guessedPlayerId) : null;
@@ -267,10 +273,16 @@ export class SocketHandler {
 
     /**
      * Handle timer expiration for ANSWERING phase
-     * Adds automatic "no response" answers and moves to GUESSING
+     * Adds automatic "no response" answers and moves to GUESSING (or SUBSTITUTE_ANSWERING in guess mode)
      */
     private handleAnsweringTimeout(lobbyCode: string, lobby: Lobby, currentRound: Round): void {
-        // Add automatic answers for players who didn't respond
+        console.log('[GUESS-DEBUG] handleAnsweringTimeout FIRED', {
+            lobbyCode,
+            phase: currentRound.phase,
+            answersBefore: Object.keys(currentRound.answers),
+            guessMyAnswerMode: currentRound.guessMyAnswerMode,
+        });
+        // Add automatic answers for players who didn't respond (excluding pilier)
         const respondingPlayers = lobby.players.filter(p => p.id !== currentRound.leader.id);
         for (const player of respondingPlayers) {
             if (!currentRound.answers[player.id]) {
@@ -279,26 +291,106 @@ export class SocketHandler {
             }
         }
 
-        // Move to GUESSING phase
+        if (currentRound.guessMyAnswerMode) {
+            // Move to SUBSTITUTE_ANSWERING (substitute now writes pilier's answer)
+            currentRound.nextPhase();
+            this.io.to(lobbyCode).emit('allAnswersSubmitted', {
+                phase: currentRound.phase,
+                answersCount: Object.keys(currentRound.answers).length,
+                forced: true
+            });
+            return;
+        }
+
+        this.transitionToGuessing(lobbyCode, lobby, currentRound, true);
+    }
+
+    /**
+     * Handle timer expiration for SUBSTITUTE_SELECTION phase.
+     * Auto-selects the first eligible player (non-pilier).
+     */
+    private handleSubstituteSelectionTimeout(lobbyCode: string, lobby: Lobby, currentRound: Round): void {
+        console.log('[GUESS-DEBUG] handleSubstituteSelectionTimeout FIRED', {
+            lobbyCode,
+            phase: currentRound.phase,
+            substitutePlayerId: currentRound.substitutePlayerId,
+        });
+        if (currentRound.substitutePlayerId) {
+            currentRound.nextPhase();
+            return;
+        }
+        const candidates = lobby.players.filter(p => p.isActive && p.id !== currentRound.leader.id);
+        if (candidates.length === 0) {
+            logger.warn('Aucun candidat substitut disponible', { lobbyCode });
+            return;
+        }
+        const chosen = candidates[0];
+        currentRound.setSubstitutePlayer(chosen.id);
         currentRound.nextPhase();
+        this.io.to(lobbyCode).emit('substituteSelected', {
+            substitutePlayerId: chosen.id,
+            phase: currentRound.phase,
+            auto: true,
+        });
+        logger.info('Substitut auto-sélectionné', { lobbyCode, substitutePlayerId: chosen.id });
+    }
+
+    /**
+     * Handle timer expiration for SUBSTITUTE_ANSWERING phase.
+     * If substitute hasn't submitted, store empty answer and move to GUESSING.
+     */
+    private handleSubstituteAnsweringTimeout(lobbyCode: string, lobby: Lobby, currentRound: Round): void {
+        if (currentRound.substituteAnswer === null || currentRound.substituteAnswer === undefined) {
+            const substituteName = lobby.players.find(p => p.id === currentRound.substitutePlayerId)?.name ?? 'Substitut';
+            currentRound.setSubstituteAnswer(`__NO_RESPONSE__${substituteName} n'a pas répondu à temps`);
+        }
+        this.io.to(lobbyCode).emit('substituteAnswerSubmitted', {
+            phase: RoundPhase.GUESSING,
+            forced: true,
+        });
+        this.transitionToGuessing(lobbyCode, lobby, currentRound, true);
+    }
+
+    /**
+     * Centralised transition to GUESSING phase: advance phase, build pool (incl. substitute answer),
+     * shuffle, store ids, and broadcast events.
+     */
+    private transitionToGuessing(lobbyCode: string, lobby: Lobby, currentRound: Round, forced: boolean): void {
+        const phaseBefore = currentRound.phase;
+        currentRound.nextPhase();
+        const answersPool = currentRound.getGuessingAnswers();
+        console.log('[GUESS-DEBUG] transitionToGuessing', {
+            lobbyCode,
+            phaseBefore,
+            phaseAfter: currentRound.phase,
+            forced,
+            answersKeys: Object.keys(currentRound.answers),
+            substituteAnswer: currentRound.substituteAnswer,
+            poolKeys: Object.keys(answersPool),
+            poolSize: Object.keys(answersPool).length,
+            leaderId: currentRound.leader.id,
+            substitutePlayerId: currentRound.substitutePlayerId,
+            guessMyAnswerMode: currentRound.guessMyAnswerMode,
+        });
         this.io.to(lobbyCode).emit('allAnswersSubmitted', {
             phase: currentRound.phase,
-            answersCount: Object.keys(currentRound.answers).length,
-            forced: true
+            answersCount: Object.keys(answersPool).length,
+            forced,
         });
-
-        // Send shuffled answers to all players
-        const answersArray = Object.entries(currentRound.answers).map(([playerId, answer]) => ({
+        const answersArray = Object.entries(answersPool).map(([playerId, answer]) => ({
             id: playerId,
-            text: answer
+            text: answer,
         }));
         const shuffledAnswers = shuffleArray(answersArray);
-        // Stocker l'ordre des réponses mélangées pour la reconnexion
         currentRound.shuffledAnswerIds = shuffledAnswers.map(a => a.id);
+        // En mode "Devine ma réponse" le pilier est aussi une cible draggable
+        const targetPlayers = currentRound.guessMyAnswerMode
+            ? lobby.players
+            : lobby.players.filter(p => p.id !== currentRound.leader.id);
         this.io.to(lobbyCode).emit('shuffledAnswersReceived', {
             answers: shuffledAnswers,
-            players: lobby.players.filter(p => p.id !== currentRound.leader.id),
-            roundNumber: currentRound.roundNumber
+            players: targetPlayers,
+            roundNumber: currentRound.roundNumber,
         });
     }
 
@@ -357,6 +449,7 @@ export class SocketHandler {
                         catalog: GameManager.getDecksCatalog(),
                         selected: lobby!.selectedDecks,
                         gameMode: lobby!.gameMode,
+                        guessMyAnswerMode: lobby!.guessMyAnswerMode,
                     });
                     logger.game.created(lobbyCode, sanitizedName);
                 } catch (error) {
@@ -422,13 +515,14 @@ export class SocketHandler {
                             catalog: GameManager.getDecksCatalog(),
                             selected: lobby.selectedDecks,
                             gameMode: lobby.gameMode,
+                            guessMyAnswerMode: lobby.guessMyAnswerMode,
                         });
                         this.io.to(lobby.code).emit('updatePlayersList', { players: lobby.players });
 
                         // Si une partie est en cours, envoyer gameStarted pour rediriger vers la page de jeu
                         if (lobby.game && lobby.game.status === 'IN_PROGRESS') {
                             const gameData = {
-                                lobby: { code: lobby.code, players: lobby.players, selectedDecks: lobby.selectedDecks, gameMode: lobby.gameMode },
+                                lobby: { code: lobby.code, players: lobby.players, selectedDecks: lobby.selectedDecks, gameMode: lobby.gameMode, guessMyAnswerMode: lobby.guessMyAnswerMode },
                                 currentRound: lobby.game.currentRound,
                                 status: lobby.game.status,
                                 rounds: lobby.game.rounds
@@ -476,13 +570,14 @@ export class SocketHandler {
                                 catalog: GameManager.getDecksCatalog(),
                                 selected: lobby.selectedDecks,
                                 gameMode: lobby.gameMode,
+                                guessMyAnswerMode: lobby.guessMyAnswerMode,
                             });
                             this.io.to(lobby.code).emit('updatePlayersList', { players: lobby.players });
 
                             // Si une partie est en cours, envoyer gameStarted pour rediriger vers la page de jeu
                             if (lobby.game && lobby.game.status === 'IN_PROGRESS') {
                                 const gameData = {
-                                    lobby: { code: lobby.code, players: lobby.players, selectedDecks: lobby.selectedDecks, gameMode: lobby.gameMode },
+                                    lobby: { code: lobby.code, players: lobby.players, selectedDecks: lobby.selectedDecks, gameMode: lobby.gameMode, guessMyAnswerMode: lobby.guessMyAnswerMode },
                                     currentRound: lobby.game.currentRound,
                                     status: lobby.game.status,
                                     rounds: lobby.game.rounds
@@ -515,6 +610,7 @@ export class SocketHandler {
                         catalog: GameManager.getDecksCatalog(),
                         selected: lobby.selectedDecks,
                         gameMode: lobby.gameMode,
+                        guessMyAnswerMode: lobby.guessMyAnswerMode,
                     });
                     this.io.to(lobby.code).emit('updatePlayersList', { players: lobby.players });
                     logger.info(`${sanitizedName} a rejoint le lobby ${lobby.code}`, { playerCount: lobby.players.length });
@@ -595,6 +691,7 @@ export class SocketHandler {
                         catalog: GameManager.getDecksCatalog(),
                         selected: lobby.selectedDecks,
                         gameMode: lobby.gameMode,
+                        guessMyAnswerMode: lobby.guessMyAnswerMode,
                     });
                 } catch (error) {
                     logger.error('Error updating selected decks', { error: (error as Error).message });
@@ -640,9 +737,59 @@ export class SocketHandler {
                         catalog: GameManager.getDecksCatalog(),
                         selected: lobby.selectedDecks,
                         gameMode: lobby.gameMode,
+                        guessMyAnswerMode: lobby.guessMyAnswerMode,
                     });
                 } catch (error) {
                     logger.error('Error updating game mode', { error: (error as Error).message });
+                    socket.emit('error', { message: (error as Error).message });
+                }
+            });
+
+            // Update Guess My Answer Mode (host only)
+            socket.on('updateGuessMyAnswerMode', (data) => {
+                try {
+                    if (!rateLimiters.general.isAllowed(socket.id)) {
+                        socket.emit('error', { message: 'Trop de requêtes. Veuillez patienter.' });
+                        return;
+                    }
+
+                    const codeValidation = validateLobbyCode(data.lobbyCode);
+                    if (!codeValidation.isValid) {
+                        socket.emit('error', { message: codeValidation.error || 'Code invalide' });
+                        return;
+                    }
+
+                    const lobby = LobbyManager.getLobby(data.lobbyCode);
+                    if (!lobby) {
+                        socket.emit('error', { message: 'Salon introuvable' });
+                        return;
+                    }
+
+                    const host = lobby.players.find(p => p.isHost);
+                    if (!host || host.socketId !== socket.id) {
+                        socket.emit('error', { message: "Seul l'hôte peut modifier ce mode" });
+                        return;
+                    }
+
+                    if (lobby.game && lobby.game.status === 'IN_PROGRESS') {
+                        socket.emit('error', { message: 'La partie est déjà en cours' });
+                        return;
+                    }
+
+                    lobby.guessMyAnswerMode = !!data.guessMyAnswerMode;
+                    lobby.updateActivity();
+
+                    this.io.to(lobby.code).emit('lobbyDecksState', {
+                        catalog: GameManager.getDecksCatalog(),
+                        selected: lobby.selectedDecks,
+                        gameMode: lobby.gameMode,
+                        guessMyAnswerMode: lobby.guessMyAnswerMode,
+                    });
+                    this.io.to(lobby.code).emit('guessMyAnswerModeUpdated', {
+                        guessMyAnswerMode: lobby.guessMyAnswerMode,
+                    });
+                } catch (error) {
+                    logger.error('Error updating guess my answer mode', { error: (error as Error).message });
                     socket.emit('error', { message: (error as Error).message });
                 }
             });
@@ -964,7 +1111,8 @@ export class SocketHandler {
                             code: lobby.code,
                             players: lobby.players,
                             selectedDecks: lobby.selectedDecks,
-                            gameMode: lobby.gameMode
+                            gameMode: lobby.gameMode,
+                            guessMyAnswerMode: lobby.guessMyAnswerMode
                         },
                         currentRound: game.currentRound,
                         status: game.status,
@@ -1253,7 +1401,8 @@ export class SocketHandler {
                             code: lobby.code,
                             players: lobby.players,
                             selectedDecks: lobby.selectedDecks,
-                            gameMode: lobby.gameMode
+                            gameMode: lobby.gameMode,
+                            guessMyAnswerMode: lobby.guessMyAnswerMode
                         },
                         currentRound: game.currentRound,
                         status: game.status,
@@ -1382,6 +1531,13 @@ export class SocketHandler {
 
                     // Ajouter la réponse
                     game.currentRound.addAnswer(data.playerId, sanitizedAnswer);
+                    console.log('[GUESS-DEBUG] submitAnswer', {
+                        lobbyCode: data.lobbyCode,
+                        playerId: data.playerId,
+                        playerName: player.name,
+                        phase: game.currentRound.phase,
+                        answersAfter: Object.keys(game.currentRound.answers),
+                    });
 
                     // Joueurs actifs qui doivent répondre (tous sauf le pilier)
                     const respondingPlayers = lobby.players.filter(p => p.isActive && p.id !== game.currentRound!.leader.id);
@@ -1408,32 +1564,145 @@ export class SocketHandler {
                             }
                         }
 
-                        // Tous les joueurs actifs ont répondu, passer à la phase GUESSING
-                        game.currentRound.nextPhase();
-                        this.io.to(data.lobbyCode).emit('allAnswersSubmitted', {
-                            phase: game.currentRound.phase,
-                            answersCount: Object.keys(game.currentRound.answers).length
-                        });
-
-                        // Automatiquement envoyer les réponses mélangées à tous les joueurs
-                        const answersArray = Object.entries(game.currentRound.answers).map(([playerId, answer]) => ({
-                            id: playerId,
-                            text: answer
-                        }));
-                        const shuffledAnswers = shuffleArray(answersArray);
-                        // Stocker l'ordre des réponses mélangées pour la reconnexion
-                        game.currentRound.shuffledAnswerIds = shuffledAnswers.map(a => a.id);
-                        this.io.to(data.lobbyCode).emit('shuffledAnswersReceived', {
-                            answers: shuffledAnswers,
-                            players: lobby.players.filter(p => p.id !== game.currentRound!.leader.id),
-                            roundNumber: game.currentRound.roundNumber
-                        });
-
-                        logger.info(`Toutes les réponses soumises, passage à GUESSING`, { lobbyCode: data.lobbyCode });
+                        const round = game.currentRound as Round;
+                        if (round.guessMyAnswerMode) {
+                            // En mode "Devine ma réponse" : passer à SUBSTITUTE_ANSWERING (le substitut écrit pour le pilier)
+                            round.nextPhase();
+                            this.io.to(data.lobbyCode).emit('allAnswersSubmitted', {
+                                phase: round.phase,
+                                answersCount: Object.keys(round.answers).length
+                            });
+                            logger.info(`Toutes les réponses des autres joueurs soumises, passage à SUBSTITUTE_ANSWERING`, { lobbyCode: data.lobbyCode });
+                        } else {
+                            this.transitionToGuessing(data.lobbyCode, lobby, round, false);
+                            logger.info(`Toutes les réponses soumises, passage à GUESSING`, { lobbyCode: data.lobbyCode });
+                        }
                     }
                 } catch (error) {
                     logger.error('Error submitting answer', { error: (error as Error).message });
                     socket.emit('error', {message: (error as Error).message});
+                }
+            });
+
+            // Select Substitute (Pilier choisit le joueur qui répondra pour lui en mode "Devine ma réponse")
+            socket.on('selectSubstitute', (data) => {
+                try {
+                    if (!rateLimiters.gameAction.isAllowed(socket.id)) {
+                        socket.emit('error', { message: 'Trop de requêtes. Veuillez patienter.' });
+                        return;
+                    }
+
+                    const lobby = LobbyManager.getLobby(data.lobbyCode);
+                    const game = lobby?.game;
+                    if (!this.requireLeader(socket, game, 'choisir le substitut')) return;
+                    const currentRound = game!.currentRound! as Round;
+
+                    if (!currentRound.guessMyAnswerMode) {
+                        socket.emit('error', { message: 'Mode "Devine ma réponse" inactif' });
+                        return;
+                    }
+                    if (currentRound.phase !== RoundPhase.SUBSTITUTE_SELECTION) {
+                        socket.emit('error', { message: 'Phase incorrecte pour cette action' });
+                        return;
+                    }
+
+                    const playerIdValidation = validatePlayerId(data.substitutePlayerId);
+                    if (!playerIdValidation.isValid) {
+                        socket.emit('error', { message: playerIdValidation.error || 'ID joueur invalide' });
+                        return;
+                    }
+
+                    const substitute = lobby!.getPlayer(data.substitutePlayerId);
+                    if (!substitute || !substitute.isActive) {
+                        socket.emit('error', { message: 'Joueur substitut introuvable ou inactif' });
+                        return;
+                    }
+                    if (substitute.id === currentRound.leader.id) {
+                        socket.emit('error', { message: 'Le pilier ne peut pas être son propre substitut' });
+                        return;
+                    }
+
+                    currentRound.setSubstitutePlayer(substitute.id);
+                    currentRound.nextPhase();
+                    console.log('[GUESS-DEBUG] selectSubstitute → phase advanced', {
+                        lobbyCode: data.lobbyCode,
+                        substitutePlayerId: substitute.id,
+                        newPhase: currentRound.phase,
+                        timerPhase: currentRound.timerPhase,
+                    });
+                    this.io.to(data.lobbyCode).emit('substituteSelected', {
+                        substitutePlayerId: substitute.id,
+                        phase: currentRound.phase,
+                    });
+                    logger.info('Substitut sélectionné', { lobbyCode: data.lobbyCode, substitutePlayerId: substitute.id });
+                } catch (error) {
+                    logger.error('Error selecting substitute', { error: (error as Error).message });
+                    socket.emit('error', { message: (error as Error).message });
+                }
+            });
+
+            // Submit Substitute Answer (le substitut soumet la réponse au nom du pilier)
+            socket.on('submitSubstituteAnswer', (data) => {
+                try {
+                    if (!rateLimiters.submitAnswer.isAllowed(socket.id)) {
+                        socket.emit('error', { message: 'Trop de requêtes. Veuillez patienter.' });
+                        return;
+                    }
+
+                    const answerValidation = validateAnswer(data.answer);
+                    if (!answerValidation.isValid) {
+                        socket.emit('error', { message: answerValidation.error || 'Réponse invalide' });
+                        return;
+                    }
+
+                    const sanitizedAnswer = sanitizeInput(data.answer);
+                    const lobby = LobbyManager.getLobby(data.lobbyCode);
+                    const game = lobby?.game;
+                    if (!game || !game.currentRound) {
+                        socket.emit('error', { message: 'Partie introuvable' });
+                        return;
+                    }
+                    const currentRound = game.currentRound as Round;
+
+                    if (!currentRound.guessMyAnswerMode) {
+                        socket.emit('error', { message: 'Mode "Devine ma réponse" inactif' });
+                        return;
+                    }
+                    if (currentRound.phase !== RoundPhase.SUBSTITUTE_ANSWERING) {
+                        socket.emit('error', { message: 'Phase incorrecte pour cette action' });
+                        return;
+                    }
+                    if (!currentRound.substitutePlayerId) {
+                        socket.emit('error', { message: 'Aucun substitut désigné' });
+                        return;
+                    }
+
+                    const substitute = lobby!.getPlayer(currentRound.substitutePlayerId);
+                    if (!substitute || substitute.socketId !== socket.id) {
+                        socket.emit('error', { message: 'Seul le substitut peut soumettre cette réponse' });
+                        return;
+                    }
+                    if (currentRound.substituteAnswer) {
+                        socket.emit('error', { message: 'Réponse déjà soumise' });
+                        return;
+                    }
+
+                    currentRound.setSubstituteAnswer(sanitizedAnswer);
+                    console.log('[GUESS-DEBUG] submitSubstituteAnswer', {
+                        lobbyCode: data.lobbyCode,
+                        substitutePlayerId: currentRound.substitutePlayerId,
+                        substituteAnswer: sanitizedAnswer,
+                        phase: currentRound.phase,
+                        answersBeforeTransition: Object.keys(currentRound.answers),
+                    });
+                    this.io.to(data.lobbyCode).emit('substituteAnswerSubmitted', {
+                        phase: RoundPhase.GUESSING,
+                    });
+                    this.transitionToGuessing(data.lobbyCode, lobby!, currentRound, false);
+                    logger.info('Réponse du substitut soumise, passage à GUESSING', { lobbyCode: data.lobbyCode });
+                } catch (error) {
+                    logger.error('Error submitting substitute answer', { error: (error as Error).message });
+                    socket.emit('error', { message: (error as Error).message });
                 }
             });
 
@@ -1454,7 +1723,9 @@ export class SocketHandler {
                     }
 
                     // Créer un tableau de réponses avec leurs IDs (playerId)
-                    const answersArray = Object.entries(game.currentRound.answers).map(([playerId, answer]) => ({
+                    // En mode "Devine ma réponse" inclure la réponse du substitut au nom du pilier
+                    const answersPool = (game.currentRound as Round).getGuessingAnswers();
+                    const answersArray = Object.entries(answersPool).map(([playerId, answer]) => ({
                         id: playerId,
                         text: answer
                     }));
@@ -1475,9 +1746,12 @@ export class SocketHandler {
                     }
 
                     // En mode remote, broadcaster à toute la room; sinon seulement au pilier
+                    const targetPlayers = (game.currentRound as Round).guessMyAnswerMode
+                        ? lobby.players
+                        : lobby.players.filter(p => p.id !== game.currentRound!.leader.id);
                     const shuffledPayload = {
                         answers: orderedAnswers,
-                        players: lobby.players.filter(p => p.id !== game.currentRound!.leader.id),
+                        players: targetPlayers,
                         roundNumber: game.currentRound.roundNumber
                     };
                     if (lobby.gameMode === 'remote') {
@@ -1544,11 +1818,16 @@ export class SocketHandler {
                     const currentRound = game!.currentRound!;
 
                     // Valider et filtrer les guesses (Sets pour lookups O(1))
-                    const answerIds = new Set(Object.keys(currentRound.answers));
+                    // En mode "Devine ma réponse" : la réponse du substitut (clé = leader.id) est un answer
+                    // valide ET le pilier est une cible draggable valide.
+                    const round = currentRound as Round;
+                    const answerIds = new Set(Object.keys(round.getGuessingAnswers()));
                     const playerIds = new Set(
-                        lobby.players
-                            .filter(p => p.id !== currentRound.leader.id)
-                            .map(p => p.id)
+                        round.guessMyAnswerMode
+                            ? lobby.players.map(p => p.id)
+                            : lobby.players
+                                  .filter(p => p.id !== currentRound.leader.id)
+                                  .map(p => p.id)
                     );
 
                     const validGuesses: Record<string, string> = {};
@@ -1798,6 +2077,12 @@ export class SocketHandler {
                     currentRound.timerStartedAt = startedAt;
                     currentRound.timerDuration = timerDuration;
                     currentRound.timerPhase = currentRound.phase; // Pour éviter les conflits entre phases
+                    console.log('[GUESS-DEBUG] startTimer set timerPhase', {
+                        lobbyCode: data.lobbyCode,
+                        timerPhase: currentRound.timerPhase,
+                        requestedPhase,
+                        duration: timerDuration,
+                    });
 
                     // Broadcaster le démarrage du timer à tous
                     this.io.to(data.lobbyCode).emit('timerStarted', {
@@ -1876,6 +2161,12 @@ export class SocketHandler {
                     // Protection : vérifier que le timer qui expire correspond bien à la phase actuelle
                     // Ex: si le timer ANSWERING expire mais que la phase a déjà avancé à GUESSING
                     // (car le dernier joueur a soumis sa réponse juste avant), on ignore
+                    console.log('[GUESS-DEBUG] timerExpired received', {
+                        lobbyCode: data.lobbyCode,
+                        currentPhase,
+                        timerPhase: currentRound.timerPhase,
+                        timerProcessedForPhase: currentRound.timerProcessedForPhase,
+                    });
                     if (currentRound.timerPhase && currentRound.timerPhase !== currentPhase) {
                         logger.debug(`Timer ignoré: démarré pour ${currentRound.timerPhase} mais phase actuelle est ${currentPhase}`);
                         return;
@@ -1898,8 +2189,14 @@ export class SocketHandler {
                         case 'QUESTION_SELECTION':
                             this.handleQuestionSelectionTimeout(data.lobbyCode, currentRound as Round);
                             break;
+                        case 'SUBSTITUTE_SELECTION':
+                            this.handleSubstituteSelectionTimeout(data.lobbyCode, lobby, currentRound as Round);
+                            break;
                         case 'ANSWERING':
                             this.handleAnsweringTimeout(data.lobbyCode, lobby, currentRound as Round);
+                            break;
+                        case 'SUBSTITUTE_ANSWERING':
+                            this.handleSubstituteAnsweringTimeout(data.lobbyCode, lobby, currentRound as Round);
                             break;
                         case 'GUESSING':
                             this.handleGuessingTimeout(data.lobbyCode, lobby, game as Game, currentRound as Round);

@@ -304,7 +304,7 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
 
         <div className="flex flex-col items-center gap-3 md:gap-4 pt-6 md:pt-12 pb-3 px-2 max-md:landscape:gap-2 max-md:landscape:pt-2">
           <p className="text-gray-900 text-sm md:text-xl font-semibold text-center max-md:landscape:text-xs shrink-0 -translate-x-4 md:-translate-x-8 max-md:landscape:-translate-x-2">
-            Montre ton écran à tout le monde !
+            Montre ton écran !
           </p>
 
           <div className="w-full flex flex-row items-center justify-center gap-3 md:gap-4">
@@ -462,40 +462,40 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
                               {getDisplayText(answer.text)}
                             </p>
                             {isLeader && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRemoveGuess(answer.id);
-                              }}
-                              className="ml-1.5 md:ml-2 shrink-0 flex items-center justify-center group"
-                              aria-label="Retirer"
-                            >
-                              <svg
-                                width="22"
-                                height="22"
-                                viewBox="0 0 24 24"
-                                className="transition-transform group-active:translate-x-[1px] group-active:translate-y-[1px]"
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRemoveGuess(answer.id);
+                                }}
+                                className="ml-1.5 md:ml-2 shrink-0 flex items-center justify-center group"
+                                aria-label="Retirer"
                               >
-                                {/* Bordure noire (tracée en premier, plus épaisse) */}
-                                <path
-                                  d="M6 6 L18 18 M18 6 L6 18"
-                                  stroke="black"
-                                  strokeWidth="7"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  fill="none"
-                                />
-                                {/* Croix rouge par-dessus */}
-                                <path
-                                  d="M6 6 L18 18 M18 6 L6 18"
-                                  stroke="#ef4444"
-                                  strokeWidth="3.5"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  fill="none"
-                                />
-                              </svg>
-                            </button>
+                                <svg
+                                  width="22"
+                                  height="22"
+                                  viewBox="0 0 24 24"
+                                  className="transition-transform group-active:translate-x-[1px] group-active:translate-y-[1px]"
+                                >
+                                  {/* Bordure noire (tracée en premier, plus épaisse) */}
+                                  <path
+                                    d="M6 6 L18 18 M18 6 L6 18"
+                                    stroke="black"
+                                    strokeWidth="7"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    fill="none"
+                                  />
+                                  {/* Croix rouge par-dessus */}
+                                  <path
+                                    d="M6 6 L18 18 M18 6 L6 18"
+                                    stroke="#ef4444"
+                                    strokeWidth="3.5"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    fill="none"
+                                  />
+                                </svg>
+                              </button>
                             )}
                           </div>
                         );

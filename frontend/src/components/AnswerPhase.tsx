@@ -5,7 +5,7 @@ import HourglassTimer from './HourglassTimer';
 import Avatar from './Avatar';
 import QuestionCard from './QuestionCard';
 import Button from './Button';
-import { GAME_CONFIG, getCategoryColor } from '../constants/game';
+import { GAME_CONFIG } from '../constants/game';
 import { IPlayer, RoundPhase, GameCard } from '@onskone/shared';
 import { playSound } from '../utils/sounds';
 
@@ -41,7 +41,6 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
     : leaderName
       ? `Question posée par ${leaderName}`
       : '';
-  const cardColor = card ? getCategoryColor(card.category) : '#18bbed';
   const [answer, setAnswer] = useState(initialMyAnswer || '');
   const [submitted, setSubmitted] = useState(!!initialMyAnswer);
   const [stage, setStage] = useState<SubmitStage>(initialMyAnswer ? 'done' : 'idle');
@@ -167,7 +166,7 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
               <circle
                 cx="50" cy="50" r="42"
                 fill="none"
-                stroke={cardColor}
+                stroke="#22c55e"
                 strokeWidth="8"
                 strokeLinecap="round"
                 strokeDasharray={ringCircumference}

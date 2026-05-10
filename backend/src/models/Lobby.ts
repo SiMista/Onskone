@@ -9,6 +9,7 @@ export class Lobby implements ILobby {
     lastActivity: Date;
     selectedDecks: SelectedDecks;
     gameMode: GameMode;
+    guessMyAnswerMode: boolean;
 
     constructor(lobbyCode: string) {
         this.code = lobbyCode;
@@ -17,6 +18,7 @@ export class Lobby implements ILobby {
         this.lastActivity = new Date();
         this.selectedDecks = getDefaultSelectedDecks();
         this.gameMode = 'local';
+        this.guessMyAnswerMode = false;
     }
 
     updateActivity(): void {

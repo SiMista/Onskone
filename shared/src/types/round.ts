@@ -7,8 +7,14 @@ export enum RoundPhase {
   /** Le pilier sélectionne une question parmi 3 */
   QUESTION_SELECTION = 'QUESTION_SELECTION',
 
+  /** Le pilier choisit le joueur qui répondra à sa place (mode "Devine ma réponse") */
+  SUBSTITUTE_SELECTION = 'SUBSTITUTE_SELECTION',
+
   /** Les joueurs (sauf le pilier) répondent à la question */
   ANSWERING = 'ANSWERING',
+
+  /** Le substitut écrit la réponse qu'il imagine pour le pilier (mode "Devine ma réponse") */
+  SUBSTITUTE_ANSWERING = 'SUBSTITUTE_ANSWERING',
 
   /** Le pilier devine qui a écrit quelle réponse */
   GUESSING = 'GUESSING',
@@ -97,4 +103,13 @@ export interface IRound {
 
   /** Indices des réponses corrigées par similarité */
   similarityCorrections?: number[];
+
+  /** Mode "Devine ma réponse" actif pour ce round (snapshot du lobby au moment du round) */
+  guessMyAnswerMode?: boolean;
+
+  /** ID du joueur substitut désigné par le pilier (mode "Devine ma réponse") */
+  substitutePlayerId?: string | null;
+
+  /** Réponse écrite par le substitut au nom du pilier (mode "Devine ma réponse") */
+  substituteAnswer?: string | null;
 }

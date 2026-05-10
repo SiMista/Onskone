@@ -6,6 +6,8 @@ import QuestionSelection from '../components/QuestionSelection';
 import AnswerPhase from '../components/AnswerPhase';
 import GuessingPhase from '../components/GuessingPhase';
 import RevealPhase from '../components/RevealPhase';
+import SubstituteSelection from '../components/SubstituteSelection';
+import SubstituteAnsweringPhase from '../components/SubstituteAnsweringPhase';
 import Logo from '../components/Logo';
 import HourglassTimer from '../components/HourglassTimer';
 import { GAME_CONFIG } from '../constants/game';
@@ -143,6 +145,27 @@ const GamePage: React.FC = () => {
       } : null);
     });
 
+    socket.on('substituteSelected', (data: { substitutePlayerId: string; phase: RoundPhase; auto?: boolean }) => {
+      setGame(prev => prev ? {
+        ...prev,
+        currentRound: prev.currentRound ? {
+          ...prev.currentRound,
+          substitutePlayerId: data.substitutePlayerId,
+          phase: data.phase
+        } : null
+      } : null);
+    });
+
+    socket.on('substituteAnswerSubmitted', (data: { phase: RoundPhase; forced?: boolean }) => {
+      setGame(prev => prev ? {
+        ...prev,
+        currentRound: prev.currentRound ? {
+          ...prev.currentRound,
+          phase: data.phase
+        } : null
+      } : null);
+    });
+
     socket.on('revealResults', (data: { phase: RoundPhase; results: RevealResult[]; scores: Record<string, number> }) => {
       setGame(prev => prev ? {
         ...prev,
@@ -181,7 +204,8 @@ const GamePage: React.FC = () => {
             code: lobbyCode || '',
             players: players,
             selectedDecks: {},
-            gameMode: 'local'
+            gameMode: 'local',
+            guessMyAnswerMode: false
           };
           return {
             lobby: minimalLobby,
@@ -217,6 +241,8 @@ const GamePage: React.FC = () => {
       socket.off('gameStarted');
       socket.off('questionSelected');
       socket.off('allAnswersSubmitted');
+      socket.off('substituteSelected');
+      socket.off('substituteAnswerSubmitted');
       socket.off('revealResults');
       socket.off('roundSkipped');
       socket.off('roundStarted');
@@ -259,6 +285,35 @@ const GamePage: React.FC = () => {
             lobbyCode={lobbyCode!}
             isLeader={isLeader}
             leaderName={game.currentRound.leader.name}
+          />
+        );
+
+      case RoundPhase.SUBSTITUTE_SELECTION:
+        return (
+          <SubstituteSelection
+            key={`substitute-selection-${game.currentRound.roundNumber}`}
+            lobbyCode={lobbyCode!}
+            isLeader={isLeader}
+            leaderName={game.currentRound.leader.name}
+            leaderId={game.currentRound.leader.id}
+            players={players}
+            question={game.currentRound.selectedQuestion || ''}
+            card={game.currentRound.gameCard}
+          />
+        );
+
+      case RoundPhase.SUBSTITUTE_ANSWERING:
+        return (
+          <SubstituteAnsweringPhase
+            key={`substitute-answering-${game.currentRound.roundNumber}`}
+            lobbyCode={lobbyCode!}
+            question={game.currentRound.selectedQuestion || ''}
+            card={game.currentRound.gameCard}
+            currentPlayerId={currentPlayer.id}
+            players={players}
+            leaderId={game.currentRound.leader.id}
+            substitutePlayerId={game.currentRound.substitutePlayerId}
+            gameMode={gameMode}
           />
         );
 
@@ -313,7 +368,7 @@ const GamePage: React.FC = () => {
         );
 
       default:
-        return <div className="text-white">Phase inconnue</div>;
+        return <div className="text-red-600 font-bold p-4">Phase inconnue: {String(phase)}</div>;
     }
   };
 
@@ -347,6 +402,8 @@ const GamePage: React.FC = () => {
       <div
         className={`flex-1 w-full max-w-4xl mx-auto px-2 pb-7 md:pb-10 flex flex-col md:pt-0 ${
           (game?.currentRound?.phase === RoundPhase.GUESSING ||
+           game?.currentRound?.phase === RoundPhase.SUBSTITUTE_SELECTION ||
+           game?.currentRound?.phase === RoundPhase.SUBSTITUTE_ANSWERING ||
            (game?.currentRound?.phase === RoundPhase.QUESTION_SELECTION && isLeader))
             ? 'pt-0'
             : 'pt-[5vh]'
@@ -370,7 +427,9 @@ const GamePage: React.FC = () => {
               const phase = game?.currentRound?.phase;
               const phaseDuration =
                 phase === RoundPhase.QUESTION_SELECTION ? GAME_CONFIG.TIMERS.QUESTION_SELECTION :
+                phase === RoundPhase.SUBSTITUTE_SELECTION ? GAME_CONFIG.TIMERS.SUBSTITUTE_SELECTION :
                 phase === RoundPhase.ANSWERING ? GAME_CONFIG.TIMERS.ANSWERING :
+                phase === RoundPhase.SUBSTITUTE_ANSWERING ? GAME_CONFIG.TIMERS.SUBSTITUTE_ANSWERING :
                 phase === RoundPhase.GUESSING ? GAME_CONFIG.TIMERS.GUESSING :
                 null;
               if (!phase || phaseDuration === null) return <div className="w-[56px]" aria-hidden />;

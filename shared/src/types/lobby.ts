@@ -19,4 +19,7 @@ export interface ILobby {
 
   /** Mode de jeu : 'local' (même pièce) ou 'remote' (à distance) */
   gameMode: GameMode;
+
+  /** Mode "Devine ma réponse" : le pilier ne répond pas, un substitut écrit pour lui */
+  guessMyAnswerMode: boolean;
 }

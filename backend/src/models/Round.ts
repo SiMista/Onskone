@@ -22,8 +22,11 @@ export class Round implements IRound {
     proposedCards: GameCard[]; // Les 3 cartes proposées au pilier pour la sélection
     shownGameCards: GameCard[]; // Cartes déjà montrées au pilier (pour éviter les doublons)
     shuffledAnswerIds: string[]; // Ordre des réponses mélangées pour la reconnexion
+    guessMyAnswerMode: boolean; // Mode "Devine ma réponse" actif pour ce round
+    substitutePlayerId: string | null; // Joueur substitut désigné par le pilier
+    substituteAnswer: string | null; // Réponse écrite par le substitut au nom du pilier
 
-    constructor(roundNumber: number, leader: IPlayer, gameCard: GameCard) {
+    constructor(roundNumber: number, leader: IPlayer, gameCard: GameCard, guessMyAnswerMode: boolean = false) {
         this.roundNumber = roundNumber;
         this.leader = leader;
         this.gameCard = gameCard;
@@ -44,6 +47,9 @@ export class Round implements IRound {
         this.proposedCards = [];
         this.shownGameCards = [];
         this.shuffledAnswerIds = [];
+        this.guessMyAnswerMode = guessMyAnswerMode;
+        this.substitutePlayerId = null;
+        this.substituteAnswer = null;
     }
 
     addAnswer(playerId: string, answer: string): void {
@@ -67,24 +73,56 @@ export class Round implements IRound {
     }
 
     nextPhase(): void {
-        const phases = [
-            RoundPhase.QUESTION_SELECTION,
-            RoundPhase.ANSWERING,
-            RoundPhase.GUESSING,
-            RoundPhase.REVEAL
-        ];
+        const phases = this.guessMyAnswerMode
+            ? [
+                RoundPhase.QUESTION_SELECTION,
+                RoundPhase.SUBSTITUTE_SELECTION,
+                RoundPhase.ANSWERING,
+                RoundPhase.SUBSTITUTE_ANSWERING,
+                RoundPhase.GUESSING,
+                RoundPhase.REVEAL
+            ]
+            : [
+                RoundPhase.QUESTION_SELECTION,
+                RoundPhase.ANSWERING,
+                RoundPhase.GUESSING,
+                RoundPhase.REVEAL
+            ];
         const currentIndex = phases.indexOf(this.phase);
         if (currentIndex < phases.length - 1) {
             this.phase = phases[currentIndex + 1];
         }
     }
 
+    /**
+     * Pool de réponses utilisé pour la phase GUESSING.
+     * En mode "Devine ma réponse", inclut la réponse du substitut associée à l'id du pilier.
+     */
+    getGuessingAnswers(): Record<string, string> {
+        const pool: Record<string, string> = { ...this.answers };
+        if (this.guessMyAnswerMode && this.substituteAnswer) {
+            pool[this.leader.id] = this.substituteAnswer;
+        }
+        return pool;
+    }
+
+    setSubstitutePlayer(playerId: string): void {
+        this.substitutePlayerId = playerId;
+    }
+
+    setSubstituteAnswer(answer: string): void {
+        this.substituteAnswer = answer;
+    }
+
     calculateScores(): void {
         // Seul le pilier gagne des points : +1 par bonne attribution
         let chiefScore = 0;
 
+        // En mode "Devine ma réponse", le pool inclut la réponse du substitut au nom du pilier
+        const answers = this.getGuessingAnswers();
+
         // Pour chaque réponse, vérifier si le pilier a correctement deviné le joueur
-        for (const playerId of Object.keys(this.answers)) {
+        for (const playerId of Object.keys(answers)) {
             const guessedPlayerId = this.guesses[playerId];
 
             if (guessedPlayerId === playerId) {

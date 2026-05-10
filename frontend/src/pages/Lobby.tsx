@@ -39,6 +39,7 @@ const Lobby = () => {
     const [selectedDecks, setSelectedDecks] = useState<SelectedDecks>({});
     const [lobbyTab, setLobbyTab] = useState<'settings' | 'players'>('settings');
     const [gameMode, setGameMode] = useState<GameMode>('local');
+    const [guessMyAnswerMode, setGuessMyAnswerMode] = useState<boolean>(false);
     const initialPlayerIdsRef = useRef<Set<string> | null>(null);
     const prevHostIdRef = useRef<string | null>(null);
     const [playerName] = useState<string>(() => {
@@ -264,11 +265,22 @@ const Lobby = () => {
         setShowGameAlreadyStarted(true);
     }, []);
 
-    const handleLobbyDecksState = useCallback((data: { catalog: DecksCatalog; selected: SelectedDecks; gameMode: GameMode }) => {
+    const handleLobbyDecksState = useCallback((data: { catalog: DecksCatalog; selected: SelectedDecks; gameMode: GameMode; guessMyAnswerMode?: boolean }) => {
         setDecksCatalog(data.catalog);
         setSelectedDecks(data.selected);
         setGameMode(data.gameMode);
+        setGuessMyAnswerMode(!!data.guessMyAnswerMode);
     }, []);
+
+    const handleGuessMyAnswerModeUpdated = useCallback((data: { guessMyAnswerMode: boolean }) => {
+        setGuessMyAnswerMode(!!data.guessMyAnswerMode);
+    }, []);
+
+    const handleGuessMyAnswerModeChange = useCallback((next: boolean) => {
+        if (lobbyCode) {
+            socket.emit('updateGuessMyAnswerMode', { lobbyCode, guessMyAnswerMode: next });
+        }
+    }, [lobbyCode]);
 
     const handleSelectedDecksChange = useCallback((next: SelectedDecks) => {
         setSelectedDecks(next);
@@ -290,6 +302,7 @@ const Lobby = () => {
     useSocketEvent('gameStarted', handleGameStarted, [handleGameStarted]);
     useSocketEvent('gameAlreadyStarted', handleGameAlreadyStarted, [handleGameAlreadyStarted]);
     useSocketEvent('lobbyDecksState', handleLobbyDecksState, [handleLobbyDecksState]);
+    useSocketEvent('guessMyAnswerModeUpdated', handleGuessMyAnswerModeUpdated, [handleGuessMyAnswerModeUpdated]);
 
     const activePlayers = players.filter(p => p.isActive);
     const hostName = players.find(p => p.isHost)?.name ?? 'le host';
@@ -301,37 +314,37 @@ const Lobby = () => {
     // Liste des joueurs — mobile : 3/ligne, desktop : 4/ligne (même format carré)
     const playersListMobile = (
         <div className="flex flex-col gap-2">
-        <div className="flex items-baseline gap-2">
-            <p className="m-0 font-display font-bold text-sm text-gray-800">Dans le salon</p>
-            <p className="m-0 text-xs text-gray-400">{activePlayers.length} joueur{activePlayers.length > 1 ? 's' : ''} connecté{activePlayers.length > 1 ? 's' : ''}</p>
-        </div>
-        <ul className="list-none w-full m-0 p-0 grid grid-cols-3 md:grid-cols-4 gap-2 max-h-[55vh] overflow-y-auto">
-            {players.map((player, index) => (
-                <li key={player.id} className={`min-w-0 ${initialPlayerIdsRef.current?.has(player.id) ? '' : 'animate-player-pop'}`} style={initialPlayerIdsRef.current?.has(player.id) ? undefined : { animationDelay: `${Math.min(index, 6) * 50}ms` }}>
-                    <PlayerCard
-                        id={player.id}
-                        name={player.name}
-                        avatarId={player.avatarId}
-                        isHost={player.isHost}
-                        isCurrentPlayer={currentPlayer?.id === player.id}
-                        currentPlayerIsHost={!!currentPlayer?.isHost}
-                        isActive={player.isActive}
-                        isFirstPlayer={index < 3}
-                        variant="square"
-                        onKick={kickPlayer}
-                        onPromote={promotePlayer}
-                    />
-                </li>
-            ))}
-            {players.length < GAME_CONFIG.MAX_PLAYERS && (
-                <li className="min-w-0">
-                    <div className="relative aspect-square flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-[10px] w-full border-2 border-dashed border-gray-300 bg-gray-50/50">
-                        <div className="w-16 h-16 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-300 text-xl">?</div>
-                        <span className="text-xs text-gray-400 italic text-center truncate w-full px-1">...</span>
-                    </div>
-                </li>
-            )}
-        </ul>
+            <div className="flex items-baseline gap-2">
+                <p className="m-0 font-display font-bold text-sm text-gray-800">Dans le salon</p>
+                <p className="m-0 text-xs text-gray-400">{activePlayers.length} joueur{activePlayers.length > 1 ? 's' : ''} connecté{activePlayers.length > 1 ? 's' : ''}</p>
+            </div>
+            <ul className="list-none w-full m-0 p-0 grid grid-cols-3 md:grid-cols-4 gap-2 max-h-[55vh] overflow-y-auto">
+                {players.map((player, index) => (
+                    <li key={player.id} className={`min-w-0 ${initialPlayerIdsRef.current?.has(player.id) ? '' : 'animate-player-pop'}`} style={initialPlayerIdsRef.current?.has(player.id) ? undefined : { animationDelay: `${Math.min(index, 6) * 50}ms` }}>
+                        <PlayerCard
+                            id={player.id}
+                            name={player.name}
+                            avatarId={player.avatarId}
+                            isHost={player.isHost}
+                            isCurrentPlayer={currentPlayer?.id === player.id}
+                            currentPlayerIsHost={!!currentPlayer?.isHost}
+                            isActive={player.isActive}
+                            isFirstPlayer={index < 3}
+                            variant="square"
+                            onKick={kickPlayer}
+                            onPromote={promotePlayer}
+                        />
+                    </li>
+                ))}
+                {players.length < GAME_CONFIG.MAX_PLAYERS && (
+                    <li className="min-w-0">
+                        <div className="relative aspect-square flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-[10px] w-full border-2 border-dashed border-gray-300 bg-gray-50/50">
+                            <div className="w-16 h-16 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-300 text-xl">?</div>
+                            <span className="text-xs text-gray-400 italic text-center truncate w-full px-1">...</span>
+                        </div>
+                    </li>
+                )}
+            </ul>
         </div>
     );
 
@@ -380,11 +393,10 @@ const Lobby = () => {
                     className="relative inline-flex shrink-0 w-[7.25rem] h-12 border-[2.5px] border-black rounded-full overflow-hidden bg-[#f9f4ee] stack-shadow-sm texture-paper transition-transform duration-150 active:scale-[0.96] cursor-pointer"
                 >
                     <span
-                        className={`absolute top-0.5 h-[2.25rem] w-[2.25rem] rounded-full border-[2.5px] border-black shadow-[1.5px_1.5px_0_0_rgba(0,0,0,0.85)] transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${
-                            localActive
-                                ? 'left-0.5 bg-[#FFC700]'
-                                : 'left-[calc(100%-2.5rem)] bg-[#7DD3F0]'
-                        }`}
+                        className={`absolute top-0.5 h-[2.25rem] w-[2.25rem] rounded-full border-[2.5px] border-black shadow-[1.5px_1.5px_0_0_rgba(0,0,0,0.85)] transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${localActive
+                            ? 'left-0.5 bg-[#FFC700]'
+                            : 'left-[calc(100%-2.5rem)] bg-[#7DD3F0]'
+                            }`}
                         aria-hidden
                     />
                     <span className="relative z-10 flex w-full items-center justify-between px-2">
@@ -404,28 +416,68 @@ const Lobby = () => {
                         />
                     </span>
                 </button>
-<div className="flex items-center gap-3">
-    {/* Slider */}
-    <div className="flex items-center">
-        {/* ton slider ici */}
-    </div>
+                <div className="flex items-center gap-3">
+                    {/* Slider */}
+                    <div className="flex items-center">
+                        {/* ton slider ici */}
+                    </div>
 
-    {/* Texte */}
-    <div
-        key={gameMode}
-        className="flex-1 min-w-0 animate-phase-enter translate-y-[7px]"
-    >
-        <div className="font-display text-sm md:text-base font-bold uppercase tracking-tight text-black leading-none">
-            {localActive ? 'Sur place' : 'À distance'}
-        </div>
+                    {/* Texte */}
+                    <div
+                        key={gameMode}
+                        className="flex-1 min-w-0 animate-phase-enter translate-y-[7px]"
+                    >
+                        <div className="font-display text-sm md:text-base font-bold uppercase tracking-tight text-black leading-none">
+                            {localActive ? 'Sur place' : 'À distance'}
+                        </div>
 
-        <div className="font-sans text-[11px] text-gray-600 leading-snug mt-1">
-            {localActive
-                ? 'Dans la même pièce, les joueurs sont à proximité  pour montrer leur téléphone'
-                : 'Chacun chez soi, les joueurs suivent la partie en direct sur leur écran'}
-        </div>
-    </div>
-</div>
+                        <div className="font-sans text-[11px] text-gray-600 leading-snug mt-1">
+                            {localActive
+                                ? 'Dans la même pièce, les joueurs sont à proximité  pour montrer leur téléphone'
+                                : 'Chacun chez soi, les joueurs suivent la partie en direct sur leur écran'}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Slider mode "Devine ma réponse" */}
+            <div className={`flex items-start gap-3.5 ${!isHost ? 'opacity-65 pointer-events-none' : ''}`}>
+                <button
+                    type="button"
+                    role="switch"
+                    aria-checked={guessMyAnswerMode}
+                    aria-label={`Mode "Devine ma réponse" — ${guessMyAnswerMode ? 'activé' : 'désactivé'}`}
+                    disabled={!isHost}
+                    onClick={() => handleGuessMyAnswerModeChange(!guessMyAnswerMode)}
+                    className="relative inline-flex shrink-0 w-[7.25rem] h-12 border-[2.5px] border-black rounded-full overflow-hidden bg-[#f9f4ee] stack-shadow-sm texture-paper transition-transform duration-150 active:scale-[0.96] cursor-pointer"
+                >
+                    <span
+                        className={`absolute top-0.5 h-[2.25rem] w-[2.25rem] rounded-full border-[2.5px] border-black shadow-[1.5px_1.5px_0_0_rgba(0,0,0,0.85)] transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${guessMyAnswerMode
+                            ? 'left-[calc(100%-2.5rem)] bg-[#7DD3F0]'
+                            : 'left-0.5 bg-[#FFC700]'
+                            }`}
+                        aria-hidden
+                    />
+                </button>
+                <div className="flex items-center gap-3">
+                    <div className="flex items-center">
+                    </div>
+
+                    <div
+                        key={guessMyAnswerMode ? 'on' : 'off'}
+                        className="flex-1 min-w-0 animate-phase-enter translate-y-[7px]"
+                    >
+                        <div className="font-display text-sm md:text-base font-bold uppercase tracking-tight text-black leading-none">
+                            {guessMyAnswerMode ? 'Devine ma réponse' : 'Classique'}
+                        </div>
+
+                        <div className="font-sans text-[11px] text-gray-600 leading-snug mt-1">
+                            {guessMyAnswerMode
+                                ? 'Un joueur est désigné pour écrire la réponse que le pilier aurait répondu'
+                                : 'Seuls les joueurs répondent et le pilier devine qui a écrit quoi'}
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* Section Thèmes */}
@@ -503,18 +555,16 @@ const Lobby = () => {
                                     />
 
                                     <span
-                                        className={`relative font-display font-bold tracking-[0.08em] uppercase text-sm md:text-base ${
-                                            active ? 'text-black' : 'text-gray-600'
-                                        }`}
+                                        className={`relative font-display font-bold tracking-[0.08em] uppercase text-sm md:text-base ${active ? 'text-black' : 'text-gray-600'
+                                            }`}
                                     >
                                         {t.label}
                                     </span>
 
                                     {t.badge && (
                                         <span
-                                            className={`relative shrink-0 font-display text-[11px] md:text-xs font-bold tabular-nums whitespace-nowrap bg-white/80 rounded-full px-2 py-0.5 border border-black/15 ${
-                                                active ? 'text-black/85' : 'text-black/60'
-                                            }`}
+                                            className={`relative shrink-0 font-display text-[11px] md:text-xs font-bold tabular-nums whitespace-nowrap bg-white/80 rounded-full px-2 py-0.5 border border-black/15 ${active ? 'text-black/85' : 'text-black/60'
+                                                }`}
                                         >
                                             {t.badge}
                                         </span>

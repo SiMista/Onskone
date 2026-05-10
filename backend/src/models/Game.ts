@@ -53,7 +53,7 @@ export class Game implements IGame {
 
         const gameCard = this.getRandomGameCard();
 
-        this.currentRound = new Round(roundNumber, leader, gameCard);
+        this.currentRound = new Round(roundNumber, leader, gameCard, this.lobby.guessMyAnswerMode === true);
         this.rounds.push(this.currentRound);
     }
 
