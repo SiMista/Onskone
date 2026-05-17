@@ -6,14 +6,17 @@ import Button from '../components/Button';
 import Footer from '../components/Footer';
 import ConfirmModal from '../components/ConfirmModal';
 import InfoModal from '../components/InfoModal';
+import HowToPlaySteps from '../components/HowToPlaySteps';
+import HowToPlayButton from '../components/HowToPlayButton';
 import { Icon } from '@iconify/react';
 import PlayerCard from '../components/PlayerCard';
 import DeckSelector from '../components/DeckSelector';
 import BackButton from '../components/BackButton';
 import { IPlayer, DecksCatalog, SelectedDecks, GameMode } from '@onskone/shared';
-import { useSocketEvent, useQueryParams, useLeavePrompt } from '../hooks';
+import { useSocketEvent, useQueryParams, useLeavePrompt, useReconnectOnVisible } from '../hooks';
 import { useToast } from '../components/Toast';
 import { GAME_CONFIG, AVATARS } from '../constants/game';
+import { studioStorage, isStudioFrame } from '../utils/studioStorage';
 
 const RECOMMENDED_PLAYERS = 4;
 
@@ -34,6 +37,7 @@ const Lobby = () => {
     const [currentPlayer, setCurrentPlayer] = useState<IPlayer | null>(null);
     const [showFewPlayersModal, setShowFewPlayersModal] = useState(false);
     const [showGameAlreadyStarted, setShowGameAlreadyStarted] = useState(false);
+    const [isHowToPlayOpen, setIsHowToPlayOpen] = useState(false);
     const [fallbackLink, setFallbackLink] = useState<string | null>(null);
     const [decksCatalog, setDecksCatalog] = useState<DecksCatalog>({});
     const [selectedDecks, setSelectedDecks] = useState<SelectedDecks>({});
@@ -45,27 +49,15 @@ const Lobby = () => {
     const [playerName] = useState<string>(() => {
         const urlPlayerName = queryParams.get('playerName');
         if (urlPlayerName) {
-            try {
-                localStorage.setItem(`playerName_${lobbyCode}`, urlPlayerName);
-            } catch (error) {
-                console.error('Failed to save player name:', error);
-            }
+            studioStorage.setItem(`playerName_${lobbyCode}`, urlPlayerName);
             return urlPlayerName;
         }
-        try {
-            const savedPlayerName = localStorage.getItem(`playerName_${lobbyCode}`);
-            if (savedPlayerName) {
-                return savedPlayerName;
-            }
-        } catch (error) {
-            console.error('Failed to load player name:', error);
+        const savedPlayerName = studioStorage.getItem(`playerName_${lobbyCode}`);
+        if (savedPlayerName) {
+            return savedPlayerName;
         }
         const randomName = `Joueur${Math.floor(Math.random() * 1000)}`;
-        try {
-            localStorage.setItem(`playerName_${lobbyCode}`, randomName);
-        } catch (error) {
-            console.error('Failed to save generated player name:', error);
-        }
+        studioStorage.setItem(`playerName_${lobbyCode}`, randomName);
         return randomName;
     });
 
@@ -74,22 +66,14 @@ const Lobby = () => {
         if (urlAvatarId !== null) {
             const id = parseInt(urlAvatarId, 10);
             if (!isNaN(id)) {
-                try {
-                    localStorage.setItem(`avatarId_${lobbyCode}`, String(id));
-                } catch (error) {
-                    console.error('Failed to save avatar id:', error);
-                }
+                studioStorage.setItem(`avatarId_${lobbyCode}`, String(id));
                 return id;
             }
         }
-        try {
-            const savedAvatarId = localStorage.getItem(`avatarId_${lobbyCode}`);
-            if (savedAvatarId !== null) {
-                const id = parseInt(savedAvatarId, 10);
-                if (!isNaN(id)) return id;
-            }
-        } catch (error) {
-            console.error('Failed to load avatar id:', error);
+        const savedAvatarId = studioStorage.getItem(`avatarId_${lobbyCode}`);
+        if (savedAvatarId !== null) {
+            const id = parseInt(savedAvatarId, 10);
+            if (!isNaN(id)) return id;
         }
         return Math.floor(Math.random() * AVATARS.length);
     });
@@ -133,11 +117,15 @@ const Lobby = () => {
     }, [lobbyCode, showToast]);
 
     const leaveLobby = useCallback(() => {
+        const isAlone = players.filter(p => p.isActive).length <= 1;
         if (currentPlayer && lobbyCode) {
             socket.emit('leaveLobby', { lobbyCode, currentPlayerId: currentPlayer.id });
         }
+        if (isAlone) {
+            showToast('Tu étais seul dans le salon — il a été supprimé', 'info', 5000);
+        }
         navigate(`/?lobbyCode=${lobbyCode}`);
-    }, [currentPlayer, lobbyCode, navigate]);
+    }, [currentPlayer, lobbyCode, navigate, players, showToast]);
 
     const kickPlayer = useCallback((playerId: string) => {
         if (lobbyCode) {
@@ -166,42 +154,51 @@ const Lobby = () => {
         }
     }, [players, doStartGame]);
 
-    // Rejoindre le lobby au montage ET lors d'une reconnexion socket
-    useEffect(() => {
-        const joinLobbyFn = () => {
-            if (lobbyCode && playerName) {
-                socket.emit('joinLobby', { lobbyCode, playerName, avatarId });
-            }
-        };
-
-        // Rejoindre au montage
-        joinLobbyFn();
-
-        // Écouter les reconnexions socket (après perte de connexion)
-        socket.on('connect', joinLobbyFn);
-
-        // MOBILE: Écouter quand l'app redevient visible (retour après changement d'app)
-        // Sur mobile, le socket peut être "pausé" sans se déconnecter complètement
-        const handleVisibilityChange = () => {
-            if (document.visibilityState === 'visible') {
-                if (socket.connected) {
-                    // Socket déjà connecté - resynchroniser immédiatement
-                    joinLobbyFn();
-                } else {
-                    // Socket déconnecté - attendre la reconnexion avant d'appeler joinLobby
-                    socket.once('connect', joinLobbyFn);
-                    socket.connect();
-                }
-            }
-        };
-
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-
-        return () => {
-            socket.off('connect', joinLobbyFn);
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
-        };
+    // Rejoindre le lobby au montage ET lors d'une reconnexion socket / retour de l'app au premier plan
+    const joinLobbyFn = useCallback(() => {
+        if (lobbyCode && playerName) {
+            socket.emit('joinLobby', { lobbyCode, playerName, avatarId });
+        }
     }, [lobbyCode, playerName, avatarId]);
+
+    useEffect(() => {
+        joinLobbyFn();
+    }, [joinLobbyFn]);
+
+    useReconnectOnVisible(joinLobbyFn);
+
+    // Studio: if this iframe is the host bot AND we've reached the recommended
+    // player count, auto-start the game. Re-armed once per lobby visit.
+    const studioAutoStartedRef = useRef(false);
+    useEffect(() => {
+        if (!isStudioFrame) return;
+        if (studioAutoStartedRef.current) return;
+        try {
+            if (sessionStorage.getItem('studioBot') !== '1') return;
+        } catch { return; }
+        if (!currentPlayer?.isHost) return;
+        const activeCount = players.filter(p => p.isActive).length;
+        if (activeCount < GAME_CONFIG.MIN_PLAYERS) return;
+        // Need a theme selected; let the server default kick in via decksCatalog
+        // — if nothing is preselected, pick the first available theme.
+        if (Object.values(selectedDecks).reduce((acc, arr) => acc + arr.length, 0) === 0) {
+            const firstCat = Object.keys(decksCatalog)[0];
+            const firstTheme = firstCat ? Object.keys(decksCatalog[firstCat] ?? {})[0] : undefined;
+            if (firstCat && firstTheme) {
+                socket.emit('updateSelectedDecks', {
+                    lobbyCode: lobbyCode!,
+                    selected: { [firstCat]: [firstTheme] },
+                });
+                return; // wait for state update, will retry next effect run
+            }
+            return;
+        }
+        studioAutoStartedRef.current = true;
+        const t = setTimeout(() => {
+            socket.emit('startGame', { lobbyCode: lobbyCode! });
+        }, 1200);
+        return () => clearTimeout(t);
+    }, [currentPlayer?.isHost, players, selectedDecks, decksCatalog, lobbyCode]);
 
     const handleUpdatePlayersList = useCallback((data: { players: IPlayer[] }) => {
         if (initialPlayerIdsRef.current === null && data.players.length > 0) {
@@ -252,11 +249,7 @@ const Lobby = () => {
 
     const handleGameStarted = useCallback(() => {
         if (currentPlayer) {
-            try {
-                localStorage.setItem('currentPlayer', JSON.stringify(currentPlayer));
-            } catch (error) {
-                console.error('Failed to save current player:', error);
-            }
+            studioStorage.setItem('currentPlayer', JSON.stringify(currentPlayer));
         }
         navigate(`/game/${lobbyCode}`);
     }, [currentPlayer, lobbyCode, navigate]);
@@ -390,39 +383,33 @@ const Lobby = () => {
                     aria-label={`Mode ${localActive ? 'sur place' : 'à distance'} — cliquer pour basculer`}
                     disabled={!isHost}
                     onClick={() => handleGameModeChange(localActive ? 'remote' : 'local')}
-                    className="relative inline-flex shrink-0 w-[7.25rem] h-12 border-[2.5px] border-black rounded-full overflow-hidden bg-[#f9f4ee] stack-shadow-sm texture-paper transition-transform duration-150 active:scale-[0.96] cursor-pointer"
+                    className="relative inline-flex shrink-0 w-[6rem] h-10 md:w-[7.25rem] md:h-12 border-[2.5px] border-black rounded-full overflow-hidden bg-[#f9f4ee] stack-shadow-sm texture-paper transition-transform duration-150 active:scale-[0.96] cursor-pointer"
                 >
                     <span
-                        className={`absolute top-0.5 h-[2.25rem] w-[2.25rem] rounded-full border-[2.5px] border-black shadow-[1.5px_1.5px_0_0_rgba(0,0,0,0.85)] transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${localActive
+                        className={`absolute top-0.5 h-[1.85rem] w-[1.85rem] md:h-[2.25rem] md:w-[2.25rem] rounded-full border-[2.5px] border-black shadow-[1.5px_1.5px_0_0_rgba(0,0,0,0.85)] transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${localActive
                             ? 'left-0.5 bg-[#FFC700]'
-                            : 'left-[calc(100%-2.5rem)] bg-[#7DD3F0]'
+                            : 'left-[calc(100%-2.1rem)] md:left-[calc(100%-2.5rem)] bg-[#7DD3F0]'
                             }`}
                         aria-hidden
                     />
                     <span className="relative z-10 flex w-full items-center justify-between px-2">
                         <Icon
                             icon="fluent-emoji-flat:busts-in-silhouette"
-                            width={22}
-                            height={22}
-                            className={`-translate-y-1 [filter:drop-shadow(1px_1.5px_0_rgba(0,0,0,0.55))] transition-all duration-300 ease-out ${localActive ? 'scale-110 rotate-[-6deg]' : 'scale-75 saturate-0 opacity-40'}`}
+                            width="1em"
+                            height="1em"
+                            className={`text-[18px] md:text-[22px] -translate-y-1 [filter:drop-shadow(1px_1.5px_0_rgba(0,0,0,0.55))] transition-all duration-300 ease-out ${localActive ? 'scale-110 rotate-[-6deg]' : 'scale-75 saturate-0 opacity-40'}`}
                             aria-hidden
                         />
                         <Icon
                             icon="fluent-emoji-flat:globe-showing-europe-africa"
-                            width={22}
-                            height={22}
-                            className={`-translate-x-0.5 -translate-y-0.5 [filter:drop-shadow(1px_1.5px_0_rgba(0,0,0,0.55))] transition-all duration-300 ease-out ${!localActive ? 'scale-110 rotate-[6deg]' : 'scale-75 saturate-0 opacity-40'}`}
+                            width="1em"
+                            height="1em"
+                            className={`text-[18px] md:text-[22px] -translate-x-0.5 -translate-y-0.5 [filter:drop-shadow(1px_1.5px_0_rgba(0,0,0,0.55))] transition-all duration-300 ease-out ${!localActive ? 'scale-110 rotate-[6deg]' : 'scale-75 saturate-0 opacity-40'}`}
                             aria-hidden
                         />
                     </span>
                 </button>
                 <div className="flex items-center gap-3">
-                    {/* Slider */}
-                    <div className="flex items-center">
-                        {/* ton slider ici */}
-                    </div>
-
-                    {/* Texte */}
                     <div
                         key={gameMode}
                         className="flex-1 min-w-0 animate-phase-enter translate-y-[7px]"
@@ -449,20 +436,17 @@ const Lobby = () => {
                     aria-label={`Mode "Devine ma réponse" — ${guessMyAnswerMode ? 'activé' : 'désactivé'}`}
                     disabled={!isHost}
                     onClick={() => handleGuessMyAnswerModeChange(!guessMyAnswerMode)}
-                    className="relative inline-flex shrink-0 w-[7.25rem] h-12 border-[2.5px] border-black rounded-full overflow-hidden bg-[#f9f4ee] stack-shadow-sm texture-paper transition-transform duration-150 active:scale-[0.96] cursor-pointer"
+                    className="relative inline-flex shrink-0 w-[6rem] h-10 md:w-[7.25rem] md:h-12 border-[2.5px] border-black rounded-full overflow-hidden bg-[#f9f4ee] stack-shadow-sm texture-paper transition-transform duration-150 active:scale-[0.96] cursor-pointer"
                 >
                     <span
-                        className={`absolute top-0.5 h-[2.25rem] w-[2.25rem] rounded-full border-[2.5px] border-black shadow-[1.5px_1.5px_0_0_rgba(0,0,0,0.85)] transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${guessMyAnswerMode
-                            ? 'left-[calc(100%-2.5rem)] bg-[#7DD3F0]'
+                        className={`absolute top-0.5 h-[1.85rem] w-[1.85rem] md:h-[2.25rem] md:w-[2.25rem] rounded-full border-[2.5px] border-black shadow-[1.5px_1.5px_0_0_rgba(0,0,0,0.85)] transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${guessMyAnswerMode
+                            ? 'left-[calc(100%-2.1rem)] md:left-[calc(100%-2.5rem)] bg-[#7DD3F0]'
                             : 'left-0.5 bg-[#FFC700]'
                             }`}
                         aria-hidden
                     />
                 </button>
                 <div className="flex items-center gap-3">
-                    <div className="flex items-center">
-                    </div>
-
                     <div
                         key={guessMyAnswerMode ? 'on' : 'off'}
                         className="flex-1 min-w-0 animate-phase-enter translate-y-[7px]"
@@ -507,8 +491,11 @@ const Lobby = () => {
 
                 {/* ===================== LAYOUT UNIFIÉ ===================== */}
                 <div className="flex flex-col gap-3 md:gap-4">
-                    {/* Bouton retour standalone, juste au-dessus des tabs */}
-                    <BackButton onClick={leaveLobby} label="Retour" />
+                    {/* Bouton retour + raccourci "Comment jouer ?" sur la même ligne. */}
+                    <div className="flex items-center justify-between gap-2">
+                        <BackButton onClick={leaveLobby} label="Retour" tone="danger" />
+                        <HowToPlayButton onClick={() => setIsHowToPlayOpen(true)} />
+                    </div>
 
                     {/* Tabs : intercalaires cartonnés en éventail, coins asymétriques */}
                     <div className="flex gap-1 md:gap-1.5 -mb-[2.5px] relative z-10 px-1">
@@ -661,6 +648,15 @@ const Lobby = () => {
                         Petit conseil : changer d'amis.
                     </p>
                 </div>
+            </InfoModal>
+
+            {/* Modal "Comment jouer ?" */}
+            <InfoModal
+                isOpen={isHowToPlayOpen}
+                onClose={() => setIsHowToPlayOpen(false)}
+                title="Comment jouer ?"
+            >
+                <HowToPlaySteps />
             </InfoModal>
 
             {/* Modal fallback : affiche le lien quand le copier-coller automatique a échoué */}

@@ -4,6 +4,8 @@ import Home from './pages/Home';
 import Lobby from './pages/Lobby';
 import Game from './pages/Game';
 import EndGame from './pages/EndGame';
+import NotFound from './pages/NotFound';
+import Studio from './pages/Studio';
 import { initSounds } from './utils/sounds';
 import { ToastProvider } from './components/Toast';
 
@@ -38,6 +40,8 @@ const App = () => {
           <Route path="/lobby/:lobbyCode" element={<Lobby />} />
           <Route path="/game/:lobbyCode" element={<Game />} />
           <Route path="/endgame/:lobbyCode" element={<EndGame />} />
+          {import.meta.env.DEV && <Route path="/studio" element={<Studio />} />}
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Router>
     </ToastProvider>

@@ -4,10 +4,14 @@ import socket from '../utils/socket';
 import HourglassTimer from './HourglassTimer';
 import Avatar from './Avatar';
 import QuestionCard from './QuestionCard';
+import QuestionByline from './QuestionByline';
+import PlayerBadge from './PlayerBadge';
 import Button from './Button';
 import { GAME_CONFIG } from '../constants/game';
 import { IPlayer, RoundPhase, GameCard } from '@onskone/shared';
 import { playSound } from '../utils/sounds';
+import { useStartTimerDelayed } from '../hooks';
+import { getQuestionSubtitle } from '../utils/questionHelpers';
 
 interface AnswerPhaseProps {
   lobbyCode: string;
@@ -35,19 +39,15 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
   initialMyAnswer
 }) => {
   const leader = players.find(p => p.id === leaderId);
-  const leaderName = leader?.name ?? '';
-  const subtitle = isLeader
-    ? 'Question posée aux autres joueurs'
-    : leaderName
-      ? `Question posée par ${leaderName}`
-      : '';
+  const subtitle = leader ? getQuestionSubtitle(RoundPhase.ANSWERING, isLeader) : '';
+  const subtitleBadge = !isLeader && leader ? <PlayerBadge player={leader} size="sm" /> : undefined;
+  useStartTimerDelayed(isLeader, lobbyCode, GAME_CONFIG.TIMERS.ANSWERING);
   const [answer, setAnswer] = useState(initialMyAnswer || '');
   const [submitted, setSubmitted] = useState(!!initialMyAnswer);
   const [stage, setStage] = useState<SubmitStage>(initialMyAnswer ? 'done' : 'idle');
   const [answeredPlayerIds, setAnsweredPlayerIds] = useState<Set<string>>(
     new Set(initialAnsweredPlayerIds || [])
   );
-  const timerStartedRef = useRef(false);
   const stageTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   useEffect(() => {
@@ -67,7 +67,6 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
       setStage('idle');
     }
     setAnsweredPlayerIds(new Set(initialAnsweredPlayerIds || []));
-    timerStartedRef.current = false;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [question]);
 
@@ -83,22 +82,14 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
   const answersCount = answeredPlayerIds.size;
 
   useEffect(() => {
-    const startTimerTimeout = setTimeout(() => {
-      if (isLeader && !timerStartedRef.current) {
-        timerStartedRef.current = true;
-        socket.emit('startTimer', { lobbyCode, duration: GAME_CONFIG.TIMERS.ANSWERING });
-      }
-    }, 500);
-
-    socket.on('playerAnswered', (data: { playerId: string; totalAnswers: number; expectedAnswers: number }) => {
+    const onPlayerAnswered = (data: { playerId: string; totalAnswers: number; expectedAnswers: number }) => {
       setAnsweredPlayerIds(prev => new Set([...prev, data.playerId]));
-    });
-
-    return () => {
-      clearTimeout(startTimerTimeout);
-      socket.off('playerAnswered');
     };
-  }, [lobbyCode, isLeader]);
+    socket.on('playerAnswered', onPlayerAnswered);
+    return () => {
+      socket.off('playerAnswered', onPlayerAnswered);
+    };
+  }, []);
 
   const handleSubmit = () => {
     if (!answer.trim() || submitted || isLeader || stage !== 'idle') return;
@@ -133,9 +124,10 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
     }
 
     if (isLeader) {
-      setTimeout(() => {
+      const t = setTimeout(() => {
         socket.emit('timerExpired', { lobbyCode });
       }, 500);
+      stageTimeoutsRef.current.push(t);
     }
   };
 
@@ -149,7 +141,14 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
 
     return (
       <div className="flex flex-col items-center justify-start h-full p-3 md:p-6 gap-4">
-        <QuestionCard question={question} card={card} subtitle={subtitle} variant="compact" />
+        <div className="flex flex-col items-center gap-1.5 w-full">
+          {subtitle && (
+            <p className="text-center text-sm md:text-base text-gray-700 italic m-0">
+              {subtitle}
+            </p>
+          )}
+          <QuestionCard question={question} card={card} subtitleBadge={subtitleBadge} variant="compact" />
+        </div>
 
         <HourglassTimer
           duration={GAME_CONFIG.TIMERS.ANSWERING}
@@ -236,7 +235,13 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
         hidden
       />
 
-      <QuestionCard question={question} card={card} subtitle={subtitle} variant="compact" />
+      <QuestionByline player={leader} />
+
+      <QuestionCard question={question} card={card} variant="compact" />
+
+      <p className="text-center text-sm md:text-base text-gray-700 italic m-0">
+        Écris ta propre réponse
+      </p>
 
       {showNotebook ? (
         <div className="flex-1 flex flex-col min-h-0">
@@ -286,7 +291,7 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
           </div>
         </div>
       ) : (
-        /* État « envoyé » — récap grisé + attente */
+        /* État « envoyé » - récap grisé + attente */
         <div className="flex-1 flex flex-col items-center justify-center gap-3 md:gap-4 animate-phase-enter">
           <div
             className="relative max-w-md w-full rounded-2xl border-[2.5px] border-black/40 stack-shadow texture-paper bg-gray-200/70 p-5 md:p-6 opacity-75"

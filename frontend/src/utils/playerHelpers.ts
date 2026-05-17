@@ -1,4 +1,5 @@
 import { IPlayer } from '@onskone/shared';
+import { studioStorage } from './studioStorage';
 
 /**
  * Validates that an object has the required IPlayer fields
@@ -45,12 +46,12 @@ export function parseStoredPlayer(jsonString: string | null): IPlayer | null {
  */
 export function getCurrentPlayerFromStorage(): IPlayer | null {
   try {
-    const stored = localStorage.getItem('currentPlayer');
+    const stored = studioStorage.getItem('currentPlayer');
     const player = parseStoredPlayer(stored);
 
     if (!player && stored) {
       // Invalid data - clean it up
-      localStorage.removeItem('currentPlayer');
+      studioStorage.removeItem('currentPlayer');
     }
 
     return player;

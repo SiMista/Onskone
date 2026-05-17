@@ -1,17 +1,19 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
 import socket from '../utils/socket';
 import HourglassTimer from './HourglassTimer';
 import Avatar from './Avatar';
 import Button from './Button';
 import QuestionCard from './QuestionCard';
+import QuestionByline from './QuestionByline';
 import { GAME_CONFIG } from '../constants/game';
 import { IPlayer, RoundPhase, GameCard } from '@onskone/shared';
+import { useStartTimerDelayed } from '../hooks';
+import { getQuestionSubtitle } from '../utils/questionHelpers';
 
 interface SubstituteSelectionProps {
   lobbyCode: string;
   isLeader: boolean;
-  leaderName: string;
   leaderId: string;
   players: IPlayer[];
   question: string;
@@ -21,39 +23,41 @@ interface SubstituteSelectionProps {
 const SubstituteSelection: React.FC<SubstituteSelectionProps> = ({
   lobbyCode,
   isLeader,
-  leaderName,
   leaderId,
   players,
   question,
   card,
 }) => {
-  const candidates = players.filter(p => p.id !== leaderId && p.isActive);
-  const [selectedId, setSelectedId] = useState<string>(candidates[0]?.id ?? '');
+  const leader = players.find(p => p.id === leaderId);
+  // Mémoïser candidates pour éviter qu'un nouveau tableau à chaque render
+  // ne déclenche en boucle l'effet qui dépend de cette valeur.
+  const candidates = useMemo(
+    () => players.filter(p => p.id !== leaderId && p.isActive),
+    [players, leaderId]
+  );
+
+  // Effective selection : valeur calculée pendant le render plutôt que via un effet
+  // qui synchronise du state dérivé.
+  const [pickedId, setPickedId] = useState<string>('');
+  const effectiveSelectedId = candidates.find(c => c.id === pickedId)?.id ?? candidates[0]?.id ?? '';
+
   const [submitted, setSubmitted] = useState(false);
   const [open, setOpen] = useState(false);
-  const timerStartedRef = useRef(false);
-  const selectedIdRef = useRef(selectedId);
+  const selectedIdRef = useRef(effectiveSelectedId);
   const submittedRef = useRef(submitted);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const expireTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => { selectedIdRef.current = selectedId; }, [selectedId]);
+  useEffect(() => { selectedIdRef.current = effectiveSelectedId; }, [effectiveSelectedId]);
   useEffect(() => { submittedRef.current = submitted; }, [submitted]);
 
-  useEffect(() => {
-    if (!candidates.find(c => c.id === selectedId) && candidates[0]) {
-      setSelectedId(candidates[0].id);
-    }
-  }, [candidates, selectedId]);
+  useStartTimerDelayed(isLeader, lobbyCode, GAME_CONFIG.TIMERS.SUBSTITUTE_SELECTION);
 
   useEffect(() => {
-    const t = setTimeout(() => {
-      if (isLeader && !timerStartedRef.current) {
-        timerStartedRef.current = true;
-        socket.emit('startTimer', { lobbyCode, duration: GAME_CONFIG.TIMERS.SUBSTITUTE_SELECTION });
-      }
-    }, 500);
-    return () => clearTimeout(t);
-  }, [isLeader, lobbyCode]);
+    return () => {
+      if (expireTimeoutRef.current) clearTimeout(expireTimeoutRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -83,7 +87,7 @@ const SubstituteSelection: React.FC<SubstituteSelectionProps> = ({
 
   const handleValidate = () => {
     if (!isLeader) return;
-    submitSelection(selectedId);
+    submitSelection(effectiveSelectedId);
   };
 
   const handleTimerExpire = () => {
@@ -92,14 +96,14 @@ const SubstituteSelection: React.FC<SubstituteSelectionProps> = ({
       submitSelection(selectedIdRef.current);
       return;
     }
-    setTimeout(() => socket.emit('timerExpired', { lobbyCode }), 300);
+    if (expireTimeoutRef.current) clearTimeout(expireTimeoutRef.current);
+    expireTimeoutRef.current = setTimeout(() => socket.emit('timerExpired', { lobbyCode }), 300);
   };
 
-  const subtitle = isLeader
-    ? 'Choisis qui devra deviner ta réponse'
-    : `Question posée par ${leaderName}`;
+  const subtitle = isLeader ? getQuestionSubtitle(RoundPhase.SUBSTITUTE_SELECTION, isLeader) : '';
+  const subtitleBadge = undefined;
 
-  const selectedPlayer = candidates.find(p => p.id === selectedId);
+  const selectedPlayer = candidates.find(p => p.id === effectiveSelectedId);
 
   return (
     <div className="flex flex-col items-center h-full p-3 md:p-6 gap-4 max-w-md mx-auto w-full">
@@ -111,7 +115,9 @@ const SubstituteSelection: React.FC<SubstituteSelectionProps> = ({
         hidden
       />
 
-      <QuestionCard question={question} card={card} subtitle={subtitle} variant="compact" />
+      {!isLeader && <QuestionByline player={leader} />}
+
+      <QuestionCard question={question} card={card} subtitle={subtitle} subtitleBadge={subtitleBadge} variant="compact" />
 
       {isLeader ? (
         <>
@@ -151,7 +157,7 @@ const SubstituteSelection: React.FC<SubstituteSelectionProps> = ({
               <ul
                 role="listbox"
                 {...(!open ? { inert: '' } : {})}
-                className={`list-none p-1 rounded-[12px] border-[2.5px] border-black bg-cream-player texture-paper stack-shadow overflow-y-auto origin-top transition-all duration-200 ease-out ${open ? 'max-h-[45vh] opacity-100 scale-y-100 translate-y-0 pointer-events-auto' : 'max-h-0 opacity-0 scale-y-95 -translate-y-1 pointer-events-none'}`}
+                className={`list-none p-1 rounded-[12px] border-[2.5px] border-black bg-cream-player texture-paper stack-shadow overflow-y-auto origin-top transition-all duration-200 ease-out ${open ? 'max-h-[30vh] md:max-h-[45vh] opacity-100 scale-y-100 translate-y-0 pointer-events-auto' : 'max-h-0 opacity-0 scale-y-95 -translate-y-1 pointer-events-none'}`}
                 style={{
                   position: 'absolute',
                   top: 'calc(100% + 6px)',
@@ -162,12 +168,12 @@ const SubstituteSelection: React.FC<SubstituteSelectionProps> = ({
                 }}
               >
                 {candidates.map(player => {
-                  const isSelected = player.id === selectedId;
+                  const isSelected = player.id === effectiveSelectedId;
                   return (
                     <li key={player.id} role="option" aria-selected={isSelected}>
                       <button
                         type="button"
-                        onClick={() => { setSelectedId(player.id); setOpen(false); }}
+                        onClick={() => { setPickedId(player.id); setOpen(false); }}
                         className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-[8px] transition-colors duration-150 cursor-pointer ${isSelected ? 'bg-[#FFE680]' : 'hover:bg-black/5'
                           }`}
                       >
@@ -190,15 +196,15 @@ const SubstituteSelection: React.FC<SubstituteSelectionProps> = ({
             variant="success"
             size="lg"
             onClick={handleValidate}
-            disabled={submitted || !selectedId}
+            disabled={submitted || !effectiveSelectedId}
           >
             Valider
           </Button>
         </>
       ) : (
-        <div className="flex-1 flex items-center justify-center">
+        <div className="flex-1 flex flex-col items-center justify-center gap-2">
           <p className="text-center text-base md:text-lg text-gray-700 italic">
-            {leaderName} choisit le joueur qui répondra pour lui...
+            choisit le joueur qui répondra pour lui...
           </p>
         </div>
       )}

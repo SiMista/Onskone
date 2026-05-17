@@ -7,6 +7,7 @@ import Button from '../components/Button';
 import Avatar from '../components/Avatar';
 import Logo from '../components/Logo';
 import { getCurrentPlayerFromStorage } from '../utils/playerHelpers';
+import { studioStorage } from '../utils/studioStorage';
 import { buildShareCard, shareBlob } from '../utils/shareCard';
 import { useToast } from '../components/Toast';
 
@@ -164,17 +165,18 @@ const EndGame: React.FC = () => {
     // On ne prend en compte que la première réception : si un joueur quitte
     // ensuite, le serveur peut ré-émettre un gameEnded mis à jour, mais on veut
     // que le classement reste figé tel qu'affiché à la fin de la partie.
-    socket.on('gameEnded', (data: { leaderboard: LeaderboardEntry[]; rounds: IRound[] }) => {
+    const onGameEnded = (data: { leaderboard: LeaderboardEntry[]; rounds: IRound[] }) => {
       setLeaderboard(prev => (prev.length ? prev : data.leaderboard));
       setRounds(prev => (prev.length ? prev : data.rounds || []));
-    });
+    };
+    socket.on('gameEnded', onGameEnded);
 
     if (lobbyCode) {
       socket.emit('getGameResults', { lobbyCode: lobbyCode! });
     }
 
     return () => {
-      socket.off('gameEnded');
+      socket.off('gameEnded', onGameEnded);
       if (confettiTimeoutRef.current) clearTimeout(confettiTimeoutRef.current);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
@@ -183,7 +185,11 @@ const EndGame: React.FC = () => {
   const pct = useMemo(() => {
     if (!leaderboard.length || !rounds.length) return 0;
     const correct = leaderboard.reduce((s, e) => s + e.score, 0);
-    const possible = rounds.length * Math.max(1, leaderboard.length - 1);
+    const baseAnswers = Math.max(1, leaderboard.length - 1);
+    const possible = rounds.reduce(
+      (s, r) => s + baseAnswers + (r.guessMyAnswerMode ? 1 : 0),
+      0
+    );
     const rawPct = possible > 0 ? Math.round((correct / possible) * 100) : 0;
     return Math.max(0, Math.min(100, rawPct));
   }, [leaderboard, rounds]);
@@ -282,7 +288,7 @@ const EndGame: React.FC = () => {
     if (lobbyCode && currentPlayer) {
       socket.emit('leaveLobby', { lobbyCode, currentPlayerId: currentPlayer.id });
     }
-    localStorage.removeItem('currentPlayer');
+    studioStorage.removeItem('currentPlayer');
     navigate(`/?lobbyCode=${lobbyCode}`);
   };
 
@@ -314,7 +320,7 @@ const EndGame: React.FC = () => {
       showToast('Image en cours de préparation…', 'info');
       return;
     }
-    const text = `${verdict.title} — ${pct}% · ${verdictMessage}`;
+    const text = `${verdict.title} - ${pct}% · ${verdictMessage}`;
     setIsSharing(true);
     try {
       const result = await shareBlob(blob, text);

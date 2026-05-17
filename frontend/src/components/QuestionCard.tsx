@@ -6,9 +6,10 @@ interface QuestionCardProps {
   card?: GameCard;
   variant?: 'full' | 'compact';
   subtitle?: string;
+  subtitleBadge?: React.ReactNode;
 }
 
-const QuestionCard: React.FC<QuestionCardProps> = ({ question, card, variant = 'full', subtitle }) => {
+const QuestionCard: React.FC<QuestionCardProps> = ({ question, card, variant = 'full', subtitle, subtitleBadge }) => {
   const color = card ? getCategoryColor(card.category) : '#18bbed';
   const isCompact = variant === 'compact';
 
@@ -74,8 +75,13 @@ const QuestionCard: React.FC<QuestionCardProps> = ({ question, card, variant = '
           </p>
         </div>
       </div>
-      {subtitle && (
-        <p className="mt-2 md:mt-3 text-sm md:text-base text-gray-600 italic text-center">{subtitle}</p>
+      {(subtitle || subtitleBadge) && (
+        <div className="mt-2 md:mt-3 flex flex-col items-center gap-1.5">
+          {subtitle && (
+            <p className="text-sm md:text-base text-gray-600 italic text-center">{subtitle}</p>
+          )}
+          {subtitleBadge}
+        </div>
       )}
     </div>
   );

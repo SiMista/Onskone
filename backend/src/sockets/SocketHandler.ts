@@ -1,11 +1,11 @@
 import { randomInt } from 'crypto';
-import {Server, Socket} from 'socket.io';
+import { Server, Socket } from 'socket.io';
 import * as LobbyManager from '../managers/LobbyManager';
 import * as GameManager from '../managers/GameManager';
-import {Player} from "../models/Player";
-import {Lobby} from "../models/Lobby";
-import {Round} from "../models/Round";
-import {Game} from "../models/Game";
+import { Player } from "../models/Player";
+import { Lobby } from "../models/Lobby";
+import { Round } from "../models/Round";
+import { Game } from "../models/Game";
 import type { ServerToClientEvents, ClientToServerEvents, IGame } from '@onskone/shared';
 import { GAME_CONSTANTS, RoundPhase } from '@onskone/shared';
 import { validatePlayerName, validateAnswer, validateLobbyCode, validatePlayerId, validateAvatarId, sanitizeInput } from '../utils/validation.js';
@@ -276,12 +276,6 @@ export class SocketHandler {
      * Adds automatic "no response" answers and moves to GUESSING (or SUBSTITUTE_ANSWERING in guess mode)
      */
     private handleAnsweringTimeout(lobbyCode: string, lobby: Lobby, currentRound: Round): void {
-        console.log('[GUESS-DEBUG] handleAnsweringTimeout FIRED', {
-            lobbyCode,
-            phase: currentRound.phase,
-            answersBefore: Object.keys(currentRound.answers),
-            guessMyAnswerMode: currentRound.guessMyAnswerMode,
-        });
         // Add automatic answers for players who didn't respond (excluding pilier)
         const respondingPlayers = lobby.players.filter(p => p.id !== currentRound.leader.id);
         for (const player of respondingPlayers) {
@@ -310,11 +304,6 @@ export class SocketHandler {
      * Auto-selects the first eligible player (non-pilier).
      */
     private handleSubstituteSelectionTimeout(lobbyCode: string, lobby: Lobby, currentRound: Round): void {
-        console.log('[GUESS-DEBUG] handleSubstituteSelectionTimeout FIRED', {
-            lobbyCode,
-            phase: currentRound.phase,
-            substitutePlayerId: currentRound.substitutePlayerId,
-        });
         if (currentRound.substitutePlayerId) {
             currentRound.nextPhase();
             return;
@@ -356,22 +345,8 @@ export class SocketHandler {
      * shuffle, store ids, and broadcast events.
      */
     private transitionToGuessing(lobbyCode: string, lobby: Lobby, currentRound: Round, forced: boolean): void {
-        const phaseBefore = currentRound.phase;
         currentRound.nextPhase();
         const answersPool = currentRound.getGuessingAnswers();
-        console.log('[GUESS-DEBUG] transitionToGuessing', {
-            lobbyCode,
-            phaseBefore,
-            phaseAfter: currentRound.phase,
-            forced,
-            answersKeys: Object.keys(currentRound.answers),
-            substituteAnswer: currentRound.substituteAnswer,
-            poolKeys: Object.keys(answersPool),
-            poolSize: Object.keys(answersPool).length,
-            leaderId: currentRound.leader.id,
-            substitutePlayerId: currentRound.substitutePlayerId,
-            guessMyAnswerMode: currentRound.guessMyAnswerMode,
-        });
         this.io.to(lobbyCode).emit('allAnswersSubmitted', {
             phase: currentRound.phase,
             answersCount: Object.keys(answersPool).length,
@@ -444,7 +419,7 @@ export class SocketHandler {
                     const hostPlayer = new Player(sanitizedName, socket.id, true, avatarId);
                     lobby?.addPlayer(hostPlayer);
                     socket.join(lobbyCode);
-                    socket.emit('lobbyCreated', {lobbyCode});
+                    socket.emit('lobbyCreated', { lobbyCode });
                     socket.emit('lobbyDecksState', {
                         catalog: GameManager.getDecksCatalog(),
                         selected: lobby!.selectedDecks,
@@ -454,7 +429,7 @@ export class SocketHandler {
                     logger.game.created(lobbyCode, sanitizedName);
                 } catch (error) {
                     logger.error('Error creating lobby', { error: (error as Error).message });
-                    socket.emit('error', {message: (error as Error).message});
+                    socket.emit('error', { message: (error as Error).message });
                 }
             });
             // Event: Join Lobby with player name
@@ -852,17 +827,17 @@ export class SocketHandler {
                     const sanitizedName = sanitizeInput(data.playerName);
                     const lobby = LobbyManager.getLobby(data.lobbyCode);
                     if (!lobby) {
-                        socket.emit('error', {message: 'Salon introuvable'});
+                        socket.emit('error', { message: 'Salon introuvable' });
                         return;
                     }
                     if (lobby.players.find(p => p.name === sanitizedName)) {
-                        socket.emit('playerNameExists', {playerName: sanitizedName});
+                        socket.emit('playerNameExists', { playerName: sanitizedName });
                     } else {
                         socket.emit('playerNameValid');
                     }
                 } catch (error) {
                     logger.error('Error checking player name', { error: (error as Error).message });
-                    socket.emit('error', {message: (error as Error).message});
+                    socket.emit('error', { message: (error as Error).message });
                 }
             });
 
@@ -875,6 +850,13 @@ export class SocketHandler {
                         return;
                     }
 
+                    // Validate lobbyCode
+                    const codeValidation = validateLobbyCode(data.lobbyCode);
+                    if (!codeValidation.isValid) {
+                        socket.emit('error', { message: codeValidation.error || 'Code invalide' });
+                        return;
+                    }
+
                     // Validate playerId
                     const playerIdValidation = validatePlayerId(data.currentPlayerId);
                     if (!playerIdValidation.isValid) {
@@ -884,26 +866,26 @@ export class SocketHandler {
 
                     const lobby = LobbyManager.getLobby(data.lobbyCode);
                     if (!lobby) {
-                        socket.emit('error', {message: 'Salon introuvable'});
+                        socket.emit('error', { message: 'Salon introuvable' });
                         return;
                     }
                     logger.debug('leaveLobby', { playerId: data.currentPlayerId, lobbyCode: data.lobbyCode });
                     const player = lobby.getPlayer(data.currentPlayerId);
                     if (!player) {
-                        socket.emit('error', {message: 'Joueur introuvable'});
+                        socket.emit('error', { message: 'Joueur introuvable' });
                         return;
                     }
 
                     // Vérifier que le socket correspond au joueur (anti-usurpation)
                     if (player.socketId !== socket.id) {
                         logger.warn(`Tentative d'usurpation leaveLobby: socket ${socket.id} essaie de quitter pour ${player.name}`);
-                        socket.emit('error', {message: 'Action non autorisée'});
+                        socket.emit('error', { message: 'Action non autorisée' });
                         return;
                     }
 
                     const lobbyCode = lobby.code;
                     const isLobbyRemoved = LobbyManager.removePlayer(lobby, player);
-                    this.io.to(lobbyCode).emit('updatePlayersList', {players: lobby.players});
+                    this.io.to(lobbyCode).emit('updatePlayersList', { players: lobby.players });
                     logger.info(`${player.name} a quitté le lobby ${lobbyCode}`);
                     if (isLobbyRemoved) {
                         this.cleanupLobbyResources(lobbyCode);
@@ -913,7 +895,7 @@ export class SocketHandler {
 
                 } catch (error) {
                     logger.error('Error leaving lobby', { error: (error as Error).message });
-                    socket.emit('error', {message: (error as Error).message});
+                    socket.emit('error', { message: (error as Error).message });
                 }
             });
 
@@ -997,8 +979,8 @@ export class SocketHandler {
                     logger.error('Error kicking player', { error: (error as Error).message });
                     socket.emit('error', { message: 'Erreur lors de l\'expulsion du joueur' });
                 }
-            });       
-            
+            });
+
             // Promote Player to Host
             socket.on('promotePlayer', ({ lobbyCode, playerId }) => {
                 try {
@@ -1066,9 +1048,16 @@ export class SocketHandler {
                         return;
                     }
 
+                    // Validate lobbyCode
+                    const codeValidation = validateLobbyCode(data.lobbyCode);
+                    if (!codeValidation.isValid) {
+                        socket.emit('error', { message: codeValidation.error || 'Code invalide' });
+                        return;
+                    }
+
                     const lobby = LobbyManager.getLobby(data.lobbyCode);
                     if (!lobby) {
-                        socket.emit('error', {message: 'Salon introuvable'});
+                        socket.emit('error', { message: 'Salon introuvable' });
                         return;
                     }
 
@@ -1120,14 +1109,14 @@ export class SocketHandler {
                     };
 
                     // Envoyer les événements aux clients
-                    this.io.to(data.lobbyCode).emit('gameStarted', {game: gameData});
+                    this.io.to(data.lobbyCode).emit('gameStarted', { game: gameData });
                     if (game.currentRound) {
-                        this.io.to(data.lobbyCode).emit('roundStarted', {round: game.currentRound});
+                        this.io.to(data.lobbyCode).emit('roundStarted', { round: game.currentRound });
                     }
                     logger.game.started(data.lobbyCode, activePlayers.length);
                 } catch (error) {
                     logger.error('Error starting game', { error: (error as Error).message });
-                    socket.emit('error', {message: (error as Error).message});
+                    socket.emit('error', { message: (error as Error).message });
                 }
             });
 
@@ -1185,7 +1174,7 @@ export class SocketHandler {
                     logger.debug(`${questions.length} carte(s) envoyée(s) au leader (${excludeCards.length} exclues)`, { lobbyCode: data.lobbyCode });
                 } catch (error) {
                     logger.error('Error requesting questions', { error: (error as Error).message });
-                    socket.emit('error', {message: (error as Error).message});
+                    socket.emit('error', { message: (error as Error).message });
                 }
             });
 
@@ -1209,7 +1198,7 @@ export class SocketHandler {
                         && data.selectedQuestion.length <= 500;
 
                     if (!validQuestion) {
-                        socket.emit('error', {message: 'Question invalide'});
+                        socket.emit('error', { message: 'Question invalide' });
                         return;
                     }
 
@@ -1218,7 +1207,7 @@ export class SocketHandler {
                     const questionExists = proposedCards.some(card => card?.questions?.includes(data.selectedQuestion));
                     if (!questionExists) {
                         logger.warn(`Question non autorisée sélectionnée`, { lobbyCode: data.lobbyCode, question: data.selectedQuestion });
-                        socket.emit('error', {message: 'Cette question n\'est pas disponible'});
+                        socket.emit('error', { message: 'Cette question n\'est pas disponible' });
                         return;
                     }
 
@@ -1241,7 +1230,7 @@ export class SocketHandler {
                     logger.debug(`Question sélectionnée`, { lobbyCode: data.lobbyCode });
                 } catch (error) {
                     logger.error('Error selecting question', { error: (error as Error).message });
-                    socket.emit('error', {message: (error as Error).message});
+                    socket.emit('error', { message: (error as Error).message });
                 }
             });
 
@@ -1257,13 +1246,13 @@ export class SocketHandler {
                     const lobby = LobbyManager.getLobby(data.lobbyCode);
                     const game = lobby?.game;
                     if (!game) {
-                        socket.emit('error', {message: 'Partie introuvable'});
+                        socket.emit('error', { message: 'Partie introuvable' });
                         return;
                     }
 
                     // Vérifier que c'est le leader du round actuel qui demande le prochain round
                     if (game.currentRound && socket.id !== game.currentRound.leader.socketId) {
-                        socket.emit('error', {message: 'Seul le pilier peut passer au round suivant'});
+                        socket.emit('error', { message: 'Seul le pilier peut passer au round suivant' });
                         return;
                     }
 
@@ -1287,12 +1276,12 @@ export class SocketHandler {
                     // Sinon, passer au round suivant
                     game.nextRound();
                     if (game.currentRound) {
-                        this.io.to(data.lobbyCode).emit('roundStarted', {round: game.currentRound});
+                        this.io.to(data.lobbyCode).emit('roundStarted', { round: game.currentRound });
                         logger.game.roundStarted(data.lobbyCode, game.currentRound.roundNumber, game.currentRound.leader.name);
                     }
                 } catch (error) {
                     logger.error('Error starting next round', { error: (error as Error).message });
-                    socket.emit('error', {message: (error as Error).message});
+                    socket.emit('error', { message: (error as Error).message });
                 }
             });
 
@@ -1305,10 +1294,25 @@ export class SocketHandler {
                         return;
                     }
 
+                    const codeValidation = validateLobbyCode(data.lobbyCode);
+                    if (!codeValidation.isValid) {
+                        socket.emit('error', { message: codeValidation.error || 'Code invalide' });
+                        return;
+                    }
+
                     const lobby = LobbyManager.getLobby(data.lobbyCode);
                     const game = lobby?.game;
                     if (!game) {
-                        socket.emit('error', {message: 'Partie introuvable'});
+                        socket.emit('error', { message: 'Partie introuvable' });
+                        return;
+                    }
+
+                    // Sécurité : seul un membre du lobby peut récupérer les résultats
+                    const isInRoom = socket.rooms.has(data.lobbyCode);
+                    const isMember = lobby!.players.some(p => p.socketId === socket.id);
+                    if (!isInRoom && !isMember) {
+                        logger.warn(`Tentative d'accès non autorisée à getGameResults`, { lobbyCode: data.lobbyCode, socketId: socket.id });
+                        socket.emit('error', { message: 'Action non autorisée' });
                         return;
                     }
 
@@ -1318,7 +1322,7 @@ export class SocketHandler {
                     });
                 } catch (error) {
                     logger.error('Error getting game results', { error: (error as Error).message });
-                    socket.emit('error', {message: (error as Error).message});
+                    socket.emit('error', { message: (error as Error).message });
                 }
             });
 
@@ -1328,6 +1332,13 @@ export class SocketHandler {
                     // Rate limiting
                     if (!rateLimiters.general.isAllowed(socket.id)) {
                         socket.emit('error', { message: 'Trop de requêtes. Veuillez patienter.' });
+                        return;
+                    }
+
+                    // Validate lobbyCode
+                    const codeValidation = validateLobbyCode(data.lobbyCode);
+                    if (!codeValidation.isValid) {
+                        socket.emit('error', { message: codeValidation.error || 'Code invalide' });
                         return;
                     }
 
@@ -1343,7 +1354,7 @@ export class SocketHandler {
                     const lobby = LobbyManager.getLobby(data.lobbyCode);
                     const game = lobby?.game;
                     if (!game) {
-                        socket.emit('error', {message: 'Partie introuvable'});
+                        socket.emit('error', { message: 'Partie introuvable' });
                         return;
                     }
 
@@ -1351,6 +1362,23 @@ export class SocketHandler {
                     if (data.playerId) {
                         const player = lobby.players.find(p => p.id === data.playerId);
                         if (player) {
+                            // Sécurité anti-prise de contrôle :
+                            // refuser d'écraser le socketId si la cible a un socket actuellement
+                            // connecté (cas légitime de reconnexion = la victime est déconnectée).
+                            // On ne refuse PAS si le socket actuel EST déjà celui du joueur (no-op).
+                            if (player.socketId !== socket.id) {
+                                const existingSocket = this.io.sockets.sockets.get(player.socketId);
+                                if (existingSocket && existingSocket.connected) {
+                                    logger.warn(`Tentative de prise de contrôle refusée`, {
+                                        lobbyCode: data.lobbyCode,
+                                        targetPlayerId: data.playerId,
+                                        attackerSocketId: socket.id,
+                                        victimSocketId: player.socketId,
+                                    });
+                                    socket.emit('error', { message: 'Action non autorisée' });
+                                    return;
+                                }
+                            }
                             const lockKey = this.getDisconnectKey(lobby.code, player.name);
 
                             // Vérifier si une reconnexion est déjà en cours
@@ -1459,7 +1487,7 @@ export class SocketHandler {
                     });
                 } catch (error) {
                     logger.error('Error getting game state', { error: (error as Error).message });
-                    socket.emit('error', {message: (error as Error).message});
+                    socket.emit('error', { message: (error as Error).message });
                 }
             });
 
@@ -1494,50 +1522,43 @@ export class SocketHandler {
                     const lobby = LobbyManager.getLobby(data.lobbyCode);
                     const game = lobby?.game;
                     if (!game) {
-                        socket.emit('error', {message: 'Partie introuvable'});
+                        socket.emit('error', { message: 'Partie introuvable' });
                         return;
                     }
 
                     // Update lobby activity
                     lobby?.updateActivity();
                     if (!game.currentRound) {
-                        socket.emit('error', {message: 'Round introuvable'});
+                        socket.emit('error', { message: 'Round introuvable' });
                         return;
                     }
                     const player = lobby.getPlayer(data.playerId);
                     if (!player) {
-                        socket.emit('error', {message: 'Joueur introuvable'});
+                        socket.emit('error', { message: 'Joueur introuvable' });
                         return;
                     }
 
                     // Vérifier que le socket correspond au joueur (anti-usurpation)
                     if (player.socketId !== socket.id) {
                         logger.warn(`Tentative d'usurpation: socket ${socket.id} essaie de soumettre pour ${player.name}`);
-                        socket.emit('error', {message: 'Action non autorisée'});
+                        socket.emit('error', { message: 'Action non autorisée' });
                         return;
                     }
 
                     // Vérifier que le joueur n'a pas déjà répondu
                     if (game.currentRound.answers[data.playerId]) {
-                        socket.emit('error', {message: 'Vous avez déjà soumis une réponse'});
+                        socket.emit('error', { message: 'Vous avez déjà soumis une réponse' });
                         return;
                     }
 
                     // Vérifier que le joueur n'est pas le pilier (le pilier ne répond pas)
                     if (player.id === game.currentRound.leader.id) {
-                        socket.emit('error', {message: 'Le pilier ne peut pas soumettre de réponse'});
+                        socket.emit('error', { message: 'Le pilier ne peut pas soumettre de réponse' });
                         return;
                     }
 
                     // Ajouter la réponse
                     game.currentRound.addAnswer(data.playerId, sanitizedAnswer);
-                    console.log('[GUESS-DEBUG] submitAnswer', {
-                        lobbyCode: data.lobbyCode,
-                        playerId: data.playerId,
-                        playerName: player.name,
-                        phase: game.currentRound.phase,
-                        answersAfter: Object.keys(game.currentRound.answers),
-                    });
 
                     // Joueurs actifs qui doivent répondre (tous sauf le pilier)
                     const respondingPlayers = lobby.players.filter(p => p.isActive && p.id !== game.currentRound!.leader.id);
@@ -1580,7 +1601,7 @@ export class SocketHandler {
                     }
                 } catch (error) {
                     logger.error('Error submitting answer', { error: (error as Error).message });
-                    socket.emit('error', {message: (error as Error).message});
+                    socket.emit('error', { message: (error as Error).message });
                 }
             });
 
@@ -1589,6 +1610,12 @@ export class SocketHandler {
                 try {
                     if (!rateLimiters.gameAction.isAllowed(socket.id)) {
                         socket.emit('error', { message: 'Trop de requêtes. Veuillez patienter.' });
+                        return;
+                    }
+
+                    const codeValidation = validateLobbyCode(data.lobbyCode);
+                    if (!codeValidation.isValid) {
+                        socket.emit('error', { message: codeValidation.error || 'Code invalide' });
                         return;
                     }
 
@@ -1624,12 +1651,6 @@ export class SocketHandler {
 
                     currentRound.setSubstitutePlayer(substitute.id);
                     currentRound.nextPhase();
-                    console.log('[GUESS-DEBUG] selectSubstitute → phase advanced', {
-                        lobbyCode: data.lobbyCode,
-                        substitutePlayerId: substitute.id,
-                        newPhase: currentRound.phase,
-                        timerPhase: currentRound.timerPhase,
-                    });
                     this.io.to(data.lobbyCode).emit('substituteSelected', {
                         substitutePlayerId: substitute.id,
                         phase: currentRound.phase,
@@ -1646,6 +1667,12 @@ export class SocketHandler {
                 try {
                     if (!rateLimiters.submitAnswer.isAllowed(socket.id)) {
                         socket.emit('error', { message: 'Trop de requêtes. Veuillez patienter.' });
+                        return;
+                    }
+
+                    const codeValidation = validateLobbyCode(data.lobbyCode);
+                    if (!codeValidation.isValid) {
+                        socket.emit('error', { message: codeValidation.error || 'Code invalide' });
                         return;
                     }
 
@@ -1688,13 +1715,6 @@ export class SocketHandler {
                     }
 
                     currentRound.setSubstituteAnswer(sanitizedAnswer);
-                    console.log('[GUESS-DEBUG] submitSubstituteAnswer', {
-                        lobbyCode: data.lobbyCode,
-                        substitutePlayerId: currentRound.substitutePlayerId,
-                        substituteAnswer: sanitizedAnswer,
-                        phase: currentRound.phase,
-                        answersBeforeTransition: Object.keys(currentRound.answers),
-                    });
                     this.io.to(data.lobbyCode).emit('substituteAnswerSubmitted', {
                         phase: RoundPhase.GUESSING,
                     });
@@ -1718,7 +1738,7 @@ export class SocketHandler {
                     const lobby = LobbyManager.getLobby(data.lobbyCode);
                     const game = lobby?.game;
                     if (!game || !game.currentRound) {
-                        socket.emit('error', {message: 'Partie ou round introuvable'});
+                        socket.emit('error', { message: 'Partie ou round introuvable' });
                         return;
                     }
 
@@ -1761,7 +1781,7 @@ export class SocketHandler {
                     }
                 } catch (error) {
                     logger.error('Error requesting shuffled answers', { error: (error as Error).message });
-                    socket.emit('error', {message: (error as Error).message});
+                    socket.emit('error', { message: (error as Error).message });
                 }
             });
 
@@ -1778,10 +1798,32 @@ export class SocketHandler {
                         return;
                     }
 
+                    const codeValidation = validateLobbyCode(data.lobbyCode);
+                    if (!codeValidation.isValid) {
+                        socket.emit('error', { message: codeValidation.error || 'Code invalide' });
+                        return;
+                    }
+
                     const lobby = LobbyManager.getLobby(data.lobbyCode);
                     const game = lobby?.game;
                     if (!this.requireLeader(socket, game, 'modifier les attributions')) return;
+                    if (!lobby) return;
                     const currentRound = game!.currentRound!;
+
+                    // Validation stricte : filtrer answerId et playerId via les sets du round.
+                    // Empêche pollution d'objet (ex __proto__, constructor) et data garbage.
+                    const round = currentRound as Round;
+                    const answerIds = new Set(Object.keys(round.getGuessingAnswers()));
+                    if (typeof data.answerId !== 'string' || !answerIds.has(data.answerId)) {
+                        return;
+                    }
+                    if (data.playerId !== null) {
+                        if (typeof data.playerId !== 'string') return;
+                        const validTargets = round.guessMyAnswerMode
+                            ? lobby.players
+                            : lobby.players.filter(p => p.id !== currentRound.leader.id);
+                        if (!validTargets.some(p => p.id === data.playerId)) return;
+                    }
 
                     // Mettre à jour l'état intermédiaire du drag & drop
                     currentRound.updateCurrentGuess(data.answerId, data.playerId);
@@ -1794,7 +1836,7 @@ export class SocketHandler {
                     });
                 } catch (error) {
                     logger.error('Error updating guess', { error: (error as Error).message });
-                    socket.emit('error', {message: (error as Error).message});
+                    socket.emit('error', { message: (error as Error).message });
                 }
             });
 
@@ -1826,8 +1868,8 @@ export class SocketHandler {
                         round.guessMyAnswerMode
                             ? lobby.players.map(p => p.id)
                             : lobby.players
-                                  .filter(p => p.id !== currentRound.leader.id)
-                                  .map(p => p.id)
+                                .filter(p => p.id !== currentRound.leader.id)
+                                .map(p => p.id)
                     );
 
                     const validGuesses: Record<string, string> = {};
@@ -1875,7 +1917,7 @@ export class SocketHandler {
                     logger.info(`Attributions validées`, { lobbyCode: data.lobbyCode, leaderScore: currentRound.scores[currentRound.leader.id] || 0 });
                 } catch (error) {
                     logger.error('Error submitting guesses', { error: (error as Error).message });
-                    socket.emit('error', {message: (error as Error).message});
+                    socket.emit('error', { message: (error as Error).message });
                 }
             });
 
@@ -1892,6 +1934,17 @@ export class SocketHandler {
                     const game = lobby?.game;
                     if (!this.requireLeader(socket, game, 'révéler les réponses')) return;
                     const currentRound = game!.currentRound!;
+
+                    // Validation stricte : answerIndex doit être un entier dans [0, totalAnswers)
+                    const totalAnswers = Object.keys((currentRound as Round).getGuessingAnswers()).length;
+                    if (
+                        typeof data.answerIndex !== 'number' ||
+                        !Number.isInteger(data.answerIndex) ||
+                        data.answerIndex < 0 ||
+                        data.answerIndex >= totalAnswers
+                    ) {
+                        return;
+                    }
 
                     // Initialiser le Set des indices révélés si nécessaire
                     if (!currentRound.revealedIndices) {
@@ -1935,11 +1988,11 @@ export class SocketHandler {
                     });
                 } catch (error) {
                     logger.error('Error revealing answer', { error: (error as Error).message });
-                    socket.emit('error', {message: (error as Error).message});
+                    socket.emit('error', { message: (error as Error).message });
                 }
             });
 
-            // Advance Reveal Cursor (mode remote — relayer aux spectateurs)
+            // Advance Reveal Cursor (mode remote - relayer aux spectateurs)
             socket.on('advanceRevealCursor', (data: { lobbyCode: string; nextIndex: number }) => {
                 try {
                     if (!rateLimiters.gameAction.isAllowed(socket.id)) {
@@ -1949,10 +2002,21 @@ export class SocketHandler {
                     const lobby = LobbyManager.getLobby(data.lobbyCode);
                     const game = lobby?.game;
                     if (!this.requireLeader(socket, game, 'avancer le curseur')) return;
+                    const currentRound = game!.currentRound!;
+                    const totalAnswers = Object.keys((currentRound as Round).getGuessingAnswers()).length;
+                    // nextIndex doit être un entier dans [-1, totalAnswers) (-1 = fin du reveal)
+                    if (
+                        typeof data.nextIndex !== 'number' ||
+                        !Number.isInteger(data.nextIndex) ||
+                        data.nextIndex < -1 ||
+                        data.nextIndex >= totalAnswers
+                    ) {
+                        return;
+                    }
                     this.io.to(data.lobbyCode).emit('revealCursorAdvanced', { nextIndex: data.nextIndex });
                 } catch (error) {
                     logger.error('Error advancing reveal cursor', { error: (error as Error).message });
-                    socket.emit('error', {message: (error as Error).message});
+                    socket.emit('error', { message: (error as Error).message });
                 }
             });
 
@@ -1987,7 +2051,8 @@ export class SocketHandler {
                     }
 
                     // Vérifier que la réponse était incorrecte
-                    const answerEntries = Object.entries(currentRound.answers);
+                    // Utiliser getGuessingAnswers() pour inclure l'entrée du pilier en mode "Devine ma réponse"
+                    const answerEntries = Object.entries((currentRound as Round).getGuessingAnswers());
                     if (data.answerIndex >= answerEntries.length) return;
                     const [playerId] = answerEntries[data.answerIndex];
                     const guessedPlayerId = currentRound.guesses[playerId];
@@ -2077,12 +2142,6 @@ export class SocketHandler {
                     currentRound.timerStartedAt = startedAt;
                     currentRound.timerDuration = timerDuration;
                     currentRound.timerPhase = currentRound.phase; // Pour éviter les conflits entre phases
-                    console.log('[GUESS-DEBUG] startTimer set timerPhase', {
-                        lobbyCode: data.lobbyCode,
-                        timerPhase: currentRound.timerPhase,
-                        requestedPhase,
-                        duration: timerDuration,
-                    });
 
                     // Broadcaster le démarrage du timer à tous
                     this.io.to(data.lobbyCode).emit('timerStarted', {
@@ -2093,7 +2152,7 @@ export class SocketHandler {
                     logger.debug(`Timer démarré: ${timerDuration}s`, { lobbyCode: data.lobbyCode, phase: currentRound.phase });
                 } catch (error) {
                     logger.error('Error starting timer', { error: (error as Error).message });
-                    socket.emit('error', {message: (error as Error).message});
+                    socket.emit('error', { message: (error as Error).message });
                 }
             });
 
@@ -2161,12 +2220,6 @@ export class SocketHandler {
                     // Protection : vérifier que le timer qui expire correspond bien à la phase actuelle
                     // Ex: si le timer ANSWERING expire mais que la phase a déjà avancé à GUESSING
                     // (car le dernier joueur a soumis sa réponse juste avant), on ignore
-                    console.log('[GUESS-DEBUG] timerExpired received', {
-                        lobbyCode: data.lobbyCode,
-                        currentPhase,
-                        timerPhase: currentRound.timerPhase,
-                        timerProcessedForPhase: currentRound.timerProcessedForPhase,
-                    });
                     if (currentRound.timerPhase && currentRound.timerPhase !== currentPhase) {
                         logger.debug(`Timer ignoré: démarré pour ${currentRound.timerPhase} mais phase actuelle est ${currentPhase}`);
                         return;
@@ -2207,7 +2260,7 @@ export class SocketHandler {
                     }
                 } catch (error) {
                     logger.error('Error handling timer expiration', { error: (error as Error).message });
-                    socket.emit('error', {message: (error as Error).message});
+                    socket.emit('error', { message: (error as Error).message });
                 }
             });
 

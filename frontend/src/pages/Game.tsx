@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import socket from '../utils/socket';
@@ -11,9 +11,11 @@ import SubstituteAnsweringPhase from '../components/SubstituteAnsweringPhase';
 import Logo from '../components/Logo';
 import HourglassTimer from '../components/HourglassTimer';
 import { GAME_CONFIG } from '../constants/game';
-import { useLeavePrompt } from '../hooks';
+import { useLeavePrompt, useReconnectOnVisible } from '../hooks';
 import { getCurrentPlayerFromStorage } from '../utils/playerHelpers';
 import { IPlayer, IRound, IGame, RoundPhase, GameStatus, RevealResult, GameCard } from '@onskone/shared';
+import { isStudioFrame, studioSlotIndex } from '../utils/studioStorage';
+import { useStudioBot } from '../hooks/useStudioBot';
 
 const GamePage: React.FC = () => {
   const { lobbyCode } = useParams<{ lobbyCode: string }>();
@@ -41,8 +43,6 @@ const GamePage: React.FC = () => {
   } | null>(null);
   const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const notificationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Ref pour tracker si on a déjà un listener once('connect') en attente
-  const pendingConnectListenerRef = useRef<boolean>(false);
 
   // Calculer isLeader directement (pas de useEffect) pour éviter les race conditions
   const isLeader = !!(game?.currentRound && currentPlayer && game.currentRound.leader.id === currentPlayer.id);
@@ -50,54 +50,53 @@ const GamePage: React.FC = () => {
   // Confirmation avant de quitter pendant une partie en cours
   useLeavePrompt(undefined, game?.status === GameStatus.IN_PROGRESS);
 
+  // Studio: bot automation + state postMessage for pilier highlight in the parent.
+  useStudioBot({ game, currentPlayer, players, lobbyCode: lobbyCode ?? null });
   useEffect(() => {
-    // Récupérer et valider le joueur actuel depuis le localStorage
-    let playerId: string | undefined;
+    if (!isStudioFrame) return;
+    if (typeof window === 'undefined' || window.parent === window) return;
+    try {
+      window.parent.postMessage({
+        type: 'studio:state',
+        slot: studioSlotIndex,
+        leaderId: game?.currentRound?.leader.id ?? null,
+        currentPlayerId: currentPlayer?.id ?? null,
+        phase: game?.currentRound?.phase ?? null,
+        substitutePlayerId: game?.currentRound?.substitutePlayerId ?? null,
+        playerName: currentPlayer?.name ?? null,
+      }, '*');
+    } catch { /* silent */ }
+  }, [
+    game?.currentRound?.leader.id,
+    game?.currentRound?.phase,
+    game?.currentRound?.substitutePlayerId,
+    currentPlayer?.id,
+    currentPlayer?.name,
+  ]);
+
+  // Fonction stable pour récupérer l'état du jeu : utilisée à la connexion initiale,
+  // sur reconnexion socket, et au retour de l'app au premier plan.
+  const fetchGameState = useCallback(() => {
+    if (!lobbyCode) return;
     const player = getCurrentPlayerFromStorage();
-    if (player) {
-      setCurrentPlayer(player);
-      playerId = player.id;
+    if (player?.id) {
+      socket.emit('getGameState', { lobbyCode, playerId: player.id });
     }
+  }, [lobbyCode]);
 
-    // Fonction pour demander l'état du jeu
-    const fetchGameState = () => {
-      if (lobbyCode && playerId) {
-        socket.emit('getGameState', { lobbyCode: lobbyCode!, playerId });
-      }
-    };
+  // Écouter les reconnexions socket + visibilitychange
+  useReconnectOnVisible(fetchGameState);
 
-    // Demander l'état actuel du jeu au serveur (avec playerId pour la reconnexion)
+  useEffect(() => {
+    // Récupérer le joueur courant pour l'état local
+    const player = getCurrentPlayerFromStorage();
+    if (player) setCurrentPlayer(player);
+
+    // Demander l'état actuel du jeu au serveur
     fetchGameState();
 
-    // Écouter les reconnexions socket (après perte de connexion)
-    socket.on('connect', fetchGameState);
-
-    // MOBILE: Écouter quand l'app redevient visible (retour après changement d'app)
-    // Sur mobile, le socket peut être "pausé" sans se déconnecter complètement
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        if (socket.connected) {
-          // Socket déjà connecté - resynchroniser immédiatement
-          fetchGameState();
-        } else if (!pendingConnectListenerRef.current) {
-          // Socket déconnecté et pas de listener en attente
-          // Évite d'empiler plusieurs listeners si visibility change rapidement
-          pendingConnectListenerRef.current = true;
-          const onConnect = () => {
-            pendingConnectListenerRef.current = false;
-            fetchGameState();
-          };
-          socket.once('connect', onConnect);
-          socket.connect();
-        }
-        // Si pendingConnectListenerRef.current est true, on attend déjà une reconnexion
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    // Socket listeners
-    socket.on('gameState', (data: {
+    // ===== Handlers nommés (cleanup ciblé pour ne pas affecter d'autres composants) =====
+    const onGameState = (data: {
       game: IGame;
       players: IPlayer[];
       reconnectionData?: {
@@ -112,18 +111,17 @@ const GamePage: React.FC = () => {
       setPlayers(data.players);
       if (data.reconnectionData) {
         setReconnectionData(data.reconnectionData);
-        // Restaurer les résultats de révélation si présents
         if (data.reconnectionData.revealResults) {
           setRevealResults(data.reconnectionData.revealResults);
         }
       }
-    });
+    };
 
-    socket.on('gameStarted', (data: { game: IGame }) => {
+    const onGameStarted = (data: { game: IGame }) => {
       setGame(data.game);
-    });
+    };
 
-    socket.on('questionSelected', (data: { question: string; phase: RoundPhase; auto?: boolean; card?: GameCard }) => {
+    const onQuestionSelected = (data: { question: string; phase: RoundPhase; auto?: boolean; card?: GameCard }) => {
       setGame(prev => prev ? {
         ...prev,
         currentRound: prev.currentRound ? {
@@ -133,9 +131,9 @@ const GamePage: React.FC = () => {
           gameCard: data.card ?? prev.currentRound.gameCard
         } : null
       } : null);
-    });
+    };
 
-    socket.on('allAnswersSubmitted', (data: { phase: RoundPhase; answersCount: number; forced?: boolean }) => {
+    const onAllAnswersSubmitted = (data: { phase: RoundPhase; answersCount: number; forced?: boolean }) => {
       setGame(prev => prev ? {
         ...prev,
         currentRound: prev.currentRound ? {
@@ -143,9 +141,9 @@ const GamePage: React.FC = () => {
           phase: data.phase
         } : null
       } : null);
-    });
+    };
 
-    socket.on('substituteSelected', (data: { substitutePlayerId: string; phase: RoundPhase; auto?: boolean }) => {
+    const onSubstituteSelected = (data: { substitutePlayerId: string; phase: RoundPhase; auto?: boolean }) => {
       setGame(prev => prev ? {
         ...prev,
         currentRound: prev.currentRound ? {
@@ -154,9 +152,9 @@ const GamePage: React.FC = () => {
           phase: data.phase
         } : null
       } : null);
-    });
+    };
 
-    socket.on('substituteAnswerSubmitted', (data: { phase: RoundPhase; forced?: boolean }) => {
+    const onSubstituteAnswerSubmitted = (data: { phase: RoundPhase; forced?: boolean }) => {
       setGame(prev => prev ? {
         ...prev,
         currentRound: prev.currentRound ? {
@@ -164,9 +162,9 @@ const GamePage: React.FC = () => {
           phase: data.phase
         } : null
       } : null);
-    });
+    };
 
-    socket.on('revealResults', (data: { phase: RoundPhase; results: RevealResult[]; scores: Record<string, number> }) => {
+    const onRevealResults = (data: { phase: RoundPhase; results: RevealResult[]; scores: Record<string, number> }) => {
       setGame(prev => prev ? {
         ...prev,
         currentRound: prev.currentRound ? {
@@ -174,93 +172,94 @@ const GamePage: React.FC = () => {
           phase: data.phase
         } : null
       } : null);
-
-      // Stocker les résultats pour RevealPhase
       setRevealResults(data.results);
-    });
+    };
 
-    socket.on('roundSkipped', (data: { skippedLeaderName: string; reason: string }) => {
-      // Afficher une notification que le round a été sauté
+    const onRoundSkipped = (data: { skippedLeaderName: string; reason: 'leader_disconnected' }) => {
       setNotification(`${data.skippedLeaderName} s'est déconnecté - round passé`);
       if (notificationTimeoutRef.current) {
         clearTimeout(notificationTimeoutRef.current);
       }
       notificationTimeoutRef.current = setTimeout(() => setNotification(null), 5000);
-    });
+    };
 
-    socket.on('roundStarted', (data: { round: IRound }) => {
+    const onRoundStarted = (data: { round: IRound }) => {
       // Réinitialiser les données de reconnexion pour la nouvelle manche
       setReconnectionData(null);
       setGame(prev => {
         if (prev) {
+          // Dédoublonnage : un round peut déjà avoir été ajouté via gameState
+          // (race entre reconnexion immédiate et roundStarted).
+          const filtered = (prev.rounds || []).filter(r => r.roundNumber !== data.round.roundNumber);
           return {
             ...prev,
             currentRound: data.round,
-            rounds: [...(prev.rounds || []), data.round]
-          };
-        } else {
-          // Si game n'existe pas encore, créer un lobby minimal
-          const minimalLobby: IGame['lobby'] = {
-            code: lobbyCode || '',
-            players: players,
-            selectedDecks: {},
-            gameMode: 'local',
-            guessMyAnswerMode: false
-          };
-          return {
-            lobby: minimalLobby,
-            currentRound: data.round,
-            status: GameStatus.IN_PROGRESS,
-            rounds: [data.round]
+            rounds: [...filtered, data.round]
           };
         }
+        // Si game n'existe pas encore, créer un lobby minimal
+        const minimalLobby: IGame['lobby'] = {
+          code: lobbyCode || '',
+          players: players,
+          selectedDecks: {},
+          gameMode: 'local',
+          guessMyAnswerMode: false
+        };
+        return {
+          lobby: minimalLobby,
+          currentRound: data.round,
+          status: GameStatus.IN_PROGRESS,
+          rounds: [data.round]
+        };
       });
-    });
+    };
 
-    socket.on('gameEnded', () => {
+    const onGameEnded = () => {
       navigate(`/endgame/${lobbyCode}`);
-    });
+    };
 
-    socket.on('updatePlayersList', (data: { players: IPlayer[] }) => {
+    const onUpdatePlayersList = (data: { players: IPlayer[] }) => {
       setPlayers(data.players);
-    });
+    };
 
-    socket.on('error', (data: { message: string }) => {
+    const onError = (data: { message: string }) => {
       setError(data.message);
-      // Cleanup previous timeout if exists
       if (errorTimeoutRef.current) {
         clearTimeout(errorTimeoutRef.current);
       }
       errorTimeoutRef.current = setTimeout(() => setError(null), 5000);
-    });
+    };
+
+    socket.on('gameState', onGameState);
+    socket.on('gameStarted', onGameStarted);
+    socket.on('questionSelected', onQuestionSelected);
+    socket.on('allAnswersSubmitted', onAllAnswersSubmitted);
+    socket.on('substituteSelected', onSubstituteSelected);
+    socket.on('substituteAnswerSubmitted', onSubstituteAnswerSubmitted);
+    socket.on('revealResults', onRevealResults);
+    socket.on('roundSkipped', onRoundSkipped);
+    socket.on('roundStarted', onRoundStarted);
+    socket.on('gameEnded', onGameEnded);
+    socket.on('updatePlayersList', onUpdatePlayersList);
+    socket.on('error', onError);
 
     return () => {
-      // Retirer le listener spécifique au lieu de tous les listeners 'connect'
-      socket.off('connect', fetchGameState);
-      socket.off('gameState');
-      socket.off('gameStarted');
-      socket.off('questionSelected');
-      socket.off('allAnswersSubmitted');
-      socket.off('substituteSelected');
-      socket.off('substituteAnswerSubmitted');
-      socket.off('revealResults');
-      socket.off('roundSkipped');
-      socket.off('roundStarted');
-      socket.off('gameEnded');
-      socket.off('updatePlayersList');
-      socket.off('error');
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      // Reset le flag pour éviter un état incohérent si le composant remount
-      pendingConnectListenerRef.current = false;
-      // Cleanup timeouts
-      if (errorTimeoutRef.current) {
-        clearTimeout(errorTimeoutRef.current);
-      }
-      if (notificationTimeoutRef.current) {
-        clearTimeout(notificationTimeoutRef.current);
-      }
+      socket.off('gameState', onGameState);
+      socket.off('gameStarted', onGameStarted);
+      socket.off('questionSelected', onQuestionSelected);
+      socket.off('allAnswersSubmitted', onAllAnswersSubmitted);
+      socket.off('substituteSelected', onSubstituteSelected);
+      socket.off('substituteAnswerSubmitted', onSubstituteAnswerSubmitted);
+      socket.off('revealResults', onRevealResults);
+      socket.off('roundSkipped', onRoundSkipped);
+      socket.off('roundStarted', onRoundStarted);
+      socket.off('gameEnded', onGameEnded);
+      socket.off('updatePlayersList', onUpdatePlayersList);
+      socket.off('error', onError);
+      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+      if (notificationTimeoutRef.current) clearTimeout(notificationTimeoutRef.current);
     };
-  }, [navigate, lobbyCode]);
+  }, [navigate, lobbyCode, fetchGameState]);
 
   const renderPhase = () => {
     if (!game || !game.currentRound || !currentPlayer) {
@@ -284,7 +283,7 @@ const GamePage: React.FC = () => {
             key={`question-selection-${game.currentRound.roundNumber}`}
             lobbyCode={lobbyCode!}
             isLeader={isLeader}
-            leaderName={game.currentRound.leader.name}
+            leader={game.currentRound.leader}
           />
         );
 
@@ -294,7 +293,6 @@ const GamePage: React.FC = () => {
             key={`substitute-selection-${game.currentRound.roundNumber}`}
             lobbyCode={lobbyCode!}
             isLeader={isLeader}
-            leaderName={game.currentRound.leader.name}
             leaderId={game.currentRound.leader.id}
             players={players}
             question={game.currentRound.selectedQuestion || ''}
@@ -339,7 +337,7 @@ const GamePage: React.FC = () => {
             key={`guessing-phase-${game.currentRound.roundNumber}`}
             lobbyCode={lobbyCode!}
             isLeader={isLeader}
-            leaderName={game.currentRound.leader.name}
+            leader={game.currentRound.leader}
             currentPlayerId={currentPlayer.id}
             question={game.currentRound.selectedQuestion || ''}
             card={game.currentRound.gameCard}
@@ -356,7 +354,7 @@ const GamePage: React.FC = () => {
             key={`reveal-phase-${game.currentRound.roundNumber}`}
             lobbyCode={lobbyCode!}
             isLeader={isLeader}
-            leaderName={game.currentRound.leader.name}
+            leader={game.currentRound.leader}
             currentPlayerId={currentPlayer.id}
             isGameOver={isGameOver}
             results={revealResults}

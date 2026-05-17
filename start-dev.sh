@@ -10,10 +10,11 @@ cleanup() {
 }
 trap cleanup INT TERM
 
-echo "[shared]    build initial..."
+# Build initial du package shared (synchrone, puis fermé - pas de watch)
+echo "[shared]   build initial..."
 (cd "$ROOT/shared" && pnpm run build)
 
-(cd "$ROOT/shared"   && pnpm run watch          2>&1 | sed -u 's/^/[shared]   /') &
+# Seuls le backend et le frontend tournent ensuite, dans le terminal courant.
 (cd "$ROOT/backend"  && pnpm run dev            2>&1 | sed -u 's/^/[backend]  /') &
 (cd "$ROOT/frontend" && pnpm run dev --host     2>&1 | sed -u 's/^/[frontend] /') &
 

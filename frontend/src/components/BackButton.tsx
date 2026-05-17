@@ -17,7 +17,7 @@ const BackButton: React.FC<BackButtonProps> = ({
 }) => {
   const isDanger = tone === "danger";
 
-  // Au repos : juste un chevron + texte, ghostés en blanc/75 — quasi-invisible.
+  // Au repos : juste un chevron + texte, ghostés en blanc/75 - quasi-invisible.
   // Au hover : pill subtile qui apparaît (bg + border translucides). Le tone
   // teinte le hover en rouge si destructif.
   const hoverClasses = isDanger

@@ -20,13 +20,13 @@ type ButtonProps = {
   type?: "button" | "submit" | "reset";
 };
 
-const variantStyles: Record<ButtonVariant, { base: string; hover: string }> = {
-  primary: { base: "bg-[#1AAFDA] text-black", hover: "hover:bg-[#3fbedf]" },
-  success: { base: "bg-[#30c94d] text-black", hover: "hover:bg-[#4ad766]" },
-  danger: { base: "bg-[#ff5757] text-black", hover: "hover:bg-[#ff7373]" },
-  warning: { base: "bg-[#FFC700] text-black", hover: "hover:bg-[#ffd633]" },
-  secondary: { base: "bg-white/90 text-black", hover: "hover:bg-white" },
-  ghost: { base: "bg-transparent text-gray-700", hover: "hover:bg-black/5 hover:text-black" },
+const variantStyles: Record<ButtonVariant, { base: string; hover: string; band: string | null }> = {
+  primary: { base: "bg-[#1AAFDA] text-black", hover: "hover:bg-[#3fbedf]", band: "#1389ad" },
+  success: { base: "bg-[#30c94d] text-black", hover: "hover:bg-[#4ad766]", band: "#1f9c38" },
+  danger: { base: "bg-[#ff5757] text-black", hover: "hover:bg-[#ff7373]", band: "#d63838" },
+  warning: { base: "bg-[#FFC700] text-black", hover: "hover:bg-[#ffd633]", band: "#cc9f00" },
+  secondary: { base: "bg-white/90 text-black", hover: "hover:bg-white", band: "#cfcfcf" },
+  ghost: { base: "bg-transparent text-gray-700", hover: "hover:bg-black/5 hover:text-black", band: null },
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
@@ -55,10 +55,21 @@ const Button: React.FC<ButtonProps> = ({
   const isDisabled = disabled || isLoading;
   const isGhost = variant === "ghost";
 
+  // Press feedback : le bouton ne bouge pas, on supprime juste sa stack-shadow
+  // (les "ombres-cartes" empilées qui lui donnent son relief). Effet visuel :
+  // le bouton s'aplatit contre la page comme un sticker pressé. Au relâchement,
+  // la transition fait revenir le relief tranquillement.
+  const pressClasses = isDisabled || isGhost
+    ? ""
+    : hero
+      ? "active:[box-shadow:none!important] active:translate-x-[3px] active:translate-y-[3px]"
+      : "active:[box-shadow:none!important] active:translate-x-[2px] active:translate-y-[2px]";
+
+  const band = variantStyles[variant].band;
   const classes = [
-    "relative font-display font-bold tracking-tight uppercase",
+    "group relative font-display font-bold tracking-tight uppercase select-none",
     "rounded-xl",
-    isGhost ? "" : "border-[2.5px] border-black",
+    isGhost ? "" : "border-[2.5px] border-black overflow-hidden",
     isGhost ? "" : "texture-paper",
     isFullWidth ? "w-full" : "",
     isGhost ? "" : (hero ? "stack-shadow" : "stack-shadow-sm"),
@@ -72,9 +83,8 @@ const Button: React.FC<ButtonProps> = ({
     rotateEffect && !hero && !isDisabled ? "hover:scale-[1.06] hover:rotate-[-1.2deg]" : "",
     // Lift par défaut si aucun effet spécial
     !rotateEffect && !hero && !isDisabled && !isGhost ? "hover:-translate-y-0.5" : "",
-    // Press effect : la carte s'enfonce dans son ombre
-    !isDisabled && !isGhost ? "active:translate-x-[2px] active:translate-y-[2px] active:[box-shadow:1px_1px_0_0_rgba(0,0,0,0.85)]" : "",
-    "transition-all duration-150 ease-out",
+    pressClasses,
+    "transition-all duration-[350ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]",
     className,
   ].filter(Boolean).join(" ");
 
@@ -100,7 +110,14 @@ const Button: React.FC<ButtonProps> = ({
       disabled={isDisabled}
       className={classes}
     >
-      {content}
+      {band && (
+        <span
+          aria-hidden
+          className="absolute inset-x-0 bottom-0 h-[10%] origin-bottom pointer-events-none transition-transform duration-200 ease-out group-active:scale-y-0"
+          style={{ backgroundColor: band }}
+        />
+      )}
+      <span className="relative z-10">{content}</span>
     </button>
   );
 };
