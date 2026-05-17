@@ -18,13 +18,13 @@ const Footer: React.FC = () => {
   return (
     <>
       <footer
-        className="w-full py-5 text-center text-white/60 text-xs select-none"
+        className="w-full py-5 text-center text-white/60 text-[10px] md:text-xs select-none"
         style={{ paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom, 0px))' }}
       >
         <div className="mb-2">
           Onskone &copy; {currentYear}
         </div>
-        <div className="flex justify-center gap-4 flex-wrap">
+        <div className="flex justify-center items-center gap-1.5 md:gap-3 whitespace-nowrap">
           <button
             type="button"
             onClick={() => setActiveModal('about')}
@@ -38,7 +38,7 @@ const Footer: React.FC = () => {
             onClick={() => setActiveModal('mentions')}
             className={footerLinkClass}
           >
-            Mentions légales
+            CGU
           </button>
           <span aria-hidden="true">|</span>
           <button
@@ -54,7 +54,7 @@ const Footer: React.FC = () => {
             onClick={() => setActiveModal('contact')}
             className={footerLinkClass}
           >
-            Nous contacter
+            Contact
           </button>
           <span aria-hidden="true">|</span>
           <a

@@ -2,18 +2,19 @@ import { useEffect, useState, useRef } from 'react';
 import { Icon } from '@iconify/react';
 import socket from '../utils/socket';
 import Timer from './Timer';
-import { GameCard, RoundPhase } from '@onskone/shared';
+import { GameCard, IPlayer, RoundPhase } from '@onskone/shared';
 import { GAME_CONFIG, getCategoryColor } from '../constants/game';
 import { getRandomFunFact, getNextFunFact } from '../constants/funFacts';
 import { playSound } from '../utils/sounds';
+import PlayerBadge from './PlayerBadge';
 
 interface QuestionSelectionProps {
   lobbyCode: string;
   isLeader: boolean;
-  leaderName: string;
+  leader: Pick<IPlayer, 'id' | 'name' | 'avatarId'>;
 }
 
-const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLeader, leaderName }) => {
+const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLeader, leader }) => {
   const [cards, setCards] = useState<GameCard[]>([]);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [selectedQuestion, setSelectedQuestion] = useState<string | null>(null);
@@ -198,14 +199,18 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
       <div className="flex flex-col items-center justify-center h-full w-full gap-2 md:gap-6 px-2 overflow-hidden">
         <div className="text-center w-full max-w-2xl">
           <div className="bg-primary-light rounded-lg px-3 md:px-4 py-1.5 md:py-2 max-w-2xl">
-            <p className="text-base md:text-2xl">Le pilier de cette manche est <strong>{leaderName}</strong></p>
-            <p className="text-center text-xs md:text-base">En attente de sa sélection de question…</p>
+            <div className="flex items-center justify-center flex-wrap gap-x-1.5 gap-y-1">
+              <p className="text-base md:text-2xl m-0">Le pilier de cette manche est</p>
+              <PlayerBadge player={leader} size="sm" />
+            </div>
+            <p className="text-center text-xs md:text-base mt-1.5">En attente de sa sélection de question…</p>
             <Timer duration={GAME_CONFIG.TIMERS.QUESTION_SELECTION} onExpire={handleTimerExpire} phase={RoundPhase.QUESTION_SELECTION} lobbyCode={lobbyCode} hidden />
           </div>
         </div>
 
-        {/* Fait insolite */}
-        <div className="w-full max-w-md text-center px-3">
+        {/* Fait insolite — min-h figée pour que le changement de fait
+            ne décale pas l'emoji situé en dessous. mt-* descend le bloc. */}
+        <div className="w-full max-w-md text-center px-3 mt-4 md:mt-8 min-h-[72px] md:min-h-[88px] flex flex-col justify-start">
           <p className="text-[10px] md:text-xs text-gray-500 uppercase font-semibold mb-1">Le saviez-vous ?</p>
           <p
             className={`text-gray-700 text-xs md:text-base italic leading-snug transition-opacity duration-300 ${factFading ? 'opacity-0' : 'opacity-100'}`}

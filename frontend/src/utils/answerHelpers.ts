@@ -22,3 +22,22 @@ export const getDisplayText = (text: string): string => {
   return text;
 };
 
+/**
+ * Couleur de fond d'une carte de réponse selon son état révélation.
+ * - non révélée : cream
+ * - révélée correcte : vert
+ * - révélée incorrecte : rouge
+ */
+export const ANSWER_CARD_COLORS = {
+  correct: 'bg-[#30c94d]',
+  incorrect: 'bg-[#ff6b6b]',
+  unrevealed: 'bg-cream-answer',
+} as const;
+
+export const answerCardBg = (revealed: boolean, correct: boolean): string =>
+  !revealed
+    ? ANSWER_CARD_COLORS.unrevealed
+    : correct
+      ? ANSWER_CARD_COLORS.correct
+      : ANSWER_CARD_COLORS.incorrect;
+

@@ -4,8 +4,11 @@ import HourglassTimer from './HourglassTimer';
 import Avatar from './Avatar';
 import Button from './Button';
 import QuestionCard from './QuestionCard';
+import QuestionByline from './QuestionByline';
+import PlayerBadge from './PlayerBadge';
 import { GAME_CONFIG } from '../constants/game';
 import { IPlayer, RoundPhase, GameCard, GameMode } from '@onskone/shared';
+import { useStartTimerDelayed } from '../hooks';
 
 interface SubstituteAnsweringPhaseProps {
   lobbyCode: string;
@@ -35,17 +38,15 @@ const SubstituteAnsweringPhase: React.FC<SubstituteAnsweringPhaseProps> = ({
 
   const [answer, setAnswer] = useState('');
   const [submitted, setSubmitted] = useState(false);
-  const timerStartedRef = useRef(false);
+  const expireTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useStartTimerDelayed(isPilier, lobbyCode, GAME_CONFIG.TIMERS.SUBSTITUTE_ANSWERING);
 
   useEffect(() => {
-    const t = setTimeout(() => {
-      if (isPilier && !timerStartedRef.current) {
-        timerStartedRef.current = true;
-        socket.emit('startTimer', { lobbyCode, duration: GAME_CONFIG.TIMERS.SUBSTITUTE_ANSWERING });
-      }
-    }, 500);
-    return () => clearTimeout(t);
-  }, [isPilier, lobbyCode]);
+    return () => {
+      if (expireTimeoutRef.current) clearTimeout(expireTimeoutRef.current);
+    };
+  }, []);
 
   const handleSubmit = () => {
     if (!isSubstitute || !answer.trim() || submitted) return;
@@ -59,11 +60,13 @@ const SubstituteAnsweringPhase: React.FC<SubstituteAnsweringPhaseProps> = ({
       socket.emit('submitSubstituteAnswer', { lobbyCode, answer: answer.trim() });
     }
     if (isPilier) {
-      setTimeout(() => socket.emit('timerExpired', { lobbyCode }), 500);
+      if (expireTimeoutRef.current) clearTimeout(expireTimeoutRef.current);
+      expireTimeoutRef.current = setTimeout(() => socket.emit('timerExpired', { lobbyCode }), 500);
     }
   };
 
-  const subtitle = leader ? `Question posée à ${leader.name}` : '';
+  const subtitle = '';
+  const subtitleBadge = undefined;
   const maxLen = GAME_CONFIG.MAX_ANSWER_LENGTH;
 
   return (
@@ -76,15 +79,17 @@ const SubstituteAnsweringPhase: React.FC<SubstituteAnsweringPhaseProps> = ({
         hidden
       />
 
-      <QuestionCard question={question} card={card} subtitle={subtitle} variant="compact" />
+      <QuestionByline player={leader} />
+
+      <QuestionCard question={question} card={card} subtitle={subtitle} subtitleBadge={subtitleBadge} variant="compact" />
 
       {isSubstitute ? (
         <div className="flex-1 flex flex-col min-h-0">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            {leader && <Avatar avatarId={leader.avatarId} name={leader.name} size="sm" />}
-            <p className="text-sm md:text-base text-gray-800 italic m-0">
-              Écris la réponse que <span className="font-bold">{leader?.name}</span> aurait donnée
-            </p>
+          <div className="flex items-center justify-center flex-wrap gap-x-2 gap-y-3 my-4 md:my-5 text-sm md:text-base text-gray-800">
+            <span>Écris la réponse que</span>
+            <Avatar avatarId={leader?.avatarId ?? 0} name={leader?.name} size="sm" />
+            <span className="font-semibold text-gray-900">{leader?.name ?? 'le pilier'}</span>
+            <span>aurait donnée</span>
           </div>
 
           {submitted ? (
@@ -124,23 +129,25 @@ const SubstituteAnsweringPhase: React.FC<SubstituteAnsweringPhaseProps> = ({
           )}
         </div>
       ) : isPilier ? (
-        <div className="flex-1 flex flex-col items-center justify-center gap-3 px-3">
-          {substitute && <Avatar avatarId={substitute.avatarId} name={substitute.name} size="lg" />}
-          <p className="text-center text-base md:text-lg text-gray-800 italic">
-            <span className="font-bold">{substitute?.name ?? 'Le substitut'}</span> écrit la réponse que tu aurais donnée...
+        <div className="flex-1 flex flex-col items-center px-3 pt-3 md:pt-16">
+          <PlayerBadge player={substitute} fallbackName="Le substitut" />
+          <p className="mt-1 md:mt-3 text-center text-base md:text-lg text-gray-800">
+            écrit la réponse que tu aurais donnée...
           </p>
-          <p className="text-center text-xs md:text-sm text-gray-500">
+          <p className="mt-6 md:mt-8 text-center text-xs md:text-sm text-gray-500 italic">
             Tu devras ensuite deviner ce qu'il a écrit pour toi.
           </p>
         </div>
       ) : (
-        <div className="flex-1 flex flex-col items-center justify-center gap-3 px-3">
-          <p className="text-center text-base md:text-lg text-gray-800 italic">
-            <span className="font-bold">{substitute?.name ?? 'Le substitut'}</span> doit écrire la réponse qu'aurait donnée <span className="font-bold">{leader?.name ?? 'le pilier'}</span>.
-          </p>
-          <p className="text-center text-sm text-gray-600">
+        <div className="flex-1 flex flex-col items-center justify-center gap-6 md:gap-8 px-3">
+          <div className="flex items-center justify-center flex-wrap gap-x-3 gap-y-4">
+            <PlayerBadge player={substitute} fallbackName="Le substitut" size="sm" />
+            <span className="text-sm md:text-base text-gray-800 italic">écrit la réponse de</span>
+            <PlayerBadge player={leader} fallbackName="le pilier" size="sm" />
+          </div>
+          <p className="text-center text-sm text-gray-600 italic">
             {gameMode === 'remote'
-              ? 'Envoie lui des messages pour l\'aider à répondre'
+              ? 'Envoie lui des messages privés pour l\'aider à répondre'
               : 'Chuchote-lui dans l\'oreille et aide-le à répondre'}
           </p>
         </div>

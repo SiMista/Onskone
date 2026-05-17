@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { isStudioFrame } from '../utils/studioStorage';
 
 /**
  * Custom hook to warn users before leaving the page
@@ -18,6 +19,8 @@ export function useLeavePrompt(
 
   useEffect(() => {
     if (!enabled) return;
+    // Studio: never block reloads/navigations inside a studio iframe.
+    if (isStudioFrame) return;
 
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       // Execute the callback

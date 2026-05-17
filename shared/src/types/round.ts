@@ -78,7 +78,7 @@ export interface IRound {
   timerProcessedForPhase?: RoundPhase | null;
 
   /** Indices des réponses révélées dans la phase REVEAL */
-  revealedIndices?: number[];
+  revealedIndices: number[];
 
   /** Timestamp de démarrage du timer (pour synchronisation) */
   timerStartedAt?: number;
@@ -90,22 +90,22 @@ export interface IRound {
   timerPhase?: RoundPhase;
 
   /** Nombre de relances utilisées par le pilier en phase QUESTION_SELECTION */
-  relancesUsed?: number;
+  relancesUsed: number;
 
   /** Les 3 cartes proposées au pilier pour la sélection */
-  proposedCards?: GameCard[];
+  proposedCards: GameCard[];
 
   /** Cartes déjà montrées au pilier (pour éviter les doublons lors des relances) */
-  shownGameCards?: GameCard[];
+  shownGameCards: GameCard[];
 
   /** Ordre des réponses mélangées pour la phase GUESSING (stocké pour la reconnexion) */
-  shuffledAnswerIds?: string[];
+  shuffledAnswerIds: string[];
 
   /** Indices des réponses corrigées par similarité */
-  similarityCorrections?: number[];
+  similarityCorrections: number[];
 
   /** Mode "Devine ma réponse" actif pour ce round (snapshot du lobby au moment du round) */
-  guessMyAnswerMode?: boolean;
+  guessMyAnswerMode: boolean;
 
   /** ID du joueur substitut désigné par le pilier (mode "Devine ma réponse") */
   substitutePlayerId?: string | null;

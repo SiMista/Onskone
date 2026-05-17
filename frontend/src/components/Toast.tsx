@@ -18,13 +18,13 @@ interface ToastContextValue {
 const ToastContext = createContext<ToastContextValue | null>(null);
 
 const VARIANT_STYLE: Record<ToastVariant, { bg: string; icon: string }> = {
-  info:    { bg: '#E7F5FF', icon: 'fluent-emoji-flat:information' },
+  info: { bg: '#E7F5FF', icon: 'fluent-emoji-flat:information' },
   success: { bg: '#E6F8E6', icon: 'fluent-emoji-flat:check-mark-button' },
   warning: { bg: '#FFF3C4', icon: 'fluent-emoji-flat:warning' },
-  error:   { bg: '#FFE2E2', icon: 'fluent-emoji-flat:cross-mark' },
+  error: { bg: '#FFE2E2', icon: 'fluent-emoji-flat:cross-mark' },
 };
 
-const EXIT_DURATION = 280; // ms — doit matcher .animate-toast-out
+const EXIT_DURATION = 280; // ms - doit matcher .animate-toast-out
 
 export const ToastProvider = ({ children }: { children: ReactNode }) => {
   const [toasts, setToasts] = useState<Toast[]>([]);

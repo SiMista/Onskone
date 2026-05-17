@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import socket from '../utils/socket';
 import Logo from '../components/Logo';
@@ -8,66 +8,13 @@ import PseudoPlate from '../components/PseudoPlate';
 import Footer from '../components/Footer';
 import AvatarSelector from '../components/AvatarSelector';
 import InfoModal from '../components/InfoModal';
+import HowToPlaySteps from '../components/HowToPlaySteps';
+import HowToPlayButton from '../components/HowToPlayButton';
 import { useToast } from '../components/Toast';
 import BackButton from '../components/BackButton';
 import { Icon } from '@iconify/react';
 import { useSocketEvent, useQueryParams } from '../hooks';
 import { GAME_CONFIG, AVATARS } from '../constants/game';
-
-const HOW_TO_PLAY_STEPS = [
-  {
-    n: '1',
-    icon: 'fluent-emoji-flat:crown',
-    text: (<>Un <b>pilier</b> est designé aléatoirement et choisit une question parmi trois cartes.</>),
-    rot: '-1deg',
-  },
-  {
-    n: '2',
-    icon: 'fluent-emoji-flat:memo',
-    text: (<>Tout le monde répond <b>anonymement</b> et le pilier devine qui a écrit quelle réponse.</>),
-    rot: '0.8deg',
-  },
-  {
-    n: '3',
-    icon: 'fluent-emoji-flat:party-popper',
-    text: (<>On révèle les prénoms, le pilier marque des points pour l'équipe et on passe au suivant.</>),
-    rot: '-0.6deg',
-  },
-] as const;
-
-const HowToPlaySteps = ({ size = 'md' }: { size?: 'md' | 'lg' }) => {
-  const isLg = size === 'lg';
-  return (
-    <div className="w-full">
-      <div className="space-y-3 w-full">
-        {HOW_TO_PLAY_STEPS.map(({ n, icon, text, rot }, i) => (
-          <div
-            key={n}
-            className="animate-step-drop"
-            style={{ animationDelay: `${300 + i * 520}ms` }}
-          >
-            <div
-              className="flex items-center gap-3 bg-cream-player border-[2.5px] border-black rounded-xl p-3 stack-shadow-sm texture-paper hover:-translate-y-0.5 transition-transform"
-              style={{ transform: `rotate(${rot})` }}
-            >
-              <div className={`flex-shrink-0 ${isLg ? 'w-11 h-11 text-lg' : 'w-10 h-10 text-base'} rounded-full flex items-center justify-center text-gray-800 bg-[#f3ece2] border-[2.5px] border-black font-display`}>
-                {n}
-              </div>
-              <Icon icon={icon} className="flex-shrink-0" width={isLg ? 30 : 26} height={isLg ? 30 : 26} aria-hidden />
-              <p className={`${isLg ? 'text-base' : 'text-sm'} m-0 leading-snug`}>{text}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-      <p
-        className={`text-center ${isLg ? 'text-xl mt-4' : 'text-lg pt-3'} font-display text-primary animate-step-drop`}
-        style={{ animationDelay: `${300 + HOW_TO_PLAY_STEPS.length * 520}ms` }}
-      >
-        Alors, on se connaît ?
-      </p>
-    </div>
-  );
-};
 
 const Home = () => {
   const [playerName, setPlayerName] = useState<string>('');
@@ -75,12 +22,25 @@ const Home = () => {
   const [isInfoOpen, setIsInfoOpen] = useState(false);
   const [hostName, setHostName] = useState<string | null>(null);
   const [lobbyExists, setLobbyExists] = useState<boolean | null>(null);
-  const [lobbyExpired, setLobbyExpired] = useState(false);
   const queryParams = useQueryParams();
   const navigate = useNavigate();
   const showToast = useToast();
 
   const lobbyCode = queryParams.get('lobbyCode');
+  const urlPlayerName = queryParams.get('playerName');
+  const urlAvatarId = queryParams.get('avatarId');
+  const autoCreate = queryParams.get('autoCreate') === '1';
+  const autoJoin = queryParams.get('autoJoin') === '1';
+
+  // Studio: pre-fill identity from URL params so iframes don't need user input.
+  useEffect(() => {
+    if (urlPlayerName && !playerName) setPlayerName(urlPlayerName);
+    if (urlAvatarId !== null) {
+      const id = parseInt(urlAvatarId, 10);
+      if (!isNaN(id)) setAvatarId(id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Fetch lobby info when there's a lobby code in URL
   useEffect(() => {
@@ -88,6 +48,27 @@ const Home = () => {
       socket.emit('getLobbyInfo', { lobbyCode });
     }
   }, [lobbyCode]);
+
+  // Studio: auto-create lobby (slot 0 / host).
+  const autoFiredRef = useRef(false);
+  useEffect(() => {
+    if (autoFiredRef.current) return;
+    if (!autoCreate || lobbyCode) return;
+    const name = urlPlayerName || playerName;
+    if (!name?.trim()) return;
+    autoFiredRef.current = true;
+    socket.emit('createLobby', { playerName: name, avatarId });
+  }, [autoCreate, lobbyCode, urlPlayerName, playerName, avatarId]);
+
+  // Studio: auto-join existing lobby (slot 1+).
+  useEffect(() => {
+    if (autoFiredRef.current) return;
+    if (!autoJoin || !lobbyCode || lobbyExists !== true) return;
+    const name = urlPlayerName || playerName;
+    if (!name?.trim()) return;
+    autoFiredRef.current = true;
+    socket.emit('checkPlayerName', { lobbyCode, playerName: name });
+  }, [autoJoin, lobbyCode, lobbyExists, urlPlayerName, playerName]);
 
   const createLobby = useCallback(() => {
     if (!playerName.trim()) {
@@ -110,16 +91,24 @@ const Home = () => {
   }, [lobbyCode, playerName, showToast]);
 
   const handleLobbyCreated = useCallback((data: { lobbyCode: string }) => {
-    navigate(`/lobby/${data.lobbyCode}?playerName=${encodeURIComponent(playerName)}&avatarId=${avatarId}`);
-  }, [navigate, playerName, avatarId]);
+    // Studio: notify parent window that the lobby exists so siblings can auto-join.
+    if (window.parent !== window) {
+      try {
+        window.parent.postMessage({ type: 'studio:lobbyCreated', lobbyCode: data.lobbyCode }, '*');
+      } catch { /* silent */ }
+    }
+    const name = urlPlayerName || playerName;
+    navigate(`/lobby/${data.lobbyCode}?playerName=${encodeURIComponent(name)}&avatarId=${avatarId}`);
+  }, [navigate, playerName, urlPlayerName, avatarId]);
 
   const handlePlayerNameExists = useCallback((data: { playerName: string }) => {
     showToast(`Le pseudo "${data.playerName}" est déjà pris dans ce salon`, 'warning');
   }, [showToast]);
 
   const handlePlayerNameValid = useCallback(() => {
-    navigate(`/lobby/${lobbyCode}?playerName=${encodeURIComponent(playerName)}&avatarId=${avatarId}`);
-  }, [navigate, lobbyCode, playerName, avatarId]);
+    const name = urlPlayerName || playerName;
+    navigate(`/lobby/${lobbyCode}?playerName=${encodeURIComponent(name)}&avatarId=${avatarId}`);
+  }, [navigate, lobbyCode, playerName, urlPlayerName, avatarId]);
 
   const handleError = useCallback((data: { message: string }) => {
     console.error('Erreur:', data.message);
@@ -131,7 +120,6 @@ const Home = () => {
     if (data.exists && data.hostName) {
       setHostName(data.hostName);
     } else if (!data.exists) {
-      setLobbyExpired(true);
       navigate('/', { replace: true });
     }
   }, [navigate]);
@@ -191,11 +179,8 @@ const Home = () => {
               </div>
               {!lobbyCode ? (
                 <div className="text-center space-y-2">
-                  {lobbyExpired && (
-                    <p className="text-sm text-red-600">Ce salon n'existe plus ou a expiré.</p>
-                  )}
                   <Button
-                    text={lobbyExpired ? "Créer un nouveau salon" : "Créer un salon"}
+                    text="Créer un salon"
                     variant="primary"
                     size="md"
                     onClick={createLobby}
@@ -213,14 +198,8 @@ const Home = () => {
             </Frame>
 
             {/* Bouton Comment jouer - mobile uniquement */}
-            <div className="md:hidden mt-4 text-center">
-              <button
-                type="button"
-                onClick={() => setIsInfoOpen(true)}
-                className="text-white text-sm underline underline-offset-2 hover:text-white/80 transition-colors cursor-pointer"
-              >
-                Comment jouer ?
-              </button>
+            <div className="md:hidden mt-4 flex justify-center">
+              <HowToPlayButton onClick={() => setIsInfoOpen(true)} />
             </div>
           </div>
 
@@ -242,6 +221,17 @@ const Home = () => {
 
       {/* Footer */}
       <Footer />
+
+      {import.meta.env.DEV && window.self === window.top && (
+        <button
+          type="button"
+          onClick={() => navigate('/studio')}
+          className="fixed bottom-4 right-4 z-50 px-3 py-2 rounded-lg bg-black/80 text-white text-xs font-display border-2 border-white/20 hover:bg-black hover:scale-105 transition-all stack-shadow-sm"
+          title="Mode debug : ouvrir le Studio multi-écrans"
+        >
+          🎬 Studio
+        </button>
+      )}
     </div>
   );
 };

@@ -205,7 +205,7 @@ export async function buildShareCard(opts: ShareCardOptions): Promise<Blob> {
   ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = 'rgba(255,255,255,0.55)';
   ctx.font = '26px Fredoka, Nunito, sans-serif';
-  ctx.fillText('onskone — le jeu qui teste vos liens', cx, H - 50);
+  ctx.fillText('onskone - le jeu qui teste vos liens', cx, H - 50);
 
   return await new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
@@ -223,7 +223,7 @@ export type ShareResult = 'shared' | 'copied' | 'cancelled' | 'failed';
 
 /**
  * Partage un blob déjà construit. DOIT être appelé synchronement depuis un
- * user gesture (onClick) — pas de await avant l'appel, sinon les navigateurs
+ * user gesture (onClick) - pas de await avant l'appel, sinon les navigateurs
  * refusent share() et clipboard.write().
  */
 export async function shareBlob(blob: Blob, text: string): Promise<ShareResult> {

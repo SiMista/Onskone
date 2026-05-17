@@ -2,8 +2,24 @@
 import { GAME_CONSTANTS } from '@onskone/shared';
 
 // Mode debug: met les timers à 1 heure pour travailler sur le front tranquillement
-// Activé via VITE_DEBUG_MODE=true dans .env ou automatiquement désactivé en production
-export const DEBUG_MODE = import.meta.env.VITE_DEBUG_MODE === 'true' && import.meta.env.DEV;
+// Activé via VITE_DEBUG_MODE=true dans .env OU via le query param ?debug=1
+// (en DEV uniquement - toujours désactivé en production)
+// Sticky debug flag: once enabled via ?debug=1, it persists for the whole tab
+// session (survives navigations + reloads). Use ?debug=0 to clear it.
+const resolveDebugMode = (): boolean => {
+  if (!import.meta.env.DEV) return false;
+  if (import.meta.env.VITE_DEBUG_MODE === 'true') return true;
+  if (typeof window === 'undefined') return false;
+  try {
+    const param = new URLSearchParams(window.location.search).get('debug');
+    if (param === '1') { sessionStorage.setItem('debug', '1'); return true; }
+    if (param === '0') { sessionStorage.removeItem('debug'); return false; }
+    return sessionStorage.getItem('debug') === '1';
+  } catch {
+    return false;
+  }
+};
+export const DEBUG_MODE = resolveDebugMode();
 
 const DEBUG_TIMER = 3600; // 1 heure
 

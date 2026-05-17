@@ -49,7 +49,7 @@ export interface ServerToClientEvents {
   updatePlayersList: (data: { players: IPlayer[] }) => void;
 
   /** Notification d'expulsion du lobby */
-  kickedFromLobby: () => void;
+  kickedFromLobby: (data: { hostName?: string }) => void;
 
   /** Vérification si le nom du joueur existe déjà */
   playerNameExists: (data: { playerName: string }) => void;
@@ -105,6 +105,8 @@ export interface ServerToClientEvents {
       myAnswer?: string;
       currentGuesses?: Record<string, string>;
       relancesUsed?: number;
+      revealResults?: RevealResult[];
+      revealedIndices?: number[];
     };
   }) => void;
 

@@ -11,7 +11,7 @@ interface HourglassTimerProps {
   hidden?: boolean;
 }
 
-// Tailles responsive : {mobile} / {desktop md:} — en px pour le SVG et le texte
+// Tailles responsive : {mobile} / {desktop md:} - en px pour le SVG et le texte
 const SIZE_CLASSES: Record<'sm' | 'md' | 'lg', { svg: string; text: string }> = {
   sm: { svg: 'w-[30px] h-[40px] md:w-14 md:h-[72px]', text: 'text-[11px] md:text-sm' },
   md: { svg: 'w-[46px] h-[60px] md:w-[72px] md:h-[92px]', text: 'text-xs md:text-base' },
@@ -76,9 +76,8 @@ const HourglassTimer = ({ duration, onExpire, phase, lobbyCode, size = 'md', hid
   return (
     <div className={`inline-flex flex-row items-center gap-1.5 md:gap-2 ${isCritical ? 'animate-hourglass-nudge' : ''}`}>
       <span
-        className={`font-display font-bold leading-none tabular-nums ${sizeClass.text} ${
-          isCritical ? 'text-red-600' : isWarning ? 'text-orange-500' : 'text-gray-700'
-        }`}
+        className={`font-display font-bold leading-none tabular-nums ${sizeClass.text} ${isCritical ? 'text-red-600' : isWarning ? 'text-orange-500' : 'text-gray-700'
+          }`}
       >
         {Math.max(0, remainingSec)}s
       </span>
@@ -114,7 +113,7 @@ const HourglassTimer = ({ duration, onExpire, phase, lobbyCode, size = 'md', hid
           </clipPath>
         </defs>
 
-        {/* Sable dans le bulb du haut — rectangle qui descend en hauteur */}
+        {/* Sable dans le bulb du haut - rectangle qui descend en hauteur */}
         <rect
           x="10"
           y={63 - topSandH}
@@ -125,7 +124,7 @@ const HourglassTimer = ({ duration, onExpire, phase, lobbyCode, size = 'md', hid
           style={{ transition: 'y 0.4s linear, height 0.4s linear, fill 0.5s ease' }}
         />
 
-        {/* Sable dans le bulb du bas — rectangle qui remplit par le bas */}
+        {/* Sable dans le bulb du bas - rectangle qui remplit par le bas */}
         <rect
           x="10"
           y={117 - bottomSandH}

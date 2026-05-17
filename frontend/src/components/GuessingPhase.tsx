@@ -3,12 +3,15 @@ import { Icon } from '@iconify/react';
 import socket from '../utils/socket';
 import HourglassTimer from './HourglassTimer';
 import Button from './Button';
-import Avatar from './Avatar';
 import QuestionCard from './QuestionCard';
+import Avatar from './Avatar';
+import PlayerBadge from './PlayerBadge';
 import PlayerAnswerCard from './PlayerAnswerCard';
+import AnswerText from './AnswerText';
 import stickmanShowPhone from '../assets/images/game/stickman-show-phone-cropped.png';
 import { IPlayer, RoundPhase, GameCard, GameMode } from '@onskone/shared';
 import { isNoResponse, getDisplayText } from '../utils/answerHelpers';
+import { useStartTimerDelayed } from '../hooks';
 
 interface Answer {
   id: string;
@@ -18,7 +21,7 @@ interface Answer {
 interface GuessingPhaseProps {
   lobbyCode: string;
   isLeader: boolean;
-  leaderName: string;
+  leader: IPlayer;
   currentPlayerId: string;
   question: string;
   card?: GameCard;
@@ -28,7 +31,7 @@ interface GuessingPhaseProps {
   gameMode: GameMode;
 }
 
-const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, leaderName, currentPlayerId, question, card, initialGuesses, playerCount, roundNumber, gameMode }) => {
+const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, leader, currentPlayerId, question, card, initialGuesses, playerCount, roundNumber, gameMode }) => {
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [players, setPlayers] = useState<IPlayer[]>([]);
   const [guesses, setGuesses] = useState<Record<string, string>>(initialGuesses || {});
@@ -42,8 +45,7 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
 
   // Refs pour les cartes joueurs (pour le scroll)
   const playerCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  // Ref pour éviter de démarrer le timer plusieurs fois (React Strict Mode, re-renders)
-  const timerStartedRef = useRef(false);
+
 
   // Calculer la durée du timer: 120s pour 3 joueurs, +20s par joueur supplémentaire
   const timerDuration = useMemo(() => {
@@ -51,6 +53,8 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
     const extraTimePerPlayer = 20;
     return baseTime + Math.max(0, playerCount - 3) * extraTimePerPlayer;
   }, [playerCount]);
+
+  useStartTimerDelayed(isLeader, lobbyCode, timerDuration);
 
   // Sync guesses when initialGuesses changes (reconnection during GUESSING phase)
   useEffect(() => {
@@ -71,14 +75,6 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
 
   useEffect(() => {
     socket.emit('requestShuffledAnswers', { lobbyCode });
-
-    const startTimerTimeout = setTimeout(() => {
-      // Vérifier si on n'a pas déjà démarré le timer pour éviter les doublons
-      if (isLeader && !timerStartedRef.current) {
-        timerStartedRef.current = true;
-        socket.emit('startTimer', { lobbyCode, duration: timerDuration });
-      }
-    }, 500);
 
     socket.on('shuffledAnswersReceived', (data: { answers: Answer[]; players: IPlayer[]; roundNumber?: number }) => {
       // Ignorer les événements d'anciens rounds (race condition sur reconnexion)
@@ -132,12 +128,11 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
     });
 
     return () => {
-      clearTimeout(startTimerTimeout);
       socket.off('shuffledAnswersReceived');
       socket.off('guessUpdated');
       if (justAssignedTimeoutRef.current) clearTimeout(justAssignedTimeoutRef.current);
     };
-  }, [lobbyCode, isLeader, timerDuration, roundNumber]);
+  }, [lobbyCode, isLeader, roundNumber]);
 
   const haptic = (pattern: number | number[]) => {
     if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
@@ -286,7 +281,7 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
   }
 
   // ============================================================
-  // VUE JOUEUR (non-pilier, mode local) — seule la réponse attribuée
+  // VUE JOUEUR (non-pilier, mode local) - seule la réponse attribuée
   // ============================================================
   if (!isLeader && gameMode === 'local') {
     const assignedText = myAssignedAnswer ? getDisplayText(myAssignedAnswer.text) : '';
@@ -326,11 +321,12 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
                     heading={null}
                   />
                 ) : (
-                  <PlayerAnswerCard
-                    answer={`En attente que ${leaderName} t'attribue une réponse…`}
-                    placeholder
-                    heading={null}
-                  />
+                  <div className="flex items-center justify-center flex-wrap gap-x-2 gap-y-1 leading-none w-full px-4 py-6 md:py-8 bg-gray-50 border border-dashed border-gray-400 rounded-xl text-sm md:text-base text-gray-600">
+                    <span className="italic">En attente que</span>
+                    <Avatar avatarId={leader?.avatarId ?? 0} name={leader?.name} size="sm" />
+                    <span>{leader?.name}</span>
+                    <span className="italic">t'attribue une réponse…</span>
+                  </div>
                 )}
               </div>
             </div>
@@ -355,9 +351,10 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
             <span className="hidden md:inline">Glissez chaque réponse vers son auteur présumé</span>
           </h2>
         ) : (
-          <p className="text-xs text-center text-gray-500 italic mt-1.5">
-            {leaderName} assigne les réponses…
-          </p>
+          <div className="flex flex-col items-center gap-1 mt-1.5">
+            <PlayerBadge player={leader} size="sm" />
+            <p className="text-xs text-center text-gray-500 italic">assigne les réponses…</p>
+          </div>
         )}
         <HourglassTimer
           duration={timerDuration}
@@ -396,9 +393,11 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
                   `}
                   style={{ animationDelay: `${Math.min(i, 8) * 70}ms` }}
                 >
-                  <p className={`text-xs md:text-sm m-0 ${noResponse ? 'text-gray-400 italic' : 'text-gray-900'}`}>
-                    {getDisplayText(answer.text)}
-                  </p>
+                  <AnswerText
+                    text={answer.text}
+                    className="text-xs md:text-sm m-0"
+                    normalClass="text-gray-900"
+                  />
                 </div>
               );
             })}
@@ -415,9 +414,6 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
           {players.map((player) => {
             const assignedAnswers = getAssignedAnswers(player.id);
             const hasAnswer = assignedAnswers.length > 0;
-            const displayName = player.name.length > 8
-              ? player.name.substring(0, 8) + '...'
-              : player.name;
             // Target éligible : un answer est en cours de drag ou sélectionné, et ce joueur n'a pas encore de réponse
             const isActiveAnswerChoice = !!(draggedAnswerId || selectedAnswerId);
             const isEligibleTarget = isLeader && isActiveAnswerChoice && !hasAnswer;
@@ -437,12 +433,8 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
                 `}
               >
                 {/* Avatar et nom */}
-                <div className="flex flex-col items-center justify-center min-w-[50px] md:min-w-[70px]">
-                  <Avatar avatarId={player.avatarId} name={player.name} size="sm" className="md:hidden" />
-                  <Avatar avatarId={player.avatarId} name={player.name} size="md" className="hidden md:block" />
-                  <span className="text-[10px] md:text-xs font-semibold text-gray-700 mt-1 text-center">
-                    {displayName}
-                  </span>
+                <div className="flex items-center justify-center min-w-[50px] md:min-w-[70px]">
+                  <PlayerBadge player={player} size="sm" className="md:hidden !min-w-[50px]" />
                 </div>
 
                 {/* Zone de réponse */}
@@ -458,9 +450,11 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
                             key={answer.id}
                             className={`rounded-lg p-2 md:p-3 flex justify-between items-start border ${noResponse ? 'bg-gray-100 border-gray-200' : 'bg-white border-gray-300'} ${isHighlighted ? 'animate-halo-pulse' : ''} ${isJustAssigned ? 'animate-snap-bounce' : ''}`}
                           >
-                            <p className={`text-xs md:text-sm flex-1 min-w-0 break-words whitespace-pre-wrap ${noResponse ? 'text-gray-400 italic' : 'text-gray-800'}`}>
-                              {getDisplayText(answer.text)}
-                            </p>
+                            <AnswerText
+                              text={answer.text}
+                              className="text-xs md:text-sm flex-1 min-w-0 break-words whitespace-pre-wrap"
+                              normalClass="text-gray-800"
+                            />
                             {isLeader && (
                               <button
                                 onClick={(e) => {
