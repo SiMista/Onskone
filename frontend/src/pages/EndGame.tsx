@@ -10,6 +10,8 @@ import { getCurrentPlayerFromStorage } from '../utils/playerHelpers';
 import { studioStorage } from '../utils/studioStorage';
 import { buildShareCard, shareBlob } from '../utils/shareCard';
 import { useToast } from '../components/Toast';
+import ReportTrigger from '../components/ReportTrigger';
+import { recordGameEnd } from '../utils/playerStats';
 
 interface Tier {
   max: number;
@@ -280,6 +282,39 @@ const EndGame: React.FC = () => {
     };
   }, [pct, leaderboard.length]);
 
+  // Enregistre les stats joueur dès qu'on a leaderboard + rounds + currentPlayer.
+  // Idempotent côté util (guard par lobbyCode), mais on garde un ref pour éviter
+  // de relancer les toasts d'achievement en cas de re-render.
+  const statsRecordedRef = useRef(false);
+  useEffect(() => {
+    if (statsRecordedRef.current) return;
+    if (!lobbyCode || !currentPlayer || !leaderboard.length || !rounds.length) return;
+    statsRecordedRef.current = true;
+
+    const me = leaderboard.find(e => e.player.id === currentPlayer.id);
+    const myScore = me?.score ?? 0;
+    const myLeaderRounds = rounds.filter(r => r.leader?.id === currentPlayer.id);
+    const roundsAsLeader = myLeaderRounds.length;
+    const correctGuessesAsLeader = myLeaderRounds.reduce(
+      (sum, r) => sum + (r.scores?.[currentPlayer.id] || 0),
+      0
+    );
+
+    const unlocked = recordGameEnd({
+      lobbyCode,
+      playerScore: myScore,
+      teamPct: pct,
+      roundsAsLeader,
+      correctGuessesAsLeader,
+    });
+
+    unlocked.forEach((ach, idx) => {
+      setTimeout(() => {
+        showToast(`Succès débloqué : ${ach.title}`, 'success', 4500);
+      }, 2000 + idx * 1200);
+    });
+  }, [lobbyCode, currentPlayer, leaderboard, rounds, pct, showToast]);
+
   const handleBackToLobby = () => {
     if (lobbyCode) navigate(`/lobby/${lobbyCode}`);
   };
@@ -306,6 +341,7 @@ const EndGame: React.FC = () => {
       topPlayers: leaderboard.slice(0, 3).map(e => ({
         name: e.player.name,
         score: e.score,
+        avatarId: e.player.avatarId,
       })),
     })
       .then(blob => { if (!cancelled) preparedBlobRef.current = blob; })
@@ -569,7 +605,7 @@ const EndGame: React.FC = () => {
             <Button variant="success" size="lg" onClick={handleBackToLobby}>
               Rejouer
             </Button>
-            <Button variant="secondary" size="lg" onClick={handleBackToHome} className="!bg-quit hover:!bg-quit-hover">
+            <Button variant="quit" size="lg" onClick={handleBackToHome}>
               Quitter
             </Button>
           </div>
@@ -671,6 +707,10 @@ const EndGame: React.FC = () => {
             })}
           </div>
         </div>
+      </div>
+
+      <div className="relative z-20 w-full text-center pt-4 pb-6 text-white/60 text-[10px] md:text-xs">
+        <ReportTrigger variant="footer" label="Signaler un bug ou une idée" />
       </div>
 
       <style>{`

@@ -176,6 +176,7 @@ export interface ServerToClientEvents {
   similarityDetected: (data: {
     answerIndex: number; // Index de la réponse révélée
     guessedPlayerName: string; // Nom du joueur que le pilier avait deviné
+    playerName: string; // Nom du vrai auteur de la réponse révélée
   }) => void;
 
   /** Confirmation de similarité par le pilier (score corrigé) */

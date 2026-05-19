@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 
-type ButtonVariant = "primary" | "success" | "danger" | "warning" | "secondary" | "ghost";
+type ButtonVariant = "primary" | "success" | "danger" | "warning" | "secondary" | "ghost" | "quit";
 type ButtonSize = "sm" | "md" | "lg" | "xl";
 
 type ButtonProps = {
@@ -27,6 +27,7 @@ const variantStyles: Record<ButtonVariant, { base: string; hover: string; band: 
   warning: { base: "bg-[#FFC700] text-black", hover: "hover:bg-[#ffd633]", band: "#cc9f00" },
   secondary: { base: "bg-white/90 text-black", hover: "hover:bg-white", band: "#cfcfcf" },
   ghost: { base: "bg-transparent text-gray-700", hover: "hover:bg-black/5 hover:text-black", band: null },
+  quit: { base: "bg-[#9ca3af] text-black", hover: "hover:bg-[#d1d5db]", band: "#6b7280" },
 };
 
 const sizeStyles: Record<ButtonSize, string> = {

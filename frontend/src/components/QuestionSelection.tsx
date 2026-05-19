@@ -7,6 +7,7 @@ import { GAME_CONFIG, getCategoryColor } from '../constants/game';
 import { getRandomFunFact, getNextFunFact } from '../constants/funFacts';
 import { playSound } from '../utils/sounds';
 import PlayerBadge from './PlayerBadge';
+import ReportTrigger from './ReportTrigger';
 
 interface QuestionSelectionProps {
   lobbyCode: string;
@@ -208,7 +209,7 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
           </div>
         </div>
 
-        {/* Fait insolite — min-h figée pour que le changement de fait
+        {/* Fait insolite - min-h figée pour que le changement de fait
             ne décale pas l'emoji situé en dessous. mt-* descend le bloc. */}
         <div className="w-full max-w-md text-center px-3 mt-4 md:mt-8 min-h-[72px] md:min-h-[88px] flex flex-col justify-start">
           <p className="text-[10px] md:text-xs text-gray-500 uppercase font-semibold mb-1">Le saviez-vous ?</p>
@@ -497,6 +498,24 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
               );
             })()}
           </div>
+
+          {/* Signaler une question pourrie (pilier uniquement, tant que pas verrouillé) */}
+          {!locked && currentCard && (
+            <div className="text-center mt-2">
+              <ReportTrigger
+                variant="discreet"
+                label="Signaler une question"
+                defaultType="question_report"
+                extraContext={[
+                  `Catégorie: ${currentCard.category}`,
+                  `Thème: ${currentCard.theme}`,
+                  `Sujet: ${currentCard.subject}`,
+                  `Questions affichées:`,
+                  ...currentCard.questions.map((q, i) => `  ${i + 1}. ${q}`),
+                ].join('\n')}
+              />
+            </div>
+          )}
 
           {/* Message de confirmation */}
           {locked && (

@@ -315,12 +315,20 @@ Contenu à écrire :
 PORT=8080
 NODE_ENV=production
 ALLOWED_ORIGINS=http://VOTRE_IP_OU_DOMAINE
+ADMIN_PASSWORD=choisis_un_mot_de_passe_long
+ADMIN_TOKEN_SECRET=une_autre_chaine_aleatoire_longue
 ```
 
 > **Explication** :
 > - `PORT=8080` = le backend écoutera sur le port 8080
 > - `NODE_ENV=production` = active les optimisations de production
 > - `ALLOWED_ORIGINS` = origine autorisée pour CORS (ex: `http://51.254.130.224` ou `https://onskone.fr`)
+> - `ADMIN_PASSWORD` = mot de passe pour accéder à la page `/admin` (tickets joueurs). **Choisis quelque chose de long et unique.**
+> - `ADMIN_TOKEN_SECRET` = secret pour signer les tokens de session admin. Idéalement différent du mot de passe. Génère-le avec : `openssl rand -hex 32`
+>
+> **À propos de la base SQLite** : le backend crée automatiquement le dossier `backend/data/` et le fichier `onskone.db` au premier lancement. Aucune installation séparée. Le fichier reste sur le VPS (non versionné).
+>
+> **Dépendance native** : `better-sqlite3` se compile au `pnpm install`. Sur Debian 12 c'est OK par défaut. Si ça plante, installer : `sudo apt install build-essential python3 -y` (côté `debian`).
 
 > **IMPORTANT** : Remplacez `VOTRE_IP_OU_DOMAINE` par l'adresse réelle de votre site (ex: `http://51.254.130.224` ou `https://onskone.fr` si vous avez un domaine avec SSL).
 

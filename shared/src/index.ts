@@ -38,3 +38,12 @@ export {
   ClientToServerEvents,
   RevealResult
 } from './types/socket-events.js';
+
+// Admin
+export {
+  AdminLobbyPhase,
+  AdminLobbyPlayer,
+  AdminLobbySummary,
+  AdminDeckSubject,
+  AdminDeckSummary
+} from './types/admin.js';

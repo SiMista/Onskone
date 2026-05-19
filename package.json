@@ -35,5 +35,10 @@
   },
   "dependencies": {
     "claude": "^0.1.2"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "better-sqlite3"
+    ]
   }
 }

@@ -5,6 +5,8 @@ import { Server } from 'socket.io';
 import { SocketHandler } from './sockets/SocketHandler';
 import * as LobbyManager from './managers/LobbyManager.js';
 import { stopAllRateLimiters } from './utils/rateLimiter.js';
+import ticketsRouter from './routes/tickets.js';
+import adminDataRouter from './routes/adminData.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -63,6 +65,35 @@ new SocketHandler(io);
 
 // Démarrer le service de nettoyage des lobbies inactifs
 LobbyManager.startCleanupInterval();
+
+// Middleware CORS pour les routes HTTP REST (tickets + admin)
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin) {
+    let allowed = false;
+    if (process.env.NODE_ENV === 'production') {
+      allowed = ALLOWED_ORIGINS.includes(origin);
+    } else {
+      allowed = origin.includes('localhost') || origin.includes('127.0.0.1') || /^http:\/\/192\.168\.\d+\.\d+:\d+$/.test(origin);
+    }
+    if (allowed) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Vary', 'Origin');
+      res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    }
+  }
+  if (req.method === 'OPTIONS') {
+    res.status(204).end();
+    return;
+  }
+  next();
+});
+
+app.use(express.json({ limit: '128kb' }));
+
+app.use('/api', ticketsRouter);
+app.use('/api', adminDataRouter);
 
 app.get('/', (req, res) => {
   res.send('Hello World');

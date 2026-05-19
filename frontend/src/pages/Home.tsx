@@ -9,17 +9,28 @@ import Footer from '../components/Footer';
 import AvatarSelector from '../components/AvatarSelector';
 import InfoModal from '../components/InfoModal';
 import HowToPlaySteps from '../components/HowToPlaySteps';
+import HowToPlayCarousel from '../components/HowToPlayCarousel';
 import HowToPlayButton from '../components/HowToPlayButton';
 import { useToast } from '../components/Toast';
 import BackButton from '../components/BackButton';
 import { Icon } from '@iconify/react';
 import { useSocketEvent, useQueryParams } from '../hooks';
 import { GAME_CONFIG, AVATARS } from '../constants/game';
+import { getStats, rememberIdentity, ACHIEVEMENTS } from '../utils/playerStats';
 
 const Home = () => {
-  const [playerName, setPlayerName] = useState<string>('');
-  const [avatarId, setAvatarId] = useState<number>(Math.floor(Math.random() * AVATARS.length));
+  // Pré-remplit depuis le profil persistant (lazy init -> 1 lecture localStorage).
+  const initialStats = (() => {
+    try { return getStats(); } catch { return null; }
+  })();
+  const [playerName, setPlayerName] = useState<string>(initialStats?.lastPseudo || '');
+  const [avatarId, setAvatarId] = useState<number>(
+    initialStats?.lastAvatarId !== null && initialStats?.lastAvatarId !== undefined
+      ? initialStats.lastAvatarId
+      : Math.floor(Math.random() * AVATARS.length)
+  );
   const [isInfoOpen, setIsInfoOpen] = useState(false);
+  const [isStatsOpen, setIsStatsOpen] = useState(false);
   const [hostName, setHostName] = useState<string | null>(null);
   const [lobbyExists, setLobbyExists] = useState<boolean | null>(null);
   const queryParams = useQueryParams();
@@ -75,6 +86,7 @@ const Home = () => {
       showToast('Entre ton pseudo avant de créer un salon', 'warning');
       return;
     }
+    rememberIdentity(playerName, avatarId);
     socket.emit('createLobby', { playerName, avatarId });
   }, [playerName, avatarId, showToast]);
 
@@ -87,8 +99,9 @@ const Home = () => {
       showToast('Code de salon invalide', 'error');
       return;
     }
+    rememberIdentity(playerName, avatarId);
     socket.emit('checkPlayerName', { lobbyCode, playerName });
-  }, [lobbyCode, playerName, showToast]);
+  }, [lobbyCode, playerName, avatarId, showToast]);
 
   const handleLobbyCreated = useCallback((data: { lobbyCode: string }) => {
     // Studio: notify parent window that the lobby exists so siblings can auto-join.
@@ -138,7 +151,69 @@ const Home = () => {
         onClose={() => setIsInfoOpen(false)}
         title="Comment jouer ?"
       >
-        <HowToPlaySteps />
+        <HowToPlayCarousel />
+      </InfoModal>
+
+      <InfoModal
+        isOpen={isStatsOpen}
+        onClose={() => setIsStatsOpen(false)}
+        title="Mes succès"
+      >
+        {(() => {
+          const stats = getStats();
+          const unlocked = new Set(stats.unlockedAchievements);
+          return (
+            <div className="flex flex-col gap-3">
+              <div className="grid grid-cols-3 gap-2 text-center mb-1">
+                <div className="bg-cream-player border-2 border-black rounded-xl p-2 stack-shadow-sm">
+                  <div className="text-xl font-display font-bold tabular-nums">{stats.gamesPlayed}</div>
+                  <div className="text-[10px] uppercase tracking-wider font-display text-gray-600">Parties</div>
+                </div>
+                <div className="bg-cream-player border-2 border-black rounded-xl p-2 stack-shadow-sm">
+                  <div className="text-xl font-display font-bold tabular-nums">{stats.bestScore}</div>
+                  <div className="text-[10px] uppercase tracking-wider font-display text-gray-600">Meilleur score</div>
+                </div>
+                <div className="bg-cream-player border-2 border-black rounded-xl p-2 stack-shadow-sm">
+                  <div className="text-xl font-display font-bold tabular-nums">{stats.correctGuessesAsLeader}</div>
+                  <div className="text-[10px] uppercase tracking-wider font-display text-gray-600">Devinettes</div>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                {ACHIEVEMENTS.map((ach) => {
+                  const isUnlocked = unlocked.has(ach.id);
+                  return (
+                    <div
+                      key={ach.id}
+                      className={`flex items-center gap-3 p-2.5 rounded-xl border-2 border-black transition-all ${isUnlocked ? 'stack-shadow-sm' : 'bg-gray-100 opacity-60'}`}
+                      style={isUnlocked ? {
+                        background: 'linear-gradient(135deg, #FFE066 0%, #FFB347 100%)',
+                      } : undefined}
+                    >
+                      <div
+                        className="flex-shrink-0"
+                        style={{
+                          filter:
+                            'drop-shadow(1px 0 0 #000) drop-shadow(-1px 0 0 #000) drop-shadow(0 1px 0 #000) drop-shadow(0 -1px 0 #000) drop-shadow(1px 2px 0 rgba(0,0,0,0.35))',
+                        }}
+                      >
+                        <Icon icon={ach.icon} width={40} height={40} aria-hidden />
+                      </div>
+                      <div className="flex-1 text-left min-w-0">
+                        <div className="font-display font-bold text-sm text-gray-900 leading-tight">
+                          {ach.title}
+                        </div>
+                        <div className={`text-xs leading-snug ${isUnlocked ? 'text-gray-800' : 'text-gray-600'}`}>
+                          {ach.description}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
       </InfoModal>
 
       {/* Contenu principal */}
@@ -158,9 +233,24 @@ const Home = () => {
             {lobbyCode && (
               <BackButton onClick={() => navigate('/')} label="Quitter" tone="danger" />
             )}
-            <Frame>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsStatsOpen(true)}
+                aria-label="Voir mes succès"
+                className="absolute -top-6 -right-4 z-10 rotate-12 hover:scale-110 hover:rotate-6 active:scale-95 transition-transform cursor-pointer"
+                style={{ filter: 'drop-shadow(2px 3px 0 rgba(0,0,0,0.35))' }}
+              >
+                <Icon
+                  icon="fluent-emoji-flat:trophy"
+                  width={56}
+                  height={56}
+                  aria-hidden
+                />
+              </button>
+              <Frame>
               {lobbyCode && lobbyExists ? (
-                <h3 className="text-lg md:text-xl">Vous êtes invité à rejoindre le salon de <b>{hostName || 'un ami'}</b></h3>
+                <h3 className="text-sm md:text-base">Vous êtes invité à rejoindre le salon de <b>{hostName || 'un ami'}</b></h3>
               ) : (
                 <h3 className="text-lg md:text-xl font-bold">JOUE MAINTENANT !</h3>
               )}
@@ -196,6 +286,7 @@ const Home = () => {
                 </div>
               )}
             </Frame>
+            </div>
 
             {/* Bouton Comment jouer - mobile uniquement */}
             <div className="md:hidden mt-4 flex justify-center">
