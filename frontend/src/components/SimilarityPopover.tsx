@@ -2,6 +2,7 @@ import Button from './Button';
 
 interface SimilarityPopoverProps {
   guessedPlayerName: string;
+  playerName: string;
   isLeader: boolean;
   onConfirm: () => void;
   onDismiss: () => void;
@@ -9,6 +10,7 @@ interface SimilarityPopoverProps {
 
 const SimilarityPopover: React.FC<SimilarityPopoverProps> = ({
   guessedPlayerName,
+  playerName,
   isLeader,
   onConfirm,
   onDismiss,
@@ -21,7 +23,7 @@ const SimilarityPopover: React.FC<SimilarityPopoverProps> = ({
         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-[-5px] w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[6px] border-b-white" />
 
         <p className="text-xs md:text-sm text-gray-800 text-center font-semibold mb-2">
-          Cette réponse est similaire à celle de <span className="text-[#1AAFDA]">{guessedPlayerName}</span>, c'est la même ?
+          <span className="text-[#1AAFDA]">{playerName}</span> a la même réponse que <span className="text-[#1AAFDA]">{guessedPlayerName}</span>, c'est la même ?
         </p>
 
         {isLeader ? (
@@ -34,10 +36,9 @@ const SimilarityPopover: React.FC<SimilarityPopoverProps> = ({
             />
             <Button
               text="Non"
-              variant="secondary"
+              variant="quit"
               size="sm"
               onClick={onDismiss}
-              className="!bg-quit hover:!bg-quit-hover"
             />
           </div>
         ) : (

@@ -85,7 +85,7 @@ const SubstituteAnsweringPhase: React.FC<SubstituteAnsweringPhaseProps> = ({
 
       {isSubstitute ? (
         <div className="flex-1 flex flex-col min-h-0">
-          <div className="flex items-center justify-center flex-wrap gap-x-2 gap-y-3 my-4 md:my-5 text-sm md:text-base text-gray-800">
+          <div className="flex items-center justify-center flex-wrap gap-x-2 gap-y-3 mt-7 md:mt-9 mb-7 md:mb-9 text-sm md:text-base text-gray-800">
             <span>Écris la réponse que</span>
             <Avatar avatarId={leader?.avatarId ?? 0} name={leader?.name} size="sm" />
             <span className="font-semibold text-gray-900">{leader?.name ?? 'le pilier'}</span>
@@ -140,7 +140,7 @@ const SubstituteAnsweringPhase: React.FC<SubstituteAnsweringPhaseProps> = ({
         </div>
       ) : (
         <div className="flex-1 flex flex-col items-center justify-center gap-6 md:gap-8 px-3">
-          <div className="flex items-center justify-center flex-wrap gap-x-3 gap-y-4">
+          <div className="flex items-center justify-center flex-wrap gap-x-3 gap-y-4 mt-6 md:mt-8">
             <PlayerBadge player={substitute} fallbackName="Le substitut" size="sm" />
             <span className="text-sm md:text-base text-gray-800 italic">écrit la réponse de</span>
             <PlayerBadge player={leader} fallbackName="le pilier" size="sm" />

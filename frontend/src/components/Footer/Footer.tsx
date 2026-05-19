@@ -1,17 +1,15 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import AboutModal from './AboutModal';
 import ContactModal from './ContactModal';
-import LegalModal from './LegalModal';
-import PrivacyModal from './PrivacyModal';
+import MentionsModal from './MentionsModal';
+import ReportTrigger from '../ReportTrigger';
 
-type ModalType = 'about' | 'mentions' | 'confidentialite' | 'contact' | null;
+type ModalType = 'about' | 'mentions' | 'contact' | null;
 
 const footerLinkClass = 'hover:text-white transition-colors underline cursor-pointer';
 
 const Footer: React.FC = () => {
   const [activeModal, setActiveModal] = useState<ModalType>(null);
-
-  const currentYear = useMemo(() => new Date().getFullYear(), []);
 
   const closeModal = () => setActiveModal(null);
 
@@ -22,9 +20,9 @@ const Footer: React.FC = () => {
         style={{ paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom, 0px))' }}
       >
         <div className="mb-2">
-          Onskone &copy; {currentYear}
+          <ReportTrigger variant="footer" label="Signaler un problème" />
         </div>
-        <div className="flex justify-center items-center gap-1.5 md:gap-3 whitespace-nowrap">
+        <div className="flex justify-center items-center gap-3 md:gap-5 whitespace-nowrap">
           <button
             type="button"
             onClick={() => setActiveModal('about')}
@@ -38,15 +36,7 @@ const Footer: React.FC = () => {
             onClick={() => setActiveModal('mentions')}
             className={footerLinkClass}
           >
-            CGU
-          </button>
-          <span aria-hidden="true">|</span>
-          <button
-            type="button"
-            onClick={() => setActiveModal('confidentialite')}
-            className={footerLinkClass}
-          >
-            Confidentialité
+            Mentions
           </button>
           <span aria-hidden="true">|</span>
           <button
@@ -73,10 +63,7 @@ const Footer: React.FC = () => {
         <AboutModal isOpen onClose={closeModal} />
       )}
       {activeModal === 'mentions' && (
-        <LegalModal isOpen onClose={closeModal} />
-      )}
-      {activeModal === 'confidentialite' && (
-        <PrivacyModal isOpen onClose={closeModal} />
+        <MentionsModal isOpen onClose={closeModal} />
       )}
       {activeModal === 'contact' && (
         <ContactModal isOpen onClose={closeModal} />

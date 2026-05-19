@@ -6,7 +6,7 @@ import Button from '../components/Button';
 import Footer from '../components/Footer';
 import ConfirmModal from '../components/ConfirmModal';
 import InfoModal from '../components/InfoModal';
-import HowToPlaySteps from '../components/HowToPlaySteps';
+import HowToPlayCarousel from '../components/HowToPlayCarousel';
 import HowToPlayButton from '../components/HowToPlayButton';
 import { Icon } from '@iconify/react';
 import PlayerCard from '../components/PlayerCard';
@@ -122,7 +122,7 @@ const Lobby = () => {
             socket.emit('leaveLobby', { lobbyCode, currentPlayerId: currentPlayer.id });
         }
         if (isAlone) {
-            showToast('Tu étais seul dans le salon — il a été supprimé', 'info', 5000);
+            showToast('Tu étais seul dans le salon, il a été supprimé', 'info', 5000);
         }
         navigate(`/?lobbyCode=${lobbyCode}`);
     }, [currentPlayer, lobbyCode, navigate, players, showToast]);
@@ -180,7 +180,7 @@ const Lobby = () => {
         const activeCount = players.filter(p => p.isActive).length;
         if (activeCount < GAME_CONFIG.MIN_PLAYERS) return;
         // Need a theme selected; let the server default kick in via decksCatalog
-        // — if nothing is preselected, pick the first available theme.
+        // - if nothing is preselected, pick the first available theme.
         if (Object.values(selectedDecks).reduce((acc, arr) => acc + arr.length, 0) === 0) {
             const firstCat = Object.keys(decksCatalog)[0];
             const firstTheme = firstCat ? Object.keys(decksCatalog[firstCat] ?? {})[0] : undefined;
@@ -304,7 +304,7 @@ const Lobby = () => {
     const hasThemeSelected = totalThemesSelected > 0;
     const canStartGame = enoughPlayers && hasThemeSelected;
 
-    // Liste des joueurs — mobile : 3/ligne, desktop : 4/ligne (même format carré)
+    // Liste des joueurs - mobile : 3/ligne, desktop : 4/ligne (même format carré)
     const playersListMobile = (
         <div className="flex flex-col gap-2">
             <div className="flex items-baseline gap-2">
@@ -361,7 +361,7 @@ const Lobby = () => {
                                         aria-hidden
                                         className="absolute -top-3.5 left-1/2 -translate-x-1/2 [filter:drop-shadow(1px_1.5px_0_rgba(0,0,0,0.5))]"
                                     />
-                                    {hostName}
+                                    {hostName && hostName.length > 10 ? `${hostName.slice(0, 10)}…` : hostName}
                                 </span>{' '}
                                 peut modifier les paramètres
                             </span>
@@ -374,13 +374,13 @@ const Lobby = () => {
                     </div>
                 </div>
             )}
-            {/* Slider mode de jeu — tout en haut, sans titre de section */}
+            {/* Slider mode de jeu - tout en haut, sans titre de section */}
             <div className={`flex items-start gap-3.5 ${!isHost ? 'opacity-65 pointer-events-none' : ''}`}>
                 <button
                     type="button"
                     role="switch"
                     aria-checked={!localActive}
-                    aria-label={`Mode ${localActive ? 'sur place' : 'à distance'} — cliquer pour basculer`}
+                    aria-label={`Mode ${localActive ? 'sur place' : 'à distance'} - cliquer pour basculer`}
                     disabled={!isHost}
                     onClick={() => handleGameModeChange(localActive ? 'remote' : 'local')}
                     className="relative inline-flex shrink-0 w-[6rem] h-10 md:w-[7.25rem] md:h-12 border-[2.5px] border-black rounded-full overflow-hidden bg-[#f9f4ee] stack-shadow-sm texture-paper transition-transform duration-150 active:scale-[0.96] cursor-pointer"
@@ -433,7 +433,7 @@ const Lobby = () => {
                     type="button"
                     role="switch"
                     aria-checked={guessMyAnswerMode}
-                    aria-label={`Mode "Devine ma réponse" — ${guessMyAnswerMode ? 'activé' : 'désactivé'}`}
+                    aria-label={`Mode "Devine ma réponse" - ${guessMyAnswerMode ? 'activé' : 'désactivé'}`}
                     disabled={!isHost}
                     onClick={() => handleGuessMyAnswerModeChange(!guessMyAnswerMode)}
                     className="relative inline-flex shrink-0 w-[6rem] h-10 md:w-[7.25rem] md:h-12 border-[2.5px] border-black rounded-full overflow-hidden bg-[#f9f4ee] stack-shadow-sm texture-paper transition-transform duration-150 active:scale-[0.96] cursor-pointer"
@@ -534,7 +534,7 @@ const Lobby = () => {
                                             : 'translate-y-1 hover:translate-y-0 z-10 opacity-90 hover:opacity-100'}
                                     `}
                                 >
-                                    {/* Bande accent inférieure colorée — plus haute si actif */}
+                                    {/* Bande accent inférieure colorée - plus haute si actif */}
                                     <span
                                         className={`absolute left-0 right-0 bottom-0 pointer-events-none transition-[height] duration-200 ${active ? 'h-2 md:h-2.5' : 'h-1.5'}`}
                                         style={{ backgroundColor: t.color }}
@@ -561,7 +561,7 @@ const Lobby = () => {
                         })}
                     </div>
 
-                    {/* Panel de la tab active — coin haut côté tab actif carré, coin opposé arrondi */}
+                    {/* Panel de la tab active - coin haut côté tab actif carré, coin opposé arrondi */}
                     <div
                         key={lobbyTab}
                         role="tabpanel"
@@ -586,7 +586,7 @@ const Lobby = () => {
                             ) : (
                                 <div className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white/85 border-[2.5px] border-black stack-shadow-sm text-gray-700">
                                     <Icon icon="fluent-emoji-flat:hourglass-not-done" className="animate-spin-slow [filter:drop-shadow(1px_1.5px_0_rgba(0,0,0,0.5))]" width="1.1em" height="1.1em" aria-hidden />
-                                    <span className="text-sm font-display italic truncate">Seul {hostName} peut démarrer la partie</span>
+                                    <span className="text-sm font-display italic truncate">Seul {hostName && hostName.length > 10 ? `${hostName.slice(0, 10)}…` : hostName} peut démarrer la partie</span>
                                 </div>
                             )}
                             <Button
@@ -613,7 +613,7 @@ const Lobby = () => {
                 </div>
             </div>
 
-            {/* Footer — desktop uniquement (caché par la sticky bar sur mobile) */}
+            {/* Footer - desktop uniquement (caché par la sticky bar sur mobile) */}
             <div className="hidden md:block">
                 <Footer />
             </div>
@@ -656,7 +656,7 @@ const Lobby = () => {
                 onClose={() => setIsHowToPlayOpen(false)}
                 title="Comment jouer ?"
             >
-                <HowToPlaySteps />
+                <HowToPlayCarousel />
             </InfoModal>
 
             {/* Modal fallback : affiche le lien quand le copier-coller automatique a échoué */}

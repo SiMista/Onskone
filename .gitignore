@@ -41,5 +41,12 @@ logs/
 # Claude
 .claude/
 
+# SQLite data (tickets, etc.)
+backend/data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
 # Misc
 nul

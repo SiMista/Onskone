@@ -35,6 +35,7 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leader, 
   const [similarityModal, setSimilarityModal] = useState<{
     answerIndex: number;
     guessedPlayerName: string;
+    playerName: string;
   } | null>(null);
   const [correctedIndices, setCorrectedIndices] = useState<Set<number>>(new Set());
 
@@ -98,10 +99,11 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leader, 
       setRevealedIndices(new Set(data.revealedIndices));
       setPilierPhase(prev => (data.revealedIndex === pilierCursorRef.current ? 'revealed' : prev));
     };
-    const onSimilarityDetected = (data: { answerIndex: number; guessedPlayerName: string }) => {
+    const onSimilarityDetected = (data: { answerIndex: number; guessedPlayerName: string; playerName: string }) => {
       setSimilarityModal({
         answerIndex: data.answerIndex,
         guessedPlayerName: data.guessedPlayerName,
+        playerName: data.playerName,
       });
     };
     const onSimilarityConfirmed = (data: { answerIndex: number; correctedScore: number; leaderboard: LeaderboardEntry[] }) => {
@@ -396,6 +398,7 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leader, 
             {showSimilarity && isLeader && (
               <SimilarityPopover
                 guessedPlayerName={similarityModal!.guessedPlayerName}
+                playerName={similarityModal!.playerName}
                 isLeader={isLeader}
                 onConfirm={handleConfirmSimilarity}
                 onDismiss={handleDismissSimilarity}
@@ -462,6 +465,7 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leader, 
             {showSimilarity && isLeader && (
               <SimilarityPopover
                 guessedPlayerName={similarityModal!.guessedPlayerName}
+                playerName={similarityModal!.playerName}
                 isLeader={isLeader}
                 onConfirm={handleConfirmSimilarity}
                 onDismiss={handleDismissSimilarity}
@@ -587,6 +591,7 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leader, 
             {showSimilarity && (
               <SimilarityPopover
                 guessedPlayerName={similarityModal!.guessedPlayerName}
+                playerName={similarityModal!.playerName}
                 isLeader={true}
                 onConfirm={handleConfirmSimilarity}
                 onDismiss={handleDismissSimilarity}

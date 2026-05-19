@@ -1963,7 +1963,7 @@ export class SocketHandler {
                     // client traite la similarité en premier (sinon la carte du joueur
                     // s'allume brièvement et perd son clignotement avant que le modal
                     // n'apparaisse).
-                    let similarityPayload: { answerIndex: number; guessedPlayerName: string } | null = null;
+                    let similarityPayload: { answerIndex: number; guessedPlayerName: string; playerName: string } | null = null;
                     const results = this.buildRevealResults(lobby, currentRound);
                     const result = results[data.answerIndex];
                     if (result && !result.correct) {
@@ -1972,7 +1972,8 @@ export class SocketHandler {
                             if (areAnswersSimilar(result.answer, guessedPlayerAnswer)) {
                                 similarityPayload = {
                                     answerIndex: data.answerIndex,
-                                    guessedPlayerName: result.guessedPlayerName
+                                    guessedPlayerName: result.guessedPlayerName,
+                                    playerName: result.playerName
                                 };
                             }
                         }
