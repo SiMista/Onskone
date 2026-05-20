@@ -1,0 +1,48 @@
+**/node_modules
+**/dist
+**/build
+**/.turbo
+**/coverage
+**/.next
+**/.cache
+**/*.tsbuildinfo
+
+# Logs / OS
+**/*.log
+**/.DS_Store
+**/Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# IDE / editor
+.vscode
+.idea
+
+# Local env (les vraies valeurs viennent du .env du VPS)
+.env
+.env.*
+!.env.example
+
+# Docker meta
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Tests / bench
+**/tests
+**/__tests__
+**/*.test.ts
+**/jest.config.js
+
+# Docs et fichiers projet inutiles a l'image
+README.md
+*.md
+docs
+
+# Backend: la DB et les fichiers locaux ne doivent pas etre dans l'image
+backend/data
+
+# Frontend: dossier public copie via vite, mais on ne veut pas les artefacts dev
+frontend/node_modules
