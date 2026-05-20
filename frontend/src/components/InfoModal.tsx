@@ -6,19 +6,27 @@ interface InfoModalProps {
   onClose: () => void;
   title: string;
   children: ReactNode;
+  /**
+   * Style d'animation d'ouverture.
+   * - 'classic' (défaut) : pop cartoon avec overshoot - convient à tout (succès, alertes, fallbacks).
+   * - 'comic'           : slam de tampon BD - réservé au "Comment jouer ?" pour matcher le carousel.
+   */
+  variant?: 'classic' | 'comic';
 }
 
-const InfoModal = ({ isOpen, onClose, title, children }: InfoModalProps) => {
+const InfoModal = ({ isOpen, onClose, title, children, variant = 'classic' }: InfoModalProps) => {
   if (!isOpen) return null;
+
+  const animClass = variant === 'comic' ? 'animate-modal-comic-slam' : 'animate-modal-pop';
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-modal-backdrop"
       onClick={onClose}
     >
-      {/* Container animé - dépliage type feuille */}
+      {/* Container animé - variante choisie par le parent */}
       <div
-        className="relative max-w-md w-full animate-modal-unfold"
+        className={`relative max-w-md w-full ${animClass}`}
         style={{ perspective: '1200px' }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -39,8 +47,9 @@ const InfoModal = ({ isOpen, onClose, title, children }: InfoModalProps) => {
         >
           {/* Header */}
           <div className="relative px-5 pt-7 pb-3 flex items-start justify-between gap-3">
-            {/* Titre surligné au marqueur */}
-            <h2 className="relative inline-block text-lg md:text-xl font-display font-bold text-gray-900 m-0 tracking-tight">
+            {/* Titre surligné au marqueur. font-accent (Fraunces) donne un côté
+                éditorial qui contraste avec Fredoka utilisé partout ailleurs. */}
+            <h2 className="relative inline-block font-accent text-display-lg text-gray-900 m-0">
               <span
                 aria-hidden
                 className="absolute left-[-4px] right-[-6px] bottom-[2px] h-[55%] -z-0 bg-yellow-300"

@@ -350,10 +350,10 @@ const Lobby = () => {
             {!isHost && (
                 <div className="flex justify-center pt-4 pb-1">
                     <div className="relative rotate-[-1.2deg] hover:rotate-0 transition-transform duration-300 ease-out">
-                        <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#FFF6D6] border-[2.5px] border-black rounded-lg stack-shadow-sm texture-paper">
+                        <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-cream-kraft border-[2.5px] border-black rounded-lg stack-shadow-sm texture-paper">
                             <span className="font-display text-[13px] tracking-tight text-black leading-snug whitespace-nowrap">
                                 Seul{' '}
-                                <span className="relative inline-block font-bold uppercase bg-black text-[#FFC700] px-1.5 py-0.5 rounded-md">
+                                <span className="relative inline-block font-bold uppercase bg-black text-warning-500 px-1.5 py-0.5 rounded-md">
                                     <Icon
                                         icon="fluent-emoji-flat:crown"
                                         width={20}
@@ -369,7 +369,7 @@ const Lobby = () => {
                         {/* ruban adhésif par dessus */}
                         <span
                             aria-hidden
-                            className="absolute -top-2 left-1/2 -translate-x-1/2 z-10 w-12 h-3.5 bg-[#FFC700]/80 border-[1.5px] border-black/60 rounded-[2px] rotate-[-3deg] [box-shadow:1px_1px_0_0_rgba(0,0,0,0.3)]"
+                            className="absolute -top-2 left-1/2 -translate-x-1/2 z-10 w-12 h-3.5 bg-warning-500/80 border-[1.5px] border-black/60 rounded-[2px] rotate-[-3deg] [box-shadow:1px_1px_0_0_rgba(0,0,0,0.3)]"
                         />
                     </div>
                 </div>
@@ -383,12 +383,12 @@ const Lobby = () => {
                     aria-label={`Mode ${localActive ? 'sur place' : 'à distance'} - cliquer pour basculer`}
                     disabled={!isHost}
                     onClick={() => handleGameModeChange(localActive ? 'remote' : 'local')}
-                    className="relative inline-flex shrink-0 w-[6rem] h-10 md:w-[7.25rem] md:h-12 border-[2.5px] border-black rounded-full overflow-hidden bg-[#f9f4ee] stack-shadow-sm texture-paper transition-transform duration-150 active:scale-[0.96] cursor-pointer"
+                    className="relative inline-flex shrink-0 w-[6rem] h-10 md:w-[7.25rem] md:h-12 border-[2.5px] border-black rounded-full overflow-hidden bg-cream-player stack-shadow-sm texture-paper transition-transform duration-150 active:scale-[0.96] cursor-pointer"
                 >
                     <span
                         className={`absolute top-0.5 h-[1.85rem] w-[1.85rem] md:h-[2.25rem] md:w-[2.25rem] rounded-full border-[2.5px] border-black shadow-[1.5px_1.5px_0_0_rgba(0,0,0,0.85)] transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${localActive
-                            ? 'left-0.5 bg-[#FFC700]'
-                            : 'left-[calc(100%-2.1rem)] md:left-[calc(100%-2.5rem)] bg-[#7DD3F0]'
+                            ? 'left-0.5 bg-warning-500'
+                            : 'left-[calc(100%-2.1rem)] md:left-[calc(100%-2.5rem)] bg-brand-200'
                             }`}
                         aria-hidden
                     />
@@ -436,12 +436,12 @@ const Lobby = () => {
                     aria-label={`Mode "Devine ma réponse" - ${guessMyAnswerMode ? 'activé' : 'désactivé'}`}
                     disabled={!isHost}
                     onClick={() => handleGuessMyAnswerModeChange(!guessMyAnswerMode)}
-                    className="relative inline-flex shrink-0 w-[6rem] h-10 md:w-[7.25rem] md:h-12 border-[2.5px] border-black rounded-full overflow-hidden bg-[#f9f4ee] stack-shadow-sm texture-paper transition-transform duration-150 active:scale-[0.96] cursor-pointer"
+                    className="relative inline-flex shrink-0 w-[6rem] h-10 md:w-[7.25rem] md:h-12 border-[2.5px] border-black rounded-full overflow-hidden bg-cream-player stack-shadow-sm texture-paper transition-transform duration-150 active:scale-[0.96] cursor-pointer"
                 >
                     <span
                         className={`absolute top-0.5 h-[1.85rem] w-[1.85rem] md:h-[2.25rem] md:w-[2.25rem] rounded-full border-[2.5px] border-black shadow-[1.5px_1.5px_0_0_rgba(0,0,0,0.85)] transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${guessMyAnswerMode
-                            ? 'left-[calc(100%-2.1rem)] md:left-[calc(100%-2.5rem)] bg-[#7DD3F0]'
-                            : 'left-0.5 bg-[#FFC700]'
+                            ? 'left-[calc(100%-2.1rem)] md:left-[calc(100%-2.5rem)] bg-brand-200'
+                            : 'left-0.5 bg-warning-500'
                             }`}
                         aria-hidden
                     />
@@ -502,14 +502,14 @@ const Lobby = () => {
                         {([
                             {
                                 id: 'settings' as const,
-                                color: '#FFC700',
+                                color: 'var(--color-warning-500)',
                                 label: 'Paramètres',
                                 badge: null,
                                 outer: 'left' as const,
                             },
                             {
                                 id: 'players' as const,
-                                color: '#1AAFDA',
+                                color: 'var(--color-brand-500)',
                                 label: 'Joueurs',
                                 badge: `${activePlayers.length}/${GAME_CONFIG.MAX_PLAYERS}`,
                                 outer: 'right' as const,
@@ -655,6 +655,7 @@ const Lobby = () => {
                 isOpen={isHowToPlayOpen}
                 onClose={() => setIsHowToPlayOpen(false)}
                 title="Comment jouer ?"
+                variant="comic"
             >
                 <HowToPlayCarousel />
             </InfoModal>
@@ -674,7 +675,7 @@ const Lobby = () => {
                         readOnly
                         value={fallbackLink ?? ''}
                         onFocus={(e) => e.currentTarget.select()}
-                        className="w-full text-sm font-mono text-gray-900 bg-[#f9f4ee] border-[2.5px] border-black rounded-lg px-3 py-2 outline-none stack-shadow-sm"
+                        className="w-full text-sm font-mono text-gray-900 bg-cream-player border-[2.5px] border-black rounded-lg px-3 py-2 outline-none stack-shadow-sm"
                     />
                 </div>
             </InfoModal>

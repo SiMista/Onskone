@@ -20,14 +20,16 @@ type ButtonProps = {
   type?: "button" | "submit" | "reset";
 };
 
+// Couleurs sourcées depuis les tokens @theme (cf. index.css). Le "band" (bandeau
+// sous le bouton qui s'écrase au press) est volontairement plus sombre que le hover.
 const variantStyles: Record<ButtonVariant, { base: string; hover: string; band: string | null }> = {
-  primary: { base: "bg-[#1AAFDA] text-black", hover: "hover:bg-[#3fbedf]", band: "#1389ad" },
-  success: { base: "bg-[#30c94d] text-black", hover: "hover:bg-[#4ad766]", band: "#1f9c38" },
-  danger: { base: "bg-[#ff5757] text-black", hover: "hover:bg-[#ff7373]", band: "#d63838" },
-  warning: { base: "bg-[#FFC700] text-black", hover: "hover:bg-[#ffd633]", band: "#cc9f00" },
+  primary: { base: "bg-brand-500 text-black", hover: "hover:bg-[#3fbedf]", band: "#1389ad" },
+  success: { base: "bg-success-500 text-black", hover: "hover:bg-success-400", band: "var(--color-success-700)" },
+  danger: { base: "bg-danger-500 text-black", hover: "hover:bg-danger-400", band: "var(--color-danger-700)" },
+  warning: { base: "bg-warning-500 text-black", hover: "hover:bg-warning-400", band: "var(--color-warning-700)" },
   secondary: { base: "bg-white/90 text-black", hover: "hover:bg-white", band: "#cfcfcf" },
   ghost: { base: "bg-transparent text-gray-700", hover: "hover:bg-black/5 hover:text-black", band: null },
-  quit: { base: "bg-[#9ca3af] text-black", hover: "hover:bg-[#d1d5db]", band: "#6b7280" },
+  quit: { base: "bg-quit text-black", hover: "hover:bg-quit-hover", band: "#6b7280" },
 };
 
 const sizeStyles: Record<ButtonSize, string> = {

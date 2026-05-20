@@ -398,7 +398,7 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
                                   transition-all duration-300 ease-in-out
                                   ${isActive && !locked ? 'cursor-pointer hover:-translate-y-0.5 hover:border-primary hover:shadow-lg' : ''}
                                   ${isSelected
-                                    ? 'scale-[1.02] border-green-500 shadow-[0_0_0_3px_#30c94d]'
+                                    ? 'scale-[1.02] border-green-500 shadow-[0_0_0_3px_var(--color-success-500)]'
                                     : 'border-gray-300 shadow-md'}
                                   ${dimmed ? 'opacity-50' : 'opacity-100'}
                                 `}

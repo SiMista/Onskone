@@ -8,7 +8,6 @@ import PseudoPlate from '../components/PseudoPlate';
 import Footer from '../components/Footer';
 import AvatarSelector from '../components/AvatarSelector';
 import InfoModal from '../components/InfoModal';
-import HowToPlaySteps from '../components/HowToPlaySteps';
 import HowToPlayCarousel from '../components/HowToPlayCarousel';
 import HowToPlayButton from '../components/HowToPlayButton';
 import { useToast } from '../components/Toast';
@@ -150,6 +149,7 @@ const Home = () => {
         isOpen={isInfoOpen}
         onClose={() => setIsInfoOpen(false)}
         title="Comment jouer ?"
+        variant="comic"
       >
         <HowToPlayCarousel />
       </InfoModal>
@@ -164,18 +164,20 @@ const Home = () => {
           const unlocked = new Set(stats.unlockedAchievements);
           return (
             <div className="flex flex-col gap-3">
+              {/* Stats top : chiffres + labels rééquilibrés (chiffres plus modestes,
+                  labels plus lisibles - avant : text-xl vs text-[10px], trop disproportionné). */}
               <div className="grid grid-cols-3 gap-2 text-center mb-1">
                 <div className="bg-cream-player border-2 border-black rounded-xl p-2 stack-shadow-sm">
-                  <div className="text-xl font-display font-bold tabular-nums">{stats.gamesPlayed}</div>
-                  <div className="text-[10px] uppercase tracking-wider font-display text-gray-600">Parties</div>
+                  <div className="text-lg font-display font-bold tabular-nums leading-none">{stats.gamesPlayed}</div>
+                  <div className="text-[11px] font-display font-semibold text-gray-600 mt-1">Parties</div>
                 </div>
                 <div className="bg-cream-player border-2 border-black rounded-xl p-2 stack-shadow-sm">
-                  <div className="text-xl font-display font-bold tabular-nums">{stats.bestScore}</div>
-                  <div className="text-[10px] uppercase tracking-wider font-display text-gray-600">Meilleur score</div>
+                  <div className="text-lg font-display font-bold tabular-nums leading-none">{stats.bestScore}</div>
+                  <div className="text-[11px] font-display font-semibold text-gray-600 mt-1">Meilleur score</div>
                 </div>
                 <div className="bg-cream-player border-2 border-black rounded-xl p-2 stack-shadow-sm">
-                  <div className="text-xl font-display font-bold tabular-nums">{stats.correctGuessesAsLeader}</div>
-                  <div className="text-[10px] uppercase tracking-wider font-display text-gray-600">Devinettes</div>
+                  <div className="text-lg font-display font-bold tabular-nums leading-none">{stats.correctGuessesAsLeader}</div>
+                  <div className="text-[11px] font-display font-semibold text-gray-600 mt-1">Devinettes</div>
                 </div>
               </div>
 
@@ -185,16 +187,15 @@ const Home = () => {
                   return (
                     <div
                       key={ach.id}
-                      className={`flex items-center gap-3 p-2.5 rounded-xl border-2 border-black transition-all ${isUnlocked ? 'stack-shadow-sm' : 'bg-gray-100 opacity-60'}`}
-                      style={isUnlocked ? {
-                        background: 'linear-gradient(135deg, #FFE066 0%, #FFB347 100%)',
-                      } : undefined}
+                      className={`flex items-center gap-3 p-2.5 rounded-xl border-2 border-black transition-all ${isUnlocked ? 'stack-shadow-sm bg-gradient-to-br from-warning-300 to-warning-orange' : 'bg-gray-100 opacity-60'}`}
                     >
                       <div
                         className="flex-shrink-0"
                         style={{
-                          filter:
-                            'drop-shadow(1px 0 0 #000) drop-shadow(-1px 0 0 #000) drop-shadow(0 1px 0 #000) drop-shadow(0 -1px 0 #000) drop-shadow(1px 2px 0 rgba(0,0,0,0.35))',
+                          filter: isUnlocked
+                            ? 'drop-shadow(1px 0 0 #000) drop-shadow(-1px 0 0 #000) drop-shadow(0 1px 0 #000) drop-shadow(0 -1px 0 #000) drop-shadow(1px 2px 0 rgba(0,0,0,0.35))'
+                            : 'grayscale(1)',
+                          opacity: isUnlocked ? 1 : 0.5,
                         }}
                       >
                         <Icon icon={ach.icon} width={40} height={40} aria-hidden />
@@ -238,70 +239,73 @@ const Home = () => {
                 type="button"
                 onClick={() => setIsStatsOpen(true)}
                 aria-label="Voir mes succès"
-                className="absolute -top-6 -right-4 z-10 rotate-12 hover:scale-110 hover:rotate-6 active:scale-95 transition-transform cursor-pointer"
-                style={{ filter: 'drop-shadow(2px 3px 0 rgba(0,0,0,0.35))' }}
+                className="absolute top-3 right-3 z-10 hover:scale-110 active:scale-95 transition-transform cursor-pointer"
+                style={{
+                  filter:
+                    'drop-shadow(1px 0 0 #000) drop-shadow(-1px 0 0 #000) drop-shadow(0 1px 0 #000) drop-shadow(0 -1px 0 #000) drop-shadow(1px 2px 0 rgba(0,0,0,0.35))',
+                }}
               >
                 <Icon
                   icon="fluent-emoji-flat:trophy"
-                  width={56}
-                  height={56}
+                  width={32}
+                  height={32}
                   aria-hidden
                 />
               </button>
               <Frame>
-              {lobbyCode && lobbyExists ? (
-                <h3 className="text-sm md:text-base">Vous êtes invité à rejoindre le salon de <b>{hostName || 'un ami'}</b></h3>
-              ) : (
-                <h3 className="text-lg md:text-xl font-bold">JOUE MAINTENANT !</h3>
-              )}
-              <AvatarSelector
-                selectedAvatarId={avatarId}
-                onSelect={setAvatarId}
-              />
-              <div className="w-full px-2">
-                <PseudoPlate
-                  value={playerName}
-                  onChange={(e) => setPlayerName(e.target.value)}
-                  placeholder="TON PSEUDO"
-                  maxLength={GAME_CONFIG.MAX_NAME_LENGTH}
-                  onSubmit={undefined}
+                {lobbyCode && lobbyExists ? (
+                  <h3 className="text-sm md:text-base font-normal">Vous êtes invité à rejoindre le salon de <b className="font-bold">{hostName || 'un ami'}</b></h3>
+                ) : (
+                  <h3 className="font-accent text-display-lg">Joue maintenant !</h3>
+                )}
+                <AvatarSelector
+                  selectedAvatarId={avatarId}
+                  onSelect={setAvatarId}
                 />
-              </div>
-              {!lobbyCode ? (
-                <div className="text-center space-y-2">
-                  <Button
-                    text="Créer un salon"
-                    variant="primary"
-                    size="md"
-                    onClick={createLobby}
+                <div className="w-full px-2">
+                  <PseudoPlate
+                    value={playerName}
+                    onChange={(e) => setPlayerName(e.target.value)}
+                    placeholder="TON PSEUDO"
+                    maxLength={GAME_CONFIG.MAX_NAME_LENGTH}
+                    onSubmit={undefined}
                   />
                 </div>
-              ) : lobbyExists === null ? (
-                <div className="text-center">
-                  <span className="text-sm text-gray-500">Vérification du salon...</span>
-                </div>
-              ) : (
-                <div>
-                  <Button text="Rejoindre" variant="warning" size="md" onClick={joinLobby} />
-                </div>
-              )}
-            </Frame>
+                {!lobbyCode ? (
+                  <div className="text-center space-y-2">
+                    <Button
+                      text="Créer un salon"
+                      variant="primary"
+                      size="md"
+                      onClick={createLobby}
+                    />
+                  </div>
+                ) : lobbyExists === null ? (
+                  <div className="text-center">
+                    <span className="text-sm text-gray-500">Vérification du salon...</span>
+                  </div>
+                ) : (
+                  <div>
+                    <Button text="Rejoindre" variant="warning" size="md" onClick={joinLobby} />
+                  </div>
+                )}
+              </Frame>
             </div>
 
-            {/* Bouton Comment jouer - mobile uniquement */}
+            {/* Bouton Comment jouer - mobile uniquement (PC: carousel inline à droite) */}
             <div className="md:hidden mt-4 flex justify-center">
               <HowToPlayButton onClick={() => setIsInfoOpen(true)} />
             </div>
           </div>
 
-          {/* Bloc explications - desktop only */}
+          {/* Bloc explications - desktop only (même carousel que la modale mobile) */}
           <div className="hidden md:block md:col-span-6">
             <Frame textAlign="left">
               <div className="w-full border-b-2 border-dashed border-gray-300 pb-3 mb-4 flex items-center gap-2">
                 <Icon icon="fluent-emoji-flat:direct-hit" width={26} height={26} aria-hidden />
-                <h2 className='text-2xl font-display text-gray-800 m-0'>Comment jouer ?</h2>
+                <h2 className='font-accent text-display-lg text-gray-800 m-0'>Comment jouer ?</h2>
               </div>
-              <HowToPlaySteps size="lg" />
+              <HowToPlayCarousel />
             </Frame>
           </div>
 

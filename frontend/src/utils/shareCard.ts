@@ -135,20 +135,21 @@ export async function buildShareCard(opts: ShareCardOptions): Promise<Blob> {
   ctx.fillStyle = veil;
   ctx.fillRect(0, 0, W, H);
 
-  // === Logo en haut ===
-  let logoBottomY = 220;
+  // === Logo en haut à gauche, plus petit ===
+  let logoBottomY = 180;
   try {
     const logo = await loadImage(logoSloganImg);
-    const logoW = 460;
+    const logoW = 280;
     const logoH = (logo.height / logo.width) * logoW;
-    const logoY = 90;
-    ctx.drawImage(logo, (W - logoW) / 2, logoY, logoW, logoH);
+    const logoX = 85;
+    const logoY = 72;
+    ctx.drawImage(logo, logoX, logoY, logoW, logoH);
     logoBottomY = logoY + logoH;
   } catch {
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 88px Fredoka, Nunito, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('Onskoné', W / 2, 200);
+    ctx.font = 'bold 56px Fredoka, Nunito, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('Onskoné', 60, 120);
   }
 
   // === Liquid glass panel central (verdict + ring) ===
@@ -475,15 +476,63 @@ export async function buildShareCard(opts: ShareCardOptions): Promise<Blob> {
     });
   }
 
-  // === Footer ===
+  // === CTA impactant en haut à droite, penché et avec fond ===
   ctx.save();
+  ctx.translate(W - 70, 135);
+  ctx.rotate(6 * Math.PI / 180);
+
+  // Dimensions du fond (sticker)
+  const ctaW = 460;
+  const ctaH = 150;
+  const ctaR = 24;
+  const ctaX = -ctaW;
+  const ctaY = 0;
+
+  // ombre empilée
+  drawStackShadow(ctx, ctaX, ctaY, ctaW, ctaH, ctaR, [4, 8], [1, 0.25]);
+
+  // fond crème façon papier
+  ctx.fillStyle = '#fdf6e3';
+  roundRectPath(ctx, ctaX, ctaY, ctaW, ctaH, ctaR);
+  ctx.fill();
+  ctx.strokeStyle = '#111827';
+  ctx.lineWidth = 3;
+  roundRectPath(ctx, ctaX, ctaY, ctaW, ctaH, ctaR);
+  ctx.stroke();
+
+  // scotch en haut (petite bande translucide jaune, légèrement inclinée)
+  ctx.save();
+  const tapeW = 150;
+  const tapeH = 38;
+  const tapeX = ctaX + ctaW / 2 - tapeW / 2;
+  const tapeY = ctaY - tapeH / 2;
+  ctx.translate(tapeX + tapeW / 2, tapeY + tapeH / 2);
+  ctx.rotate(-4 * Math.PI / 180);
+  ctx.fillStyle = 'rgba(255, 199, 0, 0.7)';
+  ctx.fillRect(-tapeW / 2, -tapeH / 2, tapeW, tapeH);
+  ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(-tapeW / 2, -tapeH / 2, tapeW, tapeH);
+  // petites stries verticales pour effet scotch
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+  ctx.lineWidth = 1;
+  for (let i = -tapeW / 2 + 12; i < tapeW / 2; i += 14) {
+    ctx.beginPath();
+    ctx.moveTo(i, -tapeH / 2);
+    ctx.lineTo(i, tapeH / 2);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // texte
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
-  ctx.fillStyle = 'rgba(255,255,255,0.7)';
-  ctx.font = '600 28px Fredoka, Nunito, sans-serif';
-  ctx.shadowColor = 'rgba(0,0,0,0.35)';
-  ctx.shadowBlur = 8;
-  ctx.fillText('onskone · le jeu qui teste vos liens', W / 2, H - 60);
+  ctx.fillStyle = '#1f2937';
+  ctx.font = 'bold 40px Fredoka, Nunito, sans-serif';
+  ctx.fillText('Viens jouer sur', ctaX + ctaW / 2, ctaY + 60);
+  ctx.fillStyle = '#1f5d90';
+  ctx.font = 'bold 60px Fredoka, Nunito, sans-serif';
+  ctx.fillText('onskone.fr !', ctaX + ctaW / 2, ctaY + 122);
   ctx.restore();
 
   return await new Promise<Blob>((resolve, reject) => {

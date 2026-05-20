@@ -130,7 +130,7 @@ const ReportModal = ({ isOpen, onClose, extraContext, defaultType }: ReportModal
           <div className="text-xs text-gray-500 mt-1 text-right">{message.length} / 2000</div>
         </div>
 
-        <div className="flex justify-end gap-2 pt-2">
+        <div className="flex justify-end items-center gap-2 pt-2 pr-1.5 pb-1.5">
           <Button variant="ghost" onClick={handleClose} disabled={isSubmitting}>
             Annuler
           </Button>

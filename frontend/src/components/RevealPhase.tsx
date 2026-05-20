@@ -385,7 +385,7 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leader, 
             </div>
           ) : (
             <p className="text-gray-900 text-sm md:text-base font-semibold text-center">
-              Réponse attribuée à <span className="text-[#1AAFDA]">{currentResult.guessedPlayerName}</span>
+              Réponse attribuée à <span className="text-brand-500">{currentResult.guessedPlayerName}</span>
             </p>
           )
         }
@@ -555,7 +555,7 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leader, 
                       type="button"
                       onClick={handleNext}
                       aria-label="Suivant"
-                      className="animate-next-pop group flex flex-col items-center gap-1 cursor-pointer text-black hover:text-[#1AAFDA] transition-colors"
+                      className="animate-next-pop group flex flex-col items-center gap-1 cursor-pointer text-black hover:text-brand-500 transition-colors"
                     >
                       <svg
                         viewBox="0 0 24 24"

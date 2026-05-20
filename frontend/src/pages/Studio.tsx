@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { AVATARS, getAvatarUrl } from '../constants/game';
 import { purgeStudioSlot } from '../utils/studioStorage';
 import StudioGallery from './StudioGallery';
@@ -108,7 +107,6 @@ const SELECT_CLS =
 const CLUSTER = 'flex items-center gap-1.5 bg-black/30 border border-white/[0.06] rounded-lg px-2 py-1';
 
 const Studio = () => {
-  const navigate = useNavigate();
   const saved = useMemo(loadSavedConfig, []);
 
   useEffect(() => {
@@ -234,14 +232,6 @@ const Studio = () => {
     setLobbyCode(null);
   };
 
-  const randomizeNames = () => {
-    setSlots((s) => s.map((x, i) => ({
-      ...x,
-      name: FUN_NAMES[(i + Math.floor(Math.random() * FUN_NAMES.length)) % FUN_NAMES.length],
-      avatarId: Math.floor(Math.random() * AVATARS.length),
-    })));
-  };
-
   const start = () => {
     slots.forEach((_, i) => purgeStudioSlot(i));
     // Garantir l'unicité des pseudos & avatars : deux slots avec le même
@@ -349,14 +339,6 @@ const Studio = () => {
       {/* ====== Control panel ====== */}
       <div className="sticky top-0 z-30 backdrop-blur-xl bg-[#0a0c12]/85 border-b border-white/[0.07]">
         <div className="px-4 py-3 flex flex-wrap items-center gap-2.5">
-          <button
-            onClick={() => navigate('/')}
-            className={`${PILL_BTN} !text-white/80`}
-            title="Retour à l'accueil"
-          >
-            ← Retour
-          </button>
-
           <div className="flex items-center gap-2.5 ml-1">
             <span className="font-mono text-[15px] leading-none flex items-baseline gap-1.5 select-none">
               <span className="text-amber-400">▍</span>
@@ -469,11 +451,6 @@ const Studio = () => {
                   title={debugTimers ? 'Slow timers ACTIFS (1h) - clic pour normal' : 'Timers normaux - clic pour passer en 1h'}
                 >⏱</button>
                 <button
-                  onClick={randomizeNames}
-                  className={PILL_ICON}
-                  title="Pseudos & avatars aléatoires"
-                >🎲</button>
-                <button
                   onClick={toggleAllBots}
                   className={`${PILL_ICON} ${allBots ? '!bg-violet-400/20 !border-violet-300/60 !text-violet-100 shadow-[0_0_10px_rgba(167,139,250,0.25)]' : ''}`}
                   title={allBots ? 'Tous les slots sont des bots - clic pour tout désactiver' : 'Activer le mode bot sur tous les slots'}
@@ -484,22 +461,6 @@ const Studio = () => {
                   className={`${PILL_ICON} disabled:opacity-25 disabled:cursor-not-allowed`}
                   title="Remettre les valeurs studio par défaut (3 slots, layout 3-col, zoom 80%, slow timers)"
                 >⟲</button>
-              </div>
-
-              {/* Lobby code chip - slot réservé pour éviter le shift quand le code arrive */}
-              <div className={`${lobbyCode ? 'min-w-[140px]' : 'min-w-0'} flex justify-end`}>
-                {lobbyCode && (
-                  <button
-                    onClick={() => navigator.clipboard?.writeText(`${window.location.origin}/?lobbyCode=${lobbyCode}`)}
-                    className="group flex items-center gap-2 bg-gradient-to-br from-amber-400/15 to-amber-500/10 border border-amber-300/40 hover:border-amber-300/80 rounded-md px-2.5 py-1 transition-all"
-                    title="Copier le lien d'invitation"
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)] animate-pulse" />
-                    <span className="font-mono text-[10px] uppercase tracking-wider text-amber-200/70">Lobby</span>
-                    <span className="font-mono text-[12px] font-bold tracking-widest text-amber-100">{lobbyCode}</span>
-                    <span className="text-amber-300/60 group-hover:text-amber-200 text-xs">⧉</span>
-                  </button>
-                )}
               </div>
 
               {/* Main action - fixed-width zone for stable layout (no shift between idle/running) */}

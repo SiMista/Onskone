@@ -1,12 +1,18 @@
 import 'dotenv/config';
 import express from 'express';
 import http from 'http';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 import { Server } from 'socket.io';
 import { SocketHandler } from './sockets/SocketHandler';
 import * as LobbyManager from './managers/LobbyManager.js';
 import { stopAllRateLimiters } from './utils/rateLimiter.js';
 import ticketsRouter from './routes/tickets.js';
 import adminDataRouter from './routes/adminData.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const server = http.createServer(app);
@@ -95,9 +101,24 @@ app.use(express.json({ limit: '128kb' }));
 app.use('/api', ticketsRouter);
 app.use('/api', adminDataRouter);
 
-app.get('/', (req, res) => {
-  res.send('Hello World');
-});
+// En production, servir le frontend statique. Le dossier est resolu via
+// FRONTEND_DIST si présent, sinon ../frontend/build par rapport au backend.
+const FRONTEND_DIST = process.env.FRONTEND_DIST
+  ? path.resolve(process.env.FRONTEND_DIST)
+  : path.resolve(__dirname, '../../frontend/build');
+
+if (fs.existsSync(FRONTEND_DIST)) {
+  logger.info(`Serving frontend from ${FRONTEND_DIST}`);
+  app.use(express.static(FRONTEND_DIST));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/socket.io')) return next();
+    res.sendFile(path.join(FRONTEND_DIST, 'index.html'));
+  });
+} else {
+  app.get('/', (_req, res) => {
+    res.send('Hello World');
+  });
+}
 
 // Lancer le serveur HTTP sur le port 5000
 const PORT = process.env.PORT || 8080;

@@ -174,7 +174,7 @@ const SubstituteSelection: React.FC<SubstituteSelectionProps> = ({
                       <button
                         type="button"
                         onClick={() => { setPickedId(player.id); setOpen(false); }}
-                        className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-[8px] transition-colors duration-150 cursor-pointer ${isSelected ? 'bg-[#FFE680]' : 'hover:bg-black/5'
+                        className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-[8px] transition-colors duration-150 cursor-pointer ${isSelected ? 'bg-warning-350' : 'hover:bg-black/5'
                           }`}
                       >
                         <Avatar avatarId={player.avatarId} name={player.name} size="sm" />
