@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useToast } from '../components/Toast';
 import {
   Ticket,
@@ -232,6 +233,107 @@ const TABS: TabDef[] = [
 
 const GROUP_ORDER: TabGroup[] = ['pilotage', 'inbox', 'catalogue', 'analytics'];
 
+// Bottom tab bar (mobile) - inclut "lobbies" (sur desktop il est promu dans le masthead).
+const MOBILE_TAB_META: Record<AdminTab, { icon: string; label: string }> = {
+  overview: { icon: 'mdi:home-variant-outline', label: 'Accueil' },
+  lobbies: { icon: 'mdi:broadcast', label: 'Live' },
+  tickets: { icon: 'mdi:ticket-outline', label: 'Tickets' },
+  decks: { icon: 'mdi:cards-outline', label: 'Decks' },
+  content: { icon: 'mdi:file-document-outline', label: 'Contenu' },
+  stats: { icon: 'mdi:chart-line', label: 'Stats' },
+};
+const MOBILE_TAB_ORDER: AdminTab[] = ['overview', 'lobbies', 'tickets', 'decks', 'content', 'stats'];
+
+const MobileBottomNav = ({
+  activeTab, setActiveTab, lobbyCount,
+}: {
+  activeTab: AdminTab;
+  setActiveTab: (t: AdminTab) => void;
+  lobbyCount: number | null;
+}) => (
+  <nav
+    aria-label="Navigation"
+    className="md:hidden fixed bottom-0 left-0 right-0 z-40 backdrop-blur-xl bg-[#0a0c12]/92 border-t border-white/10"
+    style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+  >
+    <div className="grid grid-cols-6">
+      {MOBILE_TAB_ORDER.map((id) => {
+        const meta = MOBILE_TAB_META[id];
+        const active = activeTab === id;
+        const showLive = id === 'lobbies' && (lobbyCount ?? 0) > 0;
+        return (
+          <button
+            key={id}
+            onClick={() => setActiveTab(id)}
+            aria-label={meta.label}
+            className={`relative flex flex-col items-center justify-center gap-0.5 py-2 px-0.5 transition-colors ${active ? 'text-amber-300' : 'text-white/55 active:text-white/85'
+              }`}
+          >
+            <span className="relative">
+              <Icon icon={meta.icon} className="w-[22px] h-[22px]" />
+              {showLive && (
+                <span className="absolute -top-0.5 -right-1 w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse ring-1 ring-[#0a0c12]" />
+              )}
+            </span>
+            <span className="font-mono text-[9.5px] uppercase tracking-[0.05em] leading-none">
+              {meta.label}
+            </span>
+            {active && (
+              <span className="absolute top-0 left-1/2 -translate-x-1/2 w-7 h-[2px] bg-amber-400 rounded-b-full" />
+            )}
+          </button>
+        );
+      })}
+    </div>
+  </nav>
+);
+
+// Bottom sheet générique (mobile).
+const BottomSheet = ({
+  open, onClose, title, children,
+}: {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  children: React.ReactNode;
+}) => {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 md:hidden" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in" />
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="absolute bottom-0 left-0 right-0 rounded-t-2xl border-t border-white/10 bg-gradient-to-b from-[#13161e] to-[#0d1018] shadow-[0_-20px_60px_-10px_rgba(0,0,0,0.7)] animate-sheet-up max-h-[85vh] flex flex-col"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        <div className="pt-2.5 flex justify-center">
+          <span className="w-10 h-1 rounded-full bg-white/15" />
+        </div>
+        <div className="px-4 pt-2 pb-3 flex items-center justify-between">
+          <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-white/65 font-bold">
+            {title}
+          </p>
+          <button
+            onClick={onClose}
+            className="w-7 h-7 rounded-md border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-white/70 hover:text-white flex items-center justify-center transition-colors text-[12px]"
+            aria-label="Fermer"
+          >✕</button>
+        </div>
+        <div className="overflow-y-auto custom-scroll px-4 pb-5 space-y-5">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // =====================================================================
 // Overview
 // =====================================================================
@@ -373,7 +475,7 @@ const OverviewPanel = ({
                   >
                     <span className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${type.dot}`} />
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 mb-0.5">
+                      <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
                         <span className={`px-1.5 py-0.5 rounded border font-mono text-[10px] uppercase tracking-wider ${type.chip}`}>
                           {type.label}
                         </span>
@@ -383,7 +485,7 @@ const OverviewPanel = ({
                         {t.lobby_code && (
                           <span className="font-mono text-[10px] tracking-widest font-bold text-white/55">{t.lobby_code}</span>
                         )}
-                        <span className="ml-auto font-mono text-[10px] text-white/35 tabular-nums">{formatRelative(t.created_at)}</span>
+                        <span className="ml-auto font-mono text-[10px] text-white/35 tabular-nums whitespace-nowrap">{formatRelative(t.created_at)}</span>
                       </div>
                       <p className="text-[12.5px] text-white/85 leading-snug line-clamp-1 group-hover:text-white transition-colors">
                         {t.message}
@@ -598,15 +700,15 @@ const TicketDetailModal = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6 bg-black/70 backdrop-blur-sm animate-fade-in"
+      className="fixed inset-0 z-50 flex items-stretch sm:items-center justify-center sm:px-4 sm:py-6 bg-black/70 backdrop-blur-sm animate-fade-in"
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-2xl max-h-[85vh] overflow-y-auto custom-scroll rounded-xl border border-white/[0.1] bg-gradient-to-b from-[#13161e] to-[#0d1018] shadow-[0_30px_80px_-20px_rgba(0,0,0,0.7)]"
+        className="relative w-full sm:max-w-2xl h-full sm:h-auto sm:max-h-[85vh] overflow-y-auto custom-scroll sm:rounded-xl border-0 sm:border border-white/[0.1] bg-gradient-to-b from-[#13161e] to-[#0d1018] shadow-[0_30px_80px_-20px_rgba(0,0,0,0.7)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="sticky top-0 bg-[#13161e]/95 backdrop-blur px-5 py-3 border-b border-white/[0.06] flex items-center gap-2 z-10">
+        <div className="sticky top-0 bg-[#13161e]/95 backdrop-blur px-4 sm:px-5 py-3 border-b border-white/[0.06] flex items-center gap-2 z-10 flex-wrap">
           <span className={`px-2 py-0.5 rounded border font-mono text-[11px] uppercase tracking-wider ${type.chip}`}>
             {type.label}
           </span>
@@ -621,7 +723,7 @@ const TicketDetailModal = ({
           >✕</button>
         </div>
 
-        <div className="p-5 space-y-5">
+        <div className="p-4 sm:p-5 space-y-5">
           {/* Message */}
           <div>
             <p className="font-mono text-[11px] uppercase tracking-wider text-white/35 mb-1.5">Message</p>
@@ -697,20 +799,22 @@ const TicketDetailModal = ({
         </div>
 
         {/* Footer actions */}
-        <div className="sticky bottom-0 bg-[#13161e]/95 backdrop-blur px-5 py-3 border-t border-white/[0.06] flex flex-wrap items-center gap-2">
-          <span className="font-mono text-[11px] uppercase tracking-wider text-white/35 mr-1">déplacer vers</span>
-          {STATUS_ORDER.filter((s) => s !== ticket.status).map((s) => (
-            <button
-              key={s}
-              onClick={() => onStatusChange(s)}
-              className={`px-2 py-1 rounded border font-mono text-[11px] uppercase tracking-wider transition-colors ${STATUS_META[s].pill} hover:brightness-125`}
-            >
-              → {STATUS_META[s].label}
-            </button>
-          ))}
+        <div className="sticky bottom-0 bg-[#13161e]/95 backdrop-blur px-4 sm:px-5 py-3 border-t border-white/[0.06] space-y-2 sm:space-y-0 sm:flex sm:flex-wrap sm:items-center sm:gap-2">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 sm:contents">
+            <span className="shrink-0 font-mono text-[11px] uppercase tracking-wider text-white/35 sm:mr-1 whitespace-nowrap">déplacer vers</span>
+            {STATUS_ORDER.filter((s) => s !== ticket.status).map((s) => (
+              <button
+                key={s}
+                onClick={() => onStatusChange(s)}
+                className={`shrink-0 whitespace-nowrap px-2 py-1 rounded border font-mono text-[11px] uppercase tracking-wider transition-colors ${STATUS_META[s].pill} hover:brightness-125`}
+              >
+                → {STATUS_META[s].label}
+              </button>
+            ))}
+          </div>
           <button
             onClick={onDelete}
-            className="ml-auto px-3 py-1 rounded border border-red-400/40 bg-red-500/10 hover:bg-red-500/25 hover:border-red-400/70 text-red-200 font-mono text-[11px] uppercase tracking-wider transition-colors"
+            className="w-full sm:w-auto sm:ml-auto px-3 py-1.5 sm:py-1 rounded border border-red-400/40 bg-red-500/10 hover:bg-red-500/25 hover:border-red-400/70 text-red-200 font-mono text-[11px] uppercase tracking-wider transition-colors"
           >
             ✕ supprimer
           </button>
@@ -733,6 +837,8 @@ const TicketsPanel = ({
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [openTicketId, setOpenTicketId] = useState<number | null>(null);
   const [pendingDelete, setPendingDelete] = useState<{ kind: 'single'; id: number } | { kind: 'bulk'; ids: number[] } | null>(null);
+  const [mobileStatus, setMobileStatus] = useState<TicketStatus>('new');
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const showToast = useToast();
 
   const lobbyCounts = useMemo(() => {
@@ -826,8 +932,43 @@ const TicketsPanel = ({
 
   return (
     <div className="space-y-4">
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-2.5">
+      {/* Toolbar mobile - search + bouton filtres */}
+      <div className="md:hidden flex items-center gap-2">
+        <div className={`${CLUSTER} flex-1 min-w-0`}>
+          <Icon icon="mdi:magnify" className="w-4 h-4 text-white/35 ml-0.5" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="rechercher"
+            className="flex-1 min-w-0 bg-transparent border-0 outline-0 text-[12px] text-white/85 placeholder:text-white/25 font-mono"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="text-white/30 hover:text-white text-[12px] px-1"
+            >×</button>
+          )}
+        </div>
+        <button
+          onClick={() => setFiltersOpen(true)}
+          className={`relative shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border bg-black/30 text-[11px] font-mono uppercase tracking-wider transition-colors ${typeFilter || groupByLobby
+            ? 'border-amber-300/40 text-amber-100'
+            : 'border-white/[0.08] text-white/65'
+            }`}
+        >
+          <Icon icon="mdi:tune-variant" className="w-4 h-4" />
+          Filtres
+          {(typeFilter || groupByLobby) && (
+            <span className="ml-0.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-400 text-black text-[10px] font-bold tabular-nums">
+              {(typeFilter ? 1 : 0) + (groupByLobby ? 1 : 0)}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* Toolbar desktop - layout original */}
+      <div className="hidden md:flex flex-wrap items-center gap-2.5">
         <div className={`${CLUSTER} flex-1 min-w-[200px] max-w-md`}>
           <Icon icon="mdi:magnify" className="w-4 h-4 text-white/35 ml-0.5" />
           <input
@@ -880,37 +1021,136 @@ const TicketsPanel = ({
         </div>
       </div>
 
+      {/* Bottom sheet filtres - mobile */}
+      <BottomSheet open={filtersOpen} onClose={() => setFiltersOpen(false)} title="Filtres">
+        <div>
+          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/45 mb-2">Type de ticket</p>
+          <div className="grid grid-cols-2 gap-1.5">
+            {(['', 'bug', 'question_report', 'suggestion'] as const).map((t) => {
+              const active = typeFilter === t;
+              const label = t === '' ? 'Tous' : TYPE_META[t].label;
+              return (
+                <button
+                  key={t || 'all'}
+                  onClick={() => setTypeFilter(t)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-[13px] transition-colors ${active
+                    ? 'border-amber-300/40 bg-amber-400/[0.08] text-white'
+                    : 'border-white/[0.08] bg-white/[0.02] text-white/70'
+                    }`}
+                >
+                  {t ? (
+                    <span className={`w-2 h-2 rounded-full ${TYPE_META[t].dot}`} />
+                  ) : (
+                    <span className="w-2 h-2 rounded-full bg-white/40" />
+                  )}
+                  <span>{label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div>
+          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/45 mb-2">Affichage</p>
+          <button
+            onClick={() => setGroupByLobby((v) => !v)}
+            className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg border transition-colors ${groupByLobby
+              ? 'border-amber-300/40 bg-amber-400/[0.08]'
+              : 'border-white/[0.08] bg-white/[0.02]'
+              }`}
+          >
+            <div className="text-left">
+              <p className="text-[13px] text-white">Grouper par lobby</p>
+              <p className="text-[11px] text-white/45 mt-0.5">Regroupe les tickets d'un même salon</p>
+            </div>
+            <span
+              className={`relative w-9 h-5 rounded-full transition-colors shrink-0 ${groupByLobby ? 'bg-amber-400' : 'bg-white/15'}`}
+            >
+              <span
+                className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${groupByLobby ? 'translate-x-4' : 'translate-x-0.5'}`}
+              />
+            </span>
+          </button>
+        </div>
+
+        {(typeFilter || groupByLobby) && (
+          <button
+            onClick={() => { setTypeFilter(''); setGroupByLobby(false); }}
+            className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/[0.04] text-white/70 text-[12px] font-mono uppercase tracking-wider"
+          >
+            Réinitialiser
+          </button>
+        )}
+      </BottomSheet>
+
+      {/* Sélecteur de statut - mobile only - remplace les 4 colonnes empilées */}
+      <div className="md:hidden grid grid-cols-4 gap-1.5">
+        {STATUS_ORDER.map((s) => {
+          const meta = STATUS_META[s];
+          const count = filtered.filter((t) => t.status === s).length;
+          const active = mobileStatus === s;
+          return (
+            <button
+              key={s}
+              onClick={() => setMobileStatus(s)}
+              className={`flex flex-col items-center justify-center gap-0.5 px-1.5 py-2 rounded-lg border transition-colors min-w-0 ${active
+                ? `${meta.pill} ring-1 ring-white/10`
+                : 'border-white/[0.07] bg-white/[0.02] text-white/55'
+                }`}
+            >
+              <span className="font-mono text-[10px] uppercase tracking-wider truncate max-w-full">
+                {meta.label}
+              </span>
+              <span className="tabular-nums font-bold text-[13px] leading-none">{count}</span>
+            </button>
+          );
+        })}
+      </div>
+
       {/* Bulk actions bar - animated in when selection */}
       <div
         className={`overflow-hidden transition-all duration-200 ${selected.size > 0 ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0'
           }`}
       >
-        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-300/30 bg-amber-400/[0.06] px-3 py-2">
-          <span className="font-mono text-[11px] uppercase tracking-wider text-amber-200">
-            {selected.size} sélectionné{selected.size > 1 ? 's' : ''}
-          </span>
-          <span className="text-white/20">·</span>
-          {STATUS_ORDER.map((s) => (
+        <div className="rounded-lg border border-amber-300/30 bg-amber-400/[0.06] px-3 py-2">
+          <div className="flex items-center justify-between gap-2 mb-1.5 md:mb-0 md:hidden">
+            <span className="font-mono text-[11px] uppercase tracking-wider text-amber-200">
+              {selected.size} sélectionné{selected.size > 1 ? 's' : ''}
+            </span>
             <button
-              key={s}
-              onClick={() => bulkMove(s)}
-              className={`px-2 py-0.5 rounded border font-mono text-[11px] uppercase tracking-wider ${STATUS_META[s].pill} hover:brightness-125 transition`}
+              onClick={clearSelection}
+              className="text-white/50 hover:text-white font-mono text-[11px] uppercase tracking-wider"
             >
-              → {STATUS_META[s].label}
+              annuler
             </button>
-          ))}
-          <button
-            onClick={requestBulkDelete}
-            className="px-2 py-0.5 rounded border border-red-400/40 bg-red-500/10 hover:bg-red-500/25 text-red-200 font-mono text-[11px] uppercase tracking-wider transition"
-          >
-            ✕ supprimer
-          </button>
-          <button
-            onClick={clearSelection}
-            className="ml-auto text-white/50 hover:text-white font-mono text-[11px] uppercase tracking-wider"
-          >
-            annuler
-          </button>
+          </div>
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-3 px-3 md:mx-0 md:px-0 md:flex-wrap">
+            <span className="hidden md:inline font-mono text-[11px] uppercase tracking-wider text-amber-200 whitespace-nowrap">
+              {selected.size} sélectionné{selected.size > 1 ? 's' : ''}
+            </span>
+            <span className="hidden md:inline text-white/20">·</span>
+            {STATUS_ORDER.map((s) => (
+              <button
+                key={s}
+                onClick={() => bulkMove(s)}
+                className={`shrink-0 whitespace-nowrap px-2 py-0.5 rounded border font-mono text-[11px] uppercase tracking-wider ${STATUS_META[s].pill} hover:brightness-125 transition`}
+              >
+                → {STATUS_META[s].label}
+              </button>
+            ))}
+            <button
+              onClick={requestBulkDelete}
+              className="shrink-0 whitespace-nowrap px-2 py-0.5 rounded border border-red-400/40 bg-red-500/10 hover:bg-red-500/25 text-red-200 font-mono text-[11px] uppercase tracking-wider transition"
+            >
+              ✕ supprimer
+            </button>
+            <button
+              onClick={clearSelection}
+              className="hidden md:inline ml-auto text-white/50 hover:text-white font-mono text-[11px] uppercase tracking-wider"
+            >
+              annuler
+            </button>
+          </div>
         </div>
       </div>
 
@@ -933,6 +1173,7 @@ const TicketsPanel = ({
           {STATUS_ORDER.map((status) => {
             const col = columns[status];
             const meta = STATUS_META[status];
+            const hiddenOnMobile = status !== mobileStatus;
 
             // Group by lobby if needed
             const grouped: Array<{ lobby: string | null; items: Ticket[] }> = groupByLobby
@@ -959,10 +1200,10 @@ const TicketsPanel = ({
             return (
               <div
                 key={status}
-                className={`relative rounded-xl border ${meta.accent} bg-black/30 overflow-hidden flex flex-col`}
+                className={`relative rounded-xl border ${meta.accent} bg-black/30 overflow-hidden flex flex-col ${hiddenOnMobile ? 'hidden md:flex' : ''}`}
               >
-                {/* Column header */}
-                <div className={`relative bg-gradient-to-r ${meta.bar} px-3 py-2.5 border-b border-white/[0.06] flex items-center gap-2`}>
+                {/* Column header - masqué sur mobile, le sélecteur le remplace */}
+                <div className={`relative bg-gradient-to-r ${meta.bar} px-3 py-2.5 border-b border-white/[0.06] hidden md:flex items-center gap-2`}>
                   <p className="text-[14px] font-semibold tracking-tight text-white">
                     {meta.label}
                   </p>
@@ -972,7 +1213,7 @@ const TicketsPanel = ({
                 </div>
 
                 {/* Column body */}
-                <div className="p-2 space-y-2 max-h-[calc(100vh-280px)] overflow-y-auto custom-scroll">
+                <div className="p-2 space-y-2 md:max-h-[calc(100vh-280px)] md:overflow-y-auto custom-scroll">
                   {col.length === 0 ? (
                     <p className="text-center py-8 font-mono text-[11px] uppercase tracking-widest text-white/20">
                       vide
@@ -1252,15 +1493,15 @@ const LobbiesPanel = ({ active, refreshKey }: { active: boolean; refreshKey: num
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2.5">
-        <div className={`${CLUSTER} flex-1 min-w-[200px] max-w-md`}>
+      <div className="flex flex-col md:flex-row md:flex-wrap md:items-center gap-2 md:gap-2.5">
+        <div className={`${CLUSTER} w-full md:flex-1 md:min-w-[200px] md:max-w-md`}>
           <Icon icon="mdi:magnify" className="w-4 h-4 text-white/35 ml-0.5" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="rechercher par code ou pseudo"
-            className="flex-1 bg-transparent border-0 outline-0 text-[12px] text-white/85 placeholder:text-white/25 font-mono"
+            className="flex-1 min-w-0 bg-transparent border-0 outline-0 text-[12px] text-white/85 placeholder:text-white/25 font-mono"
           />
           {search && (
             <button
@@ -1270,15 +1511,17 @@ const LobbiesPanel = ({ active, refreshKey }: { active: boolean; refreshKey: num
           )}
         </div>
 
-        <div className={CLUSTER}>
-          <span className="font-mono text-[11px] uppercase tracking-wider text-white/40 px-1">
-            {stats.total} salon{stats.total > 1 ? 's' : ''} · {stats.playing} en partie · {stats.players} joueurs
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className={CLUSTER}>
+            <span className="font-mono text-[11px] uppercase tracking-wider text-white/40 px-1 whitespace-nowrap">
+              {stats.total} salon{stats.total > 1 ? 's' : ''} · {stats.playing} en partie · {stats.players} joueurs
+            </span>
+          </div>
+
+          <span className="font-mono text-[11px] text-white/30 whitespace-nowrap">
+            {lastFetch ? `maj ${formatAge(lastFetch)}` : '…'} · refresh 5s
           </span>
         </div>
-
-        <span className="font-mono text-[11px] text-white/30">
-          {lastFetch ? `maj ${formatAge(lastFetch)}` : '…'} · refresh auto 5s
-        </span>
       </div>
 
       {isLoading && lobbies.length === 0 ? (
@@ -1366,59 +1609,148 @@ const SubjectCard = ({
   collapsed: boolean;
 }) => {
   const hasQuestions = subject.questions.length > 0;
+  // En collapsed, la carte est un bouton tappable (mobile = ouvre sheet ; desktop = hover tooltip).
+  // En non-collapsed, on garde le rendu inline.
+  if (!collapsed) {
+    return (
+      <div className="relative rounded-lg border border-white/[0.07] bg-black/20 overflow-hidden">
+        <span className={`absolute left-0 top-0 bottom-0 w-[3px] ${palette.strip}`} />
+        <div className="flex items-center gap-2 px-3 py-2 pl-4 bg-white/[0.015] border-b border-white/[0.05]">
+          <span className="text-[13px] text-white/90 font-medium truncate" title={subject.subject}>
+            {subject.subject}
+          </span>
+        </div>
+        {!hasQuestions ? (
+          <p className="px-3 py-3 text-[11px] text-white/25 italic">aucune question</p>
+        ) : (
+          <ol className="px-3 py-2.5 space-y-1.5">
+            {subject.questions.map((q, i) => (
+              <li key={i} className="flex gap-2 text-[12.5px] text-white/80 leading-snug">
+                <span className="font-mono text-[11px] tabular-nums text-white/25 mt-0.5 shrink-0 w-5 text-right">
+                  {i + 1}.
+                </span>
+                <span className="whitespace-pre-wrap break-words">{q}</span>
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
+    );
+  }
+
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [preview, setPreview] = useState<{ top: number; placement: 'top' | 'bottom' } | null>(null);
+  const holdTimer = useRef<number | null>(null);
+
+  const triggerPreview = useCallback(() => {
+    if (!cardRef.current || !hasQuestions) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    const placement: 'top' | 'bottom' = rect.top > window.innerHeight * 0.45 ? 'top' : 'bottom';
+    setPreview({
+      top: placement === 'top' ? rect.top - 8 : rect.bottom + 8,
+      placement,
+    });
+    if (navigator.vibrate) navigator.vibrate(15);
+  }, [hasQuestions]);
+
+  const startHold = () => {
+    if (holdTimer.current) window.clearTimeout(holdTimer.current);
+    holdTimer.current = window.setTimeout(triggerPreview, 380);
+  };
+  const cancelHold = () => {
+    if (holdTimer.current) {
+      window.clearTimeout(holdTimer.current);
+      holdTimer.current = null;
+    }
+    setPreview(null);
+  };
+
+  useEffect(() => () => {
+    if (holdTimer.current) window.clearTimeout(holdTimer.current);
+  }, []);
+
   return (
-    <div className="group relative rounded-lg border border-white/[0.07] hover:border-white/15 bg-black/20 transition-colors overflow-hidden">
-      {/* Strip vertical gauche - couleur de catégorie */}
-      <span className={`absolute left-0 top-0 bottom-0 w-[3px] ${palette.strip}`} />
-      <div className={`flex items-center gap-2 px-3 py-2 pl-4 bg-white/[0.015] rounded-tr-lg ${collapsed ? 'rounded-br-lg' : 'border-b border-white/[0.05]'}`}>
-        <span className="text-[13px] text-white/90 font-medium truncate" title={subject.subject}>
-          {subject.subject}
-        </span>
+    <>
+      <div
+        ref={cardRef}
+        onTouchStart={startHold}
+        onTouchEnd={cancelHold}
+        onTouchCancel={cancelHold}
+        onTouchMove={cancelHold}
+        onMouseDown={startHold}
+        onMouseUp={cancelHold}
+        onMouseLeave={cancelHold}
+        onContextMenu={(e) => { e.preventDefault(); }}
+        style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
+        className="group relative w-full text-left rounded-md border border-white/[0.07] hover:border-white/20 bg-black/20 transition-all overflow-hidden"
+      >
+        <span className={`absolute left-0 top-0 bottom-0 w-[2px] ${palette.strip}`} />
+        <div className="px-2 py-1.5 pl-2.5 bg-white/[0.015]">
+          <span className="block text-[12px] text-white/85 leading-snug truncate" title={subject.subject}>
+            {subject.subject}
+          </span>
+        </div>
+
+        {/* Hover tooltip - desktop uniquement (mobile = long-press via preview) */}
+        {hasQuestions && (
+          <div
+            role="tooltip"
+            className="hidden md:block pointer-events-none absolute left-1/2 -translate-x-1/2 top-full mt-1.5 z-30 w-[min(420px,90vw)] opacity-0 invisible translate-y-1 group-hover:opacity-100 group-hover:visible group-hover:translate-y-0 transition-all duration-150 ease-out"
+          >
+            <div className="relative rounded-lg border border-white/15 bg-[#13161e]/98 backdrop-blur-md shadow-[0_20px_60px_-15px_rgba(0,0,0,0.7)] overflow-hidden">
+              <span className={`absolute left-0 top-0 bottom-0 w-[3px] ${palette.strip}`} />
+              <div className="px-3 py-2 pl-4 border-b border-white/[0.06]">
+                <span className="text-[12.5px] text-white/85 font-medium truncate">
+                  {subject.subject}
+                </span>
+              </div>
+              <ol className="px-3 py-2.5 space-y-1.5 max-h-[60vh] overflow-y-auto custom-scroll">
+                {subject.questions.map((q, i) => (
+                  <li key={i} className="flex gap-2 text-[12.5px] text-white/85 leading-snug">
+                    <span className="font-mono text-[11px] tabular-nums text-white/30 mt-0.5 shrink-0 w-5 text-right">
+                      {i + 1}.
+                    </span>
+                    <span className="whitespace-pre-wrap break-words">{q}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </div>
+        )}
       </div>
 
-      {collapsed ? (
-        <>
-          {hasQuestions && (
-            <div
-              role="tooltip"
-              className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-full mt-1.5 z-30 w-[min(420px,90vw)] opacity-0 invisible translate-y-1 group-hover:opacity-100 group-hover:visible group-hover:translate-y-0 transition-all duration-150 ease-out"
-            >
-              <div className="relative rounded-lg border border-white/15 bg-[#13161e]/98 backdrop-blur-md shadow-[0_20px_60px_-15px_rgba(0,0,0,0.7)] overflow-hidden">
-                <span className={`absolute left-0 top-0 bottom-0 w-[3px] ${palette.strip}`} />
-                <div className="px-3 py-2 pl-4 border-b border-white/[0.06]">
-                  <span className="text-[12.5px] text-white/85 font-medium truncate">
-                    {subject.subject}
-                  </span>
-                </div>
-                <ol className="px-3 py-2.5 space-y-1.5 max-h-[60vh] overflow-y-auto custom-scroll">
-                  {subject.questions.map((q, i) => (
-                    <li key={i} className="flex gap-2 text-[12.5px] text-white/85 leading-snug">
-                      <span className="font-mono text-[11px] tabular-nums text-white/30 mt-0.5 shrink-0 w-5 text-right">
-                        {i + 1}.
-                      </span>
-                      <span className="whitespace-pre-wrap break-words">{q}</span>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            </div>
-          )}
-        </>
-      ) : !hasQuestions ? (
-        <p className="px-3 py-3 text-[11px] text-white/25 italic rounded-b-lg">aucune question</p>
-      ) : (
-        <ol className="px-3 py-2.5 space-y-1.5 rounded-b-lg">
-          {subject.questions.map((q, i) => (
-            <li key={i} className="flex gap-2 text-[12.5px] text-white/80 leading-snug">
-              <span className="font-mono text-[11px] tabular-nums text-white/25 mt-0.5 shrink-0 w-5 text-right">
-                {i + 1}.
+      {/* Long-press preview - mobile (portail dans body pour échapper aux overflow) */}
+      {preview && hasQuestions && createPortal(
+        <div
+          className="fixed left-3 right-3 z-50 pointer-events-none animate-fade-in"
+          style={{
+            top: preview.top,
+            transform: preview.placement === 'top' ? 'translateY(-100%)' : 'translateY(0)',
+          }}
+        >
+          <div className="relative rounded-xl border border-white/20 bg-[#13161e]/98 backdrop-blur-md shadow-[0_24px_60px_-10px_rgba(0,0,0,0.85)] overflow-hidden">
+            <span className={`absolute left-0 top-0 bottom-0 w-[3px] ${palette.strip}`} />
+            <div className="px-3 py-2 pl-4 border-b border-white/[0.06] flex items-center gap-2">
+              <span className={`w-1.5 h-1.5 rounded-full ${palette.dot}`} />
+              <span className="text-[12.5px] text-white/90 font-medium truncate">
+                {subject.subject}
               </span>
-              <span className="whitespace-pre-wrap break-words">{q}</span>
-            </li>
-          ))}
-        </ol>
+            </div>
+            <ol className="px-3 py-2.5 space-y-1.5 max-h-[55vh] overflow-y-auto custom-scroll">
+              {subject.questions.map((q, i) => (
+                <li key={i} className="flex gap-2 text-[12.5px] text-white/85 leading-snug">
+                  <span className="font-mono text-[11px] tabular-nums text-white/30 mt-0.5 shrink-0 w-5 text-right">
+                    {i + 1}.
+                  </span>
+                  <span className="whitespace-pre-wrap break-words">{q}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </div>,
+        document.body,
       )}
-    </div>
+    </>
   );
 };
 
@@ -1486,9 +1818,19 @@ const DeckDetail = ({
             aucun sujet
           </p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+          <div
+            className={`grid gap-1.5 ${questionsCollapsed
+              ? 'grid-cols-2 md:grid-cols-3 xl:grid-cols-4'
+              : 'grid-cols-1'
+              }`}
+          >
             {deck.subjects.map((s) => (
-              <SubjectCard key={s.subject} subject={s} palette={palette} collapsed={questionsCollapsed} />
+              <SubjectCard
+                key={s.subject}
+                subject={s}
+                palette={palette}
+                collapsed={questionsCollapsed}
+              />
             ))}
           </div>
         )}
@@ -1609,15 +1951,15 @@ const DecksPanel = ({ active }: { active: boolean }) => {
         <StatTile label="Questions" value={totals.questions} accent="emerald" />
       </div>
 
-      <div className="flex flex-wrap items-center gap-2.5">
-        <div className={`${CLUSTER} flex-1 min-w-[200px] max-w-md`}>
+      <div className="flex flex-col md:flex-row md:flex-wrap md:items-center gap-2 md:gap-2.5">
+        <div className={`${CLUSTER} w-full md:flex-1 md:min-w-[200px] md:max-w-md`}>
           <Icon icon="mdi:magnify" className="w-4 h-4 text-white/35 ml-0.5" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="rechercher sujet ou question"
-            className="flex-1 bg-transparent border-0 outline-0 text-[12px] text-white/85 placeholder:text-white/25 font-mono"
+            className="flex-1 min-w-0 bg-transparent border-0 outline-0 text-[12px] text-white/85 placeholder:text-white/25 font-mono"
           />
           {search && (
             <button
@@ -1627,8 +1969,9 @@ const DecksPanel = ({ active }: { active: boolean }) => {
           )}
         </div>
 
+        {/* Filtre catégorie - desktop : chips compacts dans un cluster */}
         {categories.length > 0 && (
-          <div className={CLUSTER}>
+          <div className={`${CLUSTER} hidden md:flex flex-wrap`}>
             <button
               onClick={() => setCategoryFilter('')}
               className={`px-2 py-0.5 rounded font-mono text-[11px] uppercase tracking-wider transition-colors ${!categoryFilter ? 'bg-white/[0.08] text-white' : 'text-white/45 hover:text-white/80'
@@ -1654,6 +1997,47 @@ const DecksPanel = ({ active }: { active: boolean }) => {
         )}
       </div>
 
+      {/* Filtre catégorie - mobile : segmented control coloré */}
+      {categories.length > 0 && (
+        <div className="md:hidden grid grid-cols-4 gap-1.5">
+          <button
+            onClick={() => setCategoryFilter('')}
+            className={`flex flex-col items-center justify-center gap-1 px-1 py-2 rounded-lg border transition-colors ${!categoryFilter
+              ? 'bg-white/[0.08] border-white/20 text-white'
+              : 'bg-white/[0.02] border-white/[0.07] text-white/55'
+              }`}
+          >
+            <span className="font-mono text-[10px] uppercase tracking-wider">Toutes</span>
+            <span className="tabular-nums font-bold text-[13px] leading-none text-white/85">
+              {decks.length}
+            </span>
+          </button>
+          {categories.map((c) => {
+            const palette = categoryStyle(c);
+            const isActive = categoryFilter === c;
+            const count = decks.filter((d) => d.category === c).length;
+            return (
+              <button
+                key={c}
+                onClick={() => setCategoryFilter(c)}
+                className={`relative flex flex-col items-center justify-center gap-1 px-1 py-2 rounded-lg border transition-colors overflow-hidden ${isActive
+                  ? `bg-white/[0.08] border-white/20`
+                  : 'bg-white/[0.02] border-white/[0.07]'
+                  }`}
+              >
+                <span className={`absolute top-0 left-0 right-0 h-[3px] ${palette.strip} ${isActive ? '' : 'opacity-50'}`} />
+                <span className={`font-mono text-[10px] uppercase tracking-wider ${isActive ? palette.text : 'text-white/55'}`}>
+                  {c}
+                </span>
+                <span className={`tabular-nums font-bold text-[13px] leading-none ${isActive ? 'text-white' : 'text-white/65'}`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {isLoading && decks.length === 0 ? (
         <div className="text-center py-20 font-mono text-[11px] uppercase tracking-[0.3em] text-white/30">
           chargement…
@@ -1664,10 +2048,55 @@ const DecksPanel = ({ active }: { active: boolean }) => {
         </div>
       ) : (
         <div className="flex flex-col md:flex-row gap-3">
-          {/* Rail */}
-          <aside className="md:w-72 shrink-0">
+          {/* Rail mobile - grille 2 colonnes par catégorie */}
+          <div className="md:hidden space-y-3">
+            {grouped.map(([category, items]) => {
+              const palette = categoryStyle(category);
+              return (
+                <div key={category} className="space-y-2">
+                  <div className="flex items-center gap-2 px-1">
+                    <span className={`w-2 h-2 rounded-full ${palette.dot}`} />
+                    <span className={`font-mono text-[10px] uppercase tracking-[0.22em] font-bold ${palette.text}`}>
+                      {category}
+                    </span>
+                    <span className="font-mono text-[10px] tabular-nums text-white/30">
+                      {items.length}
+                    </span>
+                    <span className="flex-1 h-px bg-white/[0.05]" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {items.map((d) => {
+                      const k = deckKey(d);
+                      const selected = k === selectedKey;
+                      return (
+                        <button
+                          key={k}
+                          onClick={() => setSelectedKey(k)}
+                          className={`relative overflow-hidden rounded-md border text-left transition-colors flex items-center gap-1.5 px-2 py-1.5 pl-2.5 ${selected
+                            ? `bg-white/[0.08] border-white/15 ring-1 ${palette.ring}`
+                            : 'bg-white/[0.02] border-white/[0.07] active:bg-white/[0.05]'
+                            }`}
+                        >
+                          <span className={`absolute left-0 top-0 bottom-0 w-[2px] ${palette.strip}`} />
+                          <span className={`text-[12px] leading-tight truncate flex-1 ${selected ? 'text-white' : 'text-white/80'}`}>
+                            {d.theme}
+                          </span>
+                          <span className="font-mono text-[10px] tabular-nums text-white/45 shrink-0">
+                            {d.subjectCount}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Rail desktop */}
+          <aside className="hidden md:block md:w-72 shrink-0">
             <div className="rounded-xl border border-white/[0.07] bg-gradient-to-b from-white/[0.02] to-transparent overflow-hidden">
-              <div className="max-h-[calc(100vh-360px)] md:max-h-[calc(100vh-300px)] overflow-y-auto custom-scroll p-2 space-y-3">
+              <div className="max-h-[calc(100vh-300px)] overflow-y-auto custom-scroll p-2 space-y-3">
                 {grouped.map(([category, items]) => {
                   const palette = categoryStyle(category);
                   return (
@@ -1717,6 +2146,7 @@ const DecksPanel = ({ active }: { active: boolean }) => {
           </section>
         </div>
       )}
+
     </div>
   );
 };
@@ -1866,7 +2296,7 @@ const AvatarsSection = () => (
     <p className="text-[13px] text-white/55 mb-4 max-w-2xl">
       Le casting visuel disponible pour les joueurs.
     </p>
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
+    <div className="grid grid-cols-3 gap-2.5">
       {AVATARS.map((a) => (
         <div
           key={a.id}
@@ -1901,6 +2331,7 @@ const LegalSection = () => {
     keyof typeof LEGAL_CONTENT,
     typeof LEGAL_CONTENT[keyof typeof LEGAL_CONTENT],
   ]>;
+  const [openKey, setOpenKey] = useState<string | null>(null);
   return (
     <div>
       <SectionHeader title="Contenu légal" count={entries.length} />
@@ -1910,12 +2341,26 @@ const LegalSection = () => {
       <div className="space-y-3">
         {entries.map(([key, block]) => {
           const sections = 'sections' in block ? block.sections : [];
+          const isOpen = openKey === key;
           return (
             <div
               key={key}
               className="rounded-lg border border-white/[0.07] bg-gradient-to-b from-white/[0.025] to-transparent overflow-hidden"
             >
-              <div className="px-4 py-2.5 border-b border-white/[0.05] flex items-baseline gap-2">
+              <button
+                type="button"
+                onClick={() => setOpenKey(isOpen ? null : key)}
+                aria-expanded={isOpen}
+                className={`w-full px-4 py-2.5 flex items-center gap-2 text-left hover:bg-white/[0.03] transition-colors ${isOpen ? 'border-b border-white/[0.05]' : ''}`}
+              >
+                <svg
+                  className={`w-3.5 h-3.5 text-white/50 transition-transform ${isOpen ? 'rotate-90' : ''}`}
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 0 1 .02-1.06L11.168 10 7.23 6.29a.75.75 0 1 1 1.04-1.08l4.5 4.25a.75.75 0 0 1 0 1.08l-4.5 4.25a.75.75 0 0 1-1.06-.02Z" clipRule="evenodd" />
+                </svg>
                 <p className="text-[15px] font-semibold tracking-tight text-white">
                   {LEGAL_LABELS_FR[key] ?? block.title}
                 </p>
@@ -1924,8 +2369,8 @@ const LegalSection = () => {
                     {sections.length} rubrique{sections.length > 1 ? 's' : ''}
                   </span>
                 )}
-              </div>
-              {sections.length === 0 ? (
+              </button>
+              {!isOpen ? null : sections.length === 0 ? (
                 <p className="px-4 py-3 text-[12.5px] text-white/40 italic">
                   Aucun texte (la page renvoie vers un formulaire de contact).
                 </p>
@@ -2091,7 +2536,7 @@ const ContentPanel = () => {
             <button
               key={s.id}
               onClick={() => setSection(s.id)}
-              className={`px-2.5 py-1 rounded-md border font-mono text-[11px] uppercase tracking-wider transition-colors ${active
+              className={`px-2.5 py-1.5 sm:py-1 rounded-md border font-mono text-[11px] uppercase tracking-wider transition-colors ${active
                 ? 'bg-white/[0.08] border-white/15 text-white'
                 : 'bg-transparent border-white/[0.06] text-white/45 hover:text-white/85 hover:border-white/15'
                 }`}
@@ -2237,22 +2682,22 @@ const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
 
       {/* Sticky header - masthead éditorial */}
       <div className="sticky top-0 z-30 backdrop-blur-xl bg-[#0a0c12]/85 border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-6 pt-5 pb-3">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 pt-3 sm:pt-5 pb-2 sm:pb-3">
           {/* Ligne 1 : masthead */}
           <div className="flex items-center gap-2">
             <span className="text-amber-400 text-[15px] leading-none">▍</span>
-            <span className="font-mono text-[14px] text-white/85 lowercase tracking-tight leading-none">
+            <span className="font-mono text-[13px] sm:text-[14px] text-white/85 lowercase tracking-tight leading-none">
               onskoné
             </span>
-            <span className="font-mono text-[14px] text-white/25 leading-none">/</span>
-            <span className="font-mono text-[14px] font-bold text-amber-200 uppercase tracking-[0.12em] leading-none">
+            <span className="font-mono text-[13px] sm:text-[14px] text-white/25 leading-none">/</span>
+            <span className="font-mono text-[13px] sm:text-[14px] font-bold text-amber-200 uppercase tracking-[0.12em] leading-none">
               admin
             </span>
 
-            {/* CTA principal : voir salons live (signal vivant, garde le focus) */}
+            {/* CTA principal : voir salons live - desktop only (mobile l'a dans la bottom nav) */}
             <button
               onClick={() => setActiveTab('lobbies')}
-              className={`ml-auto cursor-pointer flex items-center gap-2 px-2.5 py-1 rounded-md border transition-colors font-mono text-[10px] uppercase tracking-[0.22em] ${activeTab === 'lobbies'
+              className={`ml-auto hidden md:flex cursor-pointer items-center gap-2 px-2.5 py-1 rounded-md border transition-colors font-mono text-[10px] uppercase tracking-[0.22em] ${activeTab === 'lobbies'
                 ? 'border-emerald-400/50 bg-emerald-500/10 text-emerald-100'
                 : 'border-emerald-400/25 bg-emerald-500/[0.04] text-emerald-200 hover:bg-emerald-500/10 hover:border-emerald-400/50'
                 }`}
@@ -2266,7 +2711,7 @@ const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
             <button
               onClick={load}
               disabled={isLoading}
-              className="cursor-pointer ml-2 w-7 h-7 flex items-center justify-center rounded-md text-white/45 hover:text-white hover:bg-white/[0.05] transition-colors disabled:opacity-25"
+              className="cursor-pointer ml-auto md:ml-2 w-8 h-8 sm:w-7 sm:h-7 flex items-center justify-center rounded-md text-white/45 hover:text-white hover:bg-white/[0.05] transition-colors disabled:opacity-25"
               title="Rafraîchir"
               aria-label="Rafraîchir"
             >
@@ -2274,7 +2719,7 @@ const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
             </button>
             <button
               onClick={onLogout}
-              className="cursor-pointer w-7 h-7 flex items-center justify-center rounded-md text-white/45 hover:text-white hover:bg-white/[0.05] transition-colors"
+              className="cursor-pointer w-8 h-8 sm:w-7 sm:h-7 flex items-center justify-center rounded-md text-white/45 hover:text-white hover:bg-white/[0.05] transition-colors"
               title="Déconnexion"
               aria-label="Déconnexion"
             >
@@ -2283,15 +2728,15 @@ const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
           </div>
         </div>
 
-        {/* Ligne 2 : nav sections - sous-ligne style article */}
-        <div className="max-w-7xl mx-auto px-6 border-t border-white/[0.06]">
-          <div className="flex flex-wrap items-stretch">
+        {/* Ligne 2 : nav sections - desktop only (mobile utilise la bottom tab bar) */}
+        <div className="hidden md:block max-w-7xl mx-auto px-6 border-t border-white/[0.06]">
+          <div className="flex items-stretch">
             {GROUP_ORDER.map((group) => {
               // "lobbies" est promu dans le masthead - on l'exclut de la nav.
               const groupTabs = TABS.filter((t) => t.group === group && t.id !== 'lobbies');
               if (groupTabs.length === 0) return null;
               return (
-                <div key={group} className="flex items-stretch">
+                <div key={group} className="flex items-stretch shrink-0">
                   {groupTabs.map((tab) => {
                     const active = activeTab === tab.id;
                     return (
@@ -2300,7 +2745,7 @@ const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
                         onClick={() => setActiveTab(tab.id)}
                         aria-label={tab.ariaLabel ?? tab.label}
                         title={tab.ariaLabel ?? tab.label}
-                        className={`relative px-4 py-3 flex items-center gap-1.5 whitespace-nowrap text-[12px] font-mono font-bold uppercase tracking-[0.12em] transition-colors ${active
+                        className={`relative px-3 sm:px-4 py-2.5 sm:py-3 flex items-center gap-1.5 whitespace-nowrap text-[11px] sm:text-[12px] font-mono font-bold uppercase tracking-[0.1em] sm:tracking-[0.12em] transition-colors ${active
                           ? 'text-white'
                           : 'text-white/40 hover:text-white/75'
                           }`}
@@ -2326,7 +2771,7 @@ const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
         </div>
       </div>
 
-      <main className="relative max-w-7xl mx-auto px-4 py-6">
+      <main className="relative max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6 pb-24 md:pb-6">
         {activeTab === 'overview' && (
           <OverviewPanel tickets={tickets} onJumpToTickets={jumpToTickets} />
         )}
@@ -2351,7 +2796,16 @@ const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
         )}
       </main>
 
+      <MobileBottomNav activeTab={activeTab} setActiveTab={setActiveTab} lobbyCount={lobbyCount} />
+
       <style>{`
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        @keyframes sheet-up {
+          from { transform: translateY(100%); }
+          to { transform: translateY(0); }
+        }
+        .animate-sheet-up { animation: sheet-up 0.22s cubic-bezier(0.2, 0.8, 0.2, 1); }
         .custom-scroll::-webkit-scrollbar { width: 6px; }
         .custom-scroll::-webkit-scrollbar-track { background: transparent; }
         .custom-scroll::-webkit-scrollbar-thumb {
