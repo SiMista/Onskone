@@ -17,7 +17,7 @@ interface InfoModalProps {
 const InfoModal = ({ isOpen, onClose, title, children, variant = 'classic' }: InfoModalProps) => {
   if (!isOpen) return null;
 
-  const animClass = variant === 'comic' ? 'animate-modal-comic-slam' : 'animate-modal-pop';
+  const animClass = variant === 'comic' ? 'animate-modal-comic-slam' : 'animate-modal-content';
 
   return (
     <div
