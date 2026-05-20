@@ -14,40 +14,46 @@ import {
 } from '../utils/ticketsApi';
 import { fetchAdminLobbies, fetchAdminDecks } from '../utils/adminDataApi';
 import type { AdminLobbySummary, AdminDeckSummary } from '@onskone/shared';
+import { GAME_CONSTANTS } from '@onskone/shared';
+import { Icon } from '@iconify/react';
+import { TIERS } from './EndGame';
+import { FUN_FACTS } from '../constants/funFacts';
+import { ACHIEVEMENTS } from '../utils/playerStats';
+import { AVATARS, getAvatarUrl } from '../constants/game';
+import { LEGAL_CONTENT } from '../constants/legal';
 
 // =====================================================================
 // Admin Onskoné - control room (Studio-style dark UI)
 // =====================================================================
 
 // ---------- Studio-style shared classes ----------
-const PILL = 'bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 rounded-md transition-colors';
-const PILL_BTN = `${PILL} px-2.5 py-1 text-[11px] font-mono uppercase tracking-wider text-white/70 hover:text-white`;
-const PILL_ICON = `${PILL} w-7 h-7 flex items-center justify-center text-white/70 hover:text-white text-[13px] leading-none`;
 const CLUSTER = 'flex items-center gap-1.5 bg-black/30 border border-white/[0.06] rounded-lg px-2 py-1';
 const INPUT_CLS =
   'bg-[#0f1117] text-white/85 border border-white/10 rounded-md px-2.5 py-1.5 text-[12px] font-mono ' +
   'focus:outline-none focus:border-amber-400/60 hover:border-white/20 transition-colors ' +
   'placeholder:text-white/25';
 
-// ---------- Type → accent color (Studio palette) ----------
+// ---------- Type → accent color (palette tickets - distincte des decks) ----------
+// Decks utilisent sky/amber/red (ICEBREAKERS/FUN/DEEP). Tickets prennent une autre famille
+// pour qu'on lise au premier coup d'œil de quoi on parle.
 const TYPE_META: Record<TicketType, { label: string; dot: string; chip: string; ring: string }> = {
   question_report: {
     label: 'Question',
-    dot: 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.7)]',
-    chip: 'bg-amber-400/10 border-amber-300/40 text-amber-100',
-    ring: 'ring-amber-300/30',
+    dot: 'bg-orange-400',
+    chip: 'bg-orange-500/10 border-orange-400/40 text-orange-100',
+    ring: 'ring-orange-300/30',
   },
   bug: {
     label: 'Bug',
-    dot: 'bg-red-400 shadow-[0_0_8px_rgba(248,113,113,0.6)]',
-    chip: 'bg-red-500/10 border-red-400/40 text-red-100',
-    ring: 'ring-red-300/30',
+    dot: 'bg-rose-400',
+    chip: 'bg-rose-500/10 border-rose-400/40 text-rose-100',
+    ring: 'ring-rose-300/30',
   },
   suggestion: {
     label: 'Idée',
-    dot: 'bg-sky-400 shadow-[0_0_8px_rgba(125,211,240,0.6)]',
-    chip: 'bg-sky-500/10 border-sky-400/40 text-sky-100',
-    ring: 'ring-sky-300/30',
+    dot: 'bg-teal-400',
+    chip: 'bg-teal-500/10 border-teal-400/40 text-teal-100',
+    ring: 'ring-teal-300/30',
   },
 };
 
@@ -146,11 +152,11 @@ const LoginScreen = ({ onSuccess }: { onSuccess: () => void }) => {
         onSubmit={handleSubmit}
         className="relative w-full max-w-sm rounded-xl border border-white/[0.08] bg-gradient-to-b from-white/[0.04] to-white/[0.01] backdrop-blur-xl p-6 space-y-5 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.6)]"
       >
-        <div className="flex items-baseline gap-1.5 font-mono">
+        <div className="flex items-center gap-2">
           <span className="text-amber-400 text-[15px] leading-none">▍</span>
-          <span className="text-white/55 tracking-tight">onskoné</span>
-          <span className="text-white/25">/</span>
-          <span className="text-amber-200 font-bold tracking-tight uppercase">admin</span>
+          <span className="font-mono text-[14px] text-white/85 lowercase tracking-tight leading-none">onskoné</span>
+          <span className="font-mono text-[14px] text-white/25 leading-none">/</span>
+          <span className="font-mono text-[14px] font-bold text-amber-200 uppercase tracking-[0.12em] leading-none">admin</span>
         </div>
 
         <div className="space-y-1">
@@ -181,7 +187,7 @@ const LoginScreen = ({ onSuccess }: { onSuccess: () => void }) => {
 
         {error && (
           <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-red-500/10 border border-red-400/30">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-400 shadow-[0_0_6px_rgba(248,113,113,0.6)]" />
+            <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
             <p className="font-mono text-[11px] text-red-200">{error}</p>
           </div>
         )}
@@ -191,7 +197,7 @@ const LoginScreen = ({ onSuccess }: { onSuccess: () => void }) => {
           disabled={!password || isLoading}
           className="w-full px-5 py-2 rounded-md font-mono text-[11px] font-bold uppercase tracking-wider bg-gradient-to-br from-amber-300 to-amber-500 text-black shadow-[0_2px_0_0_rgba(0,0,0,0.4),0_0_20px_rgba(251,191,36,0.35)] hover:shadow-[0_2px_0_0_rgba(0,0,0,0.4),0_0_28px_rgba(251,191,36,0.55)] hover:-translate-y-px active:translate-y-0 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:translate-y-0"
         >
-          {isLoading ? '…' : '▶ Se connecter'}
+          {isLoading ? '…' : 'Se connecter'}
         </button>
       </form>
     </div>
@@ -201,22 +207,30 @@ const LoginScreen = ({ onSuccess }: { onSuccess: () => void }) => {
 // =====================================================================
 // Helpers
 // =====================================================================
-type AdminTab = 'overview' | 'tickets' | 'lobbies' | 'decks' | 'stats';
+type AdminTab = 'overview' | 'tickets' | 'lobbies' | 'decks' | 'content' | 'stats';
+
+type TabGroup = 'pilotage' | 'inbox' | 'catalogue' | 'analytics';
 
 interface TabDef {
   id: AdminTab;
-  label: string;
+  label?: string;
+  icon?: string;
+  ariaLabel?: string;
   hint: string;
   enabled: boolean;
+  group: TabGroup;
 }
 
 const TABS: TabDef[] = [
-  { id: 'overview', label: 'Vue d\'ensemble', hint: 'kpis', enabled: true },
-  { id: 'tickets', label: 'Tickets', hint: 'feedback', enabled: true },
-  { id: 'lobbies', label: 'Salons live', hint: 'realtime', enabled: true },
-  { id: 'decks', label: 'Decks', hint: 'catalogue', enabled: true },
-  { id: 'stats', label: 'Stats', hint: 'umami', enabled: true },
+  { id: 'overview', icon: 'mdi:home', ariaLabel: 'Accueil', hint: 'accueil', enabled: true, group: 'pilotage' },
+  { id: 'lobbies', label: 'Salons live', hint: 'temps réel', enabled: true, group: 'pilotage' },
+  { id: 'tickets', label: 'Tickets', hint: 'retours joueurs', enabled: true, group: 'inbox' },
+  { id: 'decks', label: 'Decks de questions', hint: 'catalogue', enabled: true, group: 'catalogue' },
+  { id: 'content', label: 'Contenu du site', hint: 'données fixes', enabled: true, group: 'catalogue' },
+  { id: 'stats', label: 'Stats', hint: 'analytics', enabled: true, group: 'analytics' },
 ];
+
+const GROUP_ORDER: TabGroup[] = ['pilotage', 'inbox', 'catalogue', 'analytics'];
 
 // =====================================================================
 // Overview
@@ -229,23 +243,53 @@ const StatTile = ({
   hint?: string;
   accent: 'amber' | 'sky' | 'violet' | 'emerald' | 'red' | 'white';
 }) => {
-  const accentMap: Record<typeof accent, { bar: string; text: string }> = {
-    amber: { bar: 'from-amber-400/80 to-transparent', text: 'text-amber-200' },
-    sky: { bar: 'from-sky-400/80 to-transparent', text: 'text-sky-200' },
-    violet: { bar: 'from-violet-400/80 to-transparent', text: 'text-violet-200' },
-    emerald: { bar: 'from-emerald-400/80 to-transparent', text: 'text-emerald-200' },
-    red: { bar: 'from-red-400/80 to-transparent', text: 'text-red-200' },
-    white: { bar: 'from-white/50 to-transparent', text: 'text-white' },
+  // Couleur du nombre seulement, plus de gradient strip "néon" sur le top.
+  const textColor: Record<typeof accent, string> = {
+    amber: 'text-amber-300',
+    sky: 'text-sky-300',
+    violet: 'text-violet-300',
+    emerald: 'text-emerald-300',
+    red: 'text-red-300',
+    white: 'text-white',
   };
   return (
-    <div className="relative rounded-lg border border-white/[0.07] bg-gradient-to-b from-white/[0.025] to-transparent p-4 overflow-hidden">
-      <div className={`absolute top-0 left-0 right-0 h-px bg-gradient-to-r ${accentMap[accent].bar}`} />
-      <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-white/35">{label}</p>
-      <p className={`mt-1.5 text-3xl font-semibold tracking-tight tabular-nums ${accentMap[accent].text}`}>
+    <div className="rounded-lg border border-white/[0.07] bg-white/[0.02] p-4">
+      <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-white/40">{label}</p>
+      <p className={`mt-1.5 text-3xl font-semibold tracking-tight tabular-nums ${textColor[accent]}`}>
         {value}
       </p>
-      {hint && <p className="mt-1 font-mono text-[11px] text-white/30">{hint}</p>}
+      {hint && <p className="mt-1 font-mono text-[11px] text-white/35">{hint}</p>}
     </div>
+  );
+};
+
+// Panneau d'accueil - synthèse actionnable plutôt que stats décoratives.
+const SectionLabel = ({ children }: { children: React.ReactNode }) => (
+  <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-white/55 font-bold mb-3">
+    {children}
+  </p>
+);
+
+const KpiCell = ({
+  label, value, hint, onClick,
+}: {
+  label: string;
+  value: number | string;
+  hint?: string;
+  onClick?: () => void;
+}) => {
+  const Tag = onClick ? 'button' : 'div';
+  return (
+    <Tag
+      onClick={onClick}
+      className={`text-left rounded-lg border border-white/[0.07] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/15 transition-colors p-3 ${onClick ? 'cursor-pointer' : ''}`}
+    >
+      <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/40">{label}</p>
+      <p className="mt-1 text-[26px] font-semibold tracking-tight tabular-nums text-white leading-tight">
+        {value}
+      </p>
+      {hint && <p className="mt-0.5 font-mono text-[10px] text-white/35">{hint}</p>}
+    </Tag>
   );
 };
 
@@ -258,6 +302,7 @@ const OverviewPanel = ({
   const stats = useMemo(() => {
     const now = Date.now();
     const dayMs = 24 * 60 * 60 * 1000;
+    const last24h = tickets.filter((t) => now - t.created_at < dayMs).length;
     const last7d = tickets.filter((t) => now - t.created_at < 7 * dayMs).length;
     const byStatus = tickets.reduce((acc, t) => {
       acc[t.status] = (acc[t.status] || 0) + 1;
@@ -267,61 +312,151 @@ const OverviewPanel = ({
       acc[t.type] = (acc[t.type] || 0) + 1;
       return acc;
     }, {} as Record<TicketType, number>);
-    return { last7d, byStatus, byType };
+    const lobbyCounts = tickets.reduce((acc, t) => {
+      if (!t.lobby_code) return acc;
+      acc[t.lobby_code] = (acc[t.lobby_code] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    const hotLobbies = Object.entries(lobbyCounts)
+      .filter(([, n]) => n >= 2)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+    const recent = [...tickets]
+      .sort((a, b) => b.created_at - a.created_at)
+      .slice(0, 6);
+    return { last24h, last7d, byStatus, byType, hotLobbies, recent };
   }, [tickets]);
 
   const open = (stats.byStatus.new || 0) + (stats.byStatus.in_progress || 0);
+  const total = tickets.length || 1;
 
   return (
     <div className="space-y-6">
+      {/* Ligne 1 : KPIs compacts, tous neutres (le néon des stat tiles ne sert à rien) */}
       <div>
-        <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-white/35 mb-3">
-          // signaux
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <StatTile label="Ouverts" value={open} hint={`${stats.byStatus.new || 0} nouveau · ${stats.byStatus.in_progress || 0} wip`} accent="amber" />
-          <StatTile label="7 jours" value={stats.last7d} hint="cadence hebdo" accent="violet" />
-          <StatTile label="Résolus" value={stats.byStatus.resolved || 0} hint={`${stats.byStatus.wont_fix || 0} no-fix`} accent="emerald" />
+        <SectionLabel>Vue d'ensemble</SectionLabel>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <KpiCell label="Ouverts" value={open} hint={`${stats.byStatus.new || 0} nouveau · ${stats.byStatus.in_progress || 0} wip`} onClick={() => onJumpToTickets('new')} />
+          <KpiCell label="24 h" value={stats.last24h} hint="reçus aujourd'hui" />
+          <KpiCell label="7 jours" value={stats.last7d} hint="cadence hebdo" />
+          <KpiCell label="Résolus" value={stats.byStatus.resolved || 0} hint={`${stats.byStatus.wont_fix || 0} sans suite`} onClick={() => onJumpToTickets('resolved')} />
         </div>
       </div>
 
-      <div>
-        <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-white/35 mb-3">
-          // par type
-        </p>
-        <div className="rounded-lg border border-white/[0.07] bg-gradient-to-b from-white/[0.025] to-transparent p-4">
-          <div className="space-y-2">
-            {(['bug', 'question_report', 'suggestion'] as TicketType[]).map((t) => {
-              const n = stats.byType[t] || 0;
-              const total = tickets.length || 1;
-              const pct = Math.round((n / total) * 100);
-              return (
-                <button
-                  key={t}
-                  onClick={() => onJumpToTickets(undefined, t)}
-                  className="group w-full text-left"
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="flex items-center gap-2">
-                      <span className={`w-1.5 h-1.5 rounded-full ${TYPE_META[t].dot}`} />
-                      <span className="font-mono text-[11px] text-white/75 group-hover:text-white transition-colors">
-                        {TYPE_META[t].label}
-                      </span>
+      {/* Ligne 2 : feed actionnable (gauche) + hot lobbies + par type (droite) */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        {/* Derniers tickets - colonne large */}
+        <div className="lg:col-span-3">
+          <div className="flex items-baseline justify-between mb-3">
+            <SectionLabel>Derniers tickets</SectionLabel>
+            <button
+              onClick={() => onJumpToTickets()}
+              className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/35 hover:text-amber-200 transition-colors cursor-pointer"
+            >
+              voir tout →
+            </button>
+          </div>
+          {stats.recent.length === 0 ? (
+            <div className="rounded-lg border border-white/[0.07] bg-white/[0.015] py-10 text-center font-mono text-[11px] uppercase tracking-[0.22em] text-white/30">
+              inbox vide
+            </div>
+          ) : (
+            <div className="rounded-lg border border-white/[0.07] bg-white/[0.015] overflow-hidden divide-y divide-white/[0.04]">
+              {stats.recent.map((t) => {
+                const type = TYPE_META[t.type];
+                const status = STATUS_META[t.status];
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => onJumpToTickets()}
+                    className="w-full text-left px-3 py-2.5 hover:bg-white/[0.025] transition-colors cursor-pointer flex items-start gap-2.5 group"
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${type.dot}`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <span className={`px-1.5 py-0.5 rounded border font-mono text-[10px] uppercase tracking-wider ${type.chip}`}>
+                          {type.label}
+                        </span>
+                        <span className={`px-1.5 py-0.5 rounded border font-mono text-[10px] uppercase tracking-wider ${status.pill}`}>
+                          {status.label}
+                        </span>
+                        {t.lobby_code && (
+                          <span className="font-mono text-[10px] tracking-widest font-bold text-white/55">{t.lobby_code}</span>
+                        )}
+                        <span className="ml-auto font-mono text-[10px] text-white/35 tabular-nums">{formatRelative(t.created_at)}</span>
+                      </div>
+                      <p className="text-[12.5px] text-white/85 leading-snug line-clamp-1 group-hover:text-white transition-colors">
+                        {t.message}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Colonne droite : hot lobbies + par type */}
+        <div className="lg:col-span-2 space-y-5">
+          <div>
+            <SectionLabel>Lobbies signalés</SectionLabel>
+            {stats.hotLobbies.length === 0 ? (
+              <div className="rounded-lg border border-white/[0.07] bg-white/[0.015] py-6 text-center font-mono text-[11px] text-white/30">
+                aucun lobby récurrent
+              </div>
+            ) : (
+              <div className="rounded-lg border border-white/[0.07] bg-white/[0.015] overflow-hidden divide-y divide-white/[0.04]">
+                {stats.hotLobbies.map(([code, count]) => (
+                  <button
+                    key={code}
+                    onClick={() => onJumpToTickets()}
+                    className="w-full text-left px-3 py-2 hover:bg-white/[0.025] transition-colors cursor-pointer flex items-center gap-2"
+                  >
+                    <span className="text-rose-300 text-[12px]" title="récurrent">●</span>
+                    <span className="font-mono text-[12px] font-bold tracking-widest text-white/85">{code}</span>
+                    <span className="ml-auto font-mono text-[11px] tabular-nums text-white/55">
+                      ×{count} tickets
                     </span>
-                    <span className="font-mono text-[11px] tabular-nums text-white/55">{n}</span>
-                  </div>
-                  <div className="h-1 rounded-full bg-white/[0.04] overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all ${t === 'bug' ? 'bg-red-400/70' :
-                          t === 'question_report' ? 'bg-amber-400/70' :
-                            'bg-sky-400/70'
-                        }`}
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                </button>
-              );
-            })}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <SectionLabel>Par type</SectionLabel>
+            <div className="rounded-lg border border-white/[0.07] bg-white/[0.015] p-3 space-y-2.5">
+              {(['bug', 'question_report', 'suggestion'] as TicketType[]).map((t) => {
+                const n = stats.byType[t] || 0;
+                const pct = Math.round((n / total) * 100);
+                return (
+                  <button
+                    key={t}
+                    onClick={() => onJumpToTickets(undefined, t)}
+                    className="group w-full text-left cursor-pointer"
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="flex items-center gap-2">
+                        <span className={`w-1.5 h-1.5 rounded-full ${TYPE_META[t].dot}`} />
+                        <span className="font-mono text-[11px] text-white/75 group-hover:text-white transition-colors">
+                          {TYPE_META[t].label}
+                        </span>
+                      </span>
+                      <span className="font-mono text-[11px] tabular-nums text-white/55">{n}</span>
+                    </div>
+                    <div className="h-1 rounded-full bg-white/[0.04] overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${t === 'bug' ? 'bg-rose-400/70' :
+                          t === 'question_report' ? 'bg-orange-400/70' :
+                            'bg-teal-400/70'
+                          }`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
@@ -352,13 +487,13 @@ const TicketCard = ({
     <div
       className={`group relative rounded-lg border bg-gradient-to-b from-white/[0.035] to-white/[0.01] transition-all overflow-hidden
         ${isSelected
-          ? 'border-amber-300/60 shadow-[0_0_0_1px_rgba(251,191,36,0.25),0_4px_18px_rgba(251,191,36,0.12)]'
+          ? 'border-amber-300/60'
           : 'border-white/[0.07] hover:border-white/15'}`}
     >
       {/* Type accent strip */}
-      <div className={`absolute left-0 top-0 bottom-0 w-[2px] ${ticket.type === 'bug' ? 'bg-red-400/60' :
-          ticket.type === 'question_report' ? 'bg-amber-400/60' :
-            'bg-sky-400/60'
+      <div className={`absolute left-0 top-0 bottom-0 w-[2px] ${ticket.type === 'bug' ? 'bg-rose-400/60' :
+        ticket.type === 'question_report' ? 'bg-orange-400/60' :
+          'bg-teal-400/60'
         }`} />
 
       <div className="px-2.5 py-2 pl-3.5">
@@ -367,8 +502,8 @@ const TicketCard = ({
           <button
             onClick={(e) => { e.stopPropagation(); onToggleSelect(); }}
             className={`w-4 h-4 rounded-sm border flex-shrink-0 flex items-center justify-center transition-colors ${isSelected
-                ? 'bg-amber-400 border-amber-400 text-black'
-                : 'border-white/20 hover:border-white/50 bg-transparent'
+              ? 'bg-amber-400 border-amber-400 text-black'
+              : 'border-white/20 hover:border-white/50 bg-transparent'
               }`}
             title={isSelected ? 'Désélectionner' : 'Sélectionner'}
           >
@@ -509,7 +644,10 @@ const TicketDetailModal = ({
                   className="font-mono font-bold tracking-widest text-white/85 hover:text-amber-200 transition-colors"
                   title="Copier"
                 >
-                  {ticket.lobby_code} <span className="text-white/30 text-[11px]">⧉</span>
+                  <span className="inline-flex items-center gap-1">
+                    {ticket.lobby_code}
+                    <Icon icon="mdi:content-copy" className="w-3 h-3 text-white/30" />
+                  </span>
                 </button>
               ) : <p className="text-white/30">-</p>}
             </div>
@@ -583,11 +721,10 @@ const TicketDetailModal = ({
 };
 
 const TicketsPanel = ({
-  tickets, isLoading, onReload, onChangeTickets,
+  tickets, isLoading, onChangeTickets,
 }: {
   tickets: Ticket[];
   isLoading: boolean;
-  onReload: () => void;
   onChangeTickets: (next: Ticket[] | ((prev: Ticket[]) => Ticket[])) => void;
 }) => {
   const [search, setSearch] = useState('');
@@ -692,7 +829,7 @@ const TicketsPanel = ({
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2.5">
         <div className={`${CLUSTER} flex-1 min-w-[200px] max-w-md`}>
-          <span className="text-white/30 px-1 text-[12px]">⌕</span>
+          <Icon icon="mdi:magnify" className="w-4 h-4 text-white/35 ml-0.5" />
           <input
             type="text"
             value={search}
@@ -719,8 +856,8 @@ const TicketsPanel = ({
                 key={t || 'all'}
                 onClick={() => setTypeFilter(t)}
                 className={`px-2 py-0.5 rounded font-mono text-[11px] uppercase tracking-wider transition-colors ${active
-                    ? 'bg-white/[0.08] text-white'
-                    : 'text-white/45 hover:text-white/80'
+                  ? 'bg-white/[0.08] text-white'
+                  : 'text-white/45 hover:text-white/80'
                   }`}
               >
                 {t && <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1 align-middle ${TYPE_META[t].dot}`} />}
@@ -741,15 +878,6 @@ const TicketsPanel = ({
             <span>Group by lobby</span>
           </label>
         </div>
-
-        <button
-          onClick={onReload}
-          disabled={isLoading}
-          className={`${PILL_BTN} disabled:opacity-25`}
-          title="Recharger"
-        >
-          ↻ Reload
-        </button>
       </div>
 
       {/* Bulk actions bar - animated in when selection */}
@@ -939,7 +1067,7 @@ const ConfirmDialog = ({
         className="w-full max-w-sm rounded-xl border border-red-400/30 bg-gradient-to-b from-[#171018] to-[#0d1018] shadow-[0_30px_80px_-20px_rgba(248,113,113,0.25)] p-5 space-y-4"
       >
         <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-red-400 shadow-[0_0_10px_rgba(248,113,113,0.7)]" />
+          <span className="w-2 h-2 rounded-full bg-red-400" />
           <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-red-200">danger zone</p>
         </div>
         <div>
@@ -975,12 +1103,12 @@ const PHASE_META: Record<AdminLobbySummary['phase'], { label: string; pill: stri
   lobby: {
     label: 'Salon',
     pill: 'bg-sky-400/10 border-sky-300/40 text-sky-100',
-    dot: 'bg-sky-400 shadow-[0_0_8px_rgba(125,211,240,0.7)]',
+    dot: 'bg-sky-400',
   },
   playing: {
     label: 'En partie',
     pill: 'bg-emerald-400/10 border-emerald-300/40 text-emerald-100',
-    dot: 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.7)] animate-pulse',
+    dot: 'bg-emerald-400 animate-pulse',
   },
   ended: {
     label: 'Terminé',
@@ -1056,8 +1184,8 @@ const LobbyCard = ({ lobby }: { lobby: AdminLobbySummary }) => {
           <span
             key={`${p.name}-${i}`}
             className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border font-mono text-[11px] ${p.isActive
-                ? 'border-white/15 bg-white/[0.04] text-white/80'
-                : 'border-white/[0.06] bg-white/[0.02] text-white/30 line-through'
+              ? 'border-white/15 bg-white/[0.04] text-white/80'
+              : 'border-white/[0.06] bg-white/[0.02] text-white/30 line-through'
               }`}
             title={p.isActive ? 'actif' : 'déconnecté'}
           >
@@ -1074,7 +1202,7 @@ const LobbyCard = ({ lobby }: { lobby: AdminLobbySummary }) => {
   );
 };
 
-const LobbiesPanel = ({ active }: { active: boolean }) => {
+const LobbiesPanel = ({ active, refreshKey }: { active: boolean; refreshKey: number }) => {
   const [lobbies, setLobbies] = useState<AdminLobbySummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [lastFetch, setLastFetch] = useState<number | null>(null);
@@ -1101,6 +1229,12 @@ const LobbiesPanel = ({ active }: { active: boolean }) => {
     return () => clearInterval(id);
   }, [active, load]);
 
+  // Reload manuel déclenché depuis le masthead.
+  useEffect(() => {
+    if (!active || refreshKey === 0) return;
+    load();
+  }, [refreshKey, active, load]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return lobbies;
@@ -1120,7 +1254,7 @@ const LobbiesPanel = ({ active }: { active: boolean }) => {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2.5">
         <div className={`${CLUSTER} flex-1 min-w-[200px] max-w-md`}>
-          <span className="text-white/30 px-1 text-[12px]">⌕</span>
+          <Icon icon="mdi:magnify" className="w-4 h-4 text-white/35 ml-0.5" />
           <input
             type="text"
             value={search}
@@ -1145,15 +1279,6 @@ const LobbiesPanel = ({ active }: { active: boolean }) => {
         <span className="font-mono text-[11px] text-white/30">
           {lastFetch ? `maj ${formatAge(lastFetch)}` : '…'} · refresh auto 5s
         </span>
-
-        <button
-          onClick={() => load()}
-          disabled={isLoading}
-          className={`${PILL_BTN} disabled:opacity-25`}
-          title="Recharger"
-        >
-          ↻ Reload
-        </button>
       </div>
 
       {isLoading && lobbies.length === 0 ? (
@@ -1194,28 +1319,28 @@ interface CategoryStyle {
 
 const CATEGORY_PALETTE: Record<string, CategoryStyle> = {
   ICEBREAKERS: {
-    strip: 'bg-sky-400/70',
-    chip: 'bg-sky-500/10 border-sky-400/40 text-sky-100',
-    dot: 'bg-sky-400 shadow-[0_0_8px_rgba(125,211,240,0.7)]',
-    text: 'text-sky-200',
-    ring: 'ring-sky-300/30',
-    glow: 'from-sky-400/70 to-transparent',
+    strip: 'bg-sky-400',
+    chip: 'bg-sky-500/15 border-sky-400/50 text-sky-100',
+    dot: 'bg-sky-400',
+    text: 'text-sky-300',
+    ring: 'ring-sky-300/40',
+    glow: 'from-sky-400 to-transparent',
   },
   FUN: {
-    strip: 'bg-amber-400/70',
-    chip: 'bg-amber-400/10 border-amber-300/40 text-amber-100',
-    dot: 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.7)]',
-    text: 'text-amber-200',
-    ring: 'ring-amber-300/30',
-    glow: 'from-amber-400/70 to-transparent',
+    strip: 'bg-amber-400',
+    chip: 'bg-amber-400/15 border-amber-300/50 text-amber-100',
+    dot: 'bg-amber-400',
+    text: 'text-amber-300',
+    ring: 'ring-amber-300/40',
+    glow: 'from-amber-400 to-transparent',
   },
   DEEP: {
-    strip: 'bg-red-400/70',
-    chip: 'bg-red-500/10 border-red-400/40 text-red-100',
-    dot: 'bg-red-400 shadow-[0_0_8px_rgba(248,113,113,0.7)]',
-    text: 'text-red-200',
-    ring: 'ring-red-300/30',
-    glow: 'from-red-400/70 to-transparent',
+    strip: 'bg-red-400',
+    chip: 'bg-red-500/15 border-red-400/50 text-red-100',
+    dot: 'bg-red-400',
+    text: 'text-red-300',
+    ring: 'ring-red-300/40',
+    glow: 'from-red-400 to-transparent',
   },
 };
 
@@ -1234,37 +1359,68 @@ const categoryStyle = (category: string): CategoryStyle =>
 const deckKey = (d: { category: string; theme: string }) => `${d.category}-${d.theme}`;
 
 const SubjectCard = ({
-  subject, palette,
+  subject, palette, collapsed,
 }: {
   subject: AdminDeckSummary['subjects'][number];
   palette: CategoryStyle;
-}) => (
-  <div className="rounded-lg border border-white/[0.07] bg-black/20 overflow-hidden">
-    <div className="flex items-center gap-2 px-3 py-2 border-b border-white/[0.05] bg-white/[0.015]">
-      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${palette.dot}`} />
-      <span className="text-[13px] text-white/90 font-medium truncate" title={subject.subject}>
-        {subject.subject}
-      </span>
-      <span className="ml-auto font-mono text-[11px] tabular-nums text-white/40">
-        {subject.questionCount} q.
-      </span>
+  collapsed: boolean;
+}) => {
+  const hasQuestions = subject.questions.length > 0;
+  return (
+    <div className="group relative rounded-lg border border-white/[0.07] hover:border-white/15 bg-black/20 transition-colors overflow-hidden">
+      {/* Strip vertical gauche - couleur de catégorie */}
+      <span className={`absolute left-0 top-0 bottom-0 w-[3px] ${palette.strip}`} />
+      <div className={`flex items-center gap-2 px-3 py-2 pl-4 bg-white/[0.015] rounded-tr-lg ${collapsed ? 'rounded-br-lg' : 'border-b border-white/[0.05]'}`}>
+        <span className="text-[13px] text-white/90 font-medium truncate" title={subject.subject}>
+          {subject.subject}
+        </span>
+      </div>
+
+      {collapsed ? (
+        <>
+          {hasQuestions && (
+            <div
+              role="tooltip"
+              className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-full mt-1.5 z-30 w-[min(420px,90vw)] opacity-0 invisible translate-y-1 group-hover:opacity-100 group-hover:visible group-hover:translate-y-0 transition-all duration-150 ease-out"
+            >
+              <div className="relative rounded-lg border border-white/15 bg-[#13161e]/98 backdrop-blur-md shadow-[0_20px_60px_-15px_rgba(0,0,0,0.7)] overflow-hidden">
+                <span className={`absolute left-0 top-0 bottom-0 w-[3px] ${palette.strip}`} />
+                <div className="px-3 py-2 pl-4 border-b border-white/[0.06]">
+                  <span className="text-[12.5px] text-white/85 font-medium truncate">
+                    {subject.subject}
+                  </span>
+                </div>
+                <ol className="px-3 py-2.5 space-y-1.5 max-h-[60vh] overflow-y-auto custom-scroll">
+                  {subject.questions.map((q, i) => (
+                    <li key={i} className="flex gap-2 text-[12.5px] text-white/85 leading-snug">
+                      <span className="font-mono text-[11px] tabular-nums text-white/30 mt-0.5 shrink-0 w-5 text-right">
+                        {i + 1}.
+                      </span>
+                      <span className="whitespace-pre-wrap break-words">{q}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            </div>
+          )}
+        </>
+      ) : !hasQuestions ? (
+        <p className="px-3 py-3 text-[11px] text-white/25 italic rounded-b-lg">aucune question</p>
+      ) : (
+        <ol className="px-3 py-2.5 space-y-1.5 rounded-b-lg">
+          {subject.questions.map((q, i) => (
+            <li key={i} className="flex gap-2 text-[12.5px] text-white/80 leading-snug">
+              <span className="font-mono text-[11px] tabular-nums text-white/25 mt-0.5 shrink-0 w-5 text-right">
+                {i + 1}.
+              </span>
+              <span className="whitespace-pre-wrap break-words">{q}</span>
+            </li>
+          ))}
+        </ol>
+      )}
     </div>
-    {subject.questions.length === 0 ? (
-      <p className="px-3 py-3 font-mono text-[11px] text-white/25 italic">aucune question</p>
-    ) : (
-      <ol className="px-3 py-2.5 space-y-1.5">
-        {subject.questions.map((q, i) => (
-          <li key={i} className="flex gap-2 text-[12.5px] text-white/80 leading-snug">
-            <span className="font-mono text-[11px] tabular-nums text-white/25 mt-0.5 shrink-0 w-5 text-right">
-              {i + 1}.
-            </span>
-            <span className="whitespace-pre-wrap break-words">{q}</span>
-          </li>
-        ))}
-      </ol>
-    )}
-  </div>
-);
+  );
+};
 
 const DeckRailItem = ({
   deck, palette, selected, onSelect,
@@ -1276,24 +1432,28 @@ const DeckRailItem = ({
 }) => (
   <button
     onClick={onSelect}
-    className={`group relative w-full flex items-center gap-2 pl-3 pr-2.5 py-1.5 rounded-md border transition-colors text-left ${
-      selected
-        ? `bg-white/[0.08] border-white/15 ring-1 ${palette.ring}`
-        : 'bg-transparent border-transparent hover:bg-white/[0.04]'
-    }`}
+    className={`group relative w-full flex items-center gap-2 pl-3 pr-2.5 py-1.5 rounded-md border transition-colors text-left ${selected
+      ? `bg-white/[0.08] border-white/15 ring-1 ${palette.ring}`
+      : 'bg-transparent border-transparent hover:bg-white/[0.04]'
+      }`}
   >
-    <span className={`absolute left-0 top-1.5 bottom-1.5 w-[2px] rounded-full ${selected ? palette.strip : 'bg-transparent'}`} />
-    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${palette.dot}`} />
+    <span className={`absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full ${palette.strip} ${selected ? '' : 'opacity-60 group-hover:opacity-100'} transition-opacity`} />
     <span className={`text-[12.5px] truncate flex-1 ${selected ? 'text-white' : 'text-white/75 group-hover:text-white/95'}`} title={deck.theme}>
       {deck.theme}
     </span>
-    <span className="font-mono text-[11px] tabular-nums text-white/40">
-      {deck.questionCount}
+    <span className="font-mono text-[11px] tabular-nums text-white/40" title={`${deck.subjectCount} sujet${deck.subjectCount > 1 ? 's' : ''}`}>
+      {deck.subjectCount}
     </span>
   </button>
 );
 
-const DeckDetail = ({ deck }: { deck: AdminDeckSummary }) => {
+const DeckDetail = ({
+  deck, questionsCollapsed, onToggleCollapse,
+}: {
+  deck: AdminDeckSummary;
+  questionsCollapsed: boolean;
+  onToggleCollapse: () => void;
+}) => {
   const palette = categoryStyle(deck.category);
   return (
     <div className="rounded-xl border border-white/[0.07] bg-gradient-to-b from-white/[0.025] to-transparent overflow-hidden">
@@ -1305,9 +1465,17 @@ const DeckDetail = ({ deck }: { deck: AdminDeckSummary }) => {
           <h2 className="text-[22px] font-semibold tracking-tight text-white leading-none">
             {deck.theme}
           </h2>
-          <span className="font-mono text-[11px] uppercase tracking-wider text-white/40 ml-auto">
-            {deck.subjectCount} sujets · <span className={palette.text}>{deck.questionCount}</span> questions
+          <span className="text-[12px] text-white/55 ml-auto">
+            <span className={palette.text}>{deck.subjectCount}</span> sujet{deck.subjectCount > 1 ? 's' : ''}
           </span>
+          <button
+            onClick={onToggleCollapse}
+            className="px-2.5 py-1 rounded-md border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-white/75 hover:text-white text-[12px] transition-colors inline-flex items-center gap-1.5"
+            title={questionsCollapsed ? 'Afficher les questions de tous les sujets' : 'Cacher les questions (survoler un sujet pour les voir)'}
+          >
+            <Icon icon={questionsCollapsed ? 'mdi:eye-outline' : 'mdi:eye-off-outline'} className="w-3.5 h-3.5" />
+            {questionsCollapsed ? 'Afficher les questions' : 'Cacher les questions'}
+          </button>
         </div>
         <div className={`absolute left-0 right-0 bottom-0 h-px bg-gradient-to-r ${palette.glow}`} />
       </div>
@@ -1318,9 +1486,9 @@ const DeckDetail = ({ deck }: { deck: AdminDeckSummary }) => {
             aucun sujet
           </p>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
             {deck.subjects.map((s) => (
-              <SubjectCard key={s.subject} subject={s} palette={palette} />
+              <SubjectCard key={s.subject} subject={s} palette={palette} collapsed={questionsCollapsed} />
             ))}
           </div>
         )}
@@ -1336,6 +1504,7 @@ const DecksPanel = ({ active }: { active: boolean }) => {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('');
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [questionsCollapsed, setQuestionsCollapsed] = useState(true);
   const showToast = useToast();
 
   const load = useCallback(async () => {
@@ -1378,20 +1547,29 @@ const DecksPanel = ({ active }: { active: boolean }) => {
     return Array.from(set).sort();
   }, [decks]);
 
-  const filtered = useMemo(() => {
+  const filtered = useMemo<AdminDeckSummary[]>(() => {
     const q = search.trim().toLowerCase();
-    return decks.filter((d) => {
-      if (categoryFilter && d.category !== categoryFilter) return false;
-      if (!q) return true;
-      return (
-        d.category.toLowerCase().includes(q) ||
-        d.theme.toLowerCase().includes(q) ||
-        d.subjects.some((s) =>
-          s.subject.toLowerCase().includes(q) ||
-          s.questions.some((qu) => qu.toLowerCase().includes(q))
-        )
-      );
-    });
+    const byCategory = decks.filter((d) => !categoryFilter || d.category === categoryFilter);
+    if (!q) return byCategory;
+    const result: AdminDeckSummary[] = [];
+    for (const d of byCategory) {
+      const subjects: AdminDeckSummary['subjects'] = [];
+      let questionCount = 0;
+      for (const s of d.subjects) {
+        const subjectMatch = s.subject.toLowerCase().includes(q);
+        const questions = subjectMatch
+          ? s.questions
+          : s.questions.filter((qu) => qu.toLowerCase().includes(q));
+        if (subjectMatch || questions.length > 0) {
+          subjects.push({ ...s, questions });
+          questionCount += questions.length;
+        }
+      }
+      if (subjects.length > 0) {
+        result.push({ ...d, subjects, subjectCount: subjects.length, questionCount });
+      }
+    }
+    return result;
   }, [decks, search, categoryFilter]);
 
   // Groupes par catégorie pour le rail, en préservant l'ordre d'apparition des catégories.
@@ -1433,12 +1611,12 @@ const DecksPanel = ({ active }: { active: boolean }) => {
 
       <div className="flex flex-wrap items-center gap-2.5">
         <div className={`${CLUSTER} flex-1 min-w-[200px] max-w-md`}>
-          <span className="text-white/30 px-1 text-[12px]">⌕</span>
+          <Icon icon="mdi:magnify" className="w-4 h-4 text-white/35 ml-0.5" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="rechercher catégorie, thème, sujet, question"
+            placeholder="rechercher sujet ou question"
             className="flex-1 bg-transparent border-0 outline-0 text-[12px] text-white/85 placeholder:text-white/25 font-mono"
           />
           {search && (
@@ -1451,7 +1629,6 @@ const DecksPanel = ({ active }: { active: boolean }) => {
 
         {categories.length > 0 && (
           <div className={CLUSTER}>
-            <span className="font-mono text-[11px] uppercase tracking-wider text-white/40 px-1">Cat</span>
             <button
               onClick={() => setCategoryFilter('')}
               className={`px-2 py-0.5 rounded font-mono text-[11px] uppercase tracking-wider transition-colors ${!categoryFilter ? 'bg-white/[0.08] text-white' : 'text-white/45 hover:text-white/80'
@@ -1464,29 +1641,17 @@ const DecksPanel = ({ active }: { active: boolean }) => {
                 <button
                   key={c}
                   onClick={() => setCategoryFilter(c)}
-                  className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded font-mono text-[11px] uppercase tracking-wider transition-colors ${isActive ? 'bg-white/[0.08] text-white' : 'text-white/45 hover:text-white/80'
+                  className={`inline-flex items-center px-2 py-0.5 rounded font-mono text-[11px] uppercase tracking-wider transition-colors ${isActive
+                    ? `bg-white/[0.08] ${palette.text}`
+                    : `${palette.text} opacity-50 hover:opacity-90`
                     }`}
                 >
-                  <span className={`w-1.5 h-1.5 rounded-full ${palette.dot}`} />
                   {c}
                 </button>
               );
             })}
           </div>
         )}
-
-        <span className="font-mono text-[11px] text-white/30 ml-auto">
-          source: <span className="text-white/55">questions.json</span>
-        </span>
-
-        <button
-          onClick={() => load()}
-          disabled={isLoading}
-          className={`${PILL_BTN} disabled:opacity-25`}
-          title="Recharger"
-        >
-          ↻ Reload
-        </button>
       </div>
 
       {isLoading && decks.length === 0 ? (
@@ -1508,7 +1673,6 @@ const DecksPanel = ({ active }: { active: boolean }) => {
                   return (
                     <div key={category} className="space-y-1">
                       <div className="sticky top-0 z-10 -mx-2 px-3 py-1.5 bg-[#0d1018]/95 backdrop-blur flex items-center gap-2 border-b border-white/[0.05]">
-                        <span className={`w-1.5 h-1.5 rounded-full ${palette.dot}`} />
                         <span className={`font-mono text-[11px] uppercase tracking-[0.22em] font-bold ${palette.text}`}>
                           {category}
                         </span>
@@ -1540,7 +1704,11 @@ const DecksPanel = ({ active }: { active: boolean }) => {
           {/* Detail */}
           <section className="flex-1 min-w-0">
             {selectedDeck ? (
-              <DeckDetail deck={selectedDeck} />
+              <DeckDetail
+                deck={selectedDeck}
+                questionsCollapsed={questionsCollapsed && !search.trim()}
+                onToggleCollapse={() => setQuestionsCollapsed((v) => !v)}
+              />
             ) : (
               <div className="rounded-xl border border-white/[0.07] bg-gradient-to-b from-white/[0.02] to-transparent text-center py-20 font-mono text-[11px] uppercase tracking-[0.3em] text-white/30">
                 sélectionne un thème
@@ -1549,6 +1717,400 @@ const DecksPanel = ({ active }: { active: boolean }) => {
           </section>
         </div>
       )}
+    </div>
+  );
+};
+
+// =====================================================================
+// Content - read-only catalog of fixed in-game text & data
+// =====================================================================
+type ContentSection = 'tiers' | 'funfacts' | 'achievements' | 'avatars' | 'legal' | 'constants';
+
+const CONTENT_SECTIONS: { id: ContentSection; label: string; hint: string }[] = [
+  { id: 'tiers', label: 'Paliers de score', hint: 'verdict de fin de partie' },
+  { id: 'funfacts', label: 'Saviez-vous', hint: 'faits insolites' },
+  { id: 'achievements', label: 'Succès', hint: 'badges du joueur' },
+  { id: 'avatars', label: 'Avatars', hint: 'galerie' },
+  { id: 'legal', label: 'Légal', hint: 'pages publiques' },
+  { id: 'constants', label: 'Réglages', hint: 'durées & limites' },
+];
+
+const PHASE_LABELS_FR: Record<string, string> = {
+  QUESTION_SELECTION: 'Sélection de la question',
+  SUBSTITUTE_SELECTION: 'Sélection du devineur de pilier',
+  ANSWERING: 'Réponse des joueurs',
+  SUBSTITUTE_ANSWERING: 'Réponse du devineur de pilier',
+  GUESSING: 'Devinette',
+};
+
+const SectionHeader = ({ title, hint, count }: { title: string; hint?: string; count?: number }) => (
+  <div className="flex items-baseline gap-2.5 mb-3">
+    <h2 className="text-[18px] font-semibold tracking-tight text-white">{title}</h2>
+    {typeof count === 'number' && (
+      <span className="font-mono text-[11px] tabular-nums text-white/40 px-1.5 py-0.5 rounded bg-white/[0.05] border border-white/10">
+        {count}
+      </span>
+    )}
+    {hint && (
+      <span className="text-[12px] text-white/35 ml-auto italic">
+        {hint}
+      </span>
+    )}
+  </div>
+);
+
+const TiersSection = () => (
+  <div>
+    <SectionHeader title="Paliers de score" count={TIERS.length} />
+    <p className="text-[13px] text-white/55 mb-4 max-w-2xl">
+      Le verdict affiché en fin de partie selon le pourcentage de l'équipe. Un message est tiré au sort dans la liste du palier atteint.
+    </p>
+    <div className="space-y-2.5">
+      {TIERS.map((tier, idx) => {
+        const prev = idx === 0 ? 0 : TIERS[idx - 1].max + 1;
+        return (
+          <div
+            key={idx}
+            className="rounded-lg border border-white/[0.07] bg-gradient-to-b from-white/[0.025] to-transparent overflow-hidden"
+          >
+            <div className="relative px-4 py-3 border-b border-white/[0.05] flex items-center gap-3">
+              <div
+                aria-hidden
+                className="absolute left-0 top-0 bottom-0 w-[3px]"
+                style={{ backgroundColor: tier.color }}
+              />
+              <Icon icon={tier.icon} className="w-7 h-7 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-[15px] font-semibold tracking-tight text-white truncate">
+                  {tier.title}
+                </p>
+                <p className="text-[12px] text-white/45">
+                  de {prev}% à {tier.max}%
+                </p>
+              </div>
+              <span
+                aria-hidden
+                className="w-5 h-5 rounded-full border border-white/15 shrink-0"
+                style={{ backgroundColor: tier.color }}
+              />
+            </div>
+            <ol className="px-4 py-3 space-y-1.5">
+              {tier.messages.map((m, i) => (
+                <li key={i} className="flex gap-2 text-[13px] text-white/85 leading-snug">
+                  <span className="font-mono text-[11px] tabular-nums text-white/25 mt-0.5 shrink-0 w-5 text-right">
+                    {i + 1}.
+                  </span>
+                  <span className="whitespace-pre-wrap break-words">{m}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        );
+      })}
+    </div>
+  </div>
+);
+
+const FunFactsSection = () => (
+  <div>
+    <SectionHeader title="Saviez-vous" count={FUN_FACTS.length} />
+    <p className="text-[13px] text-white/55 mb-4 max-w-2xl">
+      Affichés en rotation pendant les phases d'attente pour faire patienter les joueurs.
+    </p>
+    <div className="rounded-lg border border-white/[0.07] bg-gradient-to-b from-white/[0.025] to-transparent overflow-hidden">
+      <ol>
+        {FUN_FACTS.map((f, i) => (
+          <li
+            key={i}
+            className="flex gap-3 px-4 py-2.5 border-b border-white/[0.04] last:border-b-0 text-[13px] text-white/85 leading-snug"
+          >
+            <span className="font-mono text-[11px] tabular-nums text-white/30 shrink-0 w-6 text-right mt-0.5">
+              {String(i + 1).padStart(2, '0')}
+            </span>
+            <span className="whitespace-pre-wrap break-words">{f}</span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  </div>
+);
+
+const AchievementsSection = () => (
+  <div>
+    <SectionHeader title="Succès" count={ACHIEVEMENTS.length} />
+    <p className="text-[13px] text-white/55 mb-4 max-w-2xl">
+      Badges débloqués par le joueur en fin de partie, sauvegardés sur son appareil.
+    </p>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+      {ACHIEVEMENTS.map((a) => (
+        <div
+          key={a.id}
+          className="rounded-lg border border-white/[0.07] bg-gradient-to-b from-white/[0.025] to-transparent p-3 flex items-start gap-3"
+        >
+          <Icon icon={a.icon} className="w-9 h-9 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-[14px] font-semibold text-white truncate">{a.title}</p>
+            <p className="text-[12.5px] text-white/65 leading-snug mt-0.5">
+              {a.description}
+            </p>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+const AvatarsSection = () => (
+  <div>
+    <SectionHeader title="Avatars" count={AVATARS.length} />
+    <p className="text-[13px] text-white/55 mb-4 max-w-2xl">
+      Le casting visuel disponible pour les joueurs.
+    </p>
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
+      {AVATARS.map((a) => (
+        <div
+          key={a.id}
+          className="rounded-lg border border-white/[0.07] bg-gradient-to-b from-white/[0.025] to-transparent overflow-hidden"
+        >
+          <div className="aspect-square bg-black/30 flex items-center justify-center">
+            <img
+              src={getAvatarUrl(a.id)}
+              alt={`Avatar ${a.id + 1}`}
+              className="w-full h-full object-cover"
+              loading="lazy"
+            />
+          </div>
+          <div className="px-2 py-1.5 border-t border-white/[0.05] flex items-center justify-between">
+            <span className="text-[12px] text-white/65">Avatar {a.id + 1}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+const LEGAL_LABELS_FR: Record<string, string> = {
+  about: 'À propos',
+  mentions: 'Mentions légales',
+  privacy: 'Politique de confidentialité',
+  contact: 'Nous contacter',
+};
+
+const LegalSection = () => {
+  const entries = Object.entries(LEGAL_CONTENT) as Array<[
+    keyof typeof LEGAL_CONTENT,
+    typeof LEGAL_CONTENT[keyof typeof LEGAL_CONTENT],
+  ]>;
+  return (
+    <div>
+      <SectionHeader title="Contenu légal" count={entries.length} />
+      <p className="text-[13px] text-white/55 mb-4 max-w-2xl">
+        Textes affichés depuis le pied de page du site : À propos, Mentions légales, Confidentialité et Contact.
+      </p>
+      <div className="space-y-3">
+        {entries.map(([key, block]) => {
+          const sections = 'sections' in block ? block.sections : [];
+          return (
+            <div
+              key={key}
+              className="rounded-lg border border-white/[0.07] bg-gradient-to-b from-white/[0.025] to-transparent overflow-hidden"
+            >
+              <div className="px-4 py-2.5 border-b border-white/[0.05] flex items-baseline gap-2">
+                <p className="text-[15px] font-semibold tracking-tight text-white">
+                  {LEGAL_LABELS_FR[key] ?? block.title}
+                </p>
+                {sections.length > 0 && (
+                  <span className="ml-auto text-[12px] text-white/40">
+                    {sections.length} rubrique{sections.length > 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
+              {sections.length === 0 ? (
+                <p className="px-4 py-3 text-[12.5px] text-white/40 italic">
+                  Aucun texte (la page renvoie vers un formulaire de contact).
+                </p>
+              ) : (
+                <div className="divide-y divide-white/[0.04]">
+                  {sections.map((s, i) => (
+                    <div key={i} className="px-4 py-3">
+                      <p className="text-[13px] font-semibold text-amber-200/90 mb-1.5">
+                        {s.title}
+                      </p>
+                      <div
+                        className="text-[13px] text-white/80 leading-relaxed [&_a]:text-sky-300 [&_a]:underline [&_strong]:text-white"
+                        dangerouslySetInnerHTML={{ __html: s.content }}
+                      />
+                      {'list' in s && Array.isArray(s.list) && (
+                        <ul className="mt-2 space-y-1">
+                          {s.list.map((li, j) => (
+                            <li key={j} className="flex gap-2 text-[12.5px] text-white/70 leading-snug">
+                              <span className="text-white/30 shrink-0">·</span>
+                              <span>{li}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      {'extra' in s && s.extra && (
+                        <div
+                          className="mt-2 text-[12.5px] text-white/60 leading-snug [&_a]:text-sky-300 [&_a]:underline"
+                          dangerouslySetInnerHTML={{ __html: s.extra }}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+const ConstantsSection = () => {
+  const timers = GAME_CONSTANTS.TIMERS;
+  const [guessPlayers, setGuessPlayers] = useState(3);
+  const guessSeconds = 120 + Math.max(0, guessPlayers - 3) * 20;
+  const toMinSec = (s: number): string | null => {
+    if (s < 60) return null;
+    const m = Math.floor(s / 60);
+    const r = s % 60;
+    return r === 0 ? `${m} min` : `${m} min ${r} s`;
+  };
+  return (
+    <div>
+      <SectionHeader title="Réglages de jeu" />
+      <p className="text-[13px] text-white/55 mb-4 max-w-2xl">
+        Les durées de chaque phase et les limites appliquées aux parties.
+      </p>
+
+      <div className="space-y-4">
+        <div>
+          <p className="text-[12px] uppercase tracking-[0.18em] text-white/40 mb-2 font-semibold">
+            Durée de chaque phase
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+            {Object.entries(timers).map(([phase, seconds]) => {
+              const isGuessing = phase === 'GUESSING';
+              return (
+                <div
+                  key={phase}
+                  className="rounded-lg border border-white/[0.07] bg-gradient-to-b from-white/[0.025] to-transparent p-3"
+                >
+                  <p className="text-[12px] text-white/55">
+                    {PHASE_LABELS_FR[phase] ?? phase}
+                  </p>
+                  {isGuessing ? (
+                    <>
+                      <p className="mt-1 text-[20px] font-semibold tabular-nums text-white">
+                        {guessSeconds} secondes
+                        {toMinSec(guessSeconds) && (
+                          <span className="ml-2 text-[13px] font-normal text-white/40">
+                            ({toMinSec(guessSeconds)})
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-[12px] text-white/55 mt-0.5">
+                        120 s + 20 s par joueur au-delà de 3
+                      </p>
+                      <div className="mt-2 flex items-center gap-2">
+                        <input
+                          id="guess-slider"
+                          type="range"
+                          min={GAME_CONSTANTS.MIN_PLAYERS}
+                          max={GAME_CONSTANTS.MAX_PLAYERS}
+                          step={1}
+                          value={guessPlayers}
+                          onChange={(e) => setGuessPlayers(Number(e.target.value))}
+                          aria-label="Simuler le nombre de joueurs"
+                          className="admin-mini-slider flex-1 cursor-pointer"
+                        />
+                        <span className="text-[10px] tabular-nums text-white/45 w-14 text-right">
+                          {guessPlayers} joueur{guessPlayers > 1 ? 's' : ''}
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="mt-1 text-[20px] font-semibold tabular-nums text-white">
+                      {seconds} secondes
+                      {toMinSec(seconds) && (
+                        <span className="ml-2 text-[13px] font-normal text-white/40">
+                          ({toMinSec(seconds)})
+                        </span>
+                      )}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div>
+          <p className="text-[12px] uppercase tracking-[0.18em] text-white/40 mb-2 font-semibold">
+            Limites
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
+            {[
+              { label: 'Nombre de joueurs', value: `${GAME_CONSTANTS.MIN_PLAYERS} à ${GAME_CONSTANTS.MAX_PLAYERS}` },
+              { label: 'Longueur du pseudo', value: `${GAME_CONSTANTS.MIN_NAME_LENGTH} à ${GAME_CONSTANTS.MAX_NAME_LENGTH} caractères` },
+              { label: 'Longueur d\'une réponse', value: `${GAME_CONSTANTS.MAX_ANSWER_LENGTH} caractères max` },
+              { label: 'Avatars disponibles', value: `${GAME_CONSTANTS.AVATAR_COUNT}` },
+              { label: 'Relances par carte', value: `${GAME_CONSTANTS.DEFAULT_CARD_RELANCES}` },
+              { label: 'Longueur du code de salon', value: `${GAME_CONSTANTS.LOBBY_CODE_LENGTH} caractères` },
+            ].map((row) => (
+              <div
+                key={row.label}
+                className="rounded-lg border border-white/[0.07] bg-gradient-to-b from-white/[0.025] to-transparent p-3"
+              >
+                <p className="text-[12px] text-white/55">
+                  {row.label}
+                </p>
+                <p className="mt-1 text-[16px] font-semibold tabular-nums text-white">
+                  {row.value}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ContentPanel = () => {
+  const [section, setSection] = useState<ContentSection>('tiers');
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center gap-1.5">
+        {CONTENT_SECTIONS.map((s) => {
+          const active = section === s.id;
+          return (
+            <button
+              key={s.id}
+              onClick={() => setSection(s.id)}
+              className={`px-2.5 py-1 rounded-md border font-mono text-[11px] uppercase tracking-wider transition-colors ${active
+                ? 'bg-white/[0.08] border-white/15 text-white'
+                : 'bg-transparent border-white/[0.06] text-white/45 hover:text-white/85 hover:border-white/15'
+                }`}
+              title={s.hint}
+            >
+              {s.label}
+            </button>
+          );
+        })}
+      </div>
+
+      <div>
+        {section === 'tiers' && <TiersSection />}
+        {section === 'funfacts' && <FunFactsSection />}
+        {section === 'achievements' && <AchievementsSection />}
+        {section === 'avatars' && <AvatarsSection />}
+        {section === 'legal' && <LegalSection />}
+        {section === 'constants' && <ConstantsSection />}
+      </div>
     </div>
   );
 };
@@ -1569,7 +2131,7 @@ const StatsPanel = () => (
       />
       <div className="relative">
         <div className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.22em] text-sky-200/80 border border-sky-300/40 bg-sky-500/[0.08] rounded px-1.5 py-0.5 mb-3">
-          <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shadow-[0_0_8px_rgba(125,211,240,0.7)]" />
+          <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />
           analytics
         </div>
         <h2 className="text-[22px] font-semibold tracking-tight text-white mb-1">Trafic & visiteurs</h2>
@@ -1589,7 +2151,7 @@ const StatsPanel = () => (
 
     <div className="rounded-lg border border-white/[0.07] bg-gradient-to-b from-white/[0.02] to-transparent p-5">
       <div className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.22em] text-amber-200/80 border border-amber-300/40 bg-amber-500/[0.08] rounded px-1.5 py-0.5 mb-3">
-        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)] animate-pulse" />
+        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
         bientôt
       </div>
       <p className="text-[13px] text-white/55 max-w-xl">
@@ -1606,14 +2168,21 @@ const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
+  const [lobbyCount, setLobbyCount] = useState<number | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
   const showToast = useToast();
   const ranOnce = useRef(false);
 
   const load = useCallback(async () => {
     setIsLoading(true);
+    setRefreshKey((k) => k + 1); // déclenche aussi le reload des panels actifs (lobbies)
     try {
-      const data = await fetchTickets();
-      setTickets(data);
+      const [ticketsData, lobbiesData] = await Promise.all([
+        fetchTickets(),
+        fetchAdminLobbies().catch(() => null),
+      ]);
+      setTickets(ticketsData);
+      if (lobbiesData) setLobbyCount(lobbiesData.length);
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Erreur', 'error');
       if (err instanceof Error && err.message.includes('Session')) onLogout();
@@ -1627,6 +2196,20 @@ const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
     ranOnce.current = true;
     load();
   }, [load]);
+
+  // Compteur de salons live affiché dans le masthead (poll 5s, silencieux).
+  useEffect(() => {
+    let cancelled = false;
+    const tick = async () => {
+      try {
+        const data = await fetchAdminLobbies();
+        if (!cancelled) setLobbyCount(data.length);
+      } catch { /* silent */ }
+    };
+    tick();
+    const id = setInterval(tick, 5000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, []);
 
   const jumpToTickets = useCallback((_status?: TicketStatus, _type?: TicketType) => {
     setActiveTab('tickets');
@@ -1652,57 +2235,94 @@ const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
         }}
       />
 
-      {/* Sticky header */}
-      <div className="sticky top-0 z-30 backdrop-blur-xl bg-[#0a0c12]/85 border-b border-white/[0.07]">
-        <div className="px-4 py-3 flex flex-wrap items-center gap-2.5">
-          <div className="flex items-center gap-2.5">
-            <span className="font-mono text-[15px] leading-none flex items-baseline gap-1.5 select-none">
-              <span className="text-amber-400">▍</span>
-              <span className="text-white/55 tracking-tight">onskoné</span>
-              <span className="text-white/25">/</span>
-              <span className="text-amber-200 font-bold tracking-tight uppercase">admin</span>
+      {/* Sticky header - masthead éditorial */}
+      <div className="sticky top-0 z-30 backdrop-blur-xl bg-[#0a0c12]/85 border-b border-white/10">
+        <div className="max-w-7xl mx-auto px-6 pt-5 pb-3">
+          {/* Ligne 1 : masthead */}
+          <div className="flex items-center gap-2">
+            <span className="text-amber-400 text-[15px] leading-none">▍</span>
+            <span className="font-mono text-[14px] text-white/85 lowercase tracking-tight leading-none">
+              onskoné
             </span>
-            <span className="font-mono text-[11px] font-bold uppercase tracking-[0.22em] text-emerald-200 border border-emerald-400/40 bg-emerald-500/[0.08] rounded px-1.5 py-0.5">
-              <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.7)] mr-1 align-middle animate-pulse" />
-              live
+            <span className="font-mono text-[14px] text-white/25 leading-none">/</span>
+            <span className="font-mono text-[14px] font-bold text-amber-200 uppercase tracking-[0.12em] leading-none">
+              admin
             </span>
-          </div>
 
-          {/* Tabs */}
-          <div className="ml-2 inline-flex rounded-md border border-white/10 bg-black/30 p-0.5 font-mono text-[11px] uppercase tracking-wider overflow-x-auto">
-            {TABS.map((tab) => {
-              const active = activeTab === tab.id;
+            {/* CTA principal : voir salons live (signal vivant, garde le focus) */}
+            <button
+              onClick={() => setActiveTab('lobbies')}
+              className={`ml-auto cursor-pointer flex items-center gap-2 px-2.5 py-1 rounded-md border transition-colors font-mono text-[10px] uppercase tracking-[0.22em] ${activeTab === 'lobbies'
+                ? 'border-emerald-400/50 bg-emerald-500/10 text-emerald-100'
+                : 'border-emerald-400/25 bg-emerald-500/[0.04] text-emerald-200 hover:bg-emerald-500/10 hover:border-emerald-400/50'
+                }`}
+              title="Voir les salons live"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              voir <span className="tabular-nums font-bold text-white">{lobbyCount ?? '…'}</span> salons live
+            </button>
+
+            {/* Actions secondaires en icônes - réduit le bruit du masthead */}
+            <button
+              onClick={load}
+              disabled={isLoading}
+              className="cursor-pointer ml-2 w-7 h-7 flex items-center justify-center rounded-md text-white/45 hover:text-white hover:bg-white/[0.05] transition-colors disabled:opacity-25"
+              title="Rafraîchir"
+              aria-label="Rafraîchir"
+            >
+              <Icon icon="mdi:refresh" className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+            </button>
+            <button
+              onClick={onLogout}
+              className="cursor-pointer w-7 h-7 flex items-center justify-center rounded-md text-white/45 hover:text-white hover:bg-white/[0.05] transition-colors"
+              title="Déconnexion"
+              aria-label="Déconnexion"
+            >
+              <Icon icon="mdi:logout" className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Ligne 2 : nav sections - sous-ligne style article */}
+        <div className="max-w-7xl mx-auto px-6 border-t border-white/[0.06]">
+          <div className="flex flex-wrap items-stretch">
+            {GROUP_ORDER.map((group) => {
+              // "lobbies" est promu dans le masthead - on l'exclut de la nav.
+              const groupTabs = TABS.filter((t) => t.group === group && t.id !== 'lobbies');
+              if (groupTabs.length === 0) return null;
               return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`relative px-2.5 py-1 rounded transition-colors flex items-center gap-1.5 whitespace-nowrap ${active
-                      ? 'bg-white/[0.08] text-white'
-                      : 'text-white/45 hover:text-white/80'
-                    }`}
-                >
-                  <span>{tab.label}</span>
-                  {!tab.enabled && (
-                    <span className="w-1 h-1 rounded-full bg-amber-400/80" title="bientôt" />
-                  )}
-                </button>
+                <div key={group} className="flex items-stretch">
+                  {groupTabs.map((tab) => {
+                    const active = activeTab === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id)}
+                        aria-label={tab.ariaLabel ?? tab.label}
+                        title={tab.ariaLabel ?? tab.label}
+                        className={`relative px-4 py-3 flex items-center gap-1.5 whitespace-nowrap text-[12px] font-mono font-bold uppercase tracking-[0.12em] transition-colors ${active
+                          ? 'text-white'
+                          : 'text-white/40 hover:text-white/75'
+                          }`}
+                      >
+                        {tab.icon ? (
+                          <Icon icon={tab.icon} className="w-4 h-4" />
+                        ) : (
+                          <span>{tab.label}</span>
+                        )}
+                        {!tab.enabled && (
+                          <span className="w-1 h-1 rounded-full bg-amber-400/80" title="bientôt" />
+                        )}
+                        {active && (
+                          <span className="absolute left-0 right-0 bottom-[-1px] h-[2px] bg-amber-400" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               );
             })}
           </div>
-
-          <div className="flex-1 min-w-4" />
-
-          <button
-            onClick={load}
-            disabled={isLoading}
-            className={`${PILL_ICON} disabled:opacity-25`}
-            title="Recharger"
-          >↻</button>
-          <button
-            onClick={onLogout}
-            className={PILL_BTN}
-            title="Déconnexion"
-          >⏏ logout</button>
         </div>
       </div>
 
@@ -1714,15 +2334,17 @@ const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
           <TicketsPanel
             tickets={tickets}
             isLoading={isLoading}
-            onReload={load}
             onChangeTickets={setTickets}
           />
         )}
         {activeTab === 'lobbies' && (
-          <LobbiesPanel active={activeTab === 'lobbies'} />
+          <LobbiesPanel active={activeTab === 'lobbies'} refreshKey={refreshKey} />
         )}
         {activeTab === 'decks' && (
           <DecksPanel active={activeTab === 'decks'} />
+        )}
+        {activeTab === 'content' && (
+          <ContentPanel />
         )}
         {activeTab === 'stats' && (
           <StatsPanel />
@@ -1738,6 +2360,42 @@ const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
         }
         .custom-scroll::-webkit-scrollbar-thumb:hover {
           background: rgba(255,255,255,0.18);
+        }
+        .admin-mini-slider {
+          -webkit-appearance: none;
+          appearance: none;
+          height: 3px;
+          background: rgba(255,255,255,0.08);
+          border-radius: 999px;
+          outline: none;
+        }
+        .admin-mini-slider::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 10px;
+          height: 10px;
+          border-radius: 999px;
+          background: rgba(255,255,255,0.55);
+          border: none;
+          transition: background 0.15s;
+        }
+        .admin-mini-slider:hover::-webkit-slider-thumb {
+          background: rgba(251,191,36,0.9);
+        }
+        .admin-mini-slider::-moz-range-thumb {
+          width: 10px;
+          height: 10px;
+          border-radius: 999px;
+          background: rgba(255,255,255,0.55);
+          border: none;
+        }
+        .admin-mini-slider:hover::-moz-range-thumb {
+          background: rgba(251,191,36,0.9);
+        }
+        .admin-mini-slider::-moz-range-track {
+          height: 3px;
+          background: rgba(255,255,255,0.08);
+          border-radius: 999px;
         }
       `}</style>
     </div>

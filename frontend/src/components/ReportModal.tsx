@@ -98,16 +98,16 @@ const ReportModal = ({ isOpen, onClose, extraContext, defaultType }: ReportModal
                 key={t.value}
                 onClick={() => setSelectedType(t.value)}
                 disabled={isSubmitting}
-                className={`text-left rounded-xl border-2 px-3 py-2 transition-all ${isSelected
+                className={`text-left rounded-xl border-2 px-2 py-1.5 transition-all ${isSelected
                     ? 'border-black bg-yellow-50 shadow-md'
                     : 'border-gray-200 bg-white hover:border-gray-400'
                   } ${isSubmitting ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
               >
-                <div className="flex items-center gap-2 mb-0.5">
-                  <Icon icon={t.icon} className="w-5 h-5" />
-                  <span className="font-bold text-gray-900">{t.label}</span>
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <Icon icon={t.icon} className="w-4 h-4" />
+                  <span className="font-bold text-gray-900 text-xs">{t.label}</span>
                 </div>
-                <p className="text-xs text-gray-600 leading-snug">{t.description}</p>
+                <p className="text-[10px] text-gray-600 leading-snug">{t.description}</p>
               </button>
             );
           })}
@@ -127,7 +127,7 @@ const ReportModal = ({ isOpen, onClose, extraContext, defaultType }: ReportModal
             cols={1}
             className="block w-full min-w-0 rounded-lg border-2 border-gray-300 px-3 py-2 text-sm text-black placeholder:text-gray-400 focus:outline-none focus:border-black disabled:bg-gray-100 resize-y"
           />
-          <div className="text-xs text-gray-500 mt-1 text-right">{message.length} / 2000</div>
+          <div className="text-[10px] text-gray-500 mt-1 text-right">{message.length} / 2000</div>
         </div>
 
         <div className="flex justify-end items-center gap-2 pt-2 pr-1.5 pb-1.5">
