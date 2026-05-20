@@ -89,6 +89,50 @@ The single socket connection lives in `frontend/src/utils/socket.ts`; pages subs
 
 `backend/src/data/questions.json` is the in-game source of truth, **generated** from `Onskoné_Questions_Structurées_2604.xlsx` via `node backend/src/data/build-questions.mjs`. Don't hand-edit the JSON; edit the xlsx and re-run the script.
 
+### Design system (frontend)
+
+All design tokens live in `@theme` inside [frontend/src/index.css](frontend/src/index.css). **Never hardcode a hex color, font family, or repeat the same display-size pattern in components.** If a value would be used in more than one place, it belongs in `@theme` first.
+
+**Color tokens** (the only sanctioned source of color):
+
+- `brand-700 / 500 / 400 / 200` - bleu Onskoné, du plus foncé au plus clair (gradient, UI primaire, halo, slider "à distance")
+- `success-700 / 500 / 400` - vert validation (boutons, réponses correctes)
+- `danger-700 / 500 / 400` - rouge danger (boutons quit, croix supprimer, réponses incorrectes)
+- `warning-700 / 500 / 400 / 350 / 300 / 200 / 100 / 50 / orange` - jaune chaud (CTA warning, achievements, target magnetic, pulse, kraft)
+- `cream-player / question / answer / paper / warm / kraft` - papiers cartonnés (chaque cream a un usage narratif distinct, ne pas les interchanger)
+- `quit / quit-hover` - boutons de retrait neutres
+- `podium-gold / silver / bronze` - médailles EndGame (codes universels)
+
+**Couleurs intentionnellement hors-tokens** (story palette, ne pas généraliser) :
+- TIERS dans `EndGame.tsx` (5 paliers de couleur du score d'équipe)
+- `CATEGORY_COLORS` dans `constants/game.ts` (couleur narrative par thème de carte)
+- Onskoné violet (`#b46cff` etc.) dans EndGame, climax visuel
+- Palette sombre `Admin.tsx` / `Studio.tsx` / `StudioGallery.tsx` (dev tooling, isolée)
+- `shareCard.ts` peint sur canvas, ne peut pas lire les vars CSS
+
+**Typographie** : trois familles, à composer avec les classes de hiérarchie.
+
+- `font-sans` (Nunito) - body par défaut
+- `font-display` (Fredoka) - titres ronds, CTA, badges
+- `font-accent` (Fraunces) - **rare**, 1-2 mots-clés par écran pour casser la monotonie Fredoka
+
+**Hiérarchie typo** (utiliser ces classes plutôt que `font-display font-bold text-Xl`) :
+- `text-display-xl` (32-44px, poids 700) - titre d'écran principal
+- `text-display-lg` (24-30px, poids 700) - h1 / titre de carte
+- `text-display-md` (18-22px, poids 600) - h2 / sous-titre
+- `text-display-sm` (16px, poids 600) - h3 / label fort
+- `text-display-xs` (11px, poids 600, uppercase, tracking large) - labels & metadata
+
+**Identité visuelle** (toujours dispo en utility) :
+- `.stack-shadow` / `.stack-shadow-sm` / `.stack-shadow-lg` - ombres de carte empilées
+- `.texture-paper` - grain papier appliqué via ::after avec mix-blend multiply
+- `.bg-pattern-dots` / `.bg-pattern-diagonal` / `.bg-pattern-zigzag` - motifs de fond par ambiance
+- `.surface-notebook` - feuille de carnet (lignes + marge rouge) pour AnswerPhase
+
+**Conventions animations** :
+- Animations one-shot pour entrées/transitions (`animate-modal-pop`, `animate-card-deal-in`, etc.)
+- Animations idle infinies : **max 1 par écran**, sur l'élément qui porte l'action en cours. Si une carte clignote pour guider l'œil, suspendre les `animate-float` décoratifs alentour.
+
 ## Gotchas
 
 - **Shared package is consumed from `dist/`** — if you change a type in `shared/src/types/` and front/back don't pick it up, you forgot to rebuild. `pnpm dev:shared` keeps watch.

@@ -13,6 +13,8 @@ import AboutModal from '../components/Footer/AboutModal';
 import ContactModal from '../components/Footer/ContactModal';
 import MentionsModal from '../components/Footer/MentionsModal';
 import { useToast } from '../components/Toast';
+import { Icon } from '@iconify/react';
+import { ACHIEVEMENTS } from '../utils/playerStats';
 
 // =====================================================================
 // StudioGallery - design-system preview for the Studio
@@ -79,6 +81,16 @@ const StudioGallery = () => {
   const [aboutOpen, setAboutOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
   const [mentionsOpen, setMentionsOpen] = useState(false);
+  const [achievementsOpen, setAchievementsOpen] = useState(false);
+  const [unlockedIds, setUnlockedIds] = useState<Set<string>>(() => new Set());
+  const toggleAchievement = (id: string) => {
+    setUnlockedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
   const [shareIdx, setShareIdx] = useState(3);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [shareLoading, setShareLoading] = useState(false);
@@ -207,10 +219,59 @@ const StudioGallery = () => {
           <CompactTile label="HowToPlayButton (déclencheur)">
             <HowToPlayButton onClick={() => setHowToPlayOpen(true)} />
           </CompactTile>
+          <CompactTile label="Achievements (mes succès)">
+            <Button text="Ouvrir" variant="warning" size="sm" onClick={() => setAchievementsOpen(true)} />
+          </CompactTile>
         </div>
       </Section>
 
-      <InfoModal isOpen={howToPlayOpen} onClose={() => setHowToPlayOpen(false)} title="Comment jouer ?">
+      {/* ====== Achievements toggles ====== */}
+      <Section title="Achievements - simulateur" subtitle="active / désactive pour voir l'état dans la modale">
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap gap-2">
+            {ACHIEVEMENTS.map((ach) => {
+              const on = unlockedIds.has(ach.id);
+              return (
+                <button
+                  key={ach.id}
+                  type="button"
+                  onClick={() => toggleAchievement(ach.id)}
+                  className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border font-mono text-xs transition-colors ${on
+                      ? 'border-amber-300/60 bg-amber-300/10 text-amber-100'
+                      : 'border-white/[0.08] bg-[#1a1d28] text-white/60 hover:bg-[#23273a]'
+                    }`}
+                  title={ach.description}
+                >
+                  <Icon icon={ach.icon} width={18} height={18} aria-hidden style={on ? undefined : { filter: 'grayscale(1)', opacity: 0.6 }} />
+                  <span>{ach.title}</span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex gap-2">
+            <Button
+              text="Tout débloquer"
+              variant="success"
+              size="sm"
+              onClick={() => setUnlockedIds(new Set(ACHIEVEMENTS.map((a) => a.id)))}
+            />
+            <Button
+              text="Tout reset"
+              variant="secondary"
+              size="sm"
+              onClick={() => setUnlockedIds(new Set())}
+            />
+            <Button
+              text="Ouvrir la modale"
+              variant="primary"
+              size="sm"
+              onClick={() => setAchievementsOpen(true)}
+            />
+          </div>
+        </div>
+      </Section>
+
+      <InfoModal isOpen={howToPlayOpen} onClose={() => setHowToPlayOpen(false)} title="Comment jouer ?" variant="comic">
         <HowToPlaySteps />
       </InfoModal>
       <ConfirmModal
@@ -230,6 +291,60 @@ const StudioGallery = () => {
       <AboutModal isOpen={aboutOpen} onClose={() => setAboutOpen(false)} />
       <ContactModal isOpen={contactOpen} onClose={() => setContactOpen(false)} />
       <MentionsModal isOpen={mentionsOpen} onClose={() => setMentionsOpen(false)} />
+
+      <InfoModal isOpen={achievementsOpen} onClose={() => setAchievementsOpen(false)} title="Mes succès">
+        <div className="flex flex-col gap-3">
+          <div className="grid grid-cols-3 gap-2 text-center mb-1">
+            <div className="bg-cream-player border-2 border-black rounded-xl p-2 stack-shadow-sm">
+              <div className="text-xl font-display font-bold tabular-nums">12</div>
+              <div className="text-[10px] uppercase tracking-wider font-display text-gray-600">Parties</div>
+            </div>
+            <div className="bg-cream-player border-2 border-black rounded-xl p-2 stack-shadow-sm">
+              <div className="text-xl font-display font-bold tabular-nums">8</div>
+              <div className="text-[10px] uppercase tracking-wider font-display text-gray-600">Meilleur score</div>
+            </div>
+            <div className="bg-cream-player border-2 border-black rounded-xl p-2 stack-shadow-sm">
+              <div className="text-xl font-display font-bold tabular-nums">4</div>
+              <div className="text-[10px] uppercase tracking-wider font-display text-gray-600">Devinettes</div>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            {ACHIEVEMENTS.map((ach) => {
+              const isUnlocked = unlockedIds.has(ach.id);
+              return (
+                <div
+                  key={ach.id}
+                  className={`flex items-center gap-3 p-2.5 rounded-xl border-2 border-black transition-all ${isUnlocked ? 'stack-shadow-sm' : 'bg-gray-100 opacity-60'}`}
+                  style={isUnlocked ? {
+                    background: 'linear-gradient(135deg, #FFE066 0%, #FFB347 100%)',
+                  } : undefined}
+                >
+                  <div
+                    className="flex-shrink-0"
+                    style={{
+                      filter: isUnlocked
+                        ? 'drop-shadow(1px 0 0 #000) drop-shadow(-1px 0 0 #000) drop-shadow(0 1px 0 #000) drop-shadow(0 -1px 0 #000) drop-shadow(1px 2px 0 rgba(0,0,0,0.35))'
+                        : 'grayscale(1)',
+                      opacity: isUnlocked ? 1 : 0.5,
+                    }}
+                  >
+                    <Icon icon={ach.icon} width={40} height={40} aria-hidden />
+                  </div>
+                  <div className="flex-1 text-left min-w-0">
+                    <div className="font-display font-bold text-sm text-gray-900 leading-tight">
+                      {ach.title}
+                    </div>
+                    <div className={`text-xs leading-snug ${isUnlocked ? 'text-gray-800' : 'text-gray-600'}`}>
+                      {ach.description}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </InfoModal>
 
       {/* ====== ShareCard preview ====== */}
       <Section title="ShareCard - aperçu" subtitle="image générée pour le bouton Partager en fin de partie">

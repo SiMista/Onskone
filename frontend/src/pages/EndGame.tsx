@@ -622,7 +622,11 @@ const EndGame: React.FC = () => {
             {leaderboard.map((entry, index) => {
               const isCurrentPlayer = entry.player.id === currentPlayer?.id;
               const isPodium = index < 3;
-              const podiumColors = ['#FFC700', '#C0C0C0', '#CD7F32'];
+              const podiumColors = [
+                'var(--color-podium-gold)',
+                'var(--color-podium-silver)',
+                'var(--color-podium-bronze)',
+              ];
               const round = roundByLeaderId.get(entry.player.id);
               const hasQuestion = !!(round && round.selectedQuestion);
               const isOpen = openPopoverFor === entry.player.id;
@@ -636,7 +640,7 @@ const EndGame: React.FC = () => {
               return (
                 <div
                   key={entry.player.id}
-                  className={`flex items-center justify-between p-2 md:p-3 rounded-xl border-[2.5px] border-black animate-player-pop ${isCurrentPlayer ? 'bg-[#FFF3C4] stack-shadow-sm' : 'bg-cream-player'}`}
+                  className={`flex items-center justify-between p-2 md:p-3 rounded-xl border-[2.5px] border-black animate-player-pop ${isCurrentPlayer ? 'bg-warning-100 stack-shadow-sm' : 'bg-cream-player'}`}
                   style={{ animationDelay: `${(showLeaderboard ? 0 : 99999) + index * 80}ms` }}
                 >
                   <div className="flex items-center gap-2 md:gap-3 min-w-0">

@@ -29,8 +29,8 @@ export const getDisplayText = (text: string): string => {
  * - révélée incorrecte : rouge
  */
 export const ANSWER_CARD_COLORS = {
-  correct: 'bg-[#30c94d]',
-  incorrect: 'bg-[#ff6b6b]',
+  correct: 'bg-success-500',
+  incorrect: 'bg-danger-400',
   unrevealed: 'bg-cream-answer',
 } as const;
 

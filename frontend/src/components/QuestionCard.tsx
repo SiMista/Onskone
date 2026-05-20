@@ -10,7 +10,7 @@ interface QuestionCardProps {
 }
 
 const QuestionCard: React.FC<QuestionCardProps> = ({ question, card, variant = 'full', subtitle, subtitleBadge }) => {
-  const color = card ? getCategoryColor(card.category) : '#18bbed';
+  const color = card ? getCategoryColor(card.category) : 'var(--color-brand-400)';
   const isCompact = variant === 'compact';
 
   return (

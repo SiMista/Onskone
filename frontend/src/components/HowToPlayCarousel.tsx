@@ -62,7 +62,7 @@ const STEPS: Step[] = [
   },
 ];
 
-const SLIDE_DURATION = 4000;
+const SLIDE_DURATION = 5000;
 
 const HowToPlayCarousel = () => {
   const [index, setIndex] = useState(0);

@@ -385,9 +385,9 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
                   className={`
                     relative border rounded-lg px-2.5 md:px-3 py-1.5 md:py-2 break-words whitespace-pre-wrap
                     animate-answer-drop-in
-                    ${noResponse ? 'bg-gray-100 border-gray-300' : isSelected ? 'bg-[#FFF3C4] border-black' : 'bg-white border-black stack-shadow-sm texture-paper'}
+                    ${noResponse ? 'bg-gray-100 border-gray-300' : isSelected ? 'bg-warning-100 border-black' : 'bg-white border-black stack-shadow-sm texture-paper'}
                     ${isLeader ? 'cursor-pointer md:cursor-grab active:cursor-grabbing select-none' : 'cursor-default'}
-                    ${isSelected ? 'scale-[1.02] ring-4 ring-[#FFE680]/60 stack-shadow translate-x-1 -translate-y-1' : ''}
+                    ${isSelected ? 'scale-[1.02] ring-4 ring-warning-350/60 stack-shadow translate-x-1 -translate-y-1' : ''}
                     ${isDragging ? 'card-dragging' : ''}
                     transition-all duration-200
                   `}
@@ -482,7 +482,7 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
                                   {/* Croix rouge par-dessus */}
                                   <path
                                     d="M6 6 L18 18 M18 6 L6 18"
-                                    stroke="#ef4444"
+                                    stroke="var(--color-danger-500)"
                                     strokeWidth="3.5"
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
