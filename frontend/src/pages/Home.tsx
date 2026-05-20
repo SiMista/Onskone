@@ -247,8 +247,8 @@ const Home = () => {
               >
                 <Icon
                   icon="fluent-emoji-flat:trophy"
-                  width={32}
-                  height={32}
+                  width={22}
+                  height={22}
                   aria-hidden
                 />
               </button>
@@ -303,7 +303,17 @@ const Home = () => {
             <Frame textAlign="left">
               <div className="w-full border-b-2 border-dashed border-gray-300 pb-3 mb-4 flex items-center gap-2">
                 <Icon icon="fluent-emoji-flat:direct-hit" width={26} height={26} aria-hidden />
-                <h2 className='font-accent text-display-lg text-gray-800 m-0'>Comment jouer ?</h2>
+                <h2 className="relative inline-block font-accent text-display-lg text-gray-900 m-0">
+                  <span
+                    aria-hidden
+                    className="absolute left-[-4px] right-[-6px] bottom-[2px] h-[55%] -z-0 bg-yellow-300"
+                    style={{
+                      transform: 'skew(-6deg, -1deg) rotate(-1deg)',
+                      borderRadius: '40% 60% 55% 45% / 60% 40% 60% 40%',
+                    }}
+                  />
+                  <span className="relative z-10">Comment jouer ?</span>
+                </h2>
               </div>
               <HowToPlayCarousel />
             </Frame>

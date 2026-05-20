@@ -13,7 +13,7 @@ import { useToast } from '../components/Toast';
 import ReportTrigger from '../components/ReportTrigger';
 import { recordGameEnd } from '../utils/playerStats';
 
-interface Tier {
+export interface Tier {
   max: number;
   midPct: number;
   title: string;
@@ -22,7 +22,7 @@ interface Tier {
   icon: string;
 }
 
-const TIERS: Tier[] = [
+export const TIERS: Tier[] = [
   {
     max: 20, midPct: 10, title: 'C\'est gênant là...', color: '#ff4f4f', icon: 'fluent-emoji-flat:neutral-face',
     messages: [

@@ -384,6 +384,12 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
                           {card.questions.map((question, qi) => {
                             const isSelected = selectedQuestion === question;
                             const dimmed = locked && !isSelected;
+                            const len = question.length;
+                            const questionTextClass =
+                              len > 140 ? 'text-[11px] md:text-xs'
+                              : len > 110 ? 'text-xs md:text-sm'
+                              : len > 80 ? 'text-[13px] md:text-[15px]'
+                              : 'text-sm md:text-base';
                             return (
                               <div
                                 key={qi}
@@ -403,7 +409,7 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
                                   ${dimmed ? 'opacity-50' : 'opacity-100'}
                                 `}
                               >
-                                <p className="text-sm md:text-base font-medium text-gray-800 leading-snug w-full">
+                                <p className={`${questionTextClass} font-medium text-gray-800 leading-snug w-full`}>
                                   {question}
                                 </p>
                               </div>
