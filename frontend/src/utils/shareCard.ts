@@ -142,7 +142,7 @@ export async function buildShareCard(opts: ShareCardOptions): Promise<Blob> {
     const logoW = 280;
     const logoH = (logo.height / logo.width) * logoW;
     const logoX = 85;
-    const logoY = 72;
+    const logoY = 115;
     ctx.drawImage(logo, logoX, logoY, logoW, logoH);
     logoBottomY = logoY + logoH;
   } catch {
@@ -156,7 +156,7 @@ export async function buildShareCard(opts: ShareCardOptions): Promise<Blob> {
   const glassX = 70;
   const glassY = logoBottomY + 60;
   const glassW = W - 140;
-  const glassH = 1010;
+  const glassH = 975;
   const glassR = 56;
 
   // ombre douce sous le glass
@@ -478,7 +478,7 @@ export async function buildShareCard(opts: ShareCardOptions): Promise<Blob> {
 
   // === CTA impactant en haut à droite, penché et avec fond ===
   ctx.save();
-  ctx.translate(W - 70, 135);
+  ctx.translate(W - 70, 185);
   ctx.rotate(6 * Math.PI / 180);
 
   // Dimensions du fond (sticker)
