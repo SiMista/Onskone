@@ -6,14 +6,16 @@
 import { studioStorage } from './studioStorage';
 
 const STORAGE_KEY = 'onskone:profile';
-const CURRENT_VERSION = 1;
+// v2 -> remplace bestScore par totalPoints, ajoute topFinishes.
+const CURRENT_VERSION = 2;
 
 export interface PlayerStats {
   version: number;
   gamesPlayed: number;
-  bestScore: number;
+  totalPoints: number;
   correctGuessesAsLeader: number;
   roundsAsLeader: number;
+  topFinishes: number;
   lastPseudo: string | null;
   lastAvatarId: number | null;
   unlockedAchievements: string[];
@@ -24,9 +26,10 @@ export interface PlayerStats {
 const DEFAULT_STATS: PlayerStats = {
   version: CURRENT_VERSION,
   gamesPlayed: 0,
-  bestScore: 0,
+  totalPoints: 0,
   correctGuessesAsLeader: 0,
   roundsAsLeader: 0,
+  topFinishes: 0,
   lastPseudo: null,
   lastAvatarId: null,
   unlockedAchievements: [],
@@ -38,6 +41,8 @@ export interface Achievement {
   title: string;
   description: string;
   icon: string;
+  /** Si vrai, le succès n'apparaît pas dans la liste tant qu'il n'est pas débloqué. */
+  hidden?: boolean;
 }
 
 export const ACHIEVEMENTS: Achievement[] = [
@@ -56,14 +61,33 @@ export const ACHIEVEMENTS: Achievement[] = [
   {
     id: 'veteran-50',
     title: 'Vétéran',
-    description: '50 parties terminées. La maison vous remercie.',
+    description: '50 parties terminées. Mais t’es pas fatigué ?',
     icon: 'fluent-emoji-flat:gem-stone',
   },
   {
     id: 'mind-reader-20',
     title: "Lecteur d'esprit",
-    description: '20 bonnes devinettes en tant que leader.',
+    description: 'Trouver 20 réponses en tant que pilier.',
     icon: 'fluent-emoji-flat:bullseye',
+  },
+  {
+    id: 'marathon',
+    title: 'Marathon',
+    description: 'Terminer une partie de 10 manches ou plus.',
+    icon: 'fluent-emoji-flat:running-shoe',
+  },
+  {
+    id: 'top-1-thrice',
+    title: 'Sur le podium',
+    description: "Finir 1er d'une partie, 3 fois.",
+    icon: 'fluent-emoji-flat:1st-place-medal',
+  },
+  {
+    id: 'zero-percent',
+    title: 'Catastrophe industrielle',
+    description: 'Atteindre 0% en équipe. Bravo (?).',
+    icon: 'fluent-emoji-flat:skull',
+    hidden: true,
   },
   {
     id: 'perfect-score',
@@ -112,6 +136,10 @@ interface GameEndPayload {
   teamPct: number;
   roundsAsLeader: number;
   correctGuessesAsLeader: number;
+  /** Nombre total de manches jouées dans la partie (pour marathon). */
+  roundsPlayed: number;
+  /** Rang final du joueur (1 = premier). */
+  finishRank: number;
 }
 
 /**
@@ -123,9 +151,10 @@ export function recordGameEnd(payload: GameEndPayload): Achievement[] {
   if (stats.recordedLobbies.includes(payload.lobbyCode)) return [];
 
   stats.gamesPlayed += 1;
-  stats.bestScore = Math.max(stats.bestScore, payload.playerScore);
+  stats.totalPoints += payload.playerScore;
   stats.roundsAsLeader += payload.roundsAsLeader;
   stats.correctGuessesAsLeader += payload.correctGuessesAsLeader;
+  if (payload.finishRank === 1) stats.topFinishes += 1;
   stats.recordedLobbies.push(payload.lobbyCode);
   // Borne à 50 derniers pour pas faire grossir la clé indéfiniment.
   if (stats.recordedLobbies.length > 50) {
@@ -146,6 +175,9 @@ export function recordGameEnd(payload: GameEndPayload): Achievement[] {
   if (stats.gamesPlayed >= 50) unlock('veteran-50');
   if (stats.correctGuessesAsLeader >= 20) unlock('mind-reader-20');
   if (payload.teamPct >= 100) unlock('perfect-score');
+  if (payload.roundsPlayed >= 10) unlock('marathon');
+  if (stats.topFinishes >= 3) unlock('top-1-thrice');
+  if (payload.teamPct <= 0) unlock('zero-percent');
 
   saveStats(stats);
   return newlyUnlocked;

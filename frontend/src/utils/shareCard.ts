@@ -65,6 +65,118 @@ const roundRectPath = (
   ctx.closePath();
 };
 
+const getTierEmojis = (pct: number): string[] => {
+  if (pct >= 85) return ['🤣', '😂'];
+  if (pct >= 65) return ['😎', '🔥'];
+  if (pct >= 40) return ['😅', '🙃'];
+  if (pct >= 20) return ['😬', '👀'];
+  return ['💀', '🫠'];
+};
+
+const drawEmojiSticker = (
+  ctx: CanvasRenderingContext2D,
+  emoji: string,
+  x: number,
+  y: number,
+  size: number,
+  rotationDeg: number
+) => {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate((rotationDeg * Math.PI) / 180);
+  ctx.shadowColor = 'rgba(0,0,0,0.40)';
+  ctx.shadowBlur = 14;
+  ctx.shadowOffsetX = 3;
+  ctx.shadowOffsetY = 6;
+  ctx.font = `${size}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Twemoji Mozilla", sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(emoji, 0, 0);
+  ctx.restore();
+};
+
+// Étoile 4 branches "sparkle" dessinée au canvas.
+const drawSparkle = (
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  color: string,
+  alpha: number = 1
+) => {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = color;
+  ctx.translate(x, y);
+  ctx.shadowColor = color;
+  ctx.shadowBlur = size * 0.6;
+  const long = size;
+  const short = size * 0.18;
+  ctx.beginPath();
+  ctx.moveTo(0, -long);
+  ctx.quadraticCurveTo(short, -short, long, 0);
+  ctx.quadraticCurveTo(short, short, 0, long);
+  ctx.quadraticCurveTo(-short, short, -long, 0);
+  ctx.quadraticCurveTo(-short, -short, 0, -long);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+};
+
+// Trait de feutre semi-transparent (jaune surligneur).
+const drawMarkerStroke = (
+  ctx: CanvasRenderingContext2D,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  color: string,
+  thickness: number,
+  bend: number = 10,
+  alpha: number = 0.55
+) => {
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = thickness;
+  ctx.lineCap = 'round';
+  ctx.globalAlpha = alpha;
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  const mx = (x1 + x2) / 2;
+  const my = (y1 + y2) / 2 + bend;
+  ctx.quadraticCurveTo(mx, my, x2, y2);
+  ctx.stroke();
+  ctx.restore();
+};
+
+// Confetti : rectangle ou triangle coloré incliné.
+const drawConfetti = (
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  rotationDeg: number,
+  color: string,
+  shape: 'rect' | 'triangle'
+) => {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate((rotationDeg * Math.PI) / 180);
+  ctx.fillStyle = color;
+  if (shape === 'triangle') {
+    ctx.beginPath();
+    ctx.moveTo(0, -h / 2);
+    ctx.lineTo(w / 2, h / 2);
+    ctx.lineTo(-w / 2, h / 2);
+    ctx.closePath();
+    ctx.fill();
+  } else {
+    ctx.fillRect(-w / 2, -h / 2, w, h);
+  }
+  ctx.restore();
+};
+
 // "Stack shadow" maison : 3 cartes noires décalées derrière l'élément.
 const drawStackShadow = (
   ctx: CanvasRenderingContext2D,
@@ -300,6 +412,20 @@ export async function buildShareCard(opts: ShareCardOptions): Promise<Blob> {
   ctx.fillText('%', cx - 30 + pctW / 2 + 18, cy + 10);
   ctx.restore();
 
+  // === Sparkles 4 branches autour de l'anneau ===
+  const sparkles: Array<{ a: number; r: number; s: number; alpha: number; color: string }> = [
+    { a: -65, r: radius + 60, s: 26, alpha: 1, color: '#ffffff' },
+    { a: -20, r: radius + 80, s: 18, alpha: 0.85, color: '#ffffff' },
+    { a: 40, r: radius + 50, s: 22, alpha: 0.95, color: opts.color },
+    { a: 110, r: radius + 70, s: 16, alpha: 0.7, color: '#ffffff' },
+    { a: 175, r: radius + 55, s: 24, alpha: 0.9, color: '#ffffff' },
+    { a: 230, r: radius + 90, s: 14, alpha: 0.65, color: opts.color },
+  ];
+  for (const sp of sparkles) {
+    const rad = (sp.a * Math.PI) / 180;
+    drawSparkle(ctx, cx + Math.cos(rad) * sp.r, cy + Math.sin(rad) * sp.r, sp.s, sp.color, sp.alpha);
+  }
+
   // === Titre verdict ===
   ctx.save();
   ctx.textAlign = 'center';
@@ -311,7 +437,13 @@ export async function buildShareCard(opts: ShareCardOptions): Promise<Blob> {
   ctx.shadowOffsetY = 2;
   const titleY = cy + radius + 130;
   ctx.fillText(opts.verdictTitle, cx, titleY);
+  const titleWidth = ctx.measureText(opts.verdictTitle).width;
   ctx.restore();
+
+  // Squiggle de surligneur jaune sous le titre verdict
+  const sqHalf = Math.min(titleWidth / 2 + 30, glassW / 2 - 60);
+  drawMarkerStroke(ctx, cx - sqHalf, titleY + 22, cx + sqHalf, titleY + 18, '#fbbf24', 14, -6, 0.6);
+  drawMarkerStroke(ctx, cx - sqHalf * 0.7, titleY + 36, cx + sqHalf * 0.85, titleY + 32, '#fbbf24', 8, 4, 0.4);
 
   // Message verdict
   ctx.save();
@@ -366,6 +498,27 @@ export async function buildShareCard(opts: ShareCardOptions): Promise<Blob> {
 
     const podiumColors = ['#FFC700', '#C0C0C0', '#CD7F32'];
     const podiumTextColors = ['#000000', '#1f2937', '#1f2937'];
+
+    // === Confettis derrière le gagnant ===
+    const confettiPalette = ['#1f5d90', '#18bbed', '#FFC700', '#fbbf24', '#22c55e', '#ef4444', '#a855f7'];
+    const winnerCardY = firstCardY;
+    const seedRand = (n: number) => {
+      const x = Math.sin(n * 9301 + 49297) * 233280;
+      return x - Math.floor(x);
+    };
+    for (let k = 0; k < 32; k++) {
+      const rx = cardX + seedRand(k + 1) * cardW;
+      const ry = winnerCardY - 30 + seedRand(k + 100) * (cardH + 60);
+      const rw = 14 + seedRand(k + 200) * 18;
+      const rh = 6 + seedRand(k + 300) * 10;
+      const rot = seedRand(k + 400) * 360;
+      const color = confettiPalette[Math.floor(seedRand(k + 500) * confettiPalette.length)];
+      const shape: 'rect' | 'triangle' = seedRand(k + 600) > 0.5 ? 'rect' : 'triangle';
+      ctx.save();
+      ctx.globalAlpha = 0.85;
+      drawConfetti(ctx, rx, ry, rw, rh, rot, color, shape);
+      ctx.restore();
+    }
 
     top.forEach((p, i) => {
       const y = firstCardY + i * (cardH + gap);
@@ -474,6 +627,30 @@ export async function buildShareCard(opts: ShareCardOptions): Promise<Blob> {
       );
       ctx.restore();
     });
+  }
+
+  // === Emojis stickers éparpillés (au-dessus du glass, sous le CTA) ===
+  const tierEmojis = getTierEmojis(pctClamped);
+  const isTopTier = pctClamped >= 65;
+  const stickers: Array<{ e: string; x: number; y: number; size: number; rot: number }> = [
+    // Verdict tier - 2 stickers bien visibles
+    { e: tierEmojis[0], x: 110, y: glassY + 50, size: 110, rot: -14 },
+    { e: tierEmojis[1], x: W - 110, y: glassY + glassH - 110, size: 100, rot: 12 },
+    // Bulle de pensée, côté gauche du verdict
+    { e: '💭', x: 95, y: glassY + 470, size: 78, rot: -10 },
+    // Point d'interrogation / exclamation - raccord avec le pattern de fond
+    { e: '❓', x: W - 95, y: glassY + 230, size: 72, rot: 14 },
+    { e: '❗', x: 70, y: glassY + glassH - 180, size: 64, rot: -8 },
+    // Confettis emoji autour du top 3 gagnant
+    { e: '🎉', x: 70, y: glassY + glassH + 220, size: 90, rot: -18 },
+    { e: '🎊', x: W - 70, y: glassY + glassH + 220, size: 90, rot: 18 },
+  ];
+  // Bonus top tier : encore plus festif
+  if (isTopTier) {
+    stickers.push({ e: '✨', x: W - 130, y: glassY + 60, size: 70, rot: 16 });
+  }
+  for (const st of stickers) {
+    drawEmojiSticker(ctx, st.e, st.x, st.y, st.size, st.rot);
   }
 
   // === CTA impactant en haut à droite, penché et avec fond ===

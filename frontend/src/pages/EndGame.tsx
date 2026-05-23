@@ -299,6 +299,9 @@ const EndGame: React.FC = () => {
       (sum, r) => sum + (r.scores?.[currentPlayer.id] || 0),
       0
     );
+    // Rang strict : 1er = pas d'autre joueur strictement au-dessus en score.
+    const maxScore = leaderboard.reduce((m, e) => Math.max(m, e.score), 0);
+    const finishRank = myScore === maxScore ? 1 : 2;
 
     const unlocked = recordGameEnd({
       lobbyCode,
@@ -306,11 +309,13 @@ const EndGame: React.FC = () => {
       teamPct: pct,
       roundsAsLeader,
       correctGuessesAsLeader,
+      roundsPlayed: rounds.length,
+      finishRank,
     });
 
     unlocked.forEach((ach, idx) => {
       setTimeout(() => {
-        showToast(`Succès débloqué : ${ach.title}`, 'success', 4500);
+        showToast(`Succès débloqué - ${ach.title}`, 'achievement', 4500);
       }, 2000 + idx * 1200);
     });
   }, [lobbyCode, currentPlayer, leaderboard, rounds, pct, showToast]);

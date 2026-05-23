@@ -10,6 +10,7 @@ import * as LobbyManager from './managers/LobbyManager.js';
 import { stopAllRateLimiters } from './utils/rateLimiter.js';
 import ticketsRouter from './routes/tickets.js';
 import adminDataRouter from './routes/adminData.js';
+import { printBanner } from './utils/banner.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -70,7 +71,7 @@ const io = new Server(server, {
 new SocketHandler(io);
 
 // Démarrer le service de nettoyage des lobbies inactifs
-LobbyManager.startCleanupInterval();
+LobbyManager.startCleanupInterval(io);
 
 // Middleware CORS pour les routes HTTP REST (tickets + admin)
 app.use((req, res, next) => {
@@ -123,6 +124,7 @@ if (fs.existsSync(FRONTEND_DIST)) {
 // Lancer le serveur HTTP sur le port 5000
 const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
+  printBanner();
   console.log(`Server running on http://localhost:${PORT}`);
 });
 

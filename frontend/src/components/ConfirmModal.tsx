@@ -36,16 +36,8 @@ const ConfirmModal = ({
         <div className="relative bg-white border-[3px] border-black rounded-[28px] texture-paper overflow-hidden flex flex-col stack-shadow-lg">
           {/* Header */}
           <div className="relative px-5 pt-6 pb-3 flex items-start justify-between gap-3">
-            <h2 className="relative inline-block text-lg md:text-xl font-display font-bold text-gray-900 m-0 tracking-tight">
-              <span
-                aria-hidden
-                className="absolute left-[-4px] right-[-6px] bottom-[2px] h-[55%] -z-0 bg-yellow-300"
-                style={{
-                  transform: 'skew(-6deg, -1deg) rotate(-1deg)',
-                  borderRadius: '40% 60% 55% 45% / 60% 40% 60% 40%',
-                }}
-              />
-              <span className="relative z-10">{title}</span>
+            <h2 className="marker-highlight text-lg md:text-xl font-display font-bold text-gray-900 m-0 tracking-tight">
+              {title}
             </h2>
 
             <button

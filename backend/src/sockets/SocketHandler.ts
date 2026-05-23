@@ -624,7 +624,7 @@ export class SocketHandler {
             // Update selected decks (host only)
             socket.on('updateSelectedDecks', (data) => {
                 try {
-                    if (!rateLimiters.general.isAllowed(socket.id)) {
+                    if (!rateLimiters.lobbySettings.isAllowed(socket.id)) {
                         socket.emit('error', { message: 'Trop de requêtes. Veuillez patienter.' });
                         return;
                     }
@@ -677,7 +677,7 @@ export class SocketHandler {
             // Update Game Mode (host only)
             socket.on('updateGameMode', (data) => {
                 try {
-                    if (!rateLimiters.general.isAllowed(socket.id)) {
+                    if (!rateLimiters.lobbySettings.isAllowed(socket.id)) {
                         socket.emit('error', { message: 'Trop de requêtes. Veuillez patienter.' });
                         return;
                     }
@@ -723,7 +723,7 @@ export class SocketHandler {
             // Update Guess My Answer Mode (host only)
             socket.on('updateGuessMyAnswerMode', (data) => {
                 try {
-                    if (!rateLimiters.general.isAllowed(socket.id)) {
+                    if (!rateLimiters.lobbySettings.isAllowed(socket.id)) {
                         socket.emit('error', { message: 'Trop de requêtes. Veuillez patienter.' });
                         return;
                     }
