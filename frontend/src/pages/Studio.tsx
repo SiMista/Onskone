@@ -130,17 +130,6 @@ const Studio = () => {
     });
   };
 
-  const resetToDefaults = () => {
-    if (running) return;
-    slots.forEach((_, i) => purgeStudioSlot(i));
-    setSlots([makeSlot(0), makeSlot(1), makeSlot(2)]);
-    setLayout('cols3');
-    setZoom(0.8);
-    setDebugTimers(true);
-    setSlotStates({});
-    setLobbyCode(null);
-  };
-
   const start = () => {
     slots.forEach((_, i) => purgeStudioSlot(i));
     // Garantir l'unicité des pseudos & avatars : deux slots avec le même
@@ -274,7 +263,6 @@ const Studio = () => {
         onAddSlot={addSlot}
         onRemoveLastSlot={removeLastSlot}
         onToggleAllBots={toggleAllBots}
-        onResetToDefaults={resetToDefaults}
         onReloadAll={reloadAll}
         onStart={start}
         onReset={reset}
