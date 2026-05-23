@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Button from '../../components/Button';
 import { buildShareCard, shareBlob } from '../../utils/shareCard';
 import BackButton from '../../components/BackButton';
@@ -87,7 +87,7 @@ export const Gallery = () => {
   const [shareIdx, setShareIdx] = useState(3);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [shareLoading, setShareLoading] = useState(false);
-  const shareBlobRef = (useState<{ blob: Blob | null }>({ blob: null })[0]);
+  const shareBlobRef = useRef<Blob | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -104,7 +104,7 @@ export const Gallery = () => {
     })
       .then(blob => {
         if (cancelled) return;
-        shareBlobRef.blob = blob;
+        shareBlobRef.current = blob;
         url = URL.createObjectURL(blob);
         setShareUrl(prev => {
           if (prev) URL.revokeObjectURL(prev);
@@ -119,12 +119,12 @@ export const Gallery = () => {
     return () => {
       cancelled = true;
     };
-  }, [shareIdx, shareBlobRef]);
+  }, [shareIdx]);
 
   const handleSharePreview = async () => {
-    if (!shareBlobRef.blob) return;
+    if (!shareBlobRef.current) return;
     const preset = SHARE_PRESETS[shareIdx];
-    const result = await shareBlob(shareBlobRef.blob, `${preset.title} - ${preset.pct}%`);
+    const result = await shareBlob(shareBlobRef.current, `${preset.title} - ${preset.pct}%`);
     if (result === 'copied') showToast('Image copiée !', 'success');
     else if (result === 'shared') showToast('Partagé ✓', 'success');
     else if (result === 'failed') showToast('Partage non supporté', 'warning');

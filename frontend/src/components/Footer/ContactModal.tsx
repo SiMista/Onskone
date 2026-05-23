@@ -52,7 +52,8 @@ const CHANNELS: Channel[] = [
     label: 'Email',
     handle: CONTACT_EMAIL,
     icon: 'fluent-emoji-flat:envelope-with-arrow',
-    tileClass: 'bg-brand-500 text-white',
+    tileClass:
+      'bg-gradient-to-br from-[#60A5FA] via-[#3B82F6] to-[#1E40AF] text-white',
     handleClass: 'text-white/85',
     arrowClass: 'text-white/85',
   },
@@ -67,7 +68,7 @@ const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) => {
     >
       <div className="flex flex-col gap-3 pb-2">
         <p className="text-gray-700 text-sm leading-relaxed m-0">
-          Tu veux nous contacter mais tu sais pas comment ? T'inquète, écris-nous où tu veux, ce sera un plaisir de te répondre :
+          Tu veux nous contacter mais tu sais pas comment ? T'inquiète, écris-nous où tu veux, ce sera un plaisir de te répondre :
         </p>
         <ul className="list-none p-0 m-0 flex flex-col gap-2.5">
           {CHANNELS.map((c) => {

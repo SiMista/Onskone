@@ -7,9 +7,16 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: ReactNode;
+  /**
+   * Bloc affiché entre le séparateur pointillé et la zone scrollable, en dehors
+   * du scroll. Utile pour une barre d'onglets ou tout sous-header qui doit
+   * rester visible et collé au header sans qu'on tente de le rendre sticky
+   * (ce qui laisserait toujours un gap avec le padding du scroll body).
+   */
+  subHeader?: ReactNode;
 }
 
-const Modal = ({ isOpen, onClose, title, children }: ModalProps) => {
+const Modal = ({ isOpen, onClose, title, children, subHeader }: ModalProps) => {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const showFade = useScrollFade(scrollRef);
 
@@ -42,6 +49,12 @@ const Modal = ({ isOpen, onClose, title, children }: ModalProps) => {
 
           {/* Séparateur pointillé */}
           <div className="mx-5 border-t-[2px] border-dashed border-black/35" />
+
+          {/* Sous-header optionnel (ex : onglets) - posé entre le séparateur
+              et le scroll body, donc PAS scrollable et PAS sticky. */}
+          {subHeader && (
+            <div className="relative bg-white px-5 pt-2">{subHeader}</div>
+          )}
 
           {/* Body */}
           <div

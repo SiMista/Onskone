@@ -164,7 +164,7 @@ const Home = () => {
           const stats = getStats();
           const unlocked = new Set(stats.unlockedAchievements);
           return (
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3 pb-10">
               {/* Stats top : chiffres + labels rééquilibrés (chiffres plus modestes,
                   labels plus lisibles - avant : text-xl vs text-[10px], trop disproportionné). */}
               <div className="grid grid-cols-2 gap-2 text-center mb-1">

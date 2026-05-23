@@ -12,13 +12,27 @@ type Step = {
 
 const ACCENT = '#F5B800';
 
+// Surligneurs : réutilisent l'utility .marker-highlight (même effet feutre que
+// les titres de modales), juste avec une couleur override par rôle.
+const Pilier = ({ children }: { children: ReactNode }) => (
+  <span className="marker-highlight marker-highlight--inline font-bold">{children}</span>
+);
+const Joueurs = ({ children }: { children: ReactNode }) => (
+  <span
+    className="marker-highlight marker-highlight--inline font-bold"
+    style={{ ['--marker-color' as string]: 'var(--color-brand-200)' }}
+  >
+    {children}
+  </span>
+);
+
 const STEPS: Step[] = [
   {
     n: 1,
     image: step1Img,
     text: (
       <>
-        Un joueur devient <b>pilier</b> et choisit une question parmi celles des trois cartes proposées.
+        Chaque manche, un joueur devient <Pilier>pilier</Pilier> et choisit une question parmis celles proposées.
       </>
     ),
   },
@@ -27,7 +41,7 @@ const STEPS: Step[] = [
     image: step2Img,
     text: (
       <>
-        Chacun reçoit la question et écrit sa réponse, <b>anonymement</b>.
+        <Joueurs>Les joueurs</Joueurs> reçoivent la question et écrivent leur réponse, <b>anonymement</b>.
       </>
     ),
   },
@@ -36,7 +50,7 @@ const STEPS: Step[] = [
     image: step3Img,
     text: (
       <>
-        Le pilier ré-attribue chaque réponse et doit deviner qui l'a écrite. Les joueurs, <b>montrent leur écran</b> pour découvrir celle qu'on leur a donnée.
+        <Pilier>Le pilier</Pilier> doit deviner qui l'a écrite et ré-attribue chaque réponse. <Joueurs>Les joueurs</Joueurs> montrent leur écran pour découvrir celle qu'on leur a donnée.
       </>
     ),
   },
@@ -45,91 +59,152 @@ const STEPS: Step[] = [
     image: step4Img,
     text: (
       <>
-        On dévoile qui à écrit quoi et le pilier marque des points <b>pour l'équipe</b> si il a bien deviné.
+        <Pilier>Le pilier</Pilier> dévoile qui a écrit quoi et il marque des points pour le groupe s'il a bien deviné.
       </>
     ),
   },
 ];
 
-const SLIDE_DURATION = 5000;
+const SLIDE_DURATION = 7000;
+// Le step 3 a un texte plus long : on lui donne 1s de plus pour le lire.
+const STEP_DURATION_OVERRIDES: Record<number, number> = {
+  2: 9000,
+};
+const getStepDuration = (i: number) => STEP_DURATION_OVERRIDES[i] ?? SLIDE_DURATION;
 
 const HowToPlayCarousel = () => {
   const [index, setIndex] = useState(0);
   const [direction, setDirection] = useState<1 | -1>(1);
   const [autoTick, setAutoTick] = useState(0); // bump to restart fill animation
+  const [isPaused, setIsPaused] = useState(false);
+  const [dragX, setDragX] = useState(0);
   const touchStartX = useRef<number | null>(null);
+  // Suivi du temps écoulé sur l'étape courante pour reprendre la lecture exactement
+  // là où on s'est arrêté (sinon le compteur se désynchroniserait à la reprise).
+  const slideStartRef = useRef<number>(Date.now());
+  const elapsedRef = useRef<number>(0);
 
   const goTo = (i: number) => {
     const target = (i + STEPS.length) % STEPS.length;
     setDirection(target > index || (index === STEPS.length - 1 && target === 0) ? 1 : -1);
     setIndex(target);
     setAutoTick((t) => t + 1);
+    setIsPaused(false);
   };
   const prev = () => goTo(index - 1);
   const next = () => goTo(index + 1);
 
-  // Auto-play 4s par étape
+  // Reset du temps écoulé à chaque changement d'étape
   useEffect(() => {
+    elapsedRef.current = 0;
+  }, [index, autoTick]);
+
+  // Auto-play : reprend exactement avec le temps restant après une pause
+  useEffect(() => {
+    if (isPaused) {
+      elapsedRef.current = Date.now() - slideStartRef.current;
+      return;
+    }
+    const remaining = Math.max(0, getStepDuration(index) - elapsedRef.current);
+    slideStartRef.current = Date.now() - elapsedRef.current;
     const id = window.setTimeout(() => {
       setDirection(1);
       setIndex((i) => (i + 1) % STEPS.length);
       setAutoTick((t) => t + 1);
-    }, SLIDE_DURATION);
+    }, remaining);
     return () => window.clearTimeout(id);
-  }, [index, autoTick]);
+  }, [index, autoTick, isPaused]);
 
   const onTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
+    setIsPaused(true);
+  };
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const delta = e.changedTouches[0].clientX - touchStartX.current;
+    // Résistance élastique pour un suivi fluide sans débordement
+    setDragX(Math.sign(delta) * Math.min(Math.abs(delta), 120));
   };
   const onTouchEnd = (e: React.TouchEvent) => {
     if (touchStartX.current === null) return;
     const delta = e.changedTouches[0].clientX - touchStartX.current;
+    touchStartX.current = null;
+    setDragX(0);
     if (Math.abs(delta) > 40) {
       delta < 0 ? next() : prev();
+    } else {
+      setIsPaused(false);
     }
+  };
+  const onTouchCancel = () => {
     touchStartX.current = null;
+    setDragX(0);
+    setIsPaused(false);
   };
 
   const step = STEPS[index];
+  const isDragging = dragX !== 0;
 
   return (
-    <div className="w-full flex flex-col items-center gap-4 select-none pt-4">
+    <div
+      className="w-full flex flex-col items-center gap-4 select-none pt-4 touch-pan-y"
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+      onTouchCancel={onTouchCancel}
+      style={{ touchAction: 'pan-y' }}
+    >
       {/* Illustration */}
       <div className="relative w-full">
-        <div className="relative w-full" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+        <div className="relative w-full">
+          {/* overflow-x: clip + overflow-y: visible -> on bloque le débordement
+              horizontal du drag mais on laisse le halo / l'image dépasser verticalement. */}
           <div
-            className="relative w-full flex items-center justify-center"
-            style={{ aspectRatio: '1 / 0.78' }}
+            className="relative w-full flex items-center justify-center h-[210px] md:h-[240px]"
+            style={{ overflowX: 'clip', overflowY: 'visible' }}
           >
-            {/* Illustration centrale - animée à chaque changement */}
+            {/* Wrapper de drag : applique le translateX du doigt et revient à 0 sans
+                relancer l'anim d'apparition de l'illustration. */}
             <div
-              key={index}
               className="absolute inset-0 flex items-center justify-center"
               style={{
-                animation: `comic-slide-${direction === 1 ? 'r' : 'l'} 0.45s cubic-bezier(0.34, 1.4, 0.5, 1) both`,
+                transform: `translateX(${dragX}px)`,
+                transition: isDragging ? 'none' : 'transform 0.25s ease-out',
               }}
             >
+              {/* Illustration centrale - animée uniquement quand l'étape change */}
               <div
-                className="relative"
+                key={index}
+                className="flex items-center justify-center"
                 style={{
-                  filter: 'drop-shadow(3px 4px 0 rgba(0,0,0,0.18))',
+                  animation: `comic-slide-${direction === 1 ? 'r' : 'l'} 0.45s cubic-bezier(0.34, 1.4, 0.5, 1) both`,
                 }}
               >
-                {/* Halo jaune derrière */}
-                <span
-                  aria-hidden
-                  className="absolute inset-0 m-auto w-[130%] h-[130%] -z-0 rounded-full"
+                <div
+                  className="relative"
                   style={{
-                    background: `radial-gradient(circle, ${ACCENT}44 0%, transparent 65%)`,
+                    filter: 'drop-shadow(3px 4px 0 rgba(0,0,0,0.18))',
                   }}
-                />
-                <img
-                  src={step.image}
-                  alt=""
-                  aria-hidden
-                  draggable={false}
-                  className="relative z-10 w-[260px] h-[260px] md:w-[300px] md:h-[300px] object-contain"
-                />
+                >
+                  {/* Halo jaune derrière - libre de déborder grâce à overflow-y: visible */}
+                  <span
+                    aria-hidden
+                    className="absolute top-1/2 left-1/2 -z-0 rounded-full"
+                    style={{
+                      width: '75%',
+                      height: '75%',
+                      transform: 'translate(-50%, -50%)',
+                      background: `radial-gradient(circle, ${ACCENT}26 0%, transparent 65%)`,
+                    }}
+                  />
+                  <img
+                    src={step.image}
+                    alt=""
+                    aria-hidden
+                    draggable={false}
+                    className="relative z-10 w-[280px] h-[280px] md:w-[370px] md:h-[370px] object-contain"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -149,7 +224,8 @@ const HowToPlayCarousel = () => {
               className="absolute left-0 right-0 bottom-0"
               style={{
                 backgroundColor: ACCENT,
-                animation: `bubble-fill ${SLIDE_DURATION}ms linear forwards`,
+                animation: `bubble-fill ${getStepDuration(index)}ms linear forwards`,
+                animationPlayState: isPaused ? 'paused' : 'running',
               }}
             />
             <span className="relative z-10">{step.n}</span>
@@ -157,15 +233,40 @@ const HowToPlayCarousel = () => {
         </div>
       </div>
 
-      {/* Texte de l'étape */}
-      <div
-        key={`text-${index}`}
-        className="text-center px-1"
-        style={{ animation: 'comic-fade-up 0.4s ease-out both' }}
-      >
-        <p className="text-sm md:text-base text-gray-800 m-0 leading-snug">
-          {step.text}
-        </p>
+      {/* Texte de l'étape - tous les steps sont empilés dans la même cellule grid
+          pour que le conteneur prenne la hauteur du plus long et ne tressaute pas.
+          On applique le translateX du drag sur un wrapper externe pour que le texte
+          suive le doigt sans rejouer l'anim au relâchement. */}
+      <div className="w-full px-1 overflow-hidden">
+        <div
+          className="grid w-full"
+          style={{
+            transform: `translateX(${dragX}px)`,
+            transition: isDragging ? 'none' : 'transform 0.25s ease-out',
+          }}
+        >
+          {STEPS.map((s, i) => {
+            const active = i === index;
+            return (
+              <div
+                key={s.n}
+                aria-hidden={!active}
+                className="text-center"
+                style={{
+                  gridArea: '1 / 1',
+                  visibility: active ? 'visible' : 'hidden',
+                  animation: active
+                    ? `comic-slide-${direction === 1 ? 'r' : 'l'} 0.45s cubic-bezier(0.34, 1.4, 0.5, 1) both`
+                    : undefined,
+                }}
+              >
+                <p className="text-sm md:text-base text-gray-800 m-0 leading-snug">
+                  {s.text}
+                </p>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Stepper dots */}
