@@ -17,7 +17,6 @@ interface ToolbarProps {
   onAddSlot: () => void;
   onRemoveLastSlot: () => void;
   onToggleAllBots: () => void;
-  onResetToDefaults: () => void;
   onReloadAll: () => void;
   onStart: () => void;
   onReset: () => void;
@@ -28,7 +27,7 @@ export const Toolbar = ({
   view, setView,
   slots, layout, setLayout, zoom, setZoom, debugTimers, setDebugTimers,
   running, allBots, burstCount, setBurstCount,
-  onAddSlot, onRemoveLastSlot, onToggleAllBots, onResetToDefaults,
+  onAddSlot, onRemoveLastSlot, onToggleAllBots,
   onReloadAll, onStart, onReset, onTriggerStress,
 }: ToolbarProps) => (
   <div className="sticky top-0 z-30 backdrop-blur-xl bg-[#0a0c12]/85 border-b border-white/[0.07]">
