@@ -79,6 +79,7 @@ const TiersSection = () => {
       verdictTitle: previewTier.title,
       verdictMessage: msg,
       color: previewTier.color,
+      tierEmoji: previewTier.emoji,
       topPlayers: PREVIEW_TOP_PLAYERS,
     })
       .then((blob) => {

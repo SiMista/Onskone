@@ -201,6 +201,10 @@ const Studio = () => {
       params.set('playerName', slot.name);
       params.set('avatarId', String(slot.avatarId));
       params.set('debug', debugTimers ? '1' : '0');
+      // Encode bot state in the URL so the iframe boots already in bot mode -
+      // avoids the race with the lobby auto-start (which reads sessionStorage
+      // before the parent's postMessage might arrive).
+      params.set('bot', slot.bot ? '1' : '0');
       if (!isRunning) return `${base}/?${params.toString()}`;
       if (index === 0) {
         params.set('autoCreate', '1');

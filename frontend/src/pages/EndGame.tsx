@@ -20,11 +20,12 @@ export interface Tier {
   messages: string[];
   color: string;
   icon: string;
+  emoji: string;
 }
 
 export const TIERS: Tier[] = [
   {
-    max: 20, midPct: 10, title: 'C\'est gênant là...', color: '#ff4f4f', icon: 'fluent-emoji-flat:neutral-face',
+    max: 20, midPct: 10, title: 'C\'est gênant là...', color: '#ff4f4f', icon: 'fluent-emoji-flat:neutral-face', emoji: '😐',
     messages: [
       'Vous vous êtes croisés une fois dans un ascenseur en 2019, c\'est ça ?',
       'Vous partagez le wifi, c\'est déjà une base solide.',
@@ -33,7 +34,7 @@ export const TIERS: Tier[] = [
     ],
   },
   {
-    max: 40, midPct: 30, title: 'Pas encore ça', color: '#ff8c3a', icon: 'fluent-emoji-flat:pinching-hand',
+    max: 40, midPct: 30, title: 'Pas encore ça', color: '#ff8c3a', icon: 'fluent-emoji-flat:eyes', emoji: '👀',
     messages: [
       'Les bases sont là, reste juste à construire au-dessus.',
       'Vous avancez, doucement mais sûrement… enfin surtout doucement.',
@@ -41,7 +42,7 @@ export const TIERS: Tier[] = [
     ],
   },
   {
-    max: 60, midPct: 50, title: 'Pas mal, pas mal', color: '#ffc700', icon: 'fluent-emoji-flat:handshake',
+    max: 60, midPct: 50, title: 'Pas mal, pas mal', color: '#ffc700', icon: 'fluent-emoji-flat:handshake', emoji: '🤝',
     messages: [
       'Un pas de plus et vous êtes une vraie team.',
       'Vous pourriez covoiturer 3h sans tuer personne. C\'est déjà énorme.',
@@ -49,7 +50,7 @@ export const TIERS: Tier[] = [
     ],
   },
   {
-    max: 80, midPct: 70, title: 'Super team', color: '#8bd94d', icon: 'fluent-emoji-flat:sparkles',
+    max: 80, midPct: 70, title: 'Super team', color: '#8bd94d', icon: 'fluent-emoji-flat:sparkles', emoji: '✨',
     messages: [
       'Vous vous captez presque sans parler, c\'est beau à voir.',
       'Vous finissez les phrases des autres, et aussi leurs frites.',
@@ -57,7 +58,7 @@ export const TIERS: Tier[] = [
     ],
   },
   {
-    max: 99, midPct: 90, title: 'Inséparables', color: '#30c94d', icon: 'fluent-emoji-flat:people-hugging',
+    max: 99, midPct: 90, title: 'Inséparables', color: '#30c94d', icon: 'fluent-emoji-flat:people-hugging', emoji: '🫂',
     messages: [
       'À ce stade c\'est plus de l\'amitié, c\'est de la famille.',
       'Chaque moment ensemble devient une anecdote.',
@@ -65,7 +66,7 @@ export const TIERS: Tier[] = [
     ],
   },
   {
-    max: 100, midPct: 100, title: 'Onskoné !', color: '#b46cff', icon: 'fluent-emoji-flat:partying-face',
+    max: 100, midPct: 100, title: 'Onskoné !', color: '#b46cff', icon: 'fluent-emoji-flat:partying-face', emoji: '🥳',
     messages: [
       'Score parfait. Vous êtes la même personne en plusieurs exemplaires.',
       'À ce stade vous partagez l\'ADN, le mot de passe Wi-Fi et la même vie',
@@ -343,6 +344,7 @@ const EndGame: React.FC = () => {
       verdictTitle: verdict.title,
       verdictMessage: verdictMessage,
       color: verdict.color,
+      tierEmoji: verdict.emoji,
       topPlayers: leaderboard.slice(0, 3).map(e => ({
         name: e.player.name,
         score: e.score,
