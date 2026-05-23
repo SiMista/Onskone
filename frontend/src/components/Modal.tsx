@@ -1,5 +1,6 @@
-import { ReactNode } from 'react';
+import { ReactNode, useRef } from 'react';
 import { LuX } from 'react-icons/lu';
+import { useScrollFade } from '../hooks/useScrollFade';
 
 interface ModalProps {
   isOpen: boolean;
@@ -9,6 +10,9 @@ interface ModalProps {
 }
 
 const Modal = ({ isOpen, onClose, title, children }: ModalProps) => {
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const showFade = useScrollFade(scrollRef);
+
   if (!isOpen) return null;
 
   return (
@@ -40,9 +44,18 @@ const Modal = ({ isOpen, onClose, title, children }: ModalProps) => {
           <div className="mx-5 border-t-[2px] border-dashed border-black/35" />
 
           {/* Body */}
-          <div className="relative px-5 py-4 text-gray-800 overflow-y-auto">
+          <div
+            ref={scrollRef}
+            className="relative px-5 py-4 text-gray-800 overflow-y-auto"
+          >
             {children}
           </div>
+
+          {/* Fade blanc en bas - affiché seulement quand il reste du contenu à scroller. */}
+          <div
+            aria-hidden
+            className={`pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-white via-white/85 to-transparent transition-opacity duration-150 ${showFade ? 'opacity-100' : 'opacity-0'}`}
+          />
         </div>
       </div>
     </div>

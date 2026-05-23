@@ -150,6 +150,7 @@ const Home = () => {
         onClose={() => setIsInfoOpen(false)}
         title="Comment jouer ?"
         variant="comic"
+        disableScrollFade
       >
         <HowToPlayCarousel />
       </InfoModal>

@@ -1,6 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, ReactNode } from 'react';
 import { Icon } from '@iconify/react';
-import { LuX } from 'react-icons/lu';
 
 export type ToastVariant = 'info' | 'success' | 'warning' | 'error' | 'achievement';
 
@@ -114,7 +113,7 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
             <div
               key={t.id}
               role="status"
-              className={`pointer-events-auto w-full flex items-center gap-2.5 px-3 py-2.5 border-[2.5px] border-black rounded-xl stack-shadow-sm texture-paper ${isExiting ? 'animate-toast-out' : 'animate-toast-drop'}`}
+              className={`relative pointer-events-auto w-full flex items-center gap-2.5 px-3 py-2.5 border-[2.5px] border-black rounded-xl stack-shadow-sm texture-paper overflow-hidden ${isExiting ? 'animate-toast-out' : 'animate-toast-drop'}`}
               style={isGradient ? { backgroundImage: style.bg } : { backgroundColor: style.bg }}
             >
               <Icon
@@ -126,14 +125,15 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
                 style={style.iconOutlined ? { filter: OUTLINE_FILTER } : undefined}
               />
               <p className="flex-1 text-sm font-display font-bold text-gray-900 m-0 leading-tight">{t.message}</p>
-              <button
-                type="button"
-                onClick={() => dismiss(t.id)}
-                className="shrink-0 w-7 h-7 flex items-center justify-center active:scale-95 transition-transform text-gray-600 cursor-pointer"
-                aria-label="Fermer"
-              >
-                <LuX size={14} />
-              </button>
+              <span
+                aria-hidden
+                className="absolute left-0 bottom-0 h-[3px] bg-black/35 origin-left"
+                style={
+                  isExiting
+                    ? { width: '100%', transform: 'scaleX(0)' }
+                    : { width: '100%', animation: `toast-countdown-bar ${t.duration}ms linear forwards` }
+                }
+              />
             </div>
           );
         })}

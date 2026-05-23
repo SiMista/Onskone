@@ -61,7 +61,7 @@ export const ACHIEVEMENTS: Achievement[] = [
   {
     id: 'veteran-50',
     title: 'Vétéran',
-    description: '50 parties terminées. Mais t’es pas fatigué ?',
+    description: '25 parties terminées. Mais t’es pas fatigué ?',
     icon: 'fluent-emoji-flat:gem-stone',
   },
   {
@@ -172,7 +172,7 @@ export function recordGameEnd(payload: GameEndPayload): Achievement[] {
 
   if (stats.gamesPlayed >= 1) unlock('first-game');
   if (stats.gamesPlayed >= 10) unlock('loyal-10');
-  if (stats.gamesPlayed >= 50) unlock('veteran-50');
+  if (stats.gamesPlayed >= 25) unlock('veteran-50');
   if (stats.correctGuessesAsLeader >= 20) unlock('mind-reader-20');
   if (payload.teamPct >= 100) unlock('perfect-score');
   if (payload.roundsPlayed >= 10) unlock('marathon');

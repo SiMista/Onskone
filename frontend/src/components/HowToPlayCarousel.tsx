@@ -1,10 +1,13 @@
 import { useState, useRef, useEffect, ReactNode } from 'react';
-import { Icon } from '@iconify/react';
 import { LuChevronLeft, LuChevronRight } from 'react-icons/lu';
+import step1Img from '../assets/images/home/1-question_selection.png';
+import step2Img from '../assets/images/home/2-answering.png';
+import step3Img from '../assets/images/home/3-guessing.png';
+import step4Img from '../assets/images/home/4-reveal.png';
 
 type Step = {
   n: number;
-  icon: string;
+  image: string;
   title: string;
   text: ReactNode;
   tint: string; // bg color of the comic panel
@@ -14,7 +17,7 @@ type Step = {
 const STEPS: Step[] = [
   {
     n: 1,
-    icon: 'fluent-emoji-flat:crown',
+    image: step1Img,
     title: 'Le pilier',
     text: (
       <>
@@ -26,7 +29,7 @@ const STEPS: Step[] = [
   },
   {
     n: 2,
-    icon: 'fluent-emoji-flat:memo',
+    image: step2Img,
     title: 'Tout le monde répond',
     text: (
       <>
@@ -38,7 +41,7 @@ const STEPS: Step[] = [
   },
   {
     n: 3,
-    icon: 'fluent-emoji-flat:magnifying-glass-tilted-left',
+    image: step3Img,
     title: 'L\'enquête du pilier',
     text: (
       <>
@@ -50,7 +53,7 @@ const STEPS: Step[] = [
   },
   {
     n: 4,
-    icon: 'fluent-emoji-flat:party-popper',
+    image: step4Img,
     title: 'La révélation',
     text: (
       <>
@@ -104,7 +107,7 @@ const HowToPlayCarousel = () => {
   const step = STEPS[index];
 
   return (
-    <div className="w-full flex flex-col items-center gap-4 select-none">
+    <div className="w-full flex flex-col items-center gap-4 select-none pt-4">
       {/* Comic panel + flèches */}
       <div className="relative w-full flex items-center gap-2">
         {/* Flèche gauche */}
@@ -117,16 +120,15 @@ const HowToPlayCarousel = () => {
           <LuChevronLeft size={28} strokeWidth={3} />
         </button>
 
-        {/* Panel */}
+        {/* Panel wrapper - laisse déborder le sticker */}
+        <div className="relative flex-1" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
         <div
-          className="relative flex-1 overflow-hidden rounded-2xl border-[2.5px] border-black texture-paper"
+          className="relative overflow-hidden rounded-2xl border-[2.5px] border-black texture-paper"
           style={{
             backgroundColor: step.tint,
             boxShadow: '4px 4px 0 0 #000, 8px 8px 0 0 rgba(0,0,0,0.15)',
             aspectRatio: '1 / 0.78',
           }}
-          onTouchStart={onTouchStart}
-          onTouchEnd={onTouchEnd}
         >
           {/* Lignes d'action décoratives */}
           <svg
@@ -153,28 +155,6 @@ const HowToPlayCarousel = () => {
             }}
           />
 
-          {/* Numéro sticker - se remplit pendant les 4s */}
-          <div
-            className="absolute top-3 left-3 z-10 w-11 h-11 rounded-full flex items-center justify-center font-display font-bold text-xl text-gray-900 border-[2.5px] border-black overflow-hidden"
-            style={{
-              backgroundColor: '#ffffff',
-              transform: 'rotate(-8deg)',
-              boxShadow: '2px 2px 0 0 #000',
-            }}
-          >
-            {/* Couche de remplissage qui monte */}
-            <span
-              key={`fill-${index}-${autoTick}`}
-              aria-hidden
-              className="absolute left-0 right-0 bottom-0"
-              style={{
-                backgroundColor: step.accent,
-                animation: `bubble-fill ${SLIDE_DURATION}ms linear forwards`,
-              }}
-            />
-            <span className="relative z-10">{step.n}</span>
-          </div>
-
           {/* Illustration centrale - animée à chaque changement */}
           <div
             key={index}
@@ -197,29 +177,36 @@ const HowToPlayCarousel = () => {
                   background: `radial-gradient(circle, ${step.accent}33 0%, transparent 65%)`,
                 }}
               />
-              <Icon
-                icon={step.icon}
-                className="relative z-10"
-                width={120}
-                height={120}
+              <img
+                src={step.image}
+                alt=""
                 aria-hidden
-              />
-              {/* Étoiles décoratives autour */}
-              <Icon
-                icon="fluent-emoji-flat:sparkles"
-                className="absolute -top-2 -right-3 animate-twinkle"
-                width={28}
-                height={28}
-                aria-hidden
-              />
-              <Icon
-                icon="fluent-emoji-flat:sparkles"
-                className="absolute -bottom-1 -left-4 animate-twinkle-delay"
-                width={20}
-                height={20}
-                aria-hidden
+                draggable={false}
+                className="relative z-10 w-[180px] h-[180px] object-contain"
               />
             </div>
+          </div>
+        </div>
+
+          {/* Numéro sticker - hors panel pour déborder */}
+          <div
+            className="absolute -top-1 -left-3 z-20 w-11 h-11 rounded-full flex items-center justify-center font-display font-bold text-xl text-gray-900 border-[2.5px] border-black overflow-hidden"
+            style={{
+              backgroundColor: '#ffffff',
+              transform: 'rotate(-8deg)',
+              boxShadow: '2px 2px 0 0 #000',
+            }}
+          >
+            <span
+              key={`fill-${index}-${autoTick}`}
+              aria-hidden
+              className="absolute left-0 right-0 bottom-0"
+              style={{
+                backgroundColor: step.accent,
+                animation: `bubble-fill ${SLIDE_DURATION}ms linear forwards`,
+              }}
+            />
+            <span className="relative z-10">{step.n}</span>
           </div>
         </div>
 
