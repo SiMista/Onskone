@@ -164,6 +164,50 @@
     12px 12px 0 0 rgba(0, 0, 0, 0.10);
 }
 
+/* --- Surlignage marqueur : trait jaune translucide derrière du texte --- */
+/* Effet feutre stabilo : multiply pour s'imprégner du texte, gradient pour
+   estomper les extrémités comme un coup de marqueur qui part/finit sec. */
+.marker-highlight {
+  position: relative;
+  display: inline-block;
+  isolation: isolate;
+}
+.marker-highlight::before,
+.marker-highlight::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+}
+/* Couche 1 : bande franche skewée, estompée aux extrémités */
+.marker-highlight::before {
+  left: -6px;
+  right: -8px;
+  bottom: 2px;
+  height: 55%;
+  transform: skew(-6deg, -1deg) rotate(-1deg);
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    #fde047 6%,
+    #fde047 93%,
+    transparent 100%
+  );
+  opacity: 0.7;
+}
+/* Couche 2 : blob organique par-dessus, casse les bords trop droits */
+.marker-highlight::after {
+  left: -4px;
+  right: -6px;
+  bottom: 1px;
+  height: 60%;
+  transform: skew(-5deg, 0deg) rotate(-1.5deg);
+  background: #fde047;
+  border-radius: 40% 60% 55% 45% / 60% 40% 60% 40%;
+  opacity: 0.45;
+}
+
 /* --- Motifs d'arrière-plan par phase/catégorie --- */
 /* Dots discrets - ambiance "lobby / answer" */
 .bg-pattern-dots {
@@ -770,6 +814,23 @@ button {
 /* ========================================================================
    PHASE 5 - ANSWER : papier ligné, tampon "ENVOYÉ", pliage, sablier
    ======================================================================== */
+
+/* Liquid glass : fond translucide flouté + halo intérieur + reflet supérieur.
+   Pensé pour les conteneurs admin posés sur un fond sombre dégradé. */
+.surface-glass {
+  background-color: rgba(148, 163, 184, 0.10);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.08),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.02),
+    0 10px 28px -14px rgba(0, 0, 0, 0.6);
+}
+.surface-glass-hover:hover {
+  background-color: rgba(148, 163, 184, 0.16);
+  border-color: rgba(255, 255, 255, 0.18);
+}
 
 /* Feuille de carnet : lignes horizontales + marge rouge verticale */
 .surface-notebook {

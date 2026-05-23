@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { Icon } from '@iconify/react';
 import { LuX } from 'react-icons/lu';
 
-export type ToastVariant = 'info' | 'success' | 'warning' | 'error';
+export type ToastVariant = 'info' | 'success' | 'warning' | 'error' | 'achievement';
 
 interface Toast {
   id: number;
@@ -17,12 +17,28 @@ interface ToastContextValue {
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
-const VARIANT_STYLE: Record<ToastVariant, { bg: string; icon: string }> = {
+interface VariantStyle {
+  bg: string;
+  icon: string;
+  /** Si vrai, applique un contour noir et un drop-shadow sur l'emoji (look "succès"). */
+  iconOutlined?: boolean;
+}
+
+const VARIANT_STYLE: Record<ToastVariant, VariantStyle> = {
   info: { bg: '#E7F5FF', icon: 'fluent-emoji-flat:information' },
   success: { bg: '#E6F8E6', icon: 'fluent-emoji-flat:check-mark-button' },
   warning: { bg: '#FFF3C4', icon: 'fluent-emoji-flat:warning' },
   error: { bg: '#FFE2E2', icon: 'fluent-emoji-flat:cross-mark' },
+  // Même dégradé que les achievements débloqués dans la modale "Mes succès".
+  achievement: {
+    bg: 'linear-gradient(to bottom right, var(--color-warning-300), var(--color-warning-orange))',
+    icon: 'fluent-emoji-flat:trophy',
+    iconOutlined: true,
+  },
 };
+
+const OUTLINE_FILTER =
+  'drop-shadow(1px 0 0 #000) drop-shadow(-1px 0 0 #000) drop-shadow(0 1px 0 #000) drop-shadow(0 -1px 0 #000) drop-shadow(1px 2px 0 rgba(0,0,0,0.35))';
 
 const EXIT_DURATION = 280; // ms - doit matcher .animate-toast-out
 
@@ -93,14 +109,22 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
         {toasts.map(t => {
           const style = VARIANT_STYLE[t.variant];
           const isExiting = exitingIds.has(t.id);
+          const isGradient = style.bg.startsWith('linear-gradient');
           return (
             <div
               key={t.id}
               role="status"
               className={`pointer-events-auto w-full flex items-center gap-2.5 px-3 py-2.5 border-[2.5px] border-black rounded-xl stack-shadow-sm texture-paper ${isExiting ? 'animate-toast-out' : 'animate-toast-drop'}`}
-              style={{ backgroundColor: style.bg }}
+              style={isGradient ? { backgroundImage: style.bg } : { backgroundColor: style.bg }}
             >
-              <Icon icon={style.icon} width={22} height={22} aria-hidden className="shrink-0" />
+              <Icon
+                icon={style.icon}
+                width={style.iconOutlined ? 26 : 22}
+                height={style.iconOutlined ? 26 : 22}
+                aria-hidden
+                className="shrink-0"
+                style={style.iconOutlined ? { filter: OUTLINE_FILTER } : undefined}
+              />
               <p className="flex-1 text-sm font-display font-bold text-gray-900 m-0 leading-tight">{t.message}</p>
               <button
                 type="button"

@@ -166,24 +166,22 @@ const Home = () => {
             <div className="flex flex-col gap-3">
               {/* Stats top : chiffres + labels rééquilibrés (chiffres plus modestes,
                   labels plus lisibles - avant : text-xl vs text-[10px], trop disproportionné). */}
-              <div className="grid grid-cols-3 gap-2 text-center mb-1">
+              <div className="grid grid-cols-2 gap-2 text-center mb-1">
                 <div className="bg-cream-player border-2 border-black rounded-xl p-2 stack-shadow-sm">
                   <div className="text-lg font-display font-bold tabular-nums leading-none">{stats.gamesPlayed}</div>
-                  <div className="text-[11px] font-display font-semibold text-gray-600 mt-1">Parties</div>
+                  <div className="text-[11px] font-display font-semibold text-gray-600 mt-1">Parties jouées</div>
                 </div>
                 <div className="bg-cream-player border-2 border-black rounded-xl p-2 stack-shadow-sm">
-                  <div className="text-lg font-display font-bold tabular-nums leading-none">{stats.bestScore}</div>
-                  <div className="text-[11px] font-display font-semibold text-gray-600 mt-1">Meilleur score</div>
-                </div>
-                <div className="bg-cream-player border-2 border-black rounded-xl p-2 stack-shadow-sm">
-                  <div className="text-lg font-display font-bold tabular-nums leading-none">{stats.correctGuessesAsLeader}</div>
-                  <div className="text-[11px] font-display font-semibold text-gray-600 mt-1">Devinettes</div>
+                  <div className="text-lg font-display font-bold tabular-nums leading-none">{stats.totalPoints}</div>
+                  <div className="text-[11px] font-display font-semibold text-gray-600 mt-1">Points marqués</div>
                 </div>
               </div>
 
               <div className="flex flex-col gap-2">
                 {ACHIEVEMENTS.map((ach) => {
                   const isUnlocked = unlocked.has(ach.id);
+                  // Succès caché non débloqué -> on masque titre/description/icône.
+                  const isMystery = !!ach.hidden && !isUnlocked;
                   return (
                     <div
                       key={ach.id}
@@ -198,14 +196,19 @@ const Home = () => {
                           opacity: isUnlocked ? 1 : 0.5,
                         }}
                       >
-                        <Icon icon={ach.icon} width={40} height={40} aria-hidden />
+                        <Icon
+                          icon={isMystery ? 'fluent-emoji-flat:white-question-mark' : ach.icon}
+                          width={40}
+                          height={40}
+                          aria-hidden
+                        />
                       </div>
                       <div className="flex-1 text-left min-w-0">
                         <div className="font-display font-bold text-sm text-gray-900 leading-tight">
-                          {ach.title}
+                          {isMystery ? '???' : ach.title}
                         </div>
                         <div className={`text-xs leading-snug ${isUnlocked ? 'text-gray-800' : 'text-gray-600'}`}>
-                          {ach.description}
+                          {isMystery ? '...' : ach.description}
                         </div>
                       </div>
                     </div>
@@ -303,16 +306,8 @@ const Home = () => {
             <Frame textAlign="left">
               <div className="w-full border-b-2 border-dashed border-gray-300 pb-3 mb-4 flex items-center gap-2">
                 <Icon icon="fluent-emoji-flat:direct-hit" width={26} height={26} aria-hidden />
-                <h2 className="relative inline-block font-accent text-display-lg text-gray-900 m-0">
-                  <span
-                    aria-hidden
-                    className="absolute left-[-4px] right-[-6px] bottom-[2px] h-[55%] -z-0 bg-yellow-300"
-                    style={{
-                      transform: 'skew(-6deg, -1deg) rotate(-1deg)',
-                      borderRadius: '40% 60% 55% 45% / 60% 40% 60% 40%',
-                    }}
-                  />
-                  <span className="relative z-10">Comment jouer ?</span>
+                <h2 className="marker-highlight font-accent text-display-lg text-gray-900 m-0">
+                  Comment jouer ?
                 </h2>
               </div>
               <HowToPlayCarousel />

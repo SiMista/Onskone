@@ -1,27 +1,20 @@
 import { useEffect, useState } from 'react';
-import Button from '../components/Button';
-import { buildShareCard, shareBlob } from '../utils/shareCard';
-import BackButton from '../components/BackButton';
-import PseudoPlate from '../components/PseudoPlate';
-import InfoModal from '../components/InfoModal';
-import HowToPlaySteps from '../components/HowToPlaySteps';
-import HowToPlayButton from '../components/HowToPlayButton';
-import ConfirmModal from '../components/ConfirmModal';
-import Modal from '../components/Modal';
-import ReportModal from '../components/ReportModal';
-import AboutModal from '../components/Footer/AboutModal';
-import ContactModal from '../components/Footer/ContactModal';
-import MentionsModal from '../components/Footer/MentionsModal';
-import { useToast } from '../components/Toast';
+import Button from '../../components/Button';
+import { buildShareCard, shareBlob } from '../../utils/shareCard';
+import BackButton from '../../components/BackButton';
+import PseudoPlate from '../../components/PseudoPlate';
+import InfoModal from '../../components/InfoModal';
+import HowToPlaySteps from '../../components/HowToPlaySteps';
+import HowToPlayButton from '../../components/HowToPlayButton';
+import ConfirmModal from '../../components/ConfirmModal';
+import Modal from '../../components/Modal';
+import ReportModal from '../../components/ReportModal';
+import AboutModal from '../../components/Footer/AboutModal';
+import ContactModal from '../../components/Footer/ContactModal';
+import MentionsModal from '../../components/Footer/MentionsModal';
+import { useToast } from '../../components/Toast';
 import { Icon } from '@iconify/react';
-import { ACHIEVEMENTS } from '../utils/playerStats';
-
-// =====================================================================
-// StudioGallery - design-system preview for the Studio
-// =====================================================================
-// Rendered inside the Studio page when the "Composants" tab is active.
-// Goal: see the key reusable visuals side-by-side to spot inconsistencies.
-// =====================================================================
+import { ACHIEVEMENTS } from '../../utils/playerStats';
 
 type ButtonVariant = 'primary' | 'success' | 'danger' | 'warning' | 'secondary' | 'ghost' | 'quit';
 
@@ -70,7 +63,7 @@ const SHARE_TOP_PLAYERS = [
   { name: 'Thomas', score: 5, avatarId: 16 },
 ];
 
-const StudioGallery = () => {
+export const Gallery = () => {
   const showToast = useToast();
   const [pseudoValue, setPseudoValue] = useState('Simi');
   const [answerValue, setAnswerValue] = useState('');
@@ -155,7 +148,6 @@ const StudioGallery = () => {
         </p>
       </div>
 
-      {/* ====== Boutons : variantes ====== */}
       <Section title="Boutons - variantes" subtitle="size = md">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           {BUTTON_VARIANTS.map((v) => (
@@ -166,7 +158,6 @@ const StudioGallery = () => {
         </div>
       </Section>
 
-      {/* ====== Back button ====== */}
       <Section title="BackButton" subtitle="2 tons : neutre + danger">
         <div className="grid grid-cols-2 gap-4">
           <Tile label="neutral">
@@ -182,17 +173,16 @@ const StudioGallery = () => {
         </div>
       </Section>
 
-      {/* ====== Toasts ====== */}
       <Section title="Toasts" subtitle="clique pour déclencher un vrai toast">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Button text="info" variant="secondary" onClick={() => showToast('Une information utile', 'info')} />
           <Button text="success" variant="success" onClick={() => showToast('Action réussie ✓', 'success')} />
           <Button text="warning" variant="warning" onClick={() => showToast('Attention, vérifie ce point', 'warning')} />
           <Button text="error" variant="danger" onClick={() => showToast('Quelque chose a planté', 'error')} />
+          <Button text="achievement" variant="primary" onClick={() => showToast('Succès débloqué ! - Première partie', 'achievement')} />
         </div>
       </Section>
 
-      {/* ====== Modals ====== */}
       <Section title="Modales" subtitle="clique pour ouvrir chaque popup">
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
           <CompactTile label="InfoModal - Comment jouer">
@@ -225,7 +215,6 @@ const StudioGallery = () => {
         </div>
       </Section>
 
-      {/* ====== Achievements toggles ====== */}
       <Section title="Achievements - simulateur" subtitle="active / désactive pour voir l'état dans la modale">
         <div className="flex flex-col gap-3">
           <div className="flex flex-wrap gap-2">
@@ -237,8 +226,8 @@ const StudioGallery = () => {
                   type="button"
                   onClick={() => toggleAchievement(ach.id)}
                   className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border font-mono text-xs transition-colors ${on
-                      ? 'border-amber-300/60 bg-amber-300/10 text-amber-100'
-                      : 'border-white/[0.08] bg-[#1a1d28] text-white/60 hover:bg-[#23273a]'
+                    ? 'border-amber-300/60 bg-amber-300/10 text-amber-100'
+                    : 'border-white/[0.08] bg-[#1a1d28] text-white/60 hover:bg-[#23273a]'
                     }`}
                   title={ach.description}
                 >
@@ -346,7 +335,6 @@ const StudioGallery = () => {
         </div>
       </InfoModal>
 
-      {/* ====== ShareCard preview ====== */}
       <Section title="ShareCard - aperçu" subtitle="image générée pour le bouton Partager en fin de partie">
         <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-6 items-start">
           <div className="flex flex-col items-center gap-3">
@@ -380,8 +368,8 @@ const StudioGallery = () => {
                     type="button"
                     onClick={() => setShareIdx(i)}
                     className={`text-left px-3 py-2 rounded-lg border transition-colors font-mono text-xs flex items-center gap-3 ${active
-                        ? 'border-amber-300/60 bg-amber-300/10 text-amber-100'
-                        : 'border-white/[0.08] bg-[#1a1d28] text-white/70 hover:bg-[#23273a]'
+                      ? 'border-amber-300/60 bg-amber-300/10 text-amber-100'
+                      : 'border-white/[0.08] bg-[#1a1d28] text-white/70 hover:bg-[#23273a]'
                       }`}
                   >
                     <span
@@ -400,7 +388,6 @@ const StudioGallery = () => {
         </div>
       </Section>
 
-      {/* ====== Inputs ====== */}
       <Section title="Inputs">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Tile label="PseudoPlate">
@@ -423,5 +410,3 @@ const StudioGallery = () => {
     </div>
   );
 };
-
-export default StudioGallery;

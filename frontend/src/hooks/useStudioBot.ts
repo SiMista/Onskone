@@ -52,17 +52,77 @@ export function useStudioBot({ game, currentPlayer, players, lobbyCode }: UseStu
   // (handlers can re-run because of state updates within the same phase).
   const firedRef = useRef<Set<string>>(new Set());
 
-  // Listen for live toggle from the studio parent.
+  // Refs miroir pour que le listener "studio:stress" (enregistré une seule
+  // fois) puisse lire l'état courant du jeu sans dépendances.
+  const gameRef = useRef(game);
+  const currentPlayerRef = useRef(currentPlayer);
+  const playersRef = useRef(players);
+  const lobbyCodeRef = useRef(lobbyCode);
+  useEffect(() => { gameRef.current = game; }, [game]);
+  useEffect(() => { currentPlayerRef.current = currentPlayer; }, [currentPlayer]);
+  useEffect(() => { playersRef.current = players; }, [players]);
+  useEffect(() => { lobbyCodeRef.current = lobbyCode; }, [lobbyCode]);
+
+  // Listen for live toggle + stress burst from the studio parent.
   useEffect(() => {
     if (!isStudioFrame) return;
     const onMessage = (e: MessageEvent) => {
       const data = e?.data;
-      if (data?.type !== 'studio:setBot') return;
-      enabledRef.current = !!data.enabled;
-      try {
-        if (data.enabled) sessionStorage.setItem(BOT_KEY, '1');
-        else sessionStorage.removeItem(BOT_KEY);
-      } catch { /* silent */ }
+      if (!data || typeof data !== 'object') return;
+
+      if (data.type === 'studio:setBot') {
+        enabledRef.current = !!data.enabled;
+        try {
+          if (data.enabled) sessionStorage.setItem(BOT_KEY, '1');
+          else sessionStorage.removeItem(BOT_KEY);
+        } catch { /* silent */ }
+        return;
+      }
+
+      if (data.type === 'studio:stress') {
+        const burst = Math.max(1, Math.min(200, Number(data.count) || 10));
+        const g = gameRef.current;
+        const cp = currentPlayerRef.current;
+        const code = lobbyCodeRef.current;
+        const pls = playersRef.current;
+        if (!g?.currentRound || !cp || !code) return;
+        const round = g.currentRound;
+        const phase = round.phase;
+        const isLeader = round.leader.id === cp.id;
+        const isSubstitute = round.substitutePlayerId === cp.id;
+
+        const spam = (fn: () => void) => {
+          for (let i = 0; i < burst; i++) {
+            try { fn(); } catch (err) { console.warn('[studio-stress] failed', err); }
+          }
+        };
+
+        // Émet l'action "naturelle" de la phase courante, en rafale.
+        // Le but est de tester le rate-limit et l'idempotence côté backend,
+        // donc on bypass volontairement le firedRef du bot.
+        if (phase === RoundPhase.QUESTION_SELECTION && isLeader) {
+          // Pas d'action directe : demander une nouvelle question N fois.
+          spam(() => socket.emit('requestQuestions', { lobbyCode: code }));
+        } else if (phase === RoundPhase.SUBSTITUTE_SELECTION && isLeader) {
+          const candidate = pls.find((p) => p.isActive && p.id !== cp.id);
+          if (candidate) spam(() => socket.emit('selectSubstitute', {
+            lobbyCode: code, substitutePlayerId: candidate.id,
+          }));
+        } else if (phase === RoundPhase.ANSWERING && !isLeader) {
+          spam(() => socket.emit('submitAnswer', {
+            lobbyCode: code, playerId: cp.id, answer: randomAnswer(),
+          }));
+        } else if (phase === RoundPhase.SUBSTITUTE_ANSWERING && isSubstitute) {
+          spam(() => socket.emit('submitSubstituteAnswer', {
+            lobbyCode: code, answer: randomAnswer(),
+          }));
+        } else if (phase === RoundPhase.GUESSING && isLeader) {
+          spam(() => socket.emit('submitGuesses', { lobbyCode: code, guesses: {} }));
+        } else if (phase === RoundPhase.REVEAL && isLeader) {
+          spam(() => socket.emit('revealAnswer', { lobbyCode: code, answerIndex: 0 }));
+          spam(() => socket.emit('nextRound', { lobbyCode: code }));
+        }
+      }
     };
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);

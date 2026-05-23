@@ -1,10 +1,13 @@
 import {Lobby} from "../models/Lobby";
-import { IPlayer } from '@onskone/shared';
+import { IPlayer, ServerToClientEvents, ClientToServerEvents } from '@onskone/shared';
+import { Server } from 'socket.io';
 import {generateLobbyCode} from '../utils/helpers';
 import logger from '../utils/logger';
 
+type IoServer = Server<ClientToServerEvents, ServerToClientEvents>;
+
 const lobbies: Map<string, Lobby> = new Map();
-const INACTIVE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+const INACTIVE_TIMEOUT_MS = 2 * 60 * 60 * 1000; // 2 heures
 const CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 let cleanupIntervalId: NodeJS.Timeout | null = null;
 
@@ -35,40 +38,28 @@ export const create = (): string => {
  * Clean up inactive lobbies
  * Ne supprime pas les lobbies avec une partie en cours
  */
-export const cleanupInactiveLobbies = (): void => {
+export const cleanupInactiveLobbies = (io?: IoServer): void => {
     const now = new Date();
     const lobbiesRemoved: string[] = [];
-    const lobbiesSkipped: string[] = [];
 
     for (const [code, lobby] of lobbies.entries()) {
         const inactiveTime = now.getTime() - lobby.lastActivity.getTime();
 
         if (inactiveTime > INACTIVE_TIMEOUT_MS) {
-            // Ne pas supprimer les lobbies avec une partie en cours
-            if (lobby.game && lobby.game.status === 'IN_PROGRESS') {
-                lobbiesSkipped.push(code);
-                // Mettre à jour l'activité pour éviter de re-checker trop souvent
-                lobby.updateActivity();
-                continue;
-            }
-
-            // Ne pas supprimer les lobbies avec des joueurs actifs
-            const hasActivePlayers = lobby.players.some(p => p.isActive);
-            if (hasActivePlayers) {
-                lobbiesSkipped.push(code);
-                continue;
-            }
-
             lobbies.delete(code);
             lobbiesRemoved.push(code);
+
+            if (io) {
+                io.to(code).emit('lobbyClosed', { reason: 'inactive' });
+                // Sortir tous les sockets de la room et couper la connexion
+                // pour libérer la mémoire serveur et arrêter les reconnexions fantômes
+                io.in(code).disconnectSockets(true);
+            }
         }
     }
 
     if (lobbiesRemoved.length > 0) {
         logger.info(`Nettoyage de ${lobbiesRemoved.length} lobbies inactifs`, { lobbies: lobbiesRemoved });
-    }
-    if (lobbiesSkipped.length > 0) {
-        logger.debug(`${lobbiesSkipped.length} lobbies ignorés (partie en cours ou joueurs actifs)`);
     }
 };
 
@@ -76,17 +67,17 @@ export const cleanupInactiveLobbies = (): void => {
  * Start automatic cleanup interval
  * Safe to call multiple times (clears previous interval)
  */
-export const startCleanupInterval = (): void => {
+export const startCleanupInterval = (io?: IoServer): void => {
     // Clear existing interval to prevent memory leak on hot reload
     if (cleanupIntervalId) {
         clearInterval(cleanupIntervalId);
     }
 
     cleanupIntervalId = setInterval(() => {
-        cleanupInactiveLobbies();
+        cleanupInactiveLobbies(io);
     }, CLEANUP_INTERVAL_MS);
 
-    logger.info(`Service de nettoyage des lobbies démarré (toutes les ${CLEANUP_INTERVAL_MS / 1000 / 60} min)`);
+    logger.info(`Service de nettoyage des lobbies démarré (toutes les ${CLEANUP_INTERVAL_MS / 1000 / 60} min, timeout ${INACTIVE_TIMEOUT_MS / 1000 / 60 / 60}h)`);
 };
 
 /**

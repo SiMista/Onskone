@@ -269,24 +269,48 @@ const Lobby = () => {
         setGuessMyAnswerMode(!!data.guessMyAnswerMode);
     }, []);
 
+    const settingsEmitTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+    const queueSettingEmit = useCallback((key: string, fn: () => void, delay = 150) => {
+        const timers = settingsEmitTimers.current;
+        if (timers[key]) clearTimeout(timers[key]);
+        timers[key] = setTimeout(() => {
+            delete timers[key];
+            fn();
+        }, delay);
+    }, []);
+
+    useEffect(() => {
+        return () => {
+            const timers = settingsEmitTimers.current;
+            Object.values(timers).forEach(clearTimeout);
+            settingsEmitTimers.current = {};
+        };
+    }, []);
+
     const handleGuessMyAnswerModeChange = useCallback((next: boolean) => {
-        if (lobbyCode) {
+        setGuessMyAnswerMode(next);
+        if (!lobbyCode) return;
+        queueSettingEmit('guessMyAnswerMode', () => {
             socket.emit('updateGuessMyAnswerMode', { lobbyCode, guessMyAnswerMode: next });
-        }
-    }, [lobbyCode]);
+        });
+    }, [lobbyCode, queueSettingEmit]);
 
     const handleSelectedDecksChange = useCallback((next: SelectedDecks) => {
         setSelectedDecks(next);
-        if (lobbyCode) {
+        if (!lobbyCode) return;
+        queueSettingEmit('selectedDecks', () => {
             socket.emit('updateSelectedDecks', { lobbyCode, selected: next });
-        }
-    }, [lobbyCode]);
+        });
+    }, [lobbyCode, queueSettingEmit]);
 
     const handleGameModeChange = useCallback((next: GameMode) => {
-        if (lobbyCode) {
+        setGameMode(next);
+        if (!lobbyCode) return;
+        queueSettingEmit('gameMode', () => {
             socket.emit('updateGameMode', { lobbyCode, gameMode: next });
-        }
-    }, [lobbyCode]);
+        });
+    }, [lobbyCode, queueSettingEmit]);
 
     useSocketEvent('updatePlayersList', handleUpdatePlayersList, [handleUpdatePlayersList]);
     useSocketEvent('joinedLobby', handleJoinedLobby, [handleJoinedLobby]);

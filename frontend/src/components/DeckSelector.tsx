@@ -242,7 +242,7 @@ const DeckSelector: React.FC<Props> = ({ catalog, selected, readOnly, onChange }
                                         <div className="px-2.5 py-2 flex flex-wrap gap-1.5 max-h-[28vh] overflow-y-auto">
                                             {themes.map(theme => {
                                                 const active = isThemeSelected(localSelected, cat, theme);
-                                                const base = 'font-display text-xs px-2.5 py-1 rounded-full border-2 font-bold tracking-tight transition-colors';
+                                                const base = 'font-display text-xs px-2.5 py-1 rounded-full border-2 font-bold tracking-tight transition-colors touch-manipulation';
                                                 const cursor = readOnly ? 'cursor-default' : 'cursor-pointer active:scale-95';
                                                 const inactiveStyle = 'bg-white text-gray-600 border-gray-400';
                                                 return (

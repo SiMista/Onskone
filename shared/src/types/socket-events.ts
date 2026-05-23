@@ -51,6 +51,9 @@ export interface ServerToClientEvents {
   /** Notification d'expulsion du lobby */
   kickedFromLobby: (data: { hostName?: string }) => void;
 
+  /** Le lobby a été fermé par le serveur (inactivité prolongée) */
+  lobbyClosed: (data: { reason: 'inactive' }) => void;
+
   /** Vérification si le nom du joueur existe déjà */
   playerNameExists: (data: { playerName: string }) => void;
 
