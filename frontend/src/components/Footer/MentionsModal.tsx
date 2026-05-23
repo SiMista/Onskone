@@ -11,7 +11,7 @@ type Tab = 'mentions' | 'privacy';
 
 const tabClass = (active: boolean): string =>
   [
-    'flex-1 py-2 px-3 text-sm font-bold transition-colors border-b-2 cursor-pointer',
+    'flex-1 py-3 px-3 text-sm font-bold transition-colors border-b-2 cursor-pointer bg-transparent',
     active
       ? 'border-black text-black'
       : 'border-transparent text-gray-500 hover:text-gray-800',
@@ -20,26 +20,33 @@ const tabClass = (active: boolean): string =>
 const MentionsModal: React.FC<MentionsModalProps> = ({ isOpen, onClose }) => {
   const [tab, setTab] = useState<Tab>('mentions');
 
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Mentions & Confidentialité">
-      <div className="text-gray-700">
-        <div className="flex border-b border-gray-200 mb-4 -mt-2 sticky top-0 bg-white z-10">
-          <button
-            type="button"
-            onClick={() => setTab('mentions')}
-            className={tabClass(tab === 'mentions')}
-          >
-            Mentions légales
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab('privacy')}
-            className={tabClass(tab === 'privacy')}
-          >
-            Confidentialité
-          </button>
-        </div>
+  const tabs = (
+    <div className="flex border-b border-gray-200">
+      <button
+        type="button"
+        onClick={() => setTab('mentions')}
+        className={tabClass(tab === 'mentions')}
+      >
+        Mentions légales
+      </button>
+      <button
+        type="button"
+        onClick={() => setTab('privacy')}
+        className={tabClass(tab === 'privacy')}
+      >
+        Confidentialité
+      </button>
+    </div>
+  );
 
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Mentions & Confidentialité"
+      subHeader={tabs}
+    >
+      <div className="text-gray-700">
         {tab === 'mentions' && (
           <div className="space-y-4">
             {LEGAL_CONTENT.mentions.sections.map((section, index) => (

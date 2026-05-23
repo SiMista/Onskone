@@ -4,7 +4,7 @@ const HOW_TO_PLAY_STEPS = [
   {
     n: '1',
     icon: 'fluent-emoji-flat:crown',
-    text: (<>Un <b>pilier</b> est designé aléatoirement et choisit une question parmi trois cartes.</>),
+    text: (<>Un <b>pilier</b> est désigné aléatoirement et choisit une question parmi trois cartes.</>),
     rot: '-1deg',
   },
   {

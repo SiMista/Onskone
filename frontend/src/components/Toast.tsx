@@ -125,15 +125,6 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
                 style={style.iconOutlined ? { filter: OUTLINE_FILTER } : undefined}
               />
               <p className="flex-1 text-sm font-display font-bold text-gray-900 m-0 leading-tight">{t.message}</p>
-              <span
-                aria-hidden
-                className="absolute left-0 bottom-0 h-[3px] bg-black/35 origin-left"
-                style={
-                  isExiting
-                    ? { width: '100%', transform: 'scaleX(0)' }
-                    : { width: '100%', animation: `toast-countdown-bar ${t.duration}ms linear forwards` }
-                }
-              />
             </div>
           );
         })}

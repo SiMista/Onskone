@@ -450,7 +450,7 @@ const Lobby = () => {
 
                         <div className="font-sans text-[11px] text-gray-600 leading-snug mt-1">
                             {localActive
-                                ? 'Dans la même pièce, les joueurs sont à proximité  pour montrer leur téléphone'
+                                ? 'Dans la même pièce, les joueurs sont à proximité pour montrer leur téléphone'
                                 : 'Chacun chez soi, les joueurs suivent la partie en direct sur leur écran'}
                         </div>
                     </div>

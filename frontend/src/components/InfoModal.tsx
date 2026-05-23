@@ -7,11 +7,7 @@ interface InfoModalProps {
   onClose: () => void;
   title: string;
   children: ReactNode;
-  /**
-   * Style d'animation d'ouverture.
-   * - 'classic' (défaut) : pop cartoon avec overshoot - convient à tout (succès, alertes, fallbacks).
-   * - 'comic'           : slam de tampon BD - réservé au "Comment jouer ?" pour matcher le carousel.
-   */
+  /** Conservé pour compat - l'animation est désormais unifiée. */
   variant?: 'classic' | 'comic';
   /**
    * Désactive le fade blanc en bas du contenu (utile quand le contenu est un
@@ -25,15 +21,12 @@ const InfoModal = ({
   onClose,
   title,
   children,
-  variant = 'classic',
   disableScrollFade = false,
 }: InfoModalProps) => {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const showFade = useScrollFade(scrollRef);
 
   if (!isOpen) return null;
-
-  const animClass = variant === 'comic' ? 'animate-modal-comic-slam' : 'animate-modal-content';
 
   return (
     <div
@@ -42,8 +35,7 @@ const InfoModal = ({
     >
       {/* Container animé - variante choisie par le parent */}
       <div
-        className={`relative max-w-md w-full ${animClass}`}
-        style={{ perspective: '1200px' }}
+        className="relative max-w-md w-full animate-modal-content"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Bande adhésive (washi tape) - hors de la carte pour ne pas être coupée */}
@@ -95,7 +87,7 @@ const InfoModal = ({
           {!disableScrollFade && (
             <div
               aria-hidden
-              className={`pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-white via-white/85 to-transparent transition-opacity duration-150 ${showFade ? 'opacity-100' : 'opacity-0'}`}
+              className={`pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-white via-white/85 to-transparent rounded-b-[25px] transition-opacity duration-150 ${showFade ? 'opacity-100' : 'opacity-0'}`}
             />
           )}
         </div>
