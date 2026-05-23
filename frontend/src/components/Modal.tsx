@@ -54,7 +54,7 @@ const Modal = ({ isOpen, onClose, title, children }: ModalProps) => {
           {/* Fade blanc en bas - affiché seulement quand il reste du contenu à scroller. */}
           <div
             aria-hidden
-            className={`pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-white via-white/85 to-transparent transition-opacity duration-150 ${showFade ? 'opacity-100' : 'opacity-0'}`}
+            className={`pointer-events-none absolute inset-x-0 bottom-0 h-14 rounded-b-[25px] bg-gradient-to-t from-white via-white/85 to-transparent transition-opacity duration-150 ${showFade ? 'opacity-100' : 'opacity-0'}`}
           />
         </div>
       </div>

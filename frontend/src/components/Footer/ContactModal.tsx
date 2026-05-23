@@ -67,7 +67,7 @@ const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) => {
     >
       <div className="flex flex-col gap-3 pb-2">
         <p className="text-gray-700 text-sm leading-relaxed m-0">
-          Tu veux nous contacter ? T'inquète, choisis le canal qui te plaît, ce sera un plaisir de te répondre :
+          Tu veux nous contacter mais tu sais pas comment ? T'inquète, écris-nous où tu veux, ce sera un plaisir de te répondre :
         </p>
         <ul className="list-none p-0 m-0 flex flex-col gap-2.5">
           {CHANNELS.map((c) => {

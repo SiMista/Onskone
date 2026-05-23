@@ -4,7 +4,7 @@ import { buildShareCard, shareBlob } from '../../utils/shareCard';
 import BackButton from '../../components/BackButton';
 import PseudoPlate from '../../components/PseudoPlate';
 import InfoModal from '../../components/InfoModal';
-import HowToPlaySteps from '../../components/HowToPlaySteps';
+import HowToPlayCarousel from '../../components/HowToPlayCarousel';
 import HowToPlayButton from '../../components/HowToPlayButton';
 import ConfirmModal from '../../components/ConfirmModal';
 import Modal from '../../components/Modal';
@@ -262,7 +262,7 @@ export const Gallery = () => {
       </Section>
 
       <InfoModal isOpen={howToPlayOpen} onClose={() => setHowToPlayOpen(false)} title="Comment jouer ?" variant="comic">
-        <HowToPlaySteps />
+        <HowToPlayCarousel />
       </InfoModal>
       <ConfirmModal
         isOpen={confirmOpen}

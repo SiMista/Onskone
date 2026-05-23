@@ -17,5 +17,5 @@ export function printBanner(): void {
 
   process.stdout.write(`${cyan}${BANNER}${reset}\n`);
   process.stdout.write(`   ${bold}Onskoné${reset} ${dim}- connaissez vous vraiment vos proches ?${reset}\n`);
-  process.stdout.write(`   ${dim}© ${year} Siméon De Iva - Tous droits réservés${reset}\n\n`);
+  process.stdout.write(`   ${dim}© ${year} Siméon Deivassagayame - Tous droits réservés${reset}\n\n`);
 }

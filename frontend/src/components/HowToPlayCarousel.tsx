@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect, ReactNode } from 'react';
-import { LuChevronLeft, LuChevronRight } from 'react-icons/lu';
 import step1Img from '../assets/images/home/1-question_selection.png';
 import step2Img from '../assets/images/home/2-answering.png';
 import step3Img from '../assets/images/home/3-guessing.png';
@@ -8,60 +7,47 @@ import step4Img from '../assets/images/home/4-reveal.png';
 type Step = {
   n: number;
   image: string;
-  title: string;
   text: ReactNode;
-  tint: string; // bg color of the comic panel
-  accent: string; // dot/decor color
 };
+
+const ACCENT = '#F5B800';
 
 const STEPS: Step[] = [
   {
     n: 1,
     image: step1Img,
-    title: 'Le pilier',
     text: (
       <>
-        Un joueur est désigné <b>pilier</b>. Il pioche une question parmi trois cartes.
+        Un joueur devient <b>pilier</b> et choisit une question parmi celles des trois cartes proposées.
       </>
     ),
-    tint: '#FFF7DD',
-    accent: '#F5B800',
   },
   {
     n: 2,
     image: step2Img,
-    title: 'Tout le monde répond',
     text: (
       <>
-        Chacun écrit sa réponse à la question, <b>anonymement</b>.
+        Chacun reçoit la question et écrit sa réponse, <b>anonymement</b>.
       </>
     ),
-    tint: '#E6F4FF',
-    accent: '#18BBED',
   },
   {
     n: 3,
     image: step3Img,
-    title: 'L\'enquête du pilier',
     text: (
       <>
-        Le pilier reçoit toutes les réponses et <b>devine qui</b> a écrit quoi.
+        Le pilier ré-attribue chaque réponse et doit deviner qui l'a écrite. Les joueurs, <b>montrent leur écran</b> pour découvrir celle qu'on leur a donnée.
       </>
     ),
-    tint: '#FCE8F1',
-    accent: '#EC4899',
   },
   {
     n: 4,
     image: step4Img,
-    title: 'La révélation',
     text: (
       <>
-        On dévoile les auteurs, le pilier marque des points <b>pour l'équipe</b>.
+        On dévoile qui à écrit quoi et le pilier marque des points <b>pour l'équipe</b> si il a bien deviné.
       </>
     ),
-    tint: '#E7F8E7',
-    accent: '#22C55E',
   },
 ];
 
@@ -108,89 +94,49 @@ const HowToPlayCarousel = () => {
 
   return (
     <div className="w-full flex flex-col items-center gap-4 select-none pt-4">
-      {/* Comic panel + flèches */}
-      <div className="relative w-full flex items-center gap-2">
-        {/* Flèche gauche */}
-        <button
-          type="button"
-          onClick={prev}
-          aria-label="Étape précédente"
-          className="shrink-0 w-8 h-8 flex items-center justify-center text-gray-700 hover:text-black hover:scale-110 active:scale-95 transition-all cursor-pointer z-10"
-        >
-          <LuChevronLeft size={28} strokeWidth={3} />
-        </button>
-
-        {/* Panel wrapper - laisse déborder le sticker */}
-        <div className="relative flex-1" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-        <div
-          className="relative overflow-hidden rounded-2xl border-[2.5px] border-black texture-paper"
-          style={{
-            backgroundColor: step.tint,
-            boxShadow: '4px 4px 0 0 #000, 8px 8px 0 0 rgba(0,0,0,0.15)',
-            aspectRatio: '1 / 0.78',
-          }}
-        >
-          {/* Lignes d'action décoratives */}
-          <svg
-            aria-hidden
-            className="absolute inset-0 w-full h-full opacity-30"
-            viewBox="0 0 100 78"
-            preserveAspectRatio="none"
-          >
-            <g stroke="black" strokeWidth="0.5" strokeLinecap="round">
-              <line x1="5" y1="12" x2="18" y2="6" />
-              <line x1="82" y1="8" x2="95" y2="14" />
-              <line x1="6" y1="68" x2="20" y2="74" />
-              <line x1="80" y1="72" x2="94" y2="66" />
-            </g>
-          </svg>
-
-          {/* Dots */}
+      {/* Illustration */}
+      <div className="relative w-full">
+        <div className="relative w-full" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
           <div
-            aria-hidden
-            className="absolute inset-0 opacity-50"
-            style={{
-              backgroundImage: `radial-gradient(${step.accent}55 1px, transparent 1px)`,
-              backgroundSize: '12px 12px',
-            }}
-          />
-
-          {/* Illustration centrale - animée à chaque changement */}
-          <div
-            key={index}
-            className="absolute inset-0 flex items-center justify-center"
-            style={{
-              animation: `comic-slide-${direction === 1 ? 'r' : 'l'} 0.45s cubic-bezier(0.34, 1.4, 0.5, 1) both`,
-            }}
+            className="relative w-full flex items-center justify-center"
+            style={{ aspectRatio: '1 / 0.78' }}
           >
+            {/* Illustration centrale - animée à chaque changement */}
             <div
-              className="relative"
+              key={index}
+              className="absolute inset-0 flex items-center justify-center"
               style={{
-                filter: 'drop-shadow(3px 4px 0 rgba(0,0,0,0.25))',
+                animation: `comic-slide-${direction === 1 ? 'r' : 'l'} 0.45s cubic-bezier(0.34, 1.4, 0.5, 1) both`,
               }}
             >
-              {/* Halo derrière */}
-              <span
-                aria-hidden
-                className="absolute inset-0 m-auto w-[110%] h-[110%] -z-0 rounded-full"
+              <div
+                className="relative"
                 style={{
-                  background: `radial-gradient(circle, ${step.accent}33 0%, transparent 65%)`,
+                  filter: 'drop-shadow(3px 4px 0 rgba(0,0,0,0.18))',
                 }}
-              />
-              <img
-                src={step.image}
-                alt=""
-                aria-hidden
-                draggable={false}
-                className="relative z-10 w-[180px] h-[180px] object-contain"
-              />
+              >
+                {/* Halo jaune derrière */}
+                <span
+                  aria-hidden
+                  className="absolute inset-0 m-auto w-[130%] h-[130%] -z-0 rounded-full"
+                  style={{
+                    background: `radial-gradient(circle, ${ACCENT}44 0%, transparent 65%)`,
+                  }}
+                />
+                <img
+                  src={step.image}
+                  alt=""
+                  aria-hidden
+                  draggable={false}
+                  className="relative z-10 w-[260px] h-[260px] md:w-[300px] md:h-[300px] object-contain"
+                />
+              </div>
             </div>
           </div>
-        </div>
 
-          {/* Numéro sticker - hors panel pour déborder */}
+          {/* Numéro sticker */}
           <div
-            className="absolute -top-1 -left-3 z-20 w-11 h-11 rounded-full flex items-center justify-center font-display font-bold text-xl text-gray-900 border-[2.5px] border-black overflow-hidden"
+            className="absolute -top-2 left-1 z-20 w-11 h-11 rounded-full flex items-center justify-center font-display font-bold text-xl text-gray-900 border-[2.5px] border-black overflow-hidden"
             style={{
               backgroundColor: '#ffffff',
               transform: 'rotate(-8deg)',
@@ -202,23 +148,13 @@ const HowToPlayCarousel = () => {
               aria-hidden
               className="absolute left-0 right-0 bottom-0"
               style={{
-                backgroundColor: step.accent,
+                backgroundColor: ACCENT,
                 animation: `bubble-fill ${SLIDE_DURATION}ms linear forwards`,
               }}
             />
             <span className="relative z-10">{step.n}</span>
           </div>
         </div>
-
-        {/* Flèche droite */}
-        <button
-          type="button"
-          onClick={next}
-          aria-label="Étape suivante"
-          className="shrink-0 w-8 h-8 flex items-center justify-center text-gray-700 hover:text-black hover:scale-110 active:scale-95 transition-all cursor-pointer z-10"
-        >
-          <LuChevronRight size={28} strokeWidth={3} />
-        </button>
       </div>
 
       {/* Texte de l'étape */}
@@ -227,10 +163,7 @@ const HowToPlayCarousel = () => {
         className="text-center px-1"
         style={{ animation: 'comic-fade-up 0.4s ease-out both' }}
       >
-        <h3 className="font-display font-bold text-lg md:text-xl text-gray-900 m-0 mb-1 tracking-tight">
-          {step.title}
-        </h3>
-        <p className="text-sm md:text-base text-gray-700 m-0 leading-snug">
+        <p className="text-sm md:text-base text-gray-800 m-0 leading-snug">
           {step.text}
         </p>
       </div>
@@ -250,7 +183,7 @@ const HowToPlayCarousel = () => {
                 width: active ? 28 : 10,
                 height: 10,
                 borderRadius: 999,
-                backgroundColor: active ? s.accent : '#d4d4d4',
+                backgroundColor: active ? ACCENT : '#d4d4d4',
                 border: '2px solid #000',
                 boxShadow: active ? '1px 2px 0 0 #000' : 'none',
               }}
