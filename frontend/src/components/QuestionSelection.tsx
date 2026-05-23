@@ -74,17 +74,20 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
       }
     }, 500);
 
-    socket.on('questionsReceived', (data: { questions: GameCard[] }) => {
+    const onQuestionsReceived = (data: { questions: GameCard[] }) => {
       if (data.questions.length > 0) {
         setCards(data.questions);
         setCurrentCardIndex(0);
       }
       setLoading(false);
-    });
+    };
+    socket.on('questionsReceived', onQuestionsReceived);
 
     return () => {
       clearTimeout(startTimerTimeout);
-      socket.off('questionsReceived');
+      // IMPORTANT: detach only OUR handler, sinon on supprime aussi celui du
+      // useStudioBot (et de tout autre consommateur du même évènement).
+      socket.off('questionsReceived', onQuestionsReceived);
     };
   }, [isLeader, lobbyCode]);
 

@@ -76,7 +76,7 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
   useEffect(() => {
     socket.emit('requestShuffledAnswers', { lobbyCode });
 
-    socket.on('shuffledAnswersReceived', (data: { answers: Answer[]; players: IPlayer[]; roundNumber?: number }) => {
+    const onShuffledAnswersReceived = (data: { answers: Answer[]; players: IPlayer[]; roundNumber?: number }) => {
       // Ignorer les événements d'anciens rounds (race condition sur reconnexion)
       if (data.roundNumber !== undefined && data.roundNumber !== roundNumber) {
         console.log(`Ignoring stale shuffledAnswersReceived for round ${data.roundNumber}, current is ${roundNumber}`);
@@ -99,9 +99,10 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
       }
 
       setLoading(false);
-    });
+    };
+    socket.on('shuffledAnswersReceived', onShuffledAnswersReceived);
 
-    socket.on('guessUpdated', (data: { answerId: string; playerId: string | null }) => {
+    const onGuessUpdated = (data: { answerId: string; playerId: string | null }) => {
       setGuesses(prev => {
         const updated = { ...prev };
         if (data.playerId === null) {
@@ -125,11 +126,14 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
           flashJustAssigned(data.answerId);
         }
       }
-    });
+    };
+    socket.on('guessUpdated', onGuessUpdated);
 
     return () => {
-      socket.off('shuffledAnswersReceived');
-      socket.off('guessUpdated');
+      // IMPORTANT: détacher uniquement NOS handlers (sinon on supprime aussi
+      // les listeners du useStudioBot et de tout autre consommateur).
+      socket.off('shuffledAnswersReceived', onShuffledAnswersReceived);
+      socket.off('guessUpdated', onGuessUpdated);
       if (justAssignedTimeoutRef.current) clearTimeout(justAssignedTimeoutRef.current);
     };
   }, [lobbyCode, isLeader, roundNumber]);

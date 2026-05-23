@@ -144,24 +144,38 @@
 }
 
 /* --- Stack shadow : empile 3 ombres décalées sous un élément --- */
-/* Effet "carte posée sur une pile" - meilleur rendu avec bordure noire */
-.stack-shadow {
+/* Effet "carte posée sur une pile" - meilleur rendu avec bordure noire.
+   Déclarées en @utility (Tailwind v4) pour vivre dans le layer utilities :
+   sans ça, en build prod, `.stack-shadow` (hors layer) écrasait
+   `active:[box-shadow:none!important]` et la bordure noire ne s'animait
+   plus au press. */
+@utility stack-shadow {
   box-shadow:
     3px 3px 0 0 rgba(0, 0, 0, 1),
     6px 6px 0 0 rgba(0, 0, 0, 0.18),
     9px 9px 0 0 rgba(0, 0, 0, 0.08);
 }
-.stack-shadow-sm {
+@utility stack-shadow-sm {
   box-shadow:
     2px 2px 0 0 rgba(0, 0, 0, 1),
     4px 4px 0 0 rgba(0, 0, 0, 0.18),
     6px 6px 0 0 rgba(0, 0, 0, 0.08);
 }
-.stack-shadow-lg {
+@utility stack-shadow-lg {
   box-shadow:
     4px 4px 0 0 rgba(0, 0, 0, 1),
     8px 8px 0 0 rgba(0, 0, 0, 0.22),
     12px 12px 0 0 rgba(0, 0, 0, 0.10);
+}
+
+/* --- iOS Safari clip fix ---
+   Sur iOS, un enfant en `transform` (ex: scale-y-0 du band) à l'intérieur
+   d'un parent `overflow-hidden` + `border-radius` échappe le clipping arrondi :
+   il est promu sur son propre compositing layer qui ignore l'overflow du parent.
+   Forcer un -webkit-mask radial oblige iOS à respecter le clipping arrondi. */
+@utility ios-clip-fix {
+  -webkit-mask-image: -webkit-radial-gradient(white, black);
+  mask-image: radial-gradient(white, black);
 }
 
 /* --- Surlignage marqueur : trait jaune translucide derrière du texte --- */
@@ -786,6 +800,12 @@ button {
   animation: toast-fade-out 280ms cubic-bezier(0.4, 0, 0.6, 1) forwards;
   will-change: transform, opacity;
   pointer-events: none;
+}
+
+/* Barre de compte à rebours en bas du toast */
+@keyframes toast-countdown-bar {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
 }
 
 /* Animation bounce pour le popover de similarité */

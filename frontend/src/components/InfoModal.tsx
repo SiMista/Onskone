@@ -1,5 +1,6 @@
-import { ReactNode } from 'react';
+import { ReactNode, useRef } from 'react';
 import { LuX } from 'react-icons/lu';
+import { useScrollFade } from '../hooks/useScrollFade';
 
 interface InfoModalProps {
   isOpen: boolean;
@@ -12,9 +13,24 @@ interface InfoModalProps {
    * - 'comic'           : slam de tampon BD - réservé au "Comment jouer ?" pour matcher le carousel.
    */
   variant?: 'classic' | 'comic';
+  /**
+   * Désactive le fade blanc en bas du contenu (utile quand le contenu est un
+   * carousel ou autre composant qui gère lui-même son débord).
+   */
+  disableScrollFade?: boolean;
 }
 
-const InfoModal = ({ isOpen, onClose, title, children, variant = 'classic' }: InfoModalProps) => {
+const InfoModal = ({
+  isOpen,
+  onClose,
+  title,
+  children,
+  variant = 'classic',
+  disableScrollFade = false,
+}: InfoModalProps) => {
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const showFade = useScrollFade(scrollRef);
+
   if (!isOpen) return null;
 
   const animClass = variant === 'comic' ? 'animate-modal-comic-slam' : 'animate-modal-content';
@@ -66,10 +82,22 @@ const InfoModal = ({ isOpen, onClose, title, children, variant = 'classic' }: In
           {/* Séparateur pointillé */}
           <div className="mx-5 border-t-[2px] border-dashed border-black/35" />
 
-          {/* Content */}
-          <div className="relative px-5 py-4 text-gray-800 overflow-y-auto flex-1 min-h-0">
+          {/* Content - structure d'origine, ne pas toucher (scroll). */}
+          <div
+            ref={scrollRef}
+            className="relative px-5 py-4 text-gray-800 overflow-y-auto flex-1 min-h-0"
+          >
             {children}
           </div>
+
+          {/* Fade blanc en bas - indice visuel "il y a plus de contenu en dessous".
+              Affiché seulement quand il reste du contenu à scroller. */}
+          {!disableScrollFade && (
+            <div
+              aria-hidden
+              className={`pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-white via-white/85 to-transparent transition-opacity duration-150 ${showFade ? 'opacity-100' : 'opacity-0'}`}
+            />
+          )}
         </div>
       </div>
     </div>
