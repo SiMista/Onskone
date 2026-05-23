@@ -9,7 +9,7 @@ import { IGame, IPlayer, RoundPhase, GameCard } from '@onskone/shared';
 // Activated when running inside a studio iframe AND either ?bot=1 in the URL
 // OR a postMessage `{type: 'studio:setBot', enabled: true}` was received from
 // the parent. State is persisted in sessionStorage so it survives navigations
-// (Home → Lobby → Game) and reloads inside the iframe.
+// (Home -> Lobby -> Game) and reloads inside the iframe.
 // =====================================================================
 
 const BOT_KEY = 'studioBot';
@@ -22,8 +22,6 @@ const RANDOM_ANSWERS = [
 
 const randomAnswer = () => {
   const base = RANDOM_ANSWERS[Math.floor(Math.random() * RANDOM_ANSWERS.length)];
-  // Suffix random digits to make answers unique enough to avoid the
-  // similarity-merge popup blocking the flow during automated runs.
   return `${base} ${Math.floor(Math.random() * 1000)}`;
 };
 
@@ -48,12 +46,12 @@ interface UseStudioBotArgs {
 
 export function useStudioBot({ game, currentPlayer, players, lobbyCode }: UseStudioBotArgs) {
   const enabledRef = useRef<boolean>(readInitialBotFlag());
-  // Memoize phase decisions so we don't fire the same action twice
-  // (handlers can re-run because of state updates within the same phase).
+  // Tracks which phase-actions have already been emitted, keyed by
+  // `${roundNumber}:${phase}`. Reset on round change.
   const firedRef = useRef<Set<string>>(new Set());
 
-  // Refs miroir pour que le listener "studio:stress" (enregistré une seule
-  // fois) puisse lire l'état courant du jeu sans dépendances.
+  // Refs miroir pour que les listeners et timers (qui survivent au-delà du
+  // cycle de l'effect) puissent lire l'état courant sans dépendances React.
   const gameRef = useRef(game);
   const currentPlayerRef = useRef(currentPlayer);
   const playersRef = useRef(players);
@@ -97,11 +95,7 @@ export function useStudioBot({ game, currentPlayer, players, lobbyCode }: UseStu
           }
         };
 
-        // Émet l'action "naturelle" de la phase courante, en rafale.
-        // Le but est de tester le rate-limit et l'idempotence côté backend,
-        // donc on bypass volontairement le firedRef du bot.
         if (phase === RoundPhase.QUESTION_SELECTION && isLeader) {
-          // Pas d'action directe : demander une nouvelle question N fois.
           spam(() => socket.emit('requestQuestions', { lobbyCode: code }));
         } else if (phase === RoundPhase.SUBSTITUTE_SELECTION && isLeader) {
           const candidate = pls.find((p) => p.isActive && p.id !== cp.id);
@@ -128,6 +122,86 @@ export function useStudioBot({ game, currentPlayer, players, lobbyCode }: UseStu
     return () => window.removeEventListener('message', onMessage);
   }, []);
 
+  // Reset fired-set when round number changes so we re-arm per round.
+  const lastRoundRef = useRef<number | null>(null);
+  useEffect(() => {
+    const r = game?.currentRound?.roundNumber ?? null;
+    if (r !== lastRoundRef.current) {
+      firedRef.current = new Set();
+      lastRoundRef.current = r;
+    }
+  }, [game?.currentRound?.roundNumber]);
+
+  // ---------------------------------------------------------------------
+  // Long-lived listeners for phases dont l'action dépend d'une réponse
+  // serveur asynchrone (questionsReceived / shuffledAnswersReceived).
+  // Enregistrés UNE seule fois (deps vides) pour éviter qu'un re-render
+  // ne les détache avant que la réponse n'arrive.
+  // ---------------------------------------------------------------------
+  useEffect(() => {
+    if (!isStudioFrame) return;
+
+    const onQuestions = (data: { questions: GameCard[] }) => {
+      if (!enabledRef.current) return;
+      const g = gameRef.current;
+      const cp = currentPlayerRef.current;
+      const code = lobbyCodeRef.current;
+      if (!g?.currentRound || !cp || !code) return;
+      const round = g.currentRound;
+      if (round.phase !== RoundPhase.QUESTION_SELECTION) return;
+      if (round.leader.id !== cp.id) return;
+      const key = `${round.roundNumber}:selectQuestion`;
+      if (firedRef.current.has(key)) return;
+      if (!data.questions?.length) return;
+      const first = data.questions[0];
+      const q = first.questions[0];
+      if (!q) return;
+      firedRef.current.add(key);
+      socket.emit('selectQuestion', { lobbyCode: code, selectedQuestion: q });
+    };
+
+    const onShuffled = (data: {
+      answers: Array<{ id: string; text: string }>;
+      players: IPlayer[];
+      roundNumber?: number;
+    }) => {
+      if (!enabledRef.current) return;
+      const g = gameRef.current;
+      const cp = currentPlayerRef.current;
+      const code = lobbyCodeRef.current;
+      if (!g?.currentRound || !cp || !code) return;
+      const round = g.currentRound;
+      if (round.phase !== RoundPhase.GUESSING) return;
+      if (round.leader.id !== cp.id) return;
+      if (data.roundNumber !== undefined && data.roundNumber !== round.roundNumber) return;
+      const key = `${round.roundNumber}:submitGuesses`;
+      if (firedRef.current.has(key)) return;
+      firedRef.current.add(key);
+      const candidates = data.players.map((p) => p.id);
+      const shuffledCandidates = [...candidates].sort(() => Math.random() - 0.5);
+      const guesses: Record<string, string> = {};
+      data.answers.forEach((a, i) => {
+        guesses[a.id] = shuffledCandidates[i % shuffledCandidates.length];
+      });
+      setTimeout(() => {
+        if (!enabledRef.current) return;
+        socket.emit('submitGuesses', { lobbyCode: code, guesses });
+      }, 600);
+    };
+
+    socket.on('questionsReceived', onQuestions);
+    socket.on('shuffledAnswersReceived', onShuffled);
+    return () => {
+      socket.off('questionsReceived', onQuestions);
+      socket.off('shuffledAnswersReceived', onShuffled);
+    };
+  }, []);
+
+  // ---------------------------------------------------------------------
+  // Effet principal : déclenche l'action de phase. PAS de cleanup qui tue
+  // les setTimeout en vol -- on garde le flag firedRef pour éviter le
+  // double-emit, donc laisser le timer aller au bout est sans risque.
+  // ---------------------------------------------------------------------
   useEffect(() => {
     if (!isStudioFrame || !enabledRef.current) return;
     if (!game?.currentRound || !currentPlayer || !lobbyCode) return;
@@ -136,115 +210,105 @@ export function useStudioBot({ game, currentPlayer, players, lobbyCode }: UseStu
     const phase = round.phase;
     const isLeader = round.leader.id === currentPlayer.id;
     const isSubstitute = round.substitutePlayerId === currentPlayer.id;
-    const fireKey = `${round.roundNumber}:${phase}`;
-    if (firedRef.current.has(fireKey)) return;
 
-    const fire = (delay: number, fn: () => void) => {
-      firedRef.current.add(fireKey);
-      const t = setTimeout(() => {
+    const schedule = (key: string, delay: number, fn: () => void) => {
+      if (firedRef.current.has(key)) return;
+      firedRef.current.add(key);
+      setTimeout(() => {
         if (!enabledRef.current) return;
         try { fn(); } catch (err) { console.warn('[studio-bot] action failed', err); }
       }, delay);
-      return () => clearTimeout(t);
     };
 
     // ----- QUESTION_SELECTION (leader) -----
+    // Le listener long-lived déclenche selectQuestion ; on (re)demande les
+    // questions ici pour couvrir le cas où QuestionSelection a déjà reçu sa
+    // réponse avant qu'on soit activé, OU si on rejoint en cours.
     if (phase === RoundPhase.QUESTION_SELECTION && isLeader) {
-      // The QuestionSelection component already emits requestQuestions on mount.
-      // We listen for the response and immediately select the first question.
-      const onQuestions = (data: { questions: GameCard[] }) => {
-        if (!data.questions?.length) return;
-        const first = data.questions[0];
-        const q = first.questions[0];
-        if (!q) return;
-        socket.emit('selectQuestion', { lobbyCode, selectedQuestion: q });
-      };
-      // One-shot listener.
-      socket.once('questionsReceived', onQuestions);
-      firedRef.current.add(fireKey);
-      return () => { socket.off('questionsReceived', onQuestions); };
+      schedule(`${round.roundNumber}:requestQuestions`, 400, () => {
+        socket.emit('requestQuestions', { lobbyCode });
+      });
+      return;
     }
 
     // ----- SUBSTITUTE_SELECTION (leader) -----
     if (phase === RoundPhase.SUBSTITUTE_SELECTION && isLeader) {
-      const candidate = players.find(
+      const candidate = playersRef.current.find(
         (p) => p.isActive && p.id !== currentPlayer.id
       );
       if (!candidate) return;
-      return fire(600, () => {
+      schedule(`${round.roundNumber}:selectSubstitute`, 600, () => {
         socket.emit('selectSubstitute', {
           lobbyCode,
           substitutePlayerId: candidate.id,
         });
       });
+      return;
     }
 
     // ----- ANSWERING (non-leader) -----
     if (phase === RoundPhase.ANSWERING && !isLeader) {
-      // Skip if we've already answered (round.answers already contains us).
       if (round.answers && round.answers[currentPlayer.id]) {
-        firedRef.current.add(fireKey);
+        firedRef.current.add(`${round.roundNumber}:submitAnswer`);
         return;
       }
-      return fire(500 + Math.random() * 600, () => {
+      schedule(`${round.roundNumber}:submitAnswer`, 500 + Math.random() * 600, () => {
         socket.emit('submitAnswer', {
           lobbyCode,
           playerId: currentPlayer.id,
           answer: randomAnswer(),
         });
       });
+      return;
     }
 
     // ----- SUBSTITUTE_ANSWERING (substitute) -----
     if (phase === RoundPhase.SUBSTITUTE_ANSWERING && isSubstitute) {
-      return fire(500 + Math.random() * 600, () => {
+      schedule(`${round.roundNumber}:submitSubstituteAnswer`, 500 + Math.random() * 600, () => {
         socket.emit('submitSubstituteAnswer', {
           lobbyCode,
           answer: randomAnswer(),
         });
       });
+      return;
     }
 
     // ----- GUESSING (leader) -----
+    // Le listener long-lived déclenche submitGuesses ; on (re)demande le
+    // shuffle pour amorcer la réponse.
     if (phase === RoundPhase.GUESSING && isLeader) {
-      // GuessingPhase mounts and emits requestShuffledAnswers. Listen for the
-      // response, then submit a random mapping of answer → player.
-      const onShuffled = (data: {
-        answers: Array<{ id: string; text: string }>;
-        players: IPlayer[];
-        roundNumber?: number;
-      }) => {
-        if (data.roundNumber !== undefined && data.roundNumber !== round.roundNumber) return;
-        const candidates = data.players.map((p) => p.id);
-        const shuffledCandidates = [...candidates].sort(() => Math.random() - 0.5);
-        const guesses: Record<string, string> = {};
-        data.answers.forEach((a, i) => {
-          guesses[a.id] = shuffledCandidates[i % shuffledCandidates.length];
-        });
-        setTimeout(() => {
-          socket.emit('submitGuesses', { lobbyCode, guesses });
-        }, 600);
-      };
-      socket.once('shuffledAnswersReceived', onShuffled);
-      firedRef.current.add(fireKey);
-      return () => { socket.off('shuffledAnswersReceived', onShuffled); };
+      schedule(`${round.roundNumber}:requestShuffled`, 400, () => {
+        socket.emit('requestShuffledAnswers', { lobbyCode });
+      });
+      return;
     }
 
     // ----- REVEAL (leader) -----
+    // Boucle de reveal séquentiel + nextRound. PAS de cleanup `cancelled` :
+    // un re-render ne doit pas tuer la séquence. firedRef garantit qu'on
+    // ne relance pas la boucle deux fois pour le même round.
     if (phase === RoundPhase.REVEAL && isLeader) {
-      // Reveal each unrevealed answer sequentially, then advance to next round.
-      firedRef.current.add(fireKey);
+      const key = `${round.roundNumber}:reveal`;
+      if (firedRef.current.has(key)) return;
+      firedRef.current.add(key);
+
       const totalAnswers = Object.keys(round.answers ?? {}).length;
       const already = new Set(round.revealedIndices ?? []);
       let idx = 0;
-      let cancelled = false;
 
       const revealNext = () => {
-        if (cancelled || !enabledRef.current) return;
+        if (!enabledRef.current) return;
+        // Re-lire l'état courant : si le round a changé entre-temps, stop.
+        const g = gameRef.current;
+        if (!g?.currentRound || g.currentRound.roundNumber !== round.roundNumber) return;
+        if (g.currentRound.phase !== RoundPhase.REVEAL) return;
+
         while (idx < totalAnswers && already.has(idx)) idx++;
         if (idx >= totalAnswers) {
           setTimeout(() => {
-            if (cancelled || !enabledRef.current) return;
+            if (!enabledRef.current) return;
+            const gg = gameRef.current;
+            if (!gg?.currentRound || gg.currentRound.roundNumber !== round.roundNumber) return;
             socket.emit('nextRound', { lobbyCode });
           }, 800);
           return;
@@ -255,8 +319,7 @@ export function useStudioBot({ game, currentPlayer, players, lobbyCode }: UseStu
         setTimeout(revealNext, 900);
       };
 
-      const t = setTimeout(revealNext, 900);
-      return () => { cancelled = true; clearTimeout(t); };
+      setTimeout(revealNext, 900);
     }
   }, [
     game?.currentRound?.roundNumber,
@@ -265,16 +328,7 @@ export function useStudioBot({ game, currentPlayer, players, lobbyCode }: UseStu
     game?.currentRound?.substitutePlayerId,
     currentPlayer?.id,
     lobbyCode,
-    players,
+    // NB: pas de `players` ici - on lit playersRef pour éviter qu'un update
+    // serveur (très fréquent) ne re-déclenche l'effect en milieu de phase.
   ]);
-
-  // Reset fired-set when round number changes so we re-arm per round.
-  const lastRoundRef = useRef<number | null>(null);
-  useEffect(() => {
-    const r = game?.currentRound?.roundNumber ?? null;
-    if (r !== lastRoundRef.current) {
-      firedRef.current = new Set();
-      lastRoundRef.current = r;
-    }
-  }, [game?.currentRound?.roundNumber]);
 }

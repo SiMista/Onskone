@@ -258,6 +258,11 @@ const Lobby = () => {
         setShowGameAlreadyStarted(true);
     }, []);
 
+    const handleLobbyClosed = useCallback(() => {
+        showToast('Ce salon a été fermé pour inactivité', 'error', 4500);
+        navigate('/');
+    }, [navigate, showToast]);
+
     const handleLobbyDecksState = useCallback((data: { catalog: DecksCatalog; selected: SelectedDecks; gameMode: GameMode; guessMyAnswerMode?: boolean }) => {
         setDecksCatalog(data.catalog);
         setSelectedDecks(data.selected);
@@ -318,6 +323,7 @@ const Lobby = () => {
     useSocketEvent('error', handleError, [handleError]);
     useSocketEvent('gameStarted', handleGameStarted, [handleGameStarted]);
     useSocketEvent('gameAlreadyStarted', handleGameAlreadyStarted, [handleGameAlreadyStarted]);
+    useSocketEvent('lobbyClosed', handleLobbyClosed, [handleLobbyClosed]);
     useSocketEvent('lobbyDecksState', handleLobbyDecksState, [handleLobbyDecksState]);
     useSocketEvent('guessMyAnswerModeUpdated', handleGuessMyAnswerModeUpdated, [handleGuessMyAnswerModeUpdated]);
 

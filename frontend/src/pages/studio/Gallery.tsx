@@ -49,12 +49,12 @@ const CompactTile = ({ label, children }: { label: string; children: React.React
 );
 
 const SHARE_PRESETS = [
-  { label: '15% - gênant', pct: 15, title: "C'est gênant là...", message: "Vous partagez le wifi, c'est déjà une base solide.", color: '#ff4f4f' },
-  { label: '35% - pas encore', pct: 35, title: 'Pas encore ça', message: 'Les bases sont là, reste juste à construire au-dessus.', color: '#ff8c3a' },
-  { label: '55% - pas mal', pct: 55, title: 'Pas mal, pas mal', message: 'Un pas de plus et vous êtes une vraie team.', color: '#ffc700' },
-  { label: '75% - super team', pct: 75, title: 'Super team', message: 'Vous vous captez presque sans parler, c\'est beau à voir.', color: '#8bd94d' },
-  { label: '92% - inséparables', pct: 92, title: 'Inséparables', message: 'À ce stade c\'est plus de l\'amitié, c\'est de la famille.', color: '#30c94d' },
-  { label: '100% - Onskoné !', pct: 100, title: 'Onskoné !', message: 'Score parfait. Vous êtes la même personne en plusieurs exemplaires.', color: '#b46cff' },
+  { label: '15% - gênant', pct: 15, title: "C'est gênant là...", message: "Vous partagez le wifi, c'est déjà une base solide.", color: '#ff4f4f', emoji: '😐' },
+  { label: '35% - pas encore', pct: 35, title: 'Pas encore ça', message: 'Les bases sont là, reste juste à construire au-dessus.', color: '#ff8c3a', emoji: '👀' },
+  { label: '55% - pas mal', pct: 55, title: 'Pas mal, pas mal', message: 'Un pas de plus et vous êtes une vraie team.', color: '#ffc700', emoji: '🤝' },
+  { label: '75% - super team', pct: 75, title: 'Super team', message: 'Vous vous captez presque sans parler, c\'est beau à voir.', color: '#8bd94d', emoji: '✨' },
+  { label: '92% - inséparables', pct: 92, title: 'Inséparables', message: 'À ce stade c\'est plus de l\'amitié, c\'est de la famille.', color: '#30c94d', emoji: '🫂' },
+  { label: '100% - Onskoné !', pct: 100, title: 'Onskoné !', message: 'Score parfait. Vous êtes la même personne en plusieurs exemplaires.', color: '#b46cff', emoji: '🥳' },
 ];
 
 const SHARE_TOP_PLAYERS = [
@@ -99,6 +99,7 @@ export const Gallery = () => {
       verdictTitle: preset.title,
       verdictMessage: preset.message,
       color: preset.color,
+      tierEmoji: preset.emoji,
       topPlayers: SHARE_TOP_PLAYERS,
     })
       .then(blob => {
@@ -376,6 +377,7 @@ export const Gallery = () => {
                       className="inline-block w-3 h-3 rounded-full flex-shrink-0"
                       style={{ backgroundColor: p.color }}
                     />
+                    <span className="text-base leading-none flex-shrink-0">{p.emoji}</span>
                     <span className="flex-1">{p.label}</span>
                   </button>
                 );

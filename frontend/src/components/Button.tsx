@@ -72,7 +72,7 @@ const Button: React.FC<ButtonProps> = ({
   const classes = [
     "group relative font-display font-bold tracking-tight uppercase select-none",
     "rounded-xl",
-    isGhost ? "" : "border-[2.5px] border-black overflow-hidden",
+    isGhost ? "" : "border-[2.5px] border-black",
     isGhost ? "" : "texture-paper",
     isFullWidth ? "w-full" : "",
     isGhost ? "" : (hero ? "stack-shadow" : "stack-shadow-sm"),
@@ -87,7 +87,7 @@ const Button: React.FC<ButtonProps> = ({
     // Lift par défaut si aucun effet spécial
     !rotateEffect && !hero && !isDisabled && !isGhost ? "hover:-translate-y-0.5" : "",
     pressClasses,
-    "transition-all duration-[350ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]",
+    "transition-all duration-[400ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]",
     className,
   ].filter(Boolean).join(" ");
 
@@ -114,11 +114,20 @@ const Button: React.FC<ButtonProps> = ({
       className={classes}
     >
       {band && (
+        // Wrapper interne dédié au clipping du band : overflow-hidden + rounded
+        // hérité + mask hack iOS. Le mask est confiné à ce span, donc il NE
+        // mange PAS la stack-shadow du bouton (qui s'étend hors de la box).
         <span
           aria-hidden
-          className="absolute inset-x-0 bottom-0 h-[10%] origin-bottom pointer-events-none transition-transform duration-200 ease-out group-active:scale-y-0"
-          style={{ backgroundColor: band }}
-        />
+          className="absolute inset-0 rounded-[inherit] overflow-hidden ios-clip-fix pointer-events-none"
+        >
+          <span
+            className={`absolute inset-x-0 bottom-0 h-[10%] origin-bottom transition-transform duration-[300ms] ease-out ${
+              isDisabled ? "" : "group-active:scale-y-0"
+            }`}
+            style={{ backgroundColor: band }}
+          />
+        </span>
       )}
       <span className="relative z-10">{content}</span>
     </button>

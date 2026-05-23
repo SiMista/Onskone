@@ -44,6 +44,17 @@ export const studioSlotIndex = detectSlotIndex();
 export const isStudioFrame = studioSlotIndex !== null;
 const PREFIX = isStudioFrame ? `studio${studioSlotIndex}_` : '';
 
+// Sync URL `?bot=1|0` to sessionStorage at module boot so that downstream
+// readers (Lobby auto-start, useStudioBot) see the flag immediately - even
+// before the parent's postMessage handshake or before Game.tsx mounts.
+if (isStudioFrame && typeof window !== 'undefined') {
+  try {
+    const bot = new URLSearchParams(window.location.search).get('bot');
+    if (bot === '1') sessionStorage.setItem('studioBot', '1');
+    else if (bot === '0') sessionStorage.removeItem('studioBot');
+  } catch { /* silent */ }
+}
+
 export const studioStorage = {
   getItem(key: string): string | null {
     try {
