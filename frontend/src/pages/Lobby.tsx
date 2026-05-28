@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import socket from '../utils/socket';
-import Logo from '../components/Logo';
 import Button from '../components/Button';
 import Footer from '../components/Footer';
 import ConfirmModal from '../components/ConfirmModal';
@@ -12,6 +11,7 @@ import { Icon } from '@iconify/react';
 import PlayerCard from '../components/PlayerCard';
 import DeckSelector from '../components/DeckSelector';
 import BackButton from '../components/BackButton';
+import ScrollFade from '../components/ScrollFade';
 import { IPlayer, DecksCatalog, SelectedDecks, GameMode } from '@onskone/shared';
 import { useSocketEvent, useQueryParams, useLeavePrompt, useReconnectOnVisible } from '../hooks';
 import { useToast } from '../components/Toast';
@@ -42,6 +42,14 @@ const Lobby = () => {
     const [decksCatalog, setDecksCatalog] = useState<DecksCatalog>({});
     const [selectedDecks, setSelectedDecks] = useState<SelectedDecks>({});
     const [lobbyTab, setLobbyTab] = useState<'settings' | 'players'>('settings');
+    const lobbyTabScrollRef = useRef<HTMLDivElement | null>(null);
+    // Le scroll-container est partagé entre les 2 tabs (grid stacking).
+    // Reset à 0 au switch pour éviter que la position scrollée des settings
+    // contamine la vue Players (et que le ScrollFade reflète un mauvais état).
+    useEffect(() => {
+        const el = lobbyTabScrollRef.current;
+        if (el) el.scrollTop = 0;
+    }, [lobbyTab]);
     const [gameMode, setGameMode] = useState<GameMode>('local');
     const [guessMyAnswerMode, setGuessMyAnswerMode] = useState<boolean>(false);
     const initialPlayerIdsRef = useRef<Set<string> | null>(null);
@@ -341,7 +349,7 @@ const Lobby = () => {
                 <p className="m-0 font-display font-bold text-sm text-gray-800">Dans le salon</p>
                 <p className="m-0 text-xs text-gray-400">{activePlayers.length} joueur{activePlayers.length > 1 ? 's' : ''} connecté{activePlayers.length > 1 ? 's' : ''}</p>
             </div>
-            <ul className="list-none w-full m-0 p-0 grid grid-cols-3 md:grid-cols-4 gap-2 max-h-[55vh] overflow-y-auto">
+            <ul className="list-none w-full m-0 p-0 grid grid-cols-3 md:grid-cols-4 gap-2">
                 {players.map((player, index) => (
                     <li key={player.id} className={`min-w-0 ${initialPlayerIdsRef.current?.has(player.id) ? '' : 'animate-player-pop'}`} style={initialPlayerIdsRef.current?.has(player.id) ? undefined : { animationDelay: `${Math.min(index, 6) * 50}ms` }}>
                         <PlayerCard
@@ -511,24 +519,20 @@ const Lobby = () => {
     );
 
     return (
-        <div className="min-h-screen flex flex-col animate-phase-enter">
-            {/* Contenu principal */}
-            <div className="flex-1 w-full max-w-2xl md:max-w-3xl mx-auto px-3 md:px-4 py-3 md:py-6">
-                {/* Logo top */}
-                <div className="flex justify-center mt-3 md:mt-4 mb-4 md:mb-6">
-                    <Logo size="small" />
-                </div>
-
+        <div className="h-full flex flex-col items-center justify-center overflow-hidden animate-phase-enter">
+            {/* Contenu principal - sized to content, centré dans la fenêtre.
+                Le panel a son propre cap dvh pour scroller si le contenu dépasse. */}
+            <div className="w-full max-w-2xl md:max-w-3xl max-h-full min-h-0 mx-auto px-3 md:px-4 py-2 md:py-4 flex flex-col safe-pt">
                 {/* ===================== LAYOUT UNIFIÉ ===================== */}
-                <div className="flex flex-col gap-3 md:gap-4">
+                <div className="min-h-0 flex flex-col gap-2 md:gap-4">
                     {/* Bouton retour + raccourci "Comment jouer ?" sur la même ligne. */}
-                    <div className="flex items-center justify-between gap-2">
+                    <div className="shrink-0 flex items-center justify-between gap-2">
                         <BackButton onClick={leaveLobby} label="Retour" tone="danger" />
                         <HowToPlayButton onClick={() => setIsHowToPlayOpen(true)} />
                     </div>
 
                     {/* Tabs : intercalaires cartonnés en éventail, coins asymétriques */}
-                    <div className="flex gap-1 md:gap-1.5 -mb-[2.5px] relative z-10 px-1">
+                    <div className="shrink-0 flex gap-1 md:gap-1.5 -mb-[2.5px] relative z-10 px-1">
                         {([
                             {
                                 id: 'settings' as const,
@@ -591,23 +595,46 @@ const Lobby = () => {
                         })}
                     </div>
 
-                    {/* Panel de la tab active - coin haut côté tab actif carré, coin opposé arrondi */}
+                    {/* Panel de la tab active - sized to content, capé en dvh pour scroller
+                        si le contenu dépasse (settings dense ou liste de joueurs >9). */}
                     <div
                         key={lobbyTab}
-                        role="tabpanel"
-                        className="bg-white border-[2.5px] border-black rounded-2xl stack-shadow texture-paper p-3 md:p-4 animate-phase-enter"
+                        className="relative min-h-0 bg-white border-[2.5px] border-black rounded-2xl stack-shadow texture-paper overflow-hidden animate-phase-enter"
                     >
-                        {lobbyTab === 'settings' ? settingsPanelEl : playersListMobile}
+                        <div
+                            ref={lobbyTabScrollRef}
+                            role="tabpanel"
+                            className="max-h-[67dvh] overflow-y-auto overscroll-contain no-scrollbar p-3 md:p-4"
+                        >
+                            {/* Grid stacking : settings est toujours rendu (visible
+                                ou non) pour dicter la hauteur ; players se cale
+                                dans la même cellule de grille. */}
+                            <div className="grid grid-cols-1 grid-rows-1">
+                                <div
+                                    className={`col-start-1 row-start-1 ${lobbyTab === 'settings' ? '' : 'invisible pointer-events-none'}`}
+                                    aria-hidden={lobbyTab !== 'settings'}
+                                >
+                                    {settingsPanelEl}
+                                </div>
+                                <div
+                                    className={`col-start-1 row-start-1 ${lobbyTab === 'players' ? '' : 'invisible pointer-events-none'}`}
+                                    aria-hidden={lobbyTab !== 'players'}
+                                >
+                                    {playersListMobile}
+                                </div>
+                            </div>
+                        </div>
+                        <ScrollFade scrollRef={lobbyTabScrollRef} className="rounded-b-2xl" />
                     </div>
 
                     {/* ===================== ACTION ROW : Démarrer + Copier le lien ===================== */}
-                    <div className="flex flex-col items-center gap-1.5 mt-1 md:mt-2">
+                    <div className="shrink-0 flex flex-col items-center gap-1.5 mt-1 md:mt-2 safe-pb">
                         <div className="flex flex-row items-center justify-center gap-3 md:gap-4 w-full flex-wrap">
                             {currentPlayer?.isHost ? (
                                 <Button
                                     text="Démarrer"
                                     variant="success"
-                                    size="lg"
+                                    size="md"
                                     hero
                                     disabled={!canStartGame}
                                     onClick={startGame}

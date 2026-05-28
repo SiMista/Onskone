@@ -70,7 +70,7 @@ const SubstituteAnsweringPhase: React.FC<SubstituteAnsweringPhaseProps> = ({
   const maxLen = GAME_CONFIG.MAX_ANSWER_LENGTH;
 
   return (
-    <div className="flex flex-col h-full max-w-2xl mx-auto w-full px-3 md:px-4 py-3 md:py-4 gap-3">
+    <div className={`flex flex-col h-full max-w-2xl mx-auto w-full px-3 md:px-4 py-3 md:py-4 gap-3 overflow-hidden ${isSubstitute && !submitted ? 'min-h-[70dvh]' : ''}`}>
       <HourglassTimer
         duration={GAME_CONFIG.TIMERS.SUBSTITUTE_ANSWERING}
         onExpire={handleTimerExpire}

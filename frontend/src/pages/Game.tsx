@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import socket from '../utils/socket';
@@ -8,8 +8,8 @@ import GuessingPhase from '../components/GuessingPhase';
 import RevealPhase from '../components/RevealPhase';
 import SubstituteSelection from '../components/SubstituteSelection';
 import SubstituteAnsweringPhase from '../components/SubstituteAnsweringPhase';
-import Logo from '../components/Logo';
 import HourglassTimer from '../components/HourglassTimer';
+import { useToast } from '../components/Toast';
 import { GAME_CONFIG } from '../constants/game';
 import { useLeavePrompt, useReconnectOnVisible } from '../hooks';
 import { getCurrentPlayerFromStorage } from '../utils/playerHelpers';
@@ -20,6 +20,7 @@ import { useStudioBot } from '../hooks/useStudioBot';
 const GamePage: React.FC = () => {
   const { lobbyCode } = useParams<{ lobbyCode: string }>();
   const navigate = useNavigate();
+  const showToast = useToast();
 
   // Redirect if no lobby code
   useEffect(() => {
@@ -31,8 +32,6 @@ const GamePage: React.FC = () => {
   const [game, setGame] = useState<IGame | null>(null);
   const [players, setPlayers] = useState<IPlayer[]>([]);
   const [currentPlayer, setCurrentPlayer] = useState<IPlayer | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [notification, setNotification] = useState<string | null>(null);
   const [revealResults, setRevealResults] = useState<RevealResult[]>([]);
   const [reconnectionData, setReconnectionData] = useState<{
     answeredPlayerIds: string[];
@@ -41,8 +40,6 @@ const GamePage: React.FC = () => {
     revealResults?: RevealResult[];
     revealedIndices?: number[];
   } | null>(null);
-  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const notificationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Calculer isLeader directement (pas de useEffect) pour éviter les race conditions
   const isLeader = !!(game?.currentRound && currentPlayer && game.currentRound.leader.id === currentPlayer.id);
@@ -176,11 +173,7 @@ const GamePage: React.FC = () => {
     };
 
     const onRoundSkipped = (data: { skippedLeaderName: string; reason: 'leader_disconnected' }) => {
-      setNotification(`${data.skippedLeaderName} s'est déconnecté - round passé`);
-      if (notificationTimeoutRef.current) {
-        clearTimeout(notificationTimeoutRef.current);
-      }
-      notificationTimeoutRef.current = setTimeout(() => setNotification(null), 5000);
+      showToast(`${data.skippedLeaderName} s'est déconnecté - round passé`, 'warning', 5000);
     };
 
     const onRoundStarted = (data: { round: IRound }) => {
@@ -223,11 +216,7 @@ const GamePage: React.FC = () => {
     };
 
     const onError = (data: { message: string }) => {
-      setError(data.message);
-      if (errorTimeoutRef.current) {
-        clearTimeout(errorTimeoutRef.current);
-      }
-      errorTimeoutRef.current = setTimeout(() => setError(null), 5000);
+      showToast(data.message, 'error', 5000);
     };
 
     socket.on('gameState', onGameState);
@@ -256,10 +245,8 @@ const GamePage: React.FC = () => {
       socket.off('gameEnded', onGameEnded);
       socket.off('updatePlayersList', onUpdatePlayersList);
       socket.off('error', onError);
-      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
-      if (notificationTimeoutRef.current) clearTimeout(notificationTimeoutRef.current);
     };
-  }, [navigate, lobbyCode, fetchGameState]);
+  }, [navigate, lobbyCode, fetchGameState, showToast]);
 
   const renderPhase = () => {
     if (!game || !game.currentRound || !currentPlayer) {
@@ -371,53 +358,23 @@ const GamePage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col px-2 md:px-0">
-      {/* Logo */}
-      <div className="flex justify-center pt-5 md:pt-7 pb-2 md:pb-4">
-        <Logo size="small" />
-      </div>
-
-      {/* Error message */}
-      {error && (
-        <div className="w-full max-w-4xl mx-auto px-2">
-          <div className="bg-red-500 text-white p-3 md:p-4 rounded-lg mb-3 md:mb-4 text-sm md:text-base">
-            {error}
-          </div>
-        </div>
-      )}
-
-      {/* Notification message (round skipped, etc.) */}
-      {notification && (
-        <div className="w-full max-w-4xl mx-auto px-2">
-          <div className="bg-amber-500 text-white p-3 md:p-4 rounded-lg mb-3 md:mb-4 text-sm md:text-base text-center flex items-center justify-center gap-2">
-            <Icon icon="fluent-emoji-flat:warning" width="1.2em" height="1.2em" aria-hidden />
-            <span>{notification}</span>
-          </div>
-        </div>
-      )}
-
-      {/* Main game area - centered */}
+    <div className="h-full flex flex-col items-center justify-center overflow-hidden px-2 tablet:px-0 safe-pt">
+      {/* Main game area - sized to content, centré dans la fenêtre. La carte
+          interne a son propre cap dvh pour scroller si la phase dépasse.
+          Erreurs et notifs sont remontées via le Toast global (haut centré). */}
       <div
-        className={`flex-1 w-full max-w-4xl mx-auto px-2 pb-7 md:pb-10 flex flex-col md:pt-0 ${
-          (game?.currentRound?.phase === RoundPhase.GUESSING ||
-           game?.currentRound?.phase === RoundPhase.SUBSTITUTE_SELECTION ||
-           game?.currentRound?.phase === RoundPhase.SUBSTITUTE_ANSWERING ||
-           (game?.currentRound?.phase === RoundPhase.QUESTION_SELECTION && isLeader))
-            ? 'pt-0'
-            : 'pt-[5vh]'
-        }`}
-        style={{ paddingBottom: 'calc(1.75rem + env(safe-area-inset-bottom, 0px))' }}
+        className="w-full max-w-4xl max-h-full min-h-0 mx-auto px-2 pt-2 tablet:pt-4 flex flex-col safe-pb"
       >
-        <div className="bg-white rounded-xl p-2 md:p-4 min-h-[400px] md:min-h-[500px] flex flex-col border-[2.5px] border-black stack-shadow texture-paper">
+        <div className="min-h-0 max-h-[80dvh] phone-landscape:max-h-none phone-landscape:h-[90dvh] bg-white rounded-xl px-2 py-5 tablet:px-4 tablet:py-7 phone-landscape:!p-2 phone-landscape:tablet:!p-4 flex flex-col overflow-hidden border-[2.5px] border-black stack-shadow texture-paper">
           {/* Game info header : round + host à gauche, sablier à droite */}
-          <div className="flex items-center justify-between gap-3 mb-2 md:mb-4 pb-2 md:pb-3 border-b-[2.5px] border-dashed border-black/30">
+          <div className="shrink-0 flex items-center justify-between gap-3 mb-2 tablet:mb-4 pb-2 tablet:pb-3 border-b-[2.5px] border-dashed border-black/30">
             <div className="flex items-center gap-1.5 flex-wrap text-gray-800 text-left">
-              <span className="text-xs md:text-sm font-display font-bold tracking-wide">
+              <span className="text-xs tablet:text-sm font-display font-bold tracking-wide">
                 Round {game?.currentRound?.roundNumber || 0}<span className="text-gray-400">/{players.length}</span>
               </span>
               <span className="text-gray-300">•</span>
               <Icon icon="fluent-emoji-flat:crown" width="1.1em" height="1.1em" aria-hidden />
-              <span className="text-xs md:text-sm font-display font-semibold tracking-wide truncate max-w-[140px] md:max-w-[220px]">
+              <span className="text-xs tablet:text-sm font-display font-semibold tracking-wide truncate max-w-[140px] tablet:max-w-[220px]">
                 {game?.currentRound?.leader.name || '...'}
               </span>
             </div>
@@ -425,12 +382,16 @@ const GamePage: React.FC = () => {
               const phase = game?.currentRound?.phase;
               const phaseDuration =
                 phase === RoundPhase.QUESTION_SELECTION ? GAME_CONFIG.TIMERS.QUESTION_SELECTION :
-                phase === RoundPhase.SUBSTITUTE_SELECTION ? GAME_CONFIG.TIMERS.SUBSTITUTE_SELECTION :
-                phase === RoundPhase.ANSWERING ? GAME_CONFIG.TIMERS.ANSWERING :
-                phase === RoundPhase.SUBSTITUTE_ANSWERING ? GAME_CONFIG.TIMERS.SUBSTITUTE_ANSWERING :
-                phase === RoundPhase.GUESSING ? GAME_CONFIG.TIMERS.GUESSING :
-                null;
-              if (!phase || phaseDuration === null) return <div className="w-[56px]" aria-hidden />;
+                  phase === RoundPhase.SUBSTITUTE_SELECTION ? GAME_CONFIG.TIMERS.SUBSTITUTE_SELECTION :
+                    phase === RoundPhase.ANSWERING ? GAME_CONFIG.TIMERS.ANSWERING :
+                      phase === RoundPhase.SUBSTITUTE_ANSWERING ? GAME_CONFIG.TIMERS.SUBSTITUTE_ANSWERING :
+                        phase === RoundPhase.GUESSING ? GAME_CONFIG.TIMERS.GUESSING :
+                          null;
+              // Placeholder de la largeur réelle du sablier (size="sm") pour éviter
+              // qu'il y ait un grand vide à droite du header en phase REVEAL (sans
+              // timer). Sinon en paysage phone la zone faisait 56px alors que le
+              // sablier ne fait que 24px → décalage visuel marqué entre phases.
+              if (!phase || phaseDuration === null) return <div className="w-[24px] tablet:w-14" aria-hidden />;
               return (
                 <HourglassTimer
                   key={`top-timer-${game?.currentRound?.roundNumber}-${phase}`}
@@ -445,7 +406,7 @@ const GamePage: React.FC = () => {
 
           <div
             key={`${game?.currentRound?.roundNumber ?? 0}-${game?.currentRound?.phase ?? 'none'}`}
-            className="flex-1 animate-phase-enter"
+            className="flex-1 min-h-0 flex flex-col animate-phase-enter"
           >
             {renderPhase()}
           </div>

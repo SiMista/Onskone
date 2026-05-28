@@ -3,13 +3,10 @@ import { Icon } from '@iconify/react';
 import socket from '../utils/socket';
 import Button from './Button';
 import Avatar from './Avatar';
-import PlayerAnswerCard from './PlayerAnswerCard';
 import PlayerBadge from './PlayerBadge';
 import RevealedAnswerCard from './RevealedAnswerCard';
 import SimilarityPopover from './SimilarityPopover';
-import stickmanShowPhone from '../assets/images/game/stickman-show-phone-cropped.png';
 import { IPlayer, RevealResult, LeaderboardEntry, GameCard, GameMode } from '@onskone/shared';
-import { ANSWER_CARD_COLORS } from '../utils/answerHelpers';
 
 interface RevealPhaseProps {
   lobbyCode: string;
@@ -234,7 +231,7 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leader, 
     const isNextToReveal = !myRevealed && myIndex >= 0 && myIndex === findFirstDisplayable(0, effectiveRevealed);
 
     const waitingFooter = allRevealed ? (
-      <div className="flex items-center justify-center flex-wrap gap-x-2 gap-y-1 leading-none text-gray-900 text-base md:text-lg">
+      <div className="flex items-center justify-center flex-wrap gap-x-2 gap-y-1 leading-none text-gray-900 text-base tablet:text-lg phone-landscape:text-xs">
         <span>En attente que</span>
         <Avatar avatarId={leader?.avatarId ?? 0} name={leader?.name} size="sm" />
         <span>{leader?.name}</span>
@@ -266,36 +263,34 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leader, 
       );
     }
 
-    // Pas de réponse attribuée : rendu spécifique sans bulle avatar.
+    // Pas de réponse attribuée : on réutilise RevealedAnswerCard avec showBubble=false
+    // pour garder la même structure (header "Montre ton écran" + stickman + carte
+    // + footer) sans la bulle "Écrit par". Le bg de la carte bascule en rouge via
+    // `revealed=true correct=false` quand le timer noAnswerLitRed est passé.
+    const noAnswerResult: RevealResult = {
+      playerId: '',
+      playerName: '',
+      playerAvatarId: 0,
+      answer: `${leader.name} ne t'a attribué aucune réponse`,
+      guessedPlayerId: '',
+      guessedPlayerName: '',
+      guessedPlayerAvatarId: 0,
+      correct: false,
+    };
     return (
-      <div className="flex flex-col h-full p-2 md:p-4 max-w-3xl mx-auto landscape:max-w-5xl">
-        <div className="flex flex-col items-center gap-3 md:gap-4 pt-6 md:pt-12 pb-3 px-2 max-md:landscape:gap-2 max-md:landscape:pt-2">
-          <p className="text-gray-900 text-sm md:text-xl font-semibold text-center max-md:landscape:text-xs shrink-0 -translate-x-4 md:-translate-x-8 max-md:landscape:-translate-x-2">
-            Montre ton écran !
-          </p>
-          <div className="w-full flex flex-row items-center justify-center gap-3 md:gap-4">
-            <div className="relative flex-1 min-w-0 max-w-lg landscape:max-w-3xl">
-              <img
-                src={stickmanShowPhone}
-                alt=""
-                aria-hidden
-                draggable={false}
-                className="absolute left-[78%] -translate-x-1/2 -top-16 md:-top-20 max-md:landscape:-top-10 h-32 md:h-40 max-md:landscape:h-20 w-auto select-none pointer-events-none animate-float z-0"
-              />
-              <div className="relative z-10">
-                <PlayerAnswerCard
-                  answer={`${leader.name} ne t'a attribué aucune réponse`}
-                  bgClass={noAnswerLitRed ? ANSWER_CARD_COLORS.incorrect : ANSWER_CARD_COLORS.unrevealed}
-                  className="transition-colors duration-500"
-                  heading={null}
-                />
-              </div>
-            </div>
-          </div>
-          {waitingFooter && <div className="shrink-0 mt-1">{waitingFooter}</div>}
-          {rotateHint}
-        </div>
-      </div>
+      <RevealedAnswerCard
+        result={noAnswerResult}
+        revealed={noAnswerLitRed}
+        correct={false}
+        showBubble={false}
+        cardClassName="transition-colors duration-500"
+        footer={
+          <>
+            {waitingFooter && <div className="shrink-0 mt-1">{waitingFooter}</div>}
+            {rotateHint}
+          </>
+        }
+      />
     );
   }
 
@@ -391,10 +386,6 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leader, 
         }
         footer={
           <>
-            <p className="text-gray-700 text-xs md:text-sm mt-1">
-              {displayablePosition}/{displayableTotal}
-            </p>
-
             {showSimilarity && isLeader && (
               <SimilarityPopover
                 guessedPlayerName={similarityModal!.guessedPlayerName}
@@ -405,7 +396,11 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leader, 
               />
             )}
 
-            {isLeader && !showSimilarity && (
+            <p className="text-gray-700 text-xs md:text-sm mt-1">
+              {displayablePosition}/{displayableTotal}
+            </p>
+
+            {isLeader && (
               <div className="mt-3 md:mt-4 flex items-center justify-center">
                 {showEndButton ? (
                   <div className="animate-fade-in">
@@ -414,6 +409,7 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leader, 
                       variant="success"
                       size="lg"
                       rotateEffect
+                      disabled={showSimilarity}
                       onClick={handleNextRound}
                     />
                   </div>
@@ -424,6 +420,7 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leader, 
                       variant="primary"
                       size="lg"
                       rotateEffect
+                      disabled={showSimilarity}
                       onClick={handleNext}
                     />
                   </div>
@@ -433,7 +430,7 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leader, 
                     variant="primary"
                     size="lg"
                     rotateEffect
-                    disabled={pilierPhase === 'revealed'}
+                    disabled={showSimilarity || pilierPhase === 'revealed'}
                     onClick={handleReveal}
                   />
                 )}
@@ -458,10 +455,6 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leader, 
         rowKey={`pilier-big-${pilierCursor}`}
         footer={
           <>
-            <p className="text-gray-700 text-xs md:text-sm mt-1">
-              {displayablePosition}/{displayableTotal}
-            </p>
-
             {showSimilarity && isLeader && (
               <SimilarityPopover
                 guessedPlayerName={similarityModal!.guessedPlayerName}
@@ -472,6 +465,10 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leader, 
               />
             )}
 
+            <p className="text-gray-700 text-xs md:text-sm mt-1">
+              {displayablePosition}/{displayableTotal}
+            </p>
+
             <div className="mt-3 md:mt-4 flex items-center justify-center">
               {showEndButton ? (
                 <div className="animate-fade-in">
@@ -480,20 +477,19 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leader, 
                     variant="success"
                     size="lg"
                     rotateEffect
+                    disabled={showSimilarity}
                     onClick={handleNextRound}
                   />
                 </div>
               ) : (
-                !showSimilarity && (
-                  <Button
-                    text="Révéler"
-                    variant="primary"
-                    size="lg"
-                    rotateEffect
-                    disabled={pilierPhase === 'revealed'}
-                    onClick={handleReveal}
-                  />
-                )
+                <Button
+                  text="Révéler"
+                  variant="primary"
+                  size="lg"
+                  rotateEffect
+                  disabled={showSimilarity || pilierPhase === 'revealed'}
+                  onClick={handleReveal}
+                />
               )}
             </div>
           </>
@@ -507,11 +503,11 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leader, 
       className="flex flex-col h-full p-2 max-w-2xl mx-auto"
       style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom, 0px))' }}
     >
-      <div className="flex-1 flex flex-col items-center justify-between gap-4 md:gap-6 px-2 py-4">
+      <div className="flex flex-col items-center gap-3 md:gap-4 px-2 py-3">
         {currentResult ? (
           <>
-            <div className="flex-1 flex flex-col items-center justify-center gap-3 md:gap-4 w-full">
-              <div className="flex items-center justify-center gap-3 md:gap-5 w-full">
+            <div className="flex flex-col items-center justify-center gap-3 md:gap-4 w-full">
+              <div className="relative flex items-center justify-center gap-3 md:gap-5 w-full">
                 {/* Spacer miroir pour que la carte reste centrée */}
                 <div className="w-14 md:w-20 shrink-0" aria-hidden />
 
@@ -576,6 +572,19 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leader, 
                     </button>
                   )}
                 </div>
+
+                {/* Popover similarité - flotte sous la carte, ne pousse rien */}
+                {showSimilarity && (
+                  <div className="absolute left-1/2 -translate-x-1/2 top-full z-30 pt-2">
+                    <SimilarityPopover
+                      guessedPlayerName={similarityModal!.guessedPlayerName}
+                      playerName={similarityModal!.playerName}
+                      isLeader={true}
+                      onConfirm={handleConfirmSimilarity}
+                      onDismiss={handleDismissSimilarity}
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="text-center px-2 mt-1 md:mt-2">
@@ -588,23 +597,13 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leader, 
               </div>
             </div>
 
-            {showSimilarity && (
-              <SimilarityPopover
-                guessedPlayerName={similarityModal!.guessedPlayerName}
-                playerName={similarityModal!.playerName}
-                isLeader={true}
-                onConfirm={handleConfirmSimilarity}
-                onDismiss={handleDismissSimilarity}
-              />
-            )}
-
-            {isLeader && !showSimilarity && !showEndButton && (
+            {isLeader && !showEndButton && (
               <Button
                 text="Révéler sur son téléphone"
                 variant="primary"
                 size="lg"
                 rotateEffect
-                disabled={pilierPhase === 'revealed'}
+                disabled={showSimilarity || pilierPhase === 'revealed'}
                 onClick={handleReveal}
                 className="!text-sm sm:!text-base whitespace-nowrap"
               />

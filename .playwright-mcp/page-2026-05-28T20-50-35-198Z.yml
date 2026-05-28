@@ -1,0 +1,33 @@
+- generic [ref=e4]:
+  - generic [ref=e5]:
+    - img "Logo" [ref=e7]
+    - generic [ref=e9]:
+      - generic [ref=e10]:
+        - button "Voir mes succès" [ref=e11] [cursor=pointer]:
+          - img [ref=e13]
+        - generic [ref=e19]:
+          - heading "Joue maintenant !" [level=3] [ref=e20]
+          - generic [ref=e21]:
+            - button "‹" [ref=e22] [cursor=pointer]
+            - img "Avatar 14" [ref=e24]
+            - button "›" [ref=e25] [cursor=pointer]
+          - textbox "TON PSEUDO" [ref=e27]
+          - button "Créer un salon" [ref=e29] [cursor=pointer]:
+            - img
+            - text: Créer un salon
+      - button "Comment jouer" [ref=e31] [cursor=pointer]:
+        - generic [ref=e32]: Comment jouer ?
+  - contentinfo [ref=e34]:
+    - button "Signaler un problème" [ref=e36] [cursor=pointer]:
+      - img [ref=e37]
+      - text: Signaler un problème
+    - generic [ref=e39]:
+      - button "À propos" [ref=e40] [cursor=pointer]
+      - generic [ref=e41]: "|"
+      - button "Mentions" [ref=e42] [cursor=pointer]
+      - generic [ref=e43]: "|"
+      - button "Contact" [ref=e44] [cursor=pointer]
+      - generic [ref=e45]: "|"
+      - link "Ne clique pas" [ref=e46] [cursor=pointer]:
+        - /url: https://www.youtube.com/watch?v=xvFZjo5PgG0&list=RDxvFZjo5PgG0&start_radio=1
+  - button "🎬 Studio" [ref=e47]

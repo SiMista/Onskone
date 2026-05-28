@@ -149,16 +149,13 @@ export const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
                         onClick={() => setActiveTab(tab.id)}
                         aria-label={tab.ariaLabel ?? tab.label}
                         title={tab.ariaLabel ?? tab.label}
-                        className={`relative px-3 sm:px-4 py-2.5 sm:py-3 flex items-center gap-1.5 whitespace-nowrap text-[11px] sm:text-[12px] font-mono font-bold uppercase tracking-[0.1em] sm:tracking-[0.12em] transition-colors ${active
+                        className={`relative px-3 lg:px-5 py-2.5 lg:py-3 flex items-center gap-1.5 whitespace-nowrap text-[11px] lg:text-[12px] font-mono font-bold uppercase tracking-[0.08em] lg:tracking-[0.12em] transition-colors ${active
                           ? 'text-white'
                           : 'text-white/40 hover:text-white/75'
                           }`}
                       >
-                        {tab.icon ? (
-                          <Icon icon={tab.icon} className="w-4 h-4" />
-                        ) : (
-                          <span>{tab.label}</span>
-                        )}
+                        {tab.icon && <Icon icon={tab.icon} className="w-4 h-4" />}
+                        {tab.label && <span>{tab.label}</span>}
                         {!tab.enabled && (
                           <span className="w-1 h-1 rounded-full bg-amber-400/80" title="bientôt" />
                         )}

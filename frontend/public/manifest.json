@@ -1,6 +1,8 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "Onskoné",
+  "name": "Onskoné - Le jeu d'ambiance entre amis",
+  "description": "Le jeu d'ambiance multijoueur où vous devinez qui a écrit quoi.",
+  "lang": "fr-FR",
   "icons": [
     {
       "src": "favicon.ico",
@@ -10,16 +12,20 @@
     {
       "src": "logo192.png",
       "type": "image/png",
-      "sizes": "192x192"
+      "sizes": "192x192",
+      "purpose": "any maskable"
     },
     {
       "src": "logo512.png",
       "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "512x512",
+      "purpose": "any maskable"
     }
   ],
-  "start_url": ".",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "orientation": "any",
+  "theme_color": "#1AAFDA",
+  "background_color": "#1AAFDA"
 }

@@ -1,6 +1,6 @@
 import { ReactNode, useRef } from 'react';
 import { LuX } from 'react-icons/lu';
-import { useScrollFade } from '../hooks/useScrollFade';
+import ScrollFade from './ScrollFade';
 
 interface InfoModalProps {
   isOpen: boolean;
@@ -24,7 +24,6 @@ const InfoModal = ({
   disableScrollFade = false,
 }: InfoModalProps) => {
   const scrollRef = useRef<HTMLDivElement | null>(null);
-  const showFade = useScrollFade(scrollRef);
 
   if (!isOpen) return null;
 
@@ -32,10 +31,14 @@ const InfoModal = ({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-modal-backdrop"
       onClick={onClose}
+      style={{
+        paddingTop: 'max(1rem, env(safe-area-inset-top, 0px))',
+        paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 0px))',
+      }}
     >
-      {/* Container animé - variante choisie par le parent */}
+      {/* Container animé - largeur alignée sur Modal pour cohérence. */}
       <div
-        className="relative max-w-md w-full animate-modal-content"
+        className="relative max-w-2xl w-full animate-modal-content"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Bande adhésive (washi tape) - hors de la carte pour ne pas être coupée */}
@@ -51,7 +54,11 @@ const InfoModal = ({
 
         {/* Carte principale - blanc papier, gros contour noir, ombre stack */}
         <div
-          className="relative bg-white border-[3px] border-black rounded-[28px] texture-paper overflow-hidden max-h-[82vh] flex flex-col stack-shadow-lg"
+          className="relative bg-white border-[3px] border-black rounded-[28px] texture-paper overflow-hidden flex flex-col stack-shadow-lg"
+          style={{
+            maxHeight:
+              'min(78dvh, calc(100dvh - max(1rem, env(safe-area-inset-top, 0px)) - max(1rem, env(safe-area-inset-bottom, 0px))))',
+          }}
         >
           {/* Header */}
           <div className="relative px-5 pt-7 pb-3 flex items-start justify-between gap-3">
@@ -77,18 +84,13 @@ const InfoModal = ({
           {/* Content - structure d'origine, ne pas toucher (scroll). */}
           <div
             ref={scrollRef}
-            className="relative px-5 py-4 text-gray-800 overflow-y-auto flex-1 min-h-0"
+            className="relative px-5 py-4 text-gray-800 overflow-y-auto overscroll-contain flex-1 min-h-0"
           >
             {children}
           </div>
 
-          {/* Fade blanc en bas - indice visuel "il y a plus de contenu en dessous".
-              Affiché seulement quand il reste du contenu à scroller. */}
           {!disableScrollFade && (
-            <div
-              aria-hidden
-              className={`pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-white via-white/85 to-transparent rounded-b-[25px] transition-opacity duration-150 ${showFade ? 'opacity-100' : 'opacity-0'}`}
-            />
+            <ScrollFade scrollRef={scrollRef} className="rounded-b-[25px]" />
           )}
         </div>
       </div>

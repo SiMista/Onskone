@@ -1,6 +1,6 @@
 import { ReactNode, useRef } from 'react';
 import { LuX } from 'react-icons/lu';
-import { useScrollFade } from '../hooks/useScrollFade';
+import ScrollFade from './ScrollFade';
 
 interface ModalProps {
   isOpen: boolean;
@@ -18,7 +18,6 @@ interface ModalProps {
 
 const Modal = ({ isOpen, onClose, title, children, subHeader }: ModalProps) => {
   const scrollRef = useRef<HTMLDivElement | null>(null);
-  const showFade = useScrollFade(scrollRef);
 
   if (!isOpen) return null;
 
@@ -26,12 +25,22 @@ const Modal = ({ isOpen, onClose, title, children, subHeader }: ModalProps) => {
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-modal-backdrop"
       onClick={onClose}
+      style={{
+        paddingTop: 'max(1rem, env(safe-area-inset-top, 0px))',
+        paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 0px))',
+      }}
     >
       <div
         className="relative max-w-2xl w-full animate-modal-content"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="relative bg-white border-[3px] border-black rounded-[28px] texture-paper overflow-hidden max-h-[82vh] flex flex-col stack-shadow-lg">
+        <div
+          className="relative bg-white border-[3px] border-black rounded-[28px] texture-paper overflow-hidden flex flex-col stack-shadow-lg"
+          style={{
+            maxHeight:
+              'min(78dvh, calc(100dvh - max(1rem, env(safe-area-inset-top, 0px)) - max(1rem, env(safe-area-inset-bottom, 0px))))',
+          }}
+        >
           {/* Header */}
           <div className="relative px-5 pt-6 pb-3 flex items-start justify-between gap-3">
             <h2 className="marker-highlight text-lg md:text-xl font-display font-bold text-gray-900 m-0 tracking-tight">
@@ -59,16 +68,12 @@ const Modal = ({ isOpen, onClose, title, children, subHeader }: ModalProps) => {
           {/* Body */}
           <div
             ref={scrollRef}
-            className="relative px-5 py-4 text-gray-800 overflow-y-auto"
+            className="relative flex-1 min-h-0 px-5 py-4 text-gray-800 overflow-y-auto overscroll-contain"
           >
             {children}
           </div>
 
-          {/* Fade blanc en bas - affiché seulement quand il reste du contenu à scroller. */}
-          <div
-            aria-hidden
-            className={`pointer-events-none absolute inset-x-0 bottom-0 h-14 rounded-b-[25px] bg-gradient-to-t from-white via-white/85 to-transparent transition-opacity duration-150 ${showFade ? 'opacity-100' : 'opacity-0'}`}
-          />
+          <ScrollFade scrollRef={scrollRef} className="rounded-b-[25px]" />
         </div>
       </div>
     </div>

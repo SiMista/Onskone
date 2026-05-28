@@ -3,6 +3,7 @@ import { useLocation, useParams } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import Modal from './Modal';
 import Button from './Button';
+import Dropdown from './Dropdown';
 import { useToast } from './Toast';
 import { submitTicket, TicketType } from '../utils/ticketsApi';
 
@@ -86,31 +87,29 @@ const ReportModal = ({ isOpen, onClose, extraContext, defaultType }: ReportModal
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Signaler un problème">
-      <div className="space-y-4 min-w-0 overflow-x-hidden">
-        <p className="text-sm font-bold text-gray-800">
-          Sélectionne la catégorie de problème
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-          {TYPES.map((t) => {
-            const isSelected = selectedType === t.value;
-            return (
-              <button
-                key={t.value}
-                onClick={() => setSelectedType(t.value)}
-                disabled={isSubmitting}
-                className={`text-left rounded-xl border-2 px-2 py-1.5 transition-all ${isSelected
-                    ? 'border-black bg-yellow-50 shadow-md'
-                    : 'border-gray-200 bg-white hover:border-gray-400'
-                  } ${isSubmitting ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
-              >
-                <div className="flex items-center gap-1.5 mb-0.5">
-                  <Icon icon={t.icon} className="w-4 h-4" />
-                  <span className="font-bold text-gray-900 text-xs">{t.label}</span>
-                </div>
-                <p className="text-[10px] text-gray-600 leading-snug">{t.description}</p>
-              </button>
-            );
-          })}
+      <div className="space-y-4 min-w-0">
+        <div>
+          <label className="block text-sm font-bold text-gray-800 mb-1">
+            Catégorie de problème
+          </label>
+          <Dropdown<TicketType>
+            value={selectedType ?? ''}
+            onChange={(v) => setSelectedType(v)}
+            options={TYPES.map((t) => ({
+              value: t.value,
+              label: (
+                <span className="flex items-baseline gap-2 min-w-0">
+                  <span className="shrink-0">{t.label}</span>
+                  <span className="font-normal text-gray-500 text-xs truncate">
+                    {t.description}
+                  </span>
+                </span>
+              ),
+              prefix: <Icon icon={t.icon} className="w-5 h-5" />,
+            }))}
+            placeholder="Sélectionne une catégorie…"
+            disabled={isSubmitting}
+          />
         </div>
 
         <div>

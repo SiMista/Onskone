@@ -223,7 +223,7 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
 
   return (
     <div
-      className="flex flex-col h-full max-w-2xl mx-auto w-full px-3 md:px-4 py-3 md:py-4 gap-3"
+      className={`flex flex-col h-full max-w-2xl mx-auto w-full px-3 md:px-4 py-3 md:py-4 gap-3 ${showNotebook ? 'min-h-[55dvh]' : ''}`}
       style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.75rem)' }}
     >
       {/* Timer en logique seulement (affichage géré par le header du Game) */}

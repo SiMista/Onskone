@@ -21,4 +21,15 @@ start "" http://localhost:3000/studio
 echo Ouverture de Onskone Admin...
 start "" http://localhost:3000/admin
 
-echo Backend + frontend lancés. Fermeture du launcher.
+echo.
+echo ====================================================
+echo  Onskone est lance ! Adresses disponibles :
+echo ====================================================
+echo  Frontend : http://localhost:3000
+echo  Studio   : http://localhost:3000/studio
+echo  Admin    : http://localhost:3000/admin
+echo  Backend  : http://localhost:8080
+echo ====================================================
+echo.
+echo Fermeture du launcher.
+timeout /t 3 /nobreak >nul

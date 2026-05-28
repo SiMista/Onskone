@@ -246,11 +246,11 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
 
 
   return (
-    <div className="flex flex-col h-full p-2 md:p-4">
+    <div className="flex flex-col h-full p-2 tablet:p-4 overflow-hidden">
       {currentCard && (
         <div className="flex-1 flex flex-col items-center justify-center">
-          <div className="bg-primary text-base md:text-xl px-3 md:px-6 py-1.5 rounded-2xl mb-0 w-full text-center">
-            <p className="font-display text-lg md:text-2xl m-0 tracking-tight leading-tight">
+          <div className="bg-primary text-base tablet:text-xl px-3 tablet:px-6 py-1 tablet:py-1.5 rounded-2xl mb-0 w-full text-center">
+            <p className="font-display text-base tablet:text-2xl m-0 tracking-tight leading-tight">
               Tu es le pilier, choisis une question !
             </p>
             <Timer
@@ -270,7 +270,7 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
 
             {/* Main de cartes - hauteur stable, indépendante du contenu */}
             <div
-              className="card-hand relative w-full max-w-xl mx-auto pt-6 md:pt-10 min-h-[420px] md:min-h-[480px] touch-pan-y select-none"
+              className="card-hand relative w-full max-w-xl mx-auto pt-3 tablet:pt-10 min-h-[340px] tablet:min-h-[480px] touch-pan-y select-none"
               onTouchStart={handleTouchStart}
               onTouchEnd={handleTouchEnd}
               onMouseDown={handleMouseDown}
@@ -346,7 +346,7 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
                 return (
                   <div
                     key={`${card.theme}-${idx}`}
-                    className={`card-hand-item w-[78%] sm:w-[68%] md:w-[60%] absolute top-10 md:top-14 left-1/2 ${isActive ? 'is-active' : 'is-side'} ${isActive && locked ? 'animate-card-lift' : ''}`}
+                    className={`card-hand-item w-[78%] sm:w-[68%] tablet:w-[60%] absolute top-6 tablet:top-14 left-1/2 ${isActive ? 'is-active' : 'is-side'} ${isActive && locked ? 'animate-card-lift' : ''}`}
                     style={{
                       transform: transformStyle,
                       pointerEvents: locked ? 'none' : 'auto',
@@ -357,7 +357,7 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
                     aria-label={!isActive ? `Voir la carte ${card.theme}` : undefined}
                   >
                     <div
-                      className={`bg-cream-question border-4 md:border-[6px] rounded-2xl md:rounded-3xl p-3 md:p-5 relative overflow-hidden min-h-[360px] md:min-h-[400px] flex flex-col transition-shadow duration-500 ${revealedIdx.has(idx) ? 'animate-card-deal-in' : 'opacity-0'}`}
+                      className={`bg-cream-question border-4 tablet:border-[6px] rounded-2xl tablet:rounded-3xl p-2.5 tablet:p-5 relative overflow-hidden min-h-[290px] tablet:min-h-[400px] flex flex-col transition-shadow duration-500 ${revealedIdx.has(idx) ? 'animate-card-deal-in' : 'opacity-0'}`}
                       style={{ borderColor: color, boxShadow: cardShadow }}
                     >
                       <div
@@ -367,32 +367,32 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
                         {card.category}
                       </div>
 
-                      <div className="pt-8 md:pt-10 flex-1 flex flex-col">
+                      <div className="pt-6 tablet:pt-10 flex-1 flex flex-col">
                         {/* Thème : titre héros de la carte */}
-                        <p className="font-display text-xl md:text-2xl font-bold text-center !mt-0 !mb-1.5 md:!mb-2 leading-tight tracking-tight">{card.theme}</p>
+                        <p className="font-display text-lg tablet:text-2xl font-bold text-center !mt-0 !mb-1 tablet:!mb-2 leading-tight tracking-tight">{card.theme}</p>
                         {/* Séparateur */}
                         <div
-                          className="mx-auto rounded-full !mb-1.5 md:!mb-2"
+                          className="mx-auto rounded-full !mb-1 tablet:!mb-2"
                           style={{ width: 36, height: 2, backgroundColor: color, opacity: 0.35 }}
                         />
                         {/* Sujet : eyebrow tracké, couleur catégorie */}
                         <p
-                          className="text-center !mt-0 !mb-3 md:!mb-4 text-[10px] md:text-[11px] uppercase font-semibold tracking-[0.14em] leading-tight"
+                          className="text-center !mt-0 !mb-2 tablet:!mb-4 text-[10px] tablet:text-[11px] uppercase font-semibold tracking-[0.14em] leading-tight"
                           style={{ color }}
                         >
                           {card.subject}
                         </p>
 
-                        <div className="flex flex-col gap-2 md:gap-3 justify-start pb-6 md:pb-8">
+                        <div className="flex flex-col gap-1.5 tablet:gap-3 justify-start pb-3 tablet:pb-8">
                           {card.questions.map((question, qi) => {
                             const isSelected = selectedQuestion === question;
                             const dimmed = locked && !isSelected;
                             const len = question.length;
                             const questionTextClass =
-                              len > 140 ? 'text-[11px] md:text-xs'
-                              : len > 110 ? 'text-xs md:text-sm'
-                              : len > 80 ? 'text-[13px] md:text-[15px]'
-                              : 'text-sm md:text-base';
+                              len > 140 ? 'text-[11px] tablet:text-xs'
+                              : len > 110 ? 'text-xs tablet:text-sm'
+                              : len > 80 ? 'text-[13px] tablet:text-[15px]'
+                              : 'text-sm tablet:text-base';
                             return (
                               <div
                                 key={qi}
@@ -402,8 +402,8 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
                                   handleSelectQuestion(question);
                                 }}
                                 className={`
-                                  relative bg-white rounded-lg px-3 md:px-4 py-2.5 md:py-3 border-2
-                                  min-h-[58px] md:min-h-[68px] flex items-center
+                                  relative bg-white rounded-lg px-3 tablet:px-4 py-2 tablet:py-3 border-2
+                                  min-h-[48px] tablet:min-h-[68px] flex items-center
                                   transition-all duration-300 ease-in-out
                                   ${isActive && !locked ? 'cursor-pointer hover:-translate-y-0.5 hover:border-primary hover:shadow-lg' : ''}
                                   ${isSelected

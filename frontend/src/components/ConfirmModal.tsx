@@ -28,6 +28,10 @@ const ConfirmModal = ({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-modal-backdrop"
       onClick={onClose}
+      style={{
+        paddingTop: 'max(1rem, env(safe-area-inset-top, 0px))',
+        paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 0px))',
+      }}
     >
       <div
         className="relative max-w-md w-full animate-modal-content"
