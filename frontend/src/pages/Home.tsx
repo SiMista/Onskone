@@ -15,7 +15,13 @@ import BackButton from '../components/BackButton';
 import { Icon } from '@iconify/react';
 import { useSocketEvent, useQueryParams } from '../hooks';
 import { GAME_CONFIG, AVATARS } from '../constants/game';
-import { getStats, rememberIdentity, ACHIEVEMENTS } from '../utils/playerStats';
+import {
+  getStats,
+  rememberIdentity,
+  ACHIEVEMENTS,
+  getUnseenAchievementIds,
+  markAchievementsAsSeen,
+} from '../utils/playerStats';
 
 const Home = () => {
   // Pré-remplit depuis le profil persistant (lazy init -> 1 lecture localStorage).
@@ -30,6 +36,11 @@ const Home = () => {
   );
   const [isInfoOpen, setIsInfoOpen] = useState(false);
   const [isStatsOpen, setIsStatsOpen] = useState(false);
+  const [unseenAchievementIds, setUnseenAchievementIds] = useState<string[]>(() => {
+    try { return getUnseenAchievementIds(); } catch { return []; }
+  });
+  // Snapshot des succès "nouveaux" au moment où la modale s'ouvre -> drive l'animation des lignes.
+  const [highlightedAchievementIds, setHighlightedAchievementIds] = useState<Set<string>>(new Set());
   const [hostName, setHostName] = useState<string | null>(null);
   const [lobbyExists, setLobbyExists] = useState<boolean | null>(null);
   const queryParams = useQueryParams();
@@ -122,6 +133,24 @@ const Home = () => {
     navigate(`/lobby/${lobbyCode}?playerName=${encodeURIComponent(name)}&avatarId=${avatarId}`);
   }, [navigate, lobbyCode, playerName, urlPlayerName, avatarId]);
 
+  const openStats = useCallback(() => {
+    // On capture la snapshot AVANT de marquer comme vus, pour pouvoir animer les lignes concernées.
+    const fresh = unseenAchievementIds;
+    if (fresh.length > 0) {
+      markAchievementsAsSeen();
+      setHighlightedAchievementIds(new Set(fresh));
+      setUnseenAchievementIds([]);
+    } else {
+      setHighlightedAchievementIds(new Set());
+    }
+    setIsStatsOpen(true);
+  }, [unseenAchievementIds]);
+
+  const closeStats = useCallback(() => {
+    setIsStatsOpen(false);
+    setHighlightedAchievementIds(new Set());
+  }, []);
+
   const handleError = useCallback((data: { message: string }) => {
     console.error('Erreur:', data.message);
     showToast(data.message, 'error');
@@ -143,7 +172,7 @@ const Home = () => {
   useSocketEvent('error', handleError, [handleError]);
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="h-full flex flex-col overflow-hidden">
       {/* Modal d'information */}
       <InfoModal
         isOpen={isInfoOpen}
@@ -157,7 +186,7 @@ const Home = () => {
 
       <InfoModal
         isOpen={isStatsOpen}
-        onClose={() => setIsStatsOpen(false)}
+        onClose={closeStats}
         title="Mes succès"
       >
         {(() => {
@@ -183,10 +212,16 @@ const Home = () => {
                   const isUnlocked = unlocked.has(ach.id);
                   // Succès caché non débloqué -> on masque titre/description/icône.
                   const isMystery = !!ach.hidden && !isUnlocked;
+                  const isHighlighted = highlightedAchievementIds.has(ach.id);
+                  // Stagger doux entre nouveaux succès pour qu'ils ne bondissent pas tous en même temps.
+                  const highlightedOrder = isHighlighted
+                    ? Array.from(highlightedAchievementIds).indexOf(ach.id)
+                    : 0;
                   return (
                     <div
                       key={ach.id}
-                      className={`flex items-center gap-3 p-2.5 rounded-xl border-2 border-black transition-all ${isUnlocked ? 'stack-shadow-sm bg-gradient-to-br from-warning-300 to-warning-orange' : 'bg-gray-100 opacity-60'}`}
+                      className={`flex items-center gap-3 p-2.5 rounded-xl border-2 border-black transition-all ${isUnlocked ? 'stack-shadow-sm bg-gradient-to-br from-warning-300 to-warning-orange' : 'bg-gray-100 opacity-60'} ${isHighlighted ? 'animate-achievement-unlock' : ''}`}
+                      style={isHighlighted ? { animationDelay: `${0.15 + highlightedOrder * 0.12}s` } : undefined}
                     >
                       <div
                         className="flex-shrink-0"
@@ -222,7 +257,7 @@ const Home = () => {
       </InfoModal>
 
       {/* Contenu principal */}
-      <div className="flex-1 w-full max-w-screen-xl mx-auto px-4 py-4 md:py-4 flex flex-col justify-center md:justify-start">
+      <div className="flex-1 min-h-0 w-full max-w-screen-xl mx-auto px-4 py-4 md:py-4 flex flex-col justify-center md:justify-start overflow-y-auto overscroll-contain no-scrollbar safe-pt">
         {/* Logo */}
         <div className="flex justify-center mb-4 md:mb-8">
           <Logo size="large" />
@@ -241,24 +276,38 @@ const Home = () => {
             <div className="relative">
               <button
                 type="button"
-                onClick={() => setIsStatsOpen(true)}
-                aria-label="Voir mes succès"
+                onClick={openStats}
+                aria-label={
+                  unseenAchievementIds.length > 0
+                    ? `Voir mes succès (${unseenAchievementIds.length} nouveau${unseenAchievementIds.length > 1 ? 'x' : ''})`
+                    : 'Voir mes succès'
+                }
                 className="absolute top-3 right-3 z-10 hover:scale-110 active:scale-95 transition-transform cursor-pointer"
-                style={{
-                  filter:
-                    'drop-shadow(1px 0 0 #000) drop-shadow(-1px 0 0 #000) drop-shadow(0 1px 0 #000) drop-shadow(0 -1px 0 #000) drop-shadow(1px 2px 0 rgba(0,0,0,0.35))',
-                }}
               >
-                <Icon
-                  icon="fluent-emoji-flat:trophy"
-                  width={22}
-                  height={22}
-                  aria-hidden
-                />
+                <span
+                  className="block"
+                  style={{
+                    filter:
+                      'drop-shadow(1px 0 0 #000) drop-shadow(-1px 0 0 #000) drop-shadow(0 1px 0 #000) drop-shadow(0 -1px 0 #000) drop-shadow(1px 2px 0 rgba(0,0,0,0.35))',
+                  }}
+                >
+                  <Icon
+                    icon="fluent-emoji-flat:trophy"
+                    width={22}
+                    height={22}
+                    aria-hidden
+                  />
+                </span>
+                {unseenAchievementIds.length > 0 && (
+                  <span
+                    aria-hidden
+                    className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-danger-500 border-2 border-black animate-notification-pulse"
+                  />
+                )}
               </button>
               <Frame>
                 {lobbyCode && lobbyExists ? (
-                  <h3 className="text-sm md:text-base font-normal">Vous êtes invité à rejoindre le salon de <b className="font-bold">{hostName || 'un ami'}</b></h3>
+                  <h3 className="text-sm md:text-base font-normal"><b className="font-bold">{hostName || 'Un ami'}</b> t'invite à rejoindre son salon !</h3>
                 ) : (
                   <h3 className="font-accent text-display-lg">Joue maintenant !</h3>
                 )}
@@ -320,8 +369,10 @@ const Home = () => {
         </div>
       </div>
 
-      {/* Footer */}
-      <Footer />
+      {/* Footer - shrink-0 pour rester collé en bas, safe-area déjà gérée dans le composant */}
+      <div className="shrink-0">
+        <Footer />
+      </div>
 
       {import.meta.env.DEV && window.self === window.top && (
         <button

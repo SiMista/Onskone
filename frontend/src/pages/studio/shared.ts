@@ -13,8 +13,10 @@ export interface ViewportPreset {
 
 export const VIEWPORT_PRESETS: ViewportPreset[] = [
   { id: 'iphone-se', label: 'iPhone SE - 375×667', short: 'SE', w: 375, h: 667 },
-  { id: 'iphone-14', label: 'iPhone 14 - 390×844', short: 'iP14', w: 390, h: 844 },
-  { id: 'iphone-pm', label: 'iPhone Pro Max - 430×932', short: 'iPM', w: 430, h: 932 },
+  { id: 'iphone-17', label: 'iPhone 17 - 402×874', short: 'iP17', w: 402, h: 874 },
+  { id: 'iphone-17-air', label: 'iPhone 17 Air - 422×917', short: 'iP17A', w: 422, h: 917 },
+  { id: 'iphone-17-pro', label: 'iPhone 17 Pro - 402×874', short: 'iP17P', w: 402, h: 874 },
+  { id: 'iphone-17-pmax', label: 'iPhone 17 Pro Max - 440×956', short: 'iP17PM', w: 440, h: 956 },
   { id: 'galaxy', label: 'Galaxy S22 - 360×800', short: 'GS22', w: 360, h: 800 },
   { id: 'pixel', label: 'Pixel 7 - 412×915', short: 'Px7', w: 412, h: 915 },
   { id: 'ipad', label: 'iPad - 820×1180', short: 'iPad', w: 820, h: 1180 },
@@ -24,8 +26,15 @@ export const VIEWPORT_PRESETS: ViewportPreset[] = [
   { id: 'free', label: 'Libre - 480×720', short: 'Free', w: 480, h: 720 },
 ];
 
-export const presetById = (id: string): ViewportPreset =>
-  VIEWPORT_PRESETS.find((p) => p.id === id) ?? VIEWPORT_PRESETS[1];
+const LEGACY_VIEWPORT_ALIAS: Record<string, string> = {
+  'iphone-14': 'iphone-17',
+  'iphone-pm': 'iphone-17-pmax',
+};
+
+export const presetById = (id: string): ViewportPreset => {
+  const resolved = LEGACY_VIEWPORT_ALIAS[id] ?? id;
+  return VIEWPORT_PRESETS.find((p) => p.id === resolved) ?? VIEWPORT_PRESETS[1];
+};
 
 export interface SlotConfig {
   id: string;
@@ -54,7 +63,7 @@ export const makeSlot = (i: number): SlotConfig => ({
   id: `slot-${i}-${Math.random().toString(36).slice(2, 7)}`,
   name: FUN_NAMES[i % FUN_NAMES.length],
   avatarId: i % AVATARS.length,
-  viewportId: 'iphone-14',
+  viewportId: 'iphone-17',
   orientation: 'portrait',
   bot: false,
 });
@@ -72,14 +81,17 @@ export const loadSavedConfig = (): SavedConfig | null => {
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed?.slots)) return null;
-    parsed.slots = parsed.slots.map((s: Partial<SlotConfig>) => ({
-      ...makeSlot(0),
-      ...s,
-      bot: !!s.bot,
-      viewportId: s.viewportId && VIEWPORT_PRESETS.some((p) => p.id === s.viewportId)
-        ? s.viewportId
-        : 'iphone-14',
-    }));
+    parsed.slots = parsed.slots.map((s: Partial<SlotConfig>) => {
+      const aliased = s.viewportId ? LEGACY_VIEWPORT_ALIAS[s.viewportId] ?? s.viewportId : undefined;
+      return {
+        ...makeSlot(0),
+        ...s,
+        bot: !!s.bot,
+        viewportId: aliased && VIEWPORT_PRESETS.some((p) => p.id === aliased)
+          ? aliased
+          : 'iphone-17',
+      };
+    });
     return parsed;
   } catch { return null; }
 };

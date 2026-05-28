@@ -102,7 +102,7 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
     <ToastContext.Provider value={value}>
       {children}
       <div
-        className="fixed top-12 left-1/2 -translate-x-1/2 z-[100] flex flex-col items-center gap-2 px-3 w-full max-w-md pointer-events-none"
+        className="fixed top-12 left-1/2 -translate-x-1/2 z-[100] flex flex-col items-center gap-2 px-3 w-full max-w-xs md:max-w-md pointer-events-none"
         style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
       >
         {toasts.map(t => {

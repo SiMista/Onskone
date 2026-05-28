@@ -24,11 +24,17 @@ interface RevealedAnswerCardProps {
   footer?: ReactNode;
   /** Afficher le stickman derrière la carte (défaut: true). */
   showStickman?: boolean;
+  /** Afficher la bulle "Écrit par" à gauche de la carte (défaut: true).
+   *  À mettre à false pour la vue REVEAL "pas de réponse attribuée". */
+  showBubble?: boolean;
+  /** Si défini, la carte affiche un état d'attente "En attente que {name} t'attribue…"
+   *  avec avatar inline (au lieu du texte auto-fit). */
+  waitingFor?: { name: string; avatarId: number };
 }
 
 const defaultHeader = (
-  <p className="text-gray-900 text-sm md:text-xl font-semibold text-center max-md:landscape:text-xs shrink-0 -translate-x-4 md:-translate-x-8 max-md:landscape:-translate-x-2">
-    Montre ton écran !
+  <p className="text-gray-900 text-sm tablet:text-xl font-semibold text-center phone-landscape:text-xl shrink-0 -translate-x-4 tablet:-translate-x-8 phone-landscape:-translate-x-1">
+    Montre ton écran à tout le monde !
   </p>
 );
 
@@ -50,59 +56,74 @@ const RevealedAnswerCard: React.FC<RevealedAnswerCardProps> = ({
   header = defaultHeader,
   footer,
   showStickman = true,
+  showBubble = true,
+  waitingFor,
 }) => {
   return (
-    <div className="flex flex-col h-full p-2 md:p-4 max-w-3xl mx-auto landscape:max-w-5xl">
-      <div className="flex flex-col items-center gap-3 md:gap-4 pt-6 md:pt-12 pb-3 px-2 max-md:landscape:gap-2 max-md:landscape:pt-2">
-        {header}
+    <div className="flex flex-col h-full p-2 tablet:p-4 max-w-3xl mx-auto landscape:max-w-5xl w-full">
+      {/* En paysage phone, on prend la pleine hauteur (flex-1 min-h-0) pour que
+          la carte remplisse la frame. En portrait/desktop, layout content-sized
+          comme avant - le wrapper sort en hauteur naturelle. */}
+      <div className="phone-landscape:flex-1 phone-landscape:min-h-0 flex flex-col items-center gap-3 tablet:gap-4 pt-6 tablet:pt-12 pb-3 px-2 phone-landscape:gap-2 phone-landscape:pt-2 phone-landscape:pb-2">
+        <div className="shrink-0 w-full flex justify-center">
+          {header}
+        </div>
 
         <div
           key={rowKey}
-          className={`w-full flex flex-row items-center justify-center gap-3 md:gap-5 max-md:landscape:gap-2 ${swapAnimation ? 'animate-reveal-card-swap' : ''}`}
+          className={`w-full flex flex-row items-center justify-center gap-5 tablet:gap-7 phone-landscape:gap-6 phone-landscape:flex-1 phone-landscape:min-h-0 phone-landscape:items-stretch ${swapAnimation ? 'animate-reveal-card-swap' : ''}`}
         >
           {/* Bulle "Écrit par" : largeur prise dans le flux, hauteur 0 pour ne pas décaler verticalement */}
-          <div className="shrink-0 self-center w-16 md:w-24 max-md:landscape:w-14 h-0 relative z-20">
-            <div className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 flex flex-col items-center gap-1 md:gap-1.5 max-md:landscape:gap-0.5">
-              <p className="text-gray-700 text-[10px] md:text-xs font-semibold uppercase tracking-wide whitespace-nowrap">
-                Écrit par
-              </p>
-              <RevealAvatar
-                avatarId={result.playerAvatarId ?? 0}
-                name={result.playerName}
-                revealed={revealed}
-              />
-              <span
-                className={`text-xs md:text-sm font-semibold text-black transition-opacity duration-500 max-md:landscape:text-[11px] truncate max-w-[6rem] md:max-w-[7rem] ${revealed ? 'opacity-100' : 'opacity-0'}`}
-              >
-                {result.playerName}
-              </span>
+          {showBubble && (
+            <div className="shrink-0 self-center w-16 tablet:w-24 phone-landscape:w-14 h-0 relative z-20">
+              <div className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 flex flex-col items-center gap-1 tablet:gap-1.5 phone-landscape:gap-0.5">
+                <p className="text-gray-700 text-[10px] tablet:text-xs font-semibold uppercase tracking-wide whitespace-nowrap">
+                  Écrit par
+                </p>
+                <RevealAvatar
+                  avatarId={result.playerAvatarId ?? 0}
+                  name={result.playerName}
+                  revealed={revealed}
+                />
+                <span
+                  className={`text-xs tablet:text-sm font-semibold text-black transition-opacity duration-500 phone-landscape:text-[11px] truncate max-w-[6rem] tablet:max-w-[7rem] ${revealed ? 'opacity-100' : 'opacity-0'}`}
+                >
+                  {result.playerName}
+                </span>
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Carte (avec stickman optionnel derrière) */}
-          <div className="relative flex-1 min-w-0 max-w-lg landscape:max-w-3xl">
+          {/* Carte (avec stickman optionnel derrière). h-full uniquement en
+              paysage phone pour que la carte remplisse la hauteur du row flex-1. */}
+          <div className="relative flex-1 min-w-0 max-w-lg phone-landscape:max-w-3xl tablet:landscape:max-w-4xl phone-landscape:h-full">
             {showStickman && (
               <img
                 src={stickmanShowPhone}
                 alt=""
                 aria-hidden
                 draggable={false}
-                className="absolute left-[78%] -translate-x-1/2 -top-16 md:-top-20 max-md:landscape:-top-10 h-32 md:h-40 max-md:landscape:h-20 w-auto select-none pointer-events-none animate-float z-0"
+                className="absolute left-[78%] -translate-x-1/2 -top-16 tablet:-top-20 phone-landscape:-top-16 h-32 tablet:h-40 phone-landscape:h-32 w-auto select-none pointer-events-none animate-float z-0"
               />
             )}
-            <div className="relative z-10">
+            <div className="relative z-10 phone-landscape:h-full">
               <PlayerAnswerCard
                 answer={getDisplayText(result.answer)}
                 isNoResponse={isNoResponse(result.answer)}
                 bgClass={answerCardBg(revealed, correct)}
                 className={`transition-colors duration-500 ${cardClassName}`}
                 heading={null}
+                waitingFor={waitingFor}
               />
             </div>
           </div>
         </div>
 
-        {footer}
+        {/* Container footer toujours rendu (même vide) avec un min-h en paysage
+            phone pour réserver l'espace de l'éventuel message "En attente…" qui
+            arrive en phase REVEAL. Évite que la carte du dessus ne se rétrécisse
+            à la transition GUESSING → REVEAL. */}
+        <div className="shrink-0 w-full flex flex-col items-center phone-landscape:min-h-[1rem]">{footer}</div>
       </div>
     </div>
   );

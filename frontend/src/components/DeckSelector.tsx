@@ -140,7 +140,7 @@ const DeckSelector: React.FC<Props> = ({ catalog, selected, readOnly, onChange }
             {!readOnly && (
                 <>
                     <div className="text-sm font-display font-bold text-gray-700">
-                        Clique sur les thèmes pour les ajouter
+                        Clique sur les thèmes pour les ajouter/retirer
                     </div>
                     <div className="flex items-center justify-between gap-2">
                         <span className="text-xs text-gray-500">
@@ -174,97 +174,97 @@ const DeckSelector: React.FC<Props> = ({ catalog, selected, readOnly, onChange }
                         className="pointer-events-none absolute inset-y-0 right-0 w-[4%] md:w-[5%] z-10"
                         style={{ background: 'linear-gradient(to left, rgba(255,255,255,0.7), rgba(255,255,255,0))' }}
                     />
-                <div
-                    ref={carouselRef}
-                    className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth px-[7%] md:px-[8%] pb-1"
-                    style={{ scrollbarWidth: 'none' }}
-                >
-                    {categories.map((cat, i) => {
-                        const themes = catalog[cat];
-                        const selectedInCat = (localSelected[cat] || []).length;
-                        const color = getCategoryColor(cat);
-                        const catAllChecked = selectedInCat === themes.length && themes.length > 0;
-                        const catNoneChecked = selectedInCat === 0;
-                        const description = categoryDescriptions[cat] ?? '';
-                        const isActive = i === activeSlide;
+                    <div
+                        ref={carouselRef}
+                        className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth px-[7%] md:px-[8%] pb-1"
+                        style={{ scrollbarWidth: 'none' }}
+                    >
+                        {categories.map((cat, i) => {
+                            const themes = catalog[cat];
+                            const selectedInCat = (localSelected[cat] || []).length;
+                            const color = getCategoryColor(cat);
+                            const catAllChecked = selectedInCat === themes.length && themes.length > 0;
+                            const catNoneChecked = selectedInCat === 0;
+                            const description = categoryDescriptions[cat] ?? '';
+                            const isActive = i === activeSlide;
 
-                        const handleSlideClick = (e: React.MouseEvent) => {
-                            if (!isActive) {
-                                e.stopPropagation();
-                                goToSlide(i);
-                            }
-                        };
+                            const handleSlideClick = (e: React.MouseEvent) => {
+                                if (!isActive) {
+                                    e.stopPropagation();
+                                    goToSlide(i);
+                                }
+                            };
 
-                        return (
-                            <div
-                                key={cat}
-                                className={`snap-center shrink-0 basis-[86%] md:basis-[84%] px-1.5 transition-opacity ${isActive ? '' : 'opacity-70 cursor-pointer'}`}
-                                onClickCapture={handleSlideClick}
-                            >
-                                <div className="border-[2.5px] border-black rounded-xl bg-white overflow-hidden stack-shadow-sm">
-                                    {/* Header coloré */}
-                                    <div
-                                        className="flex items-center gap-2 px-3 py-2 border-b-[2.5px] border-black"
-                                        style={{ backgroundColor: color }}
-                                    >
-                                        <Icon icon={categoryIcons[cat] ?? DEFAULT_DECK_ICON} width={22} height={22} aria-hidden className="flex-shrink-0 [filter:drop-shadow(2px_3px_0_rgba(0,0,0,0.55))_drop-shadow(0_0_2px_rgba(0,0,0,0.5))]" />
-                                        <span className="font-display font-bold text-base tracking-tight flex-1 truncate text-black">{cat}</span>
-                                        <span className="font-display text-[11px] font-bold text-black/80 whitespace-nowrap flex-shrink-0 bg-white/80 rounded-full px-2 py-0.5 border border-black/10">
-                                            {selectedInCat}/{themes.length}
-                                        </span>
-                                        {!readOnly && (
-                                            <label
-                                                className="flex items-center cursor-pointer flex-shrink-0"
-                                                onClick={e => e.stopPropagation()}
-                                            >
-                                                <input
-                                                    type="checkbox"
-                                                    className="w-4 h-4 cursor-pointer accent-black"
-                                                    checked={catAllChecked}
-                                                    ref={el => { if (el) el.indeterminate = !catAllChecked && !catNoneChecked; }}
-                                                    onChange={() => {
-                                                        const next = setCategory(localSelectedRef.current, cat, !catAllChecked, catalog);
-                                                        localSelectedRef.current = next;
-                                                        setLocalSelected(next);
-                                                        onChange(next);
-                                                    }}
-                                                />
-                                            </label>
-                                        )}
-                                    </div>
-                                    {/* Corps : description + pills */}
-                                    <div style={{ backgroundColor: hexToSoftBg(color) }}>
-                                        {description && (
-                                            <div className="font-sans px-3 py-1.5 text-[11px] italic text-gray-600 border-b border-black/20">
-                                                {description}
+                            return (
+                                <div
+                                    key={cat}
+                                    className={`snap-center shrink-0 basis-[86%] md:basis-[84%] px-1.5 transition-opacity ${isActive ? '' : 'opacity-70 cursor-pointer'}`}
+                                    onClickCapture={handleSlideClick}
+                                >
+                                    <div className="border-[2.5px] border-black rounded-xl bg-white overflow-hidden stack-shadow-sm">
+                                        {/* Header coloré */}
+                                        <div
+                                            className="flex items-center gap-2 px-3 py-2 border-b-[2.5px] border-black"
+                                            style={{ backgroundColor: color }}
+                                        >
+                                            <Icon icon={categoryIcons[cat] ?? DEFAULT_DECK_ICON} width={22} height={22} aria-hidden className="flex-shrink-0 [filter:drop-shadow(2px_3px_0_rgba(0,0,0,0.55))_drop-shadow(0_0_2px_rgba(0,0,0,0.5))]" />
+                                            <span className="font-display font-bold text-base tracking-tight flex-1 truncate text-black">{cat}</span>
+                                            <span className="font-display text-[11px] font-bold text-black/80 whitespace-nowrap flex-shrink-0 bg-white/80 rounded-full px-2 py-0.5 border border-black/10">
+                                                {selectedInCat}/{themes.length}
+                                            </span>
+                                            {!readOnly && (
+                                                <label
+                                                    className="flex items-center cursor-pointer flex-shrink-0"
+                                                    onClick={e => e.stopPropagation()}
+                                                >
+                                                    <input
+                                                        type="checkbox"
+                                                        className="w-4 h-4 cursor-pointer accent-black"
+                                                        checked={catAllChecked}
+                                                        ref={el => { if (el) el.indeterminate = !catAllChecked && !catNoneChecked; }}
+                                                        onChange={() => {
+                                                            const next = setCategory(localSelectedRef.current, cat, !catAllChecked, catalog);
+                                                            localSelectedRef.current = next;
+                                                            setLocalSelected(next);
+                                                            onChange(next);
+                                                        }}
+                                                    />
+                                                </label>
+                                            )}
+                                        </div>
+                                        {/* Corps : description + pills */}
+                                        <div style={{ backgroundColor: hexToSoftBg(color) }}>
+                                            {description && (
+                                                <div className="font-sans px-3 py-1.5 text-[11px] italic text-gray-600 border-b border-black/20">
+                                                    {description}
+                                                </div>
+                                            )}
+                                            <div className="px-2.5 py-2 flex flex-wrap gap-1.5 max-h-[28vh] overflow-y-auto">
+                                                {themes.map(theme => {
+                                                    const active = isThemeSelected(localSelected, cat, theme);
+                                                    const base = 'font-display text-xs px-2.5 py-1 rounded-full border-2 font-bold tracking-tight transition-colors touch-manipulation';
+                                                    const cursor = readOnly ? 'cursor-default' : 'cursor-pointer active:scale-95';
+                                                    const inactiveStyle = 'bg-white text-gray-600 border-gray-400';
+                                                    return (
+                                                        <button
+                                                            key={theme}
+                                                            type="button"
+                                                            disabled={readOnly}
+                                                            className={`${base} ${active ? 'text-black border-black' : inactiveStyle} ${cursor}`}
+                                                            style={active ? { backgroundColor: color } : undefined}
+                                                            onClick={() => handleThemeToggle(cat, theme)}
+                                                        >
+                                                            {theme}
+                                                        </button>
+                                                    );
+                                                })}
                                             </div>
-                                        )}
-                                        <div className="px-2.5 py-2 flex flex-wrap gap-1.5 max-h-[28vh] overflow-y-auto">
-                                            {themes.map(theme => {
-                                                const active = isThemeSelected(localSelected, cat, theme);
-                                                const base = 'font-display text-xs px-2.5 py-1 rounded-full border-2 font-bold tracking-tight transition-colors touch-manipulation';
-                                                const cursor = readOnly ? 'cursor-default' : 'cursor-pointer active:scale-95';
-                                                const inactiveStyle = 'bg-white text-gray-600 border-gray-400';
-                                                return (
-                                                    <button
-                                                        key={theme}
-                                                        type="button"
-                                                        disabled={readOnly}
-                                                        className={`${base} ${active ? 'text-black border-black' : inactiveStyle} ${cursor}`}
-                                                        style={active ? { backgroundColor: color } : undefined}
-                                                        onClick={() => handleThemeToggle(cat, theme)}
-                                                    >
-                                                        {theme}
-                                                    </button>
-                                                );
-                                            })}
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        );
-                    })}
-                </div>
+                            );
+                        })}
+                    </div>
                 </div>
                 {/* Dots indicator */}
                 <div className="flex items-center justify-center gap-2 mt-2">
@@ -277,9 +277,8 @@ const DeckSelector: React.FC<Props> = ({ catalog, selected, readOnly, onChange }
                                 type="button"
                                 onClick={() => goToSlide(i)}
                                 aria-label={`Aller à ${cat}`}
-                                className={`transition-all duration-300 border-2 border-black rounded-full cursor-pointer ${
-                                    isActive ? 'w-6 h-2.5' : 'w-2.5 h-2.5'
-                                }`}
+                                className={`transition-all duration-300 border-2 border-black rounded-full cursor-pointer ${isActive ? 'w-6 h-2.5' : 'w-2.5 h-2.5'
+                                    }`}
                                 style={{ backgroundColor: isActive ? color : 'white' }}
                             />
                         );

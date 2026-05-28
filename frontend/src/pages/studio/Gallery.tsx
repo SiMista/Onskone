@@ -76,6 +76,8 @@ export const Gallery = () => {
   const [mentionsOpen, setMentionsOpen] = useState(false);
   const [achievementsOpen, setAchievementsOpen] = useState(false);
   const [unlockedIds, setUnlockedIds] = useState<Set<string>>(() => new Set());
+  // Succès qui doivent jouer l'anim de déblocage à la prochaine ouverture de la modale.
+  const [animatedIds, setAnimatedIds] = useState<Set<string>>(() => new Set());
   const toggleAchievement = (id: string) => {
     setUnlockedIds((prev) => {
       const next = new Set(prev);
@@ -83,6 +85,14 @@ export const Gallery = () => {
       else next.add(id);
       return next;
     });
+  };
+  const openAchievementsWithAnim = (ids: Set<string>) => {
+    setAnimatedIds(new Set(ids));
+    setAchievementsOpen(true);
+  };
+  const closeAchievements = () => {
+    setAchievementsOpen(false);
+    setAnimatedIds(new Set());
   };
   const [shareIdx, setShareIdx] = useState(3);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
@@ -238,7 +248,7 @@ export const Gallery = () => {
               );
             })}
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               text="Tout débloquer"
               variant="success"
@@ -255,7 +265,13 @@ export const Gallery = () => {
               text="Ouvrir la modale"
               variant="primary"
               size="sm"
-              onClick={() => setAchievementsOpen(true)}
+              onClick={() => openAchievementsWithAnim(new Set())}
+            />
+            <Button
+              text="Ouvrir + animer les débloqués"
+              variant="warning"
+              size="sm"
+              onClick={() => openAchievementsWithAnim(unlockedIds)}
             />
           </div>
         </div>
@@ -282,7 +298,7 @@ export const Gallery = () => {
       <ContactModal isOpen={contactOpen} onClose={() => setContactOpen(false)} />
       <MentionsModal isOpen={mentionsOpen} onClose={() => setMentionsOpen(false)} />
 
-      <InfoModal isOpen={achievementsOpen} onClose={() => setAchievementsOpen(false)} title="Mes succès">
+      <InfoModal isOpen={achievementsOpen} onClose={closeAchievements} title="Mes succès">
         <div className="flex flex-col gap-3">
           <div className="grid grid-cols-3 gap-2 text-center mb-1">
             <div className="bg-cream-player border-2 border-black rounded-xl p-2 stack-shadow-sm">
@@ -302,13 +318,19 @@ export const Gallery = () => {
           <div className="flex flex-col gap-2">
             {ACHIEVEMENTS.map((ach) => {
               const isUnlocked = unlockedIds.has(ach.id);
+              const isAnimated = isUnlocked && animatedIds.has(ach.id);
+              // Stagger doux pour que plusieurs déblocages ne s'allument pas en même temps.
+              const animOrder = isAnimated
+                ? Array.from(animatedIds).indexOf(ach.id)
+                : 0;
               return (
                 <div
                   key={ach.id}
-                  className={`flex items-center gap-3 p-2.5 rounded-xl border-2 border-black transition-all ${isUnlocked ? 'stack-shadow-sm' : 'bg-gray-100 opacity-60'}`}
-                  style={isUnlocked ? {
-                    background: 'linear-gradient(135deg, #FFE066 0%, #FFB347 100%)',
-                  } : undefined}
+                  className={`flex items-center gap-3 p-2.5 rounded-xl border-2 border-black transition-all ${isUnlocked ? 'stack-shadow-sm' : 'bg-gray-100 opacity-60'} ${isAnimated ? 'animate-achievement-unlock' : ''}`}
+                  style={{
+                    ...(isUnlocked ? { background: 'linear-gradient(135deg, #FFE066 0%, #FFB347 100%)' } : {}),
+                    ...(isAnimated ? { animationDelay: `${0.15 + animOrder * 0.18}s` } : {}),
+                  }}
                 >
                   <div
                     className="flex-shrink-0"

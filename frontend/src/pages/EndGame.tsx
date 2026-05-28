@@ -5,7 +5,6 @@ import socket from '../utils/socket';
 import { IPlayer, LeaderboardEntry, IRound } from '@onskone/shared';
 import Button from '../components/Button';
 import Avatar from '../components/Avatar';
-import Logo from '../components/Logo';
 import { getCurrentPlayerFromStorage } from '../utils/playerHelpers';
 import { studioStorage } from '../utils/studioStorage';
 import { buildShareCard, shareBlob } from '../utils/shareCard';
@@ -399,7 +398,7 @@ const EndGame: React.FC = () => {
   const ringOffset = ringCircumference - (displayPct / 100) * ringCircumference;
 
   return (
-    <div className="min-h-screen p-3 md:p-6 relative overflow-hidden">
+    <div className="h-full p-3 md:p-6 relative overflow-hidden flex flex-col items-center justify-center safe-pt">
       <div
         className="pointer-events-none fixed inset-0 z-10 transition-opacity duration-1000"
         style={{
@@ -428,12 +427,8 @@ const EndGame: React.FC = () => {
         </div>
       )}
 
-      <div className="max-w-3xl mx-auto">
-        <div className="flex justify-center mt-3 md:mt-4 mb-2 md:mb-4">
-          <Logo size="small" />
-        </div>
-
-        <div className="flex flex-col items-center mb-5 md:mb-8">
+      <div className="h-full max-h-[820px] min-h-0 max-w-3xl mx-auto w-full overflow-y-auto overscroll-contain no-scrollbar relative z-20">
+        <div className="flex flex-col items-center mb-5 md:mb-8 mt-2 md:mt-4">
           <div
             className="relative flex flex-col items-center px-5 pt-5 pb-4"
             style={{ overflow: 'visible' }}
@@ -620,7 +615,6 @@ const EndGame: React.FC = () => {
 
         <div
           className={`bg-white border-[2.5px] border-black rounded-2xl stack-shadow texture-paper p-3 md:p-5 transition-all duration-500 ${showLeaderboard ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
-          style={{ marginBottom: 'env(safe-area-inset-bottom, 0px)' }}
         >
           <h2 className="text-base md:text-xl font-display font-bold text-gray-900 mb-2 md:mb-3 text-center uppercase tracking-wider m-0">
             Scores individuels
@@ -720,8 +714,10 @@ const EndGame: React.FC = () => {
         </div>
       </div>
 
-      <div className="relative z-20 w-full text-center pt-4 pb-6 text-white/60 text-[10px] md:text-xs">
-        <ReportTrigger variant="footer" label="Signaler un bug ou une idée" />
+      <div
+        className={`shrink-0 relative z-20 w-full text-center pt-2 pb-2 text-white/60 text-[10px] md:text-xs safe-pb transition-all duration-500 ${showLeaderboard ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}
+      >
+        <ReportTrigger variant="footer" label="Signaler un bug ou une suggestion" />
       </div>
 
       <style>{`

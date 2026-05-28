@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { getAvatarUrl } from '../../constants/game';
 import {
   SlotConfig, SlotRuntimeState,
@@ -33,6 +34,23 @@ export const SlotCard = ({
   const isPilier = !!state?.isLeader;
   const isSubstitute = !!state?.isSubstitute && !isPilier;
   const preset = presetById(slot.viewportId);
+
+  // Mesure la largeur dispo dans le slot pour shrink-to-fit si zoom utilisateur trop large.
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const [availableWidth, setAvailableWidth] = useState<number>(0);
+  useEffect(() => {
+    if (!viewportRef.current) return;
+    const el = viewportRef.current;
+    const ro = new ResizeObserver((entries) => {
+      setAvailableWidth(entries[0].contentRect.width);
+    });
+    ro.observe(el);
+    setAvailableWidth(el.clientWidth);
+    return () => ro.disconnect();
+  }, []);
+
+  const fitZoom = availableWidth > 0 ? availableWidth / dims.w : zoom;
+  const effectiveZoom = Math.min(zoom, fitZoom);
 
   const phaseLabel = !running
     ? 'idle'
@@ -150,8 +168,9 @@ export const SlotCard = ({
       </div>
 
       <div
-        className="relative flex justify-center items-start bg-black/40 p-2 overflow-auto"
-        style={{ height: dims.h * zoom + 24 }}
+        ref={viewportRef}
+        className="relative flex justify-center items-start bg-black/40 p-2 overflow-hidden"
+        style={{ height: dims.h * effectiveZoom + 16 }}
       >
         <div aria-hidden className="pointer-events-none absolute inset-2 opacity-40">
           <span className="absolute top-0 left-0 w-2 h-px bg-white/30" />
@@ -166,11 +185,17 @@ export const SlotCard = ({
 
         <div
           style={{
+            width: dims.w * effectiveZoom,
+            height: dims.h * effectiveZoom,
+            flexShrink: 0,
+          }}
+        >
+        <div
+          style={{
             width: dims.w,
             height: dims.h,
-            transform: `scale(${zoom})`,
-            transformOrigin: 'top center',
-            flexShrink: 0,
+            transform: `scale(${effectiveZoom})`,
+            transformOrigin: 'top left',
           }}
         >
           {url ? (
@@ -206,6 +231,7 @@ export const SlotCard = ({
               <span className="font-mono text-[11px] uppercase tracking-[0.3em]">en attente du lobby</span>
             </div>
           )}
+        </div>
         </div>
       </div>
 

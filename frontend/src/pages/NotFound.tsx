@@ -9,8 +9,8 @@ const NotFound = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <div className="flex-1 w-full max-w-screen-md mx-auto px-4 py-4 md:py-4 flex flex-col justify-center">
+    <div className="h-full flex flex-col overflow-hidden">
+      <div className="flex-1 min-h-0 w-full max-w-screen-md mx-auto px-4 py-4 md:py-4 flex flex-col justify-center overflow-y-auto overscroll-contain no-scrollbar safe-pt">
         <div className="flex justify-center mb-4 md:mb-8">
           <Logo size="large" />
         </div>
@@ -55,7 +55,9 @@ const NotFound = () => {
         </Frame>
       </div>
 
-      <Footer />
+      <div className="shrink-0">
+        <Footer />
+      </div>
     </div>
   );
 };

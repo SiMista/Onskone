@@ -107,10 +107,10 @@ export interface TabDef {
 export const TABS: TabDef[] = [
   { id: 'overview', icon: 'mdi:home', ariaLabel: 'Accueil', hint: 'accueil', enabled: true, group: 'pilotage' },
   { id: 'lobbies', label: 'Salons live', hint: 'temps réel', enabled: true, group: 'pilotage' },
-  { id: 'tickets', label: 'Tickets', hint: 'retours joueurs', enabled: true, group: 'inbox' },
-  { id: 'decks', label: 'Decks de questions', hint: 'catalogue', enabled: true, group: 'catalogue' },
-  { id: 'content', label: 'Contenu du site', hint: 'données fixes', enabled: true, group: 'catalogue' },
-  { id: 'stats', label: 'Stats', hint: 'analytics', enabled: true, group: 'analytics' },
+  { id: 'tickets', icon: 'mdi:ticket-outline', label: 'Tickets', ariaLabel: 'Tickets', hint: 'retours joueurs', enabled: true, group: 'inbox' },
+  { id: 'decks', icon: 'mdi:cards-outline', label: 'Decks', ariaLabel: 'Decks de questions', hint: 'catalogue', enabled: true, group: 'catalogue' },
+  { id: 'content', icon: 'mdi:file-document-outline', label: 'Contenu', ariaLabel: 'Contenu du site', hint: 'données fixes', enabled: true, group: 'catalogue' },
+  { id: 'stats', icon: 'mdi:chart-line', label: 'Stats', ariaLabel: 'Stats', hint: 'analytics', enabled: true, group: 'analytics' },
 ];
 
 export const GROUP_ORDER: TabGroup[] = ['pilotage', 'inbox', 'catalogue', 'analytics'];

@@ -11,11 +11,13 @@ interface HourglassTimerProps {
   hidden?: boolean;
 }
 
-// Tailles responsive : {mobile} / {desktop md:} - en px pour le SVG et le texte
+// Tailles responsive : {mobile} / {vraie tablette tablet:} - en px pour le SVG et le texte
+// tablet: au lieu de md: pour qu'un téléphone en paysage (width>md mais height<600)
+// ne déclenche pas la version desktop, sinon le sablier mange tout le header.
 const SIZE_CLASSES: Record<'sm' | 'md' | 'lg', { svg: string; text: string }> = {
-  sm: { svg: 'w-[30px] h-[40px] md:w-14 md:h-[72px]', text: 'text-[11px] md:text-sm' },
-  md: { svg: 'w-[46px] h-[60px] md:w-[72px] md:h-[92px]', text: 'text-xs md:text-base' },
-  lg: { svg: 'w-[64px] h-[82px] md:w-24 md:h-[122px]', text: 'text-sm md:text-lg' },
+  sm: { svg: 'w-[24px] h-[32px] tablet:w-14 tablet:h-[72px]', text: 'text-[10px] tablet:text-sm' },
+  md: { svg: 'w-[40px] h-[52px] tablet:w-[72px] tablet:h-[92px]', text: 'text-xs tablet:text-base' },
+  lg: { svg: 'w-[56px] h-[72px] tablet:w-24 tablet:h-[122px]', text: 'text-sm tablet:text-lg' },
 };
 
 const HourglassTimer = ({ duration, onExpire, phase, lobbyCode, size = 'md', hidden = false }: HourglassTimerProps) => {

@@ -4,14 +4,13 @@ import socket from '../utils/socket';
 import HourglassTimer from './HourglassTimer';
 import Button from './Button';
 import QuestionCard from './QuestionCard';
-import Avatar from './Avatar';
 import PlayerBadge from './PlayerBadge';
-import PlayerAnswerCard from './PlayerAnswerCard';
+import RevealedAnswerCard from './RevealedAnswerCard';
 import AnswerText from './AnswerText';
-import stickmanShowPhone from '../assets/images/game/stickman-show-phone-cropped.png';
-import { IPlayer, RoundPhase, GameCard, GameMode } from '@onskone/shared';
-import { isNoResponse, getDisplayText } from '../utils/answerHelpers';
+import { IPlayer, RoundPhase, GameCard, GameMode, RevealResult } from '@onskone/shared';
+import { isNoResponse } from '../utils/answerHelpers';
 import { useStartTimerDelayed } from '../hooks';
+import ScrollFade from './ScrollFade';
 
 interface Answer {
   id: string;
@@ -45,6 +44,10 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
 
   // Refs pour les cartes joueurs (pour le scroll)
   const playerCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  // Refs des conteneurs scrollables (réponses non attribuées + liste joueurs)
+  const answersScrollRef = useRef<HTMLDivElement | null>(null);
+  const playersScrollRef = useRef<HTMLDivElement | null>(null);
 
 
   // Calculer la durée du timer: 120s pour 3 joueurs, +20s par joueur supplémentaire
@@ -285,14 +288,25 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
   }
 
   // ============================================================
-  // VUE JOUEUR (non-pilier, mode local) - seule la réponse attribuée
+  // VUE JOUEUR (non-pilier, mode local)
   // ============================================================
+  // On délègue toujours le rendu à RevealedAnswerCard avec revealed=false pour
+  // garder une structure identique entre "en attente d'attribution", "attribué"
+  // et la phase REVEAL qui suit. Le seul élément qui change c'est le texte de la
+  // carte (message d'attente vs réponse réelle), évitant tout jump de layout.
   if (!isLeader && gameMode === 'local') {
-    const assignedText = myAssignedAnswer ? getDisplayText(myAssignedAnswer.text) : '';
-    const noResponse = myAssignedAnswer ? isNoResponse(myAssignedAnswer.text) : false;
-
+    const result: RevealResult = {
+      playerId: '',
+      playerName: '',
+      playerAvatarId: 0,
+      answer: myAssignedAnswer?.text ?? '',
+      guessedPlayerId: '',
+      guessedPlayerName: '',
+      guessedPlayerAvatarId: 0,
+      correct: false,
+    };
     return (
-      <div className="flex flex-col h-full p-2 md:p-4 max-w-3xl mx-auto landscape:max-w-5xl">
+      <>
         <HourglassTimer
           duration={timerDuration}
           onExpire={handleTimerExpire}
@@ -300,59 +314,33 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
           lobbyCode={lobbyCode}
           hidden
         />
-
-        <div className="flex flex-col items-center gap-3 md:gap-4 pt-6 md:pt-12 pb-3 px-2 max-md:landscape:gap-2 max-md:landscape:pt-2">
-          <p className="text-gray-900 text-sm md:text-xl font-semibold text-center max-md:landscape:text-xs shrink-0 -translate-x-4 md:-translate-x-8 max-md:landscape:-translate-x-2">
-            Montre ton écran !
-          </p>
-
-          <div className="w-full flex flex-row items-center justify-center gap-3 md:gap-4">
-            <div className="relative flex-1 min-w-0 max-w-lg landscape:max-w-3xl">
-              <img
-                src={stickmanShowPhone}
-                alt=""
-                aria-hidden
-                draggable={false}
-                className="absolute left-[78%] -translate-x-1/2 -top-16 md:-top-20 max-md:landscape:-top-10 h-32 md:h-40 max-md:landscape:h-20 w-auto select-none pointer-events-none animate-float z-0"
-              />
-              <div className="relative z-10">
-                {myAssignedAnswer ? (
-                  <PlayerAnswerCard
-                    key={myAssignedAnswer.id}
-                    answer={assignedText}
-                    isNoResponse={noResponse}
-                    pulse
-                    heading={null}
-                  />
-                ) : (
-                  <div className="flex items-center justify-center flex-wrap gap-x-2 gap-y-1 leading-none w-full px-4 py-6 md:py-8 bg-gray-50 border border-dashed border-gray-400 rounded-xl text-sm md:text-base text-gray-600">
-                    <span className="italic">En attente que</span>
-                    <Avatar avatarId={leader?.avatarId ?? 0} name={leader?.name} size="sm" />
-                    <span>{leader?.name}</span>
-                    <span className="italic">t'attribue une réponse…</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <p className="landscape:hidden flex items-center gap-1.5 text-xs text-gray-500/80 shrink-0 mt-1">
-            <Icon icon="mdi:phone-rotate-landscape" width={14} height={14} aria-hidden />
-            Tourne ton téléphone pour un affichage plus large
-          </p>
-        </div>
-      </div>
+        <RevealedAnswerCard
+          key={myAssignedAnswer?.id ?? 'waiting'}
+          result={result}
+          revealed={false}
+          correct={false}
+          showBubble={false}
+          cardClassName={myAssignedAnswer ? 'animate-card-receive' : ''}
+          waitingFor={myAssignedAnswer ? undefined : { name: leader?.name ?? 'le pilier', avatarId: leader?.avatarId ?? 0 }}
+          footer={
+            <p className="landscape:hidden flex items-center gap-1.5 text-xs text-gray-500/80 mt-1">
+              <Icon icon="mdi:phone-rotate-landscape" width={14} height={14} aria-hidden />
+              Tourne ton téléphone pour un affichage plus large
+            </p>
+          }
+        />
+      </>
     );
   }
 
   return (
-    <div className="flex flex-col h-full p-2 md:p-4">
-      <div className="mb-2 md:mb-3">
+    <div className="flex flex-col h-full min-h-[70dvh] p-2 md:p-4 overflow-hidden">
+      <div className="shrink-0 mb-2 md:mb-3">
         <QuestionCard question={question} card={card} variant="compact" />
         {isLeader ? (
           <h2 className="text-sm md:text-lg font-bold text-gray-800 mt-2 md:mt-3 mb-1 md:mb-2 text-center">
-            <span className="md:hidden">Tapez une réponse puis un joueur</span>
-            <span className="hidden md:inline">Glissez chaque réponse vers son auteur présumé</span>
+            <span className="tablet:hidden">Tape une réponse puis un joueur</span>
+            <span className="hidden tablet:inline">Glisse chaque réponse vers son auteur présumé</span>
           </h2>
         ) : (
           <div className="flex flex-col items-center gap-1 mt-1.5">
@@ -369,12 +357,16 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
         />
       </div>
 
-      {/* Layout responsive: colonnes sur desktop, empilé sur mobile */}
-      <div className="flex-1 flex flex-col md:grid md:grid-cols-2 gap-2 md:gap-4 overflow-auto">
-        {/* Réponses non attribuées */}
-        <div className="bg-gray-100 rounded-lg p-2 md:p-3 border-2 border-gray-300 max-h-[35vh] md:max-h-none overflow-y-auto">
-          <h3 className="text-sm md:text-base font-bold text-gray-800 mb-1.5 md:mb-2 m-0 uppercase tracking-wider">Réponses</h3>
-          <div className="space-y-1.5 md:space-y-2 pr-1 md:pr-2">
+      {/* Layout responsive: colonnes sur desktop, empilé sur mobile. flex-1 min-h-0
+          pour permettre aux listes internes de scroller au lieu de pousser le parent. */}
+      <div className="flex-1 min-h-0 flex flex-col tablet:grid tablet:grid-cols-2 gap-2 tablet:gap-4 overflow-hidden">
+        {/* Réponses non attribuées : zone bornée scrollable. En mobile portrait,
+            on garde le design original (35dvh max) pour laisser la place aux
+            cartes joueurs. En landscape mobile, la liste passe en 2 colonnes
+            pour rester lisible quand le tel est tourné. */}
+        <div className="relative bg-gray-100 rounded-lg p-2 md:p-3 border-2 border-gray-300 flex flex-col min-h-0 max-h-[35dvh] tablet:max-h-none tablet:flex-1 overflow-hidden">
+          <h3 className="shrink-0 text-sm md:text-base font-bold text-gray-800 mb-1.5 md:mb-2 m-0 uppercase tracking-wider">Réponses</h3>
+          <div ref={answersScrollRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain no-scrollbar space-y-1.5 md:space-y-2 landscape-2col pr-1 md:pr-2">
             {unassignedAnswers.map((answer, i) => {
               const noResponse = isNoResponse(answer.text);
               const isSelected = selectedAnswerId === answer.id;
@@ -391,7 +383,7 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
                     animate-answer-drop-in
                     ${noResponse ? 'bg-gray-100 border-gray-300' : isSelected ? 'bg-warning-100 border-black' : 'bg-white border-black stack-shadow-sm texture-paper'}
                     ${isLeader ? 'cursor-pointer md:cursor-grab active:cursor-grabbing select-none' : 'cursor-default'}
-                    ${isSelected ? 'scale-[1.02] ring-4 ring-warning-350/60 stack-shadow translate-x-1 -translate-y-1' : ''}
+                    ${isSelected ? 'ring-[3px] ring-inset ring-warning-500 stack-shadow' : ''}
                     ${isDragging ? 'card-dragging' : ''}
                     transition-all duration-200
                   `}
@@ -411,10 +403,18 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
               </p>
             )}
           </div>
+          <ScrollFade scrollRef={answersScrollRef} className="rounded-b-lg" />
         </div>
 
-        {/* Joueurs avec leurs réponses attribuées */}
-        <div className="space-y-2 md:space-y-3 overflow-y-auto overflow-x-visible flex-1 px-1 py-1">
+        {/* Joueurs avec leurs réponses attribuées - alignés en haut, scroll
+            interne si la liste déborde. Fade blanc en bas comme indice "il
+            reste du contenu à scroller". */}
+        <div className="relative flex-1 min-h-0">
+        <div
+          ref={playersScrollRef}
+          className="absolute inset-0 overflow-y-auto overscroll-contain no-scrollbar px-2 py-1"
+        >
+        <div className="flex flex-col space-y-2 md:space-y-3">
           {players.map((player) => {
             const assignedAnswers = getAssignedAnswers(player.id);
             const hasAnswer = assignedAnswers.length > 0;
@@ -502,7 +502,7 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
                   ) : (
                     <div className="border-2 border-dashed border-gray-400 rounded-lg p-2 md:p-4 text-center bg-white h-full flex items-center justify-center min-h-[40px] md:min-h-[60px]">
                       <p className="text-gray-500 text-xs md:text-sm">
-                        {isLeader ? (selectedAnswerId ? 'Déposez ici' : 'Tapez pour assigner') : '…'}
+                        {isLeader ? (selectedAnswerId ? 'Dépose ici' : 'Tape pour assigner') : '…'}
                       </p>
                     </div>
                   )}
@@ -511,16 +511,18 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
             );
           })}
         </div>
+        </div>
+        <ScrollFade scrollRef={playersScrollRef} />
+        </div>
       </div>
 
       {isLeader && (
         <div
-          className="mt-3 md:mt-6 text-center"
-          style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+          className="shrink-0 mt-2 md:mt-6 text-center"
         >
           {unassignedAnswers.length > 0 && (
             <p className="mb-2 text-xs md:text-sm font-medium text-gray-500">
-              Il reste {unassignedAnswers.length} réponse(s) à attribuer
+              Il reste {unassignedAnswers.length} réponse{unassignedAnswers.length > 1 ? 's' : ''} à attribuer
             </p>
           )}
           <Button

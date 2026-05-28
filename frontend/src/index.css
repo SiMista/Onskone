@@ -1,6 +1,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,900&display=swap');
 @import "tailwindcss";
 
+/* Variant "vraie tablette / desktop" : md largeur + hauteur suffisante. Évite
+   qu'un téléphone en landscape (ex: Pixel 7, 915x412) bascule en layout PC. */
+@custom-variant tablet (@media (min-width: 768px) and (min-height: 600px));
+
+/* Variant "téléphone en paysage" : toutes les tailles de phone tournées.
+   Sert à compacter les vues "montre ton écran" quand le joueur tourne son tel. */
+@custom-variant phone-landscape (@media (orientation: landscape) and (max-height: 599px));
+
 @theme {
   --font-sans: 'Nunito', sans-serif;
   --font-display: 'Fredoka', 'Nunito', sans-serif;
@@ -118,12 +126,21 @@
 
 /* --- Safe areas iOS/Android --- */
 /* Utilitaires pour respecter les zones natives (encoche, home indicator, gestures) */
-.safe-pb { padding-bottom: env(safe-area-inset-bottom, 0px); }
-.safe-pt { padding-top: env(safe-area-inset-top, 0px); }
+.safe-pb { padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 0px)); }
+.safe-pt { padding-top: max(1.5rem, env(safe-area-inset-top, 0px)); }
 .safe-pl { padding-left: env(safe-area-inset-left, 0px); }
 .safe-pr { padding-right: env(safe-area-inset-right, 0px); }
 .safe-mb { margin-bottom: env(safe-area-inset-bottom, 0px); }
 .safe-mt { margin-top: env(safe-area-inset-top, 0px); }
+
+/* En paysage phone, la hauteur est précieuse et la notch/home indicator est sur
+   les côtés (gauche/droite), pas en haut/bas. On retire le plancher 1.5rem qui
+   gaspille verticalement (en dev/desktop, env(...) renvoie 0 → 24px de marge
+   inutile sinon). */
+@media (orientation: landscape) and (max-height: 599px) {
+  .safe-pb { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .safe-pt { padding-top: env(safe-area-inset-top, 0px); }
+}
 
 /* --- Identité visuelle : texture "papier cartonné" --- */
 /* Grain subtil appliqué sur les cartes cream pour casser l'aspect "plat numérique" */
@@ -258,17 +275,50 @@
 }
 
 
+/* --- App shell : la fenêtre devient l'app, plus de scroll global --- */
+/* height: 100dvh suit la viewport dynamique (pas de saut quand la barre
+   d'URL Safari apparaît/disparaît). overflow:hidden empêche tout scroll
+   global ; les zones internes qui en ont besoin utilisent flex-1 min-h-0
+   overflow-y-auto. overscroll-behavior tue le bounce iOS et le
+   pull-to-refresh qui pourrait recharger en pleine partie. */
 html, body {
-  @apply h-full;
+  height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+html {
+  touch-action: manipulation;
 }
 
 body {
-  @apply m-0 font-sans relative min-h-screen;
+  @apply m-0 font-sans relative;
   background:
     url('./assets/images/interrogation_bg_transparent.png') repeat ,
     linear-gradient(to bottom, rgba(31,93,144,0.93), rgba(24,187,237,0.93));
   background-size: 280px 340px, auto;
   background-attachment: fixed;
+}
+
+/* Scrollbar invisible pour les zones internes scrollables (feel app) */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Mobile en landscape : pendant Guessing/Reveal le joueur tourne le tel pour
+   montrer à la tablée. Forcer la liste des réponses en 2 colonnes pour que
+   ça reste lisible avec la faible hauteur disponible. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .landscape-2col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+  .landscape-2col > * { margin: 0 !important; }
 }
 
 
@@ -1019,4 +1069,39 @@ button {
   animation: onskone-shockwave 1.4s ease-out infinite;
 }
 
+/* Point de notification (trophée Home : succès non vus). */
+@keyframes notification-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(1.18); opacity: 0.85; }
+}
+.animate-notification-pulse {
+  animation: notification-pulse 1.8s ease-in-out infinite;
+}
+
+/* Déblocage d'un succès : part de l'apparence "verrouillée" (grisé, terne)
+   puis s'allume avec un coup de brightness + halo chaud, et atterrit sur l'état débloqué. */
+@keyframes achievement-unlock {
+  0% {
+    filter: grayscale(1) brightness(1.18);
+    opacity: 0.62;
+    transform: scale(0.97);
+  }
+  45% {
+    filter: grayscale(0) brightness(1.2) drop-shadow(0 0 14px rgba(255, 179, 71, 0.7));
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  72% {
+    filter: grayscale(0) brightness(1.06) drop-shadow(0 0 6px rgba(255, 179, 71, 0.35));
+    transform: scale(0.99);
+  }
+  100% {
+    filter: grayscale(0) brightness(1);
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.animate-achievement-unlock {
+  animation: achievement-unlock 0.75s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
 

@@ -20,12 +20,12 @@ const RevealAvatar: React.FC<RevealAvatarProps> = ({
   name,
   revealed,
   size = 'lg',
-  className = 'relative w-16 h-16 md:w-24 md:h-24 max-md:landscape:w-14 max-md:landscape:h-14',
+  className = 'relative w-16 h-16 tablet:w-24 tablet:h-24 phone-landscape:w-16 phone-landscape:h-16',
 }) => {
   return (
     <div className={className}>
       <div
-        className={`absolute inset-0 rounded-full bg-gray-200 border-2 border-dashed border-gray-400 flex items-center justify-center text-gray-500 font-bold text-2xl md:text-3xl shadow-md transition-opacity duration-500 max-md:landscape:text-xl ${revealed ? 'opacity-0' : 'opacity-100'}`}
+        className={`absolute inset-0 rounded-full bg-gray-200 border-2 border-dashed border-gray-400 flex items-center justify-center text-gray-500 font-bold text-2xl tablet:text-3xl shadow-md transition-opacity duration-500 phone-landscape:text-lg ${revealed ? 'opacity-0' : 'opacity-100'}`}
       >
         ?
       </div>

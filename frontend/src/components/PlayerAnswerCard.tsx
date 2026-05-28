@@ -1,4 +1,5 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import Avatar from './Avatar';
 
 const SOFT_HYPHEN = '­';
 
@@ -28,6 +29,9 @@ interface PlayerAnswerCardProps {
   className?: string;
   heading?: string | null;
   placeholder?: boolean;
+  /** Si défini, affiche un état d'attente "En attente que {name} t'attribue une réponse…"
+   *  avec avatar inline et police modérée, à la place du texte auto-fit. */
+  waitingFor?: { name: string; avatarId: number };
 }
 
 const FIT_MAX = 128;
@@ -39,8 +43,9 @@ const PlayerAnswerCard: React.FC<PlayerAnswerCardProps> = ({
   bgClass = 'bg-cream-answer',
   pulse = false,
   className = '',
-  heading = 'Montre ton écran !',
+  heading = null,
   placeholder = false,
+  waitingFor,
 }) => {
   const textClass = placeholder
     ? 'italic text-gray-500 font-normal'
@@ -58,7 +63,7 @@ const PlayerAnswerCard: React.FC<PlayerAnswerCardProps> = ({
   );
 
   useLayoutEffect(() => {
-    if (placeholder) return;
+    if (placeholder || waitingFor) return;
     const fit = () => {
       const box = fitBoxRef.current;
       const txt = textRef.current;
@@ -89,14 +94,14 @@ const PlayerAnswerCard: React.FC<PlayerAnswerCardProps> = ({
   return (
     <>
       {heading && (
-        <p className="text-gray-900 text-base md:text-xl font-semibold text-center">
+        <p className="text-gray-900 text-base tablet:text-xl font-semibold text-center">
           {heading}
         </p>
       )}
       <div
         className={`
-          w-full h-32 md:h-48 max-md:landscape:h-40 md:landscape:h-56
-          p-4 md:p-6 max-md:landscape:p-3
+          w-full h-32 tablet:h-48 tablet:landscape:h-56 phone-landscape:h-full
+          p-4 tablet:p-6 phone-landscape:p-4
           rounded-xl border flex items-center justify-center
           ${placeholder
             ? 'border-dashed border-gray-400 bg-gray-50 shadow-none'
@@ -107,9 +112,20 @@ const PlayerAnswerCard: React.FC<PlayerAnswerCardProps> = ({
         `}
       >
         {placeholder ? (
-          <p className={`font-bold text-center break-words text-sm md:text-base ${textClass}`}>
+          <p className={`font-bold text-center break-words text-sm tablet:text-base ${textClass}`}>
             {answer}
           </p>
+        ) : waitingFor ? (
+          <div className="w-full h-full flex items-center justify-center overflow-hidden px-2">
+            <p className="text-gray-700 text-sm tablet:text-base phone-landscape:text-lg font-medium text-center italic leading-snug flex items-center justify-center flex-wrap gap-x-1.5 gap-y-1">
+              <span>En attente que</span>
+              <span className="inline-flex items-center gap-1.5 not-italic font-semibold text-gray-900">
+                <Avatar avatarId={waitingFor.avatarId} name={waitingFor.name} size="sm" />
+                <span>{waitingFor.name}</span>
+              </span>
+              <span>t'attribue une réponse…</span>
+            </p>
+          </div>
         ) : (
           <div ref={fitBoxRef} className="w-full h-full flex items-center justify-center overflow-hidden">
             <p

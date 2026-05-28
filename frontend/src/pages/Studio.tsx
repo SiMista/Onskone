@@ -39,6 +39,7 @@ const Studio = () => {
   const [reloadKey, setReloadKey] = useState(0);
   const [slotReloadKeys, setSlotReloadKeys] = useState<Record<string, number>>({});
   const [burstCount, setBurstCount] = useState<number>(10);
+  const [limitBreaker, setLimitBreaker] = useState<boolean>(false);
 
   const iframeRefs = useRef<Record<string, HTMLIFrameElement | null>>({});
 
@@ -173,18 +174,27 @@ const Studio = () => {
     setReloadKey((k) => k + 1);
   };
   const reloadAll = () => setReloadKey((k) => k + 1);
-  const triggerStress = (target?: string) => {
-    if (!running) return;
+  const broadcast = useCallback((msg: unknown, target?: string) => {
     const send = (frame: HTMLIFrameElement | null | undefined) => {
-      try {
-        frame?.contentWindow?.postMessage(
-          { type: 'studio:stress', count: burstCount },
-          '*'
-        );
-      } catch { /* silent */ }
+      try { frame?.contentWindow?.postMessage(msg, '*'); } catch { /* silent */ }
     };
     if (target) send(iframeRefs.current[target]);
     else slots.forEach((s) => send(iframeRefs.current[s.id]));
+  }, [slots]);
+
+  // Limit Breakers : propage l'état + le count vers chaque iframe à chaque
+  // changement, et désactive auto à la fin de la session.
+  useEffect(() => {
+    broadcast({ type: 'studio:setLimitBreaker', enabled: limitBreaker && running, count: burstCount });
+  }, [limitBreaker, burstCount, running, broadcast]);
+
+  const toggleLimitBreaker = () => {
+    if (!running) return;
+    const next = !limitBreaker;
+    setLimitBreaker(next);
+    // Lors de l'activation, on déclenche aussi un burst immédiat sur la phase
+    // courante - sinon il faudrait attendre la prochaine transition.
+    if (next) broadcast({ type: 'studio:stress', count: burstCount });
   };
   const reloadSlot = (id: string) =>
     setSlotReloadKeys((m) => ({ ...m, [id]: (m[id] ?? 0) + 1 }));
@@ -264,13 +274,14 @@ const Studio = () => {
         allBots={allBots}
         burstCount={burstCount}
         setBurstCount={setBurstCount}
+        limitBreaker={limitBreaker}
+        onToggleLimitBreaker={toggleLimitBreaker}
         onAddSlot={addSlot}
         onRemoveLastSlot={removeLastSlot}
         onToggleAllBots={toggleAllBots}
         onReloadAll={reloadAll}
         onStart={start}
         onReset={reset}
-        onTriggerStress={() => triggerStress()}
       />
 
       {view === 'gallery' && <Gallery />}

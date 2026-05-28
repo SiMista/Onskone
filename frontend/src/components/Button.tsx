@@ -122,9 +122,8 @@ const Button: React.FC<ButtonProps> = ({
           className="absolute inset-0 rounded-[inherit] overflow-hidden ios-clip-fix pointer-events-none"
         >
           <span
-            className={`absolute inset-x-0 bottom-0 h-[10%] origin-bottom transition-transform duration-[300ms] ease-out ${
-              isDisabled ? "" : "group-active:scale-y-0"
-            }`}
+            className={`absolute inset-x-0 bottom-0 h-[10%] origin-bottom transition-transform duration-[300ms] ease-out ${isDisabled ? "" : "group-active:scale-y-0"
+              }`}
             style={{ backgroundColor: band }}
           />
         </span>

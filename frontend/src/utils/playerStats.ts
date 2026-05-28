@@ -19,6 +19,8 @@ export interface PlayerStats {
   lastPseudo: string | null;
   lastAvatarId: number | null;
   unlockedAchievements: string[];
+  /** Succès déjà consultés par l'utilisateur (ouverture de la modale). Permet de marquer les nouveaux. */
+  seenAchievements: string[];
   /** Liste de lobbyCodes déjà comptés -> garde-fou anti double-compte si l'utilisateur refresh EndGame. */
   recordedLobbies: string[];
 }
@@ -33,6 +35,7 @@ const DEFAULT_STATS: PlayerStats = {
   lastPseudo: null,
   lastAvatarId: null,
   unlockedAchievements: [],
+  seenAchievements: [],
   recordedLobbies: [],
 };
 
@@ -109,7 +112,13 @@ export function getStats(): PlayerStats {
     if (!parsed || typeof parsed !== 'object' || parsed.version !== CURRENT_VERSION) {
       return { ...DEFAULT_STATS };
     }
-    return { ...DEFAULT_STATS, ...parsed };
+    const merged: PlayerStats = { ...DEFAULT_STATS, ...parsed };
+    // Migration silencieuse : si seenAchievements absent, on considère les succès déjà débloqués
+    // comme déjà vus pour éviter de spammer une notif rétroactive aux anciens utilisateurs.
+    if (parsed.seenAchievements === undefined) {
+      merged.seenAchievements = [...merged.unlockedAchievements];
+    }
+    return merged;
   } catch {
     return { ...DEFAULT_STATS };
   }
@@ -121,6 +130,24 @@ function saveStats(stats: PlayerStats): void {
   } catch {
     /* silent */
   }
+}
+
+/** Renvoie les succès débloqués mais pas encore consultés (drive le point de notif). */
+export function getUnseenAchievementIds(): string[] {
+  const stats = getStats();
+  const seen = new Set(stats.seenAchievements);
+  return stats.unlockedAchievements.filter(id => !seen.has(id));
+}
+
+/** Marque tous les succès débloqués comme vus. Renvoie la liste qui vient d'être marquée. */
+export function markAchievementsAsSeen(): string[] {
+  const stats = getStats();
+  const seen = new Set(stats.seenAchievements);
+  const newlySeen = stats.unlockedAchievements.filter(id => !seen.has(id));
+  if (newlySeen.length === 0) return [];
+  stats.seenAchievements = [...stats.unlockedAchievements];
+  saveStats(stats);
+  return newlySeen;
 }
 
 export function rememberIdentity(pseudo: string, avatarId: number): void {

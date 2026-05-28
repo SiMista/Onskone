@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Icon } from '@iconify/react';
 import socket from '../utils/socket';
 import HourglassTimer from './HourglassTimer';
 import Avatar from './Avatar';
 import Button from './Button';
 import QuestionCard from './QuestionCard';
 import QuestionByline from './QuestionByline';
+import Dropdown from './Dropdown';
 import { GAME_CONFIG } from '../constants/game';
 import { IPlayer, RoundPhase, GameCard } from '@onskone/shared';
 import { useStartTimerDelayed } from '../hooks';
@@ -42,10 +42,8 @@ const SubstituteSelection: React.FC<SubstituteSelectionProps> = ({
   const effectiveSelectedId = candidates.find(c => c.id === pickedId)?.id ?? candidates[0]?.id ?? '';
 
   const [submitted, setSubmitted] = useState(false);
-  const [open, setOpen] = useState(false);
   const selectedIdRef = useRef(effectiveSelectedId);
   const submittedRef = useRef(submitted);
-  const dropdownRef = useRef<HTMLDivElement | null>(null);
   const expireTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => { selectedIdRef.current = effectiveSelectedId; }, [effectiveSelectedId]);
@@ -59,29 +57,10 @@ const SubstituteSelection: React.FC<SubstituteSelectionProps> = ({
     };
   }, []);
 
-  useEffect(() => {
-    if (!open) return;
-    const onClick = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    const onEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
-    };
-    document.addEventListener('mousedown', onClick);
-    document.addEventListener('keydown', onEsc);
-    return () => {
-      document.removeEventListener('mousedown', onClick);
-      document.removeEventListener('keydown', onEsc);
-    };
-  }, [open]);
-
   const submitSelection = (id: string) => {
     if (!id || submittedRef.current) return;
     submittedRef.current = true;
     setSubmitted(true);
-    setOpen(false);
     socket.emit('selectSubstitute', { lobbyCode, substitutePlayerId: id });
   };
 
@@ -103,10 +82,14 @@ const SubstituteSelection: React.FC<SubstituteSelectionProps> = ({
   const subtitle = isLeader ? getQuestionSubtitle(RoundPhase.SUBSTITUTE_SELECTION, isLeader) : '';
   const subtitleBadge = undefined;
 
-  const selectedPlayer = candidates.find(p => p.id === effectiveSelectedId);
+  const dropdownOptions = candidates.map(p => ({
+    value: p.id,
+    label: p.name,
+    prefix: <Avatar avatarId={p.avatarId} name={p.name} size="sm" />,
+  }));
 
   return (
-    <div className="flex flex-col items-center h-full p-3 md:p-6 gap-4 max-w-md mx-auto w-full">
+    <div className="flex flex-col items-center h-full p-3 md:p-6 gap-4 max-w-md mx-auto w-full overflow-hidden">
       <HourglassTimer
         duration={GAME_CONFIG.TIMERS.SUBSTITUTE_SELECTION}
         onExpire={handleTimerExpire}
@@ -125,72 +108,13 @@ const SubstituteSelection: React.FC<SubstituteSelectionProps> = ({
             Le joueur que tu choisis devra deviner la réponse que tu aurais donnée.
           </p>
 
-          <div ref={dropdownRef} className="relative w-full" style={{ zIndex: 30 }}>
-            <button
-              type="button"
-              onClick={() => setOpen(o => !o)}
-              disabled={submitted || candidates.length === 0}
-              aria-haspopup="listbox"
-              aria-expanded={open}
-              className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-[12px] border-[2.5px] border-black bg-cream-player texture-paper stack-shadow-sm transition-transform duration-150 active:scale-[0.99] cursor-pointer ${submitted ? 'opacity-60 pointer-events-none' : ''}`}
-            >
-              <span className="flex items-center gap-2.5 min-w-0">
-                {selectedPlayer ? (
-                  <>
-                    <Avatar avatarId={selectedPlayer.avatarId} name={selectedPlayer.name} size="sm" />
-                    <span className="font-display font-semibold text-black truncate">{selectedPlayer.name}</span>
-                  </>
-                ) : (
-                  <span className="text-gray-500 italic">Aucun joueur disponible</span>
-                )}
-              </span>
-              <Icon
-                icon="lucide:chevron-down"
-                width={22}
-                height={22}
-                className={`shrink-0 text-black transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
-                aria-hidden
-              />
-            </button>
-
-            {candidates.length > 0 && (
-              <ul
-                role="listbox"
-                {...(!open ? { inert: '' } : {})}
-                className={`list-none p-1 rounded-[12px] border-[2.5px] border-black bg-cream-player texture-paper stack-shadow overflow-y-auto origin-top transition-all duration-200 ease-out ${open ? 'max-h-[30vh] md:max-h-[45vh] opacity-100 scale-y-100 translate-y-0 pointer-events-auto' : 'max-h-0 opacity-0 scale-y-95 -translate-y-1 pointer-events-none'}`}
-                style={{
-                  position: 'absolute',
-                  top: 'calc(100% + 6px)',
-                  left: 0,
-                  right: 0,
-                  margin: 0,
-                  zIndex: 40,
-                }}
-              >
-                {candidates.map(player => {
-                  const isSelected = player.id === effectiveSelectedId;
-                  return (
-                    <li key={player.id} role="option" aria-selected={isSelected}>
-                      <button
-                        type="button"
-                        onClick={() => { setPickedId(player.id); setOpen(false); }}
-                        className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-[8px] transition-colors duration-150 cursor-pointer ${isSelected ? 'bg-warning-350' : 'hover:bg-black/5'
-                          }`}
-                      >
-                        <Avatar avatarId={player.avatarId} name={player.name} size="sm" />
-                        <span className="font-display font-semibold text-black truncate flex-1 text-left">
-                          {player.name}
-                        </span>
-                        {isSelected && (
-                          <Icon icon="lucide:check" width={18} height={18} className="text-black shrink-0" aria-hidden />
-                        )}
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
+          <Dropdown
+            value={effectiveSelectedId}
+            onChange={setPickedId}
+            options={dropdownOptions}
+            placeholder="Aucun joueur disponible"
+            disabled={submitted}
+          />
 
           <Button
             variant="success"
