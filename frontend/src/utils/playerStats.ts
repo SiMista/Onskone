@@ -41,63 +41,21 @@ const DEFAULT_STATS: PlayerStats = {
 
 export interface Achievement {
   id: string;
-  title: string;
-  description: string;
+  /** Icône Iconify (la traduction title/description vit dans t.achievements[id]) */
   icon: string;
   /** Si vrai, le succès n'apparaît pas dans la liste tant qu'il n'est pas débloqué. */
   hidden?: boolean;
 }
 
 export const ACHIEVEMENTS: Achievement[] = [
-  {
-    id: 'first-game',
-    title: 'Première partie',
-    description: 'Tu as terminé ta toute première partie.',
-    icon: 'fluent-emoji-flat:party-popper',
-  },
-  {
-    id: 'loyal-10',
-    title: 'Fidèle',
-    description: '10 parties au compteur.',
-    icon: 'fluent-emoji-flat:fire',
-  },
-  {
-    id: 'veteran-50',
-    title: 'Vétéran',
-    description: '25 parties terminées. Mais t’es pas fatigué ?',
-    icon: 'fluent-emoji-flat:gem-stone',
-  },
-  {
-    id: 'mind-reader-20',
-    title: "Lecteur d'esprit",
-    description: 'Trouver 20 réponses en tant que pilier.',
-    icon: 'fluent-emoji-flat:bullseye',
-  },
-  {
-    id: 'marathon',
-    title: 'Marathon',
-    description: 'Terminer une partie de 10 manches ou plus.',
-    icon: 'fluent-emoji-flat:running-shoe',
-  },
-  {
-    id: 'top-1-thrice',
-    title: 'Sur le podium',
-    description: "Finir 1er d'une partie, 3 fois.",
-    icon: 'fluent-emoji-flat:1st-place-medal',
-  },
-  {
-    id: 'zero-percent',
-    title: 'Catastrophe industrielle',
-    description: 'Atteindre 0% en équipe. Bravo (?).',
-    icon: 'fluent-emoji-flat:skull',
-    hidden: true,
-  },
-  {
-    id: 'perfect-score',
-    title: 'Score parfait',
-    description: 'Une équipe à 100%. Onskoné !',
-    icon: 'fluent-emoji-flat:trophy',
-  },
+  { id: 'first-game', icon: 'fluent-emoji-flat:party-popper' },
+  { id: 'loyal-10', icon: 'fluent-emoji-flat:fire' },
+  { id: 'veteran-50', icon: 'fluent-emoji-flat:gem-stone' },
+  { id: 'mind-reader-20', icon: 'fluent-emoji-flat:bullseye' },
+  { id: 'marathon', icon: 'fluent-emoji-flat:running-shoe' },
+  { id: 'top-1-thrice', icon: 'fluent-emoji-flat:1st-place-medal' },
+  { id: 'zero-percent', icon: 'fluent-emoji-flat:skull', hidden: true },
+  { id: 'perfect-score', icon: 'fluent-emoji-flat:trophy' },
 ];
 
 const ACHIEVEMENT_BY_ID = new Map(ACHIEVEMENTS.map(a => [a.id, a]));

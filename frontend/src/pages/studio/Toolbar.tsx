@@ -1,3 +1,4 @@
+import { GameMode } from '@onskone/shared';
 import { Layout, SlotConfig, SELECT_CLS } from './shared';
 
 // Variants compacts (locaux) pour la Toolbar, sans toucher au CLUSTER/PILL_*
@@ -17,6 +18,8 @@ interface ToolbarProps {
   setZoom: (z: number | ((prev: number) => number)) => void;
   debugTimers: boolean;
   setDebugTimers: (v: boolean | ((prev: boolean) => boolean)) => void;
+  gameMode: GameMode;
+  setGameMode: (m: GameMode) => void;
   running: boolean;
   allBots: boolean;
   burstCount: number;
@@ -34,6 +37,7 @@ interface ToolbarProps {
 export const Toolbar = ({
   view, setView,
   slots, layout, setLayout, zoom, setZoom, debugTimers, setDebugTimers,
+  gameMode, setGameMode,
   running, allBots, burstCount, setBurstCount,
   limitBreaker, onToggleLimitBreaker,
   onAddSlot, onRemoveLastSlot, onToggleAllBots,
@@ -173,12 +177,27 @@ export const Toolbar = ({
               tabIndex={running ? 0 : -1}
             >↻</button>
             {!running ? (
-              <button
-                onClick={onStart}
-                className="relative min-w-[80px] px-3 py-1 rounded-md font-mono text-[10px] font-bold uppercase tracking-wider bg-gradient-to-br from-amber-300 to-amber-500 text-black shadow-[0_2px_0_0_rgba(0,0,0,0.4),0_0_20px_rgba(251,191,36,0.35)] hover:shadow-[0_2px_0_0_rgba(0,0,0,0.4),0_0_28px_rgba(251,191,36,0.55)] hover:-translate-y-px active:translate-y-0 transition-all"
-              >
-                ▶ Lancer
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => setGameMode(gameMode === 'local' ? 'remote' : 'local')}
+                  className={`${COMPACT_BTN} min-w-[68px] ${gameMode === 'local'
+                    ? '!bg-amber-300/15 !border-amber-300/50 !text-amber-100'
+                    : '!bg-sky-400/15 !border-sky-300/50 !text-sky-100'
+                  }`}
+                  title={gameMode === 'local'
+                    ? 'Mode SUR PLACE - clic pour basculer en À DISTANCE'
+                    : 'Mode À DISTANCE - clic pour basculer en SUR PLACE'}
+                >
+                  {gameMode === 'local' ? '👥 Local' : '🌍 Remote'}
+                </button>
+                <button
+                  onClick={onStart}
+                  className="relative min-w-[80px] px-3 py-1 rounded-md font-mono text-[10px] font-bold uppercase tracking-wider bg-gradient-to-br from-amber-300 to-amber-500 text-black shadow-[0_2px_0_0_rgba(0,0,0,0.4),0_0_20px_rgba(251,191,36,0.35)] hover:shadow-[0_2px_0_0_rgba(0,0,0,0.4),0_0_28px_rgba(251,191,36,0.55)] hover:-translate-y-px active:translate-y-0 transition-all"
+                >
+                  ▶ Lancer
+                </button>
+              </>
             ) : (
               <button
                 onClick={onReset}

@@ -1,6 +1,6 @@
 import { Icon } from '@iconify/react';
 import Modal from '../Modal';
-import { LEGAL_CONTENT } from '../../constants/legal';
+import { useLocale } from '../../i18n';
 
 interface ContactModalProps {
   isOpen: boolean;
@@ -60,15 +60,16 @@ const CHANNELS: Channel[] = [
 ];
 
 const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) => {
+  const { t } = useLocale();
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={LEGAL_CONTENT.contact.title}
+      title={t.legal.contact.title}
     >
       <div className="flex flex-col gap-3 pb-2">
         <p className="text-gray-700 text-sm leading-relaxed m-0">
-          Tu veux nous contacter mais tu sais pas comment ? T'inquiète, écris-nous où tu veux, ce sera un plaisir de te répondre :
+          {t.legal.contact.intro}
         </p>
         <ul className="list-none p-0 m-0 flex flex-col gap-2.5">
           {CHANNELS.map((c) => {

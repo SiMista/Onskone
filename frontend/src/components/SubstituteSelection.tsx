@@ -10,6 +10,7 @@ import { GAME_CONFIG } from '../constants/game';
 import { IPlayer, RoundPhase, GameCard } from '@onskone/shared';
 import { useStartTimerDelayed } from '../hooks';
 import { getQuestionSubtitle } from '../utils/questionHelpers';
+import { useLocale } from '../i18n';
 
 interface SubstituteSelectionProps {
   lobbyCode: string;
@@ -28,6 +29,7 @@ const SubstituteSelection: React.FC<SubstituteSelectionProps> = ({
   question,
   card,
 }) => {
+  const { t } = useLocale();
   const leader = players.find(p => p.id === leaderId);
   // Mémoïser candidates pour éviter qu'un nouveau tableau à chaque render
   // ne déclenche en boucle l'effet qui dépend de cette valeur.
@@ -79,7 +81,7 @@ const SubstituteSelection: React.FC<SubstituteSelectionProps> = ({
     expireTimeoutRef.current = setTimeout(() => socket.emit('timerExpired', { lobbyCode }), 300);
   };
 
-  const subtitle = isLeader ? getQuestionSubtitle(RoundPhase.SUBSTITUTE_SELECTION, isLeader) : '';
+  const subtitle = isLeader ? getQuestionSubtitle(t.phases, RoundPhase.SUBSTITUTE_SELECTION, isLeader) : '';
   const subtitleBadge = undefined;
 
   const dropdownOptions = candidates.map(p => ({
@@ -105,14 +107,14 @@ const SubstituteSelection: React.FC<SubstituteSelectionProps> = ({
       {isLeader ? (
         <>
           <p className="text-center text-sm md:text-base text-gray-700 italic px-2">
-            Le joueur que tu choisis devra deviner la réponse que tu aurais donnée.
+            {t.phases.substituteSelection.instructionLeader}
           </p>
 
           <Dropdown
             value={effectiveSelectedId}
             onChange={setPickedId}
             options={dropdownOptions}
-            placeholder="Aucun joueur disponible"
+            placeholder={t.phases.substituteSelection.noPlayersDropdown}
             disabled={submitted}
           />
 
@@ -122,13 +124,13 @@ const SubstituteSelection: React.FC<SubstituteSelectionProps> = ({
             onClick={handleValidate}
             disabled={submitted || !effectiveSelectedId}
           >
-            Valider
+            {t.phases.substituteSelection.validate}
           </Button>
         </>
       ) : (
         <div className="flex-1 flex flex-col items-center justify-center gap-2">
           <p className="text-center text-base md:text-lg text-gray-700 italic">
-            choisit le joueur qui répondra pour lui...
+            {t.phases.substituteSelection.leaderChoosingPlayer}
           </p>
         </div>
       )}

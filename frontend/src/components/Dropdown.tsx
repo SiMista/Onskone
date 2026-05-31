@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { Icon } from '@iconify/react';
 
 export interface DropdownOption<V extends string = string> {
@@ -18,6 +19,13 @@ interface DropdownProps<V extends string = string> {
   className?: string;
 }
 
+interface TriggerRect {
+  top: number;
+  left: number;
+  width: number;
+  bottom: number;
+}
+
 function Dropdown<V extends string = string>({
   value,
   onChange,
@@ -27,16 +35,43 @@ function Dropdown<V extends string = string>({
   className = '',
 }: DropdownProps<V>) {
   const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement | null>(null);
+  const [rect, setRect] = useState<TriggerRect | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const listboxRef = useRef<HTMLUListElement | null>(null);
 
   const selected = options.find(o => o.value === value);
+
+  const updateRect = useCallback(() => {
+    const el = triggerRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    setRect({ top: r.top, left: r.left, width: r.width, bottom: r.bottom });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    updateRect();
+  }, [open, updateRect]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onScroll = () => updateRect();
+    const onResize = () => updateRect();
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', onResize);
+    return () => {
+      window.removeEventListener('scroll', onScroll, true);
+      window.removeEventListener('resize', onResize);
+    };
+  }, [open, updateRect]);
 
   useEffect(() => {
     if (!open) return;
     const onClick = (e: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+      const target = e.target as Node;
+      if (triggerRef.current?.contains(target)) return;
+      if (listboxRef.current?.contains(target)) return;
+      setOpen(false);
     };
     const onEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpen(false);
@@ -52,9 +87,58 @@ function Dropdown<V extends string = string>({
   const isEmpty = options.length === 0;
   const isDisabled = disabled || isEmpty;
 
+  // Hauteur dispo entre le bas du trigger et le bas du viewport (avec marge confortable).
+  const availableHeight = rect ? Math.max(160, window.innerHeight - rect.bottom - 80) : 280;
+
+  const listbox = open && !isEmpty && rect && createPortal(
+    <ul
+      ref={listboxRef}
+      role="listbox"
+      className="list-none p-1 rounded-[12px] border-[2.5px] border-black bg-cream-player texture-paper stack-shadow overflow-y-auto overscroll-contain animate-menu-open"
+      style={{
+        position: 'fixed',
+        top: rect.bottom + 6,
+        left: rect.left,
+        width: rect.width,
+        maxHeight: availableHeight,
+        margin: 0,
+        zIndex: 100,
+      }}
+    >
+      {options.map((option, idx) => {
+        const isSelected = option.value === value;
+        return (
+          <li key={option.value} role="option" aria-selected={isSelected}>
+            {idx > 0 && (
+              <div className="mx-2 border-t border-dashed border-black/15" aria-hidden />
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                onChange(option.value);
+                setOpen(false);
+              }}
+              className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-[8px] transition-colors duration-150 cursor-pointer ${isSelected ? 'bg-warning-350' : 'hover:bg-black/5'}`}
+            >
+              {option.prefix}
+              <span className="font-display font-semibold text-black truncate flex-1 text-left">
+                {option.label}
+              </span>
+              {isSelected && (
+                <Icon icon="lucide:check" width={18} height={18} className="text-black shrink-0" aria-hidden />
+              )}
+            </button>
+          </li>
+        );
+      })}
+    </ul>,
+    document.body
+  );
+
   return (
-    <div ref={rootRef} className={`relative w-full ${className}`} style={{ zIndex: 30 }}>
+    <div className={`relative w-full ${className}`}>
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen(o => !o)}
         disabled={isDisabled}
@@ -82,46 +166,7 @@ function Dropdown<V extends string = string>({
           aria-hidden
         />
       </button>
-
-      {!isEmpty && (
-        <ul
-          role="listbox"
-          {...(!open ? { inert: '' } : {})}
-          className={`list-none p-1 rounded-[12px] border-[2.5px] border-black bg-cream-player texture-paper stack-shadow overflow-y-auto origin-top transition-all duration-200 ease-out ${open ? 'max-h-[30vh] md:max-h-[45vh] opacity-100 scale-y-100 translate-y-0 pointer-events-auto' : 'max-h-0 opacity-0 scale-y-95 -translate-y-1 pointer-events-none'}`}
-          style={{
-            position: 'absolute',
-            top: 'calc(100% + 6px)',
-            left: 0,
-            right: 0,
-            margin: 0,
-            zIndex: 40,
-          }}
-        >
-          {options.map(option => {
-            const isSelected = option.value === value;
-            return (
-              <li key={option.value} role="option" aria-selected={isSelected}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onChange(option.value);
-                    setOpen(false);
-                  }}
-                  className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-[8px] transition-colors duration-150 cursor-pointer ${isSelected ? 'bg-warning-350' : 'hover:bg-black/5'}`}
-                >
-                  {option.prefix}
-                  <span className="font-display font-semibold text-black truncate flex-1 text-left">
-                    {option.label}
-                  </span>
-                  {isSelected && (
-                    <Icon icon="lucide:check" width={18} height={18} className="text-black shrink-0" aria-hidden />
-                  )}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      {listbox}
     </div>
   );
 }

@@ -8,6 +8,7 @@ import NotFound from './pages/NotFound';
 import Studio from './pages/Studio';
 import { initSounds } from './utils/sounds';
 import { ToastProvider } from './components/Toast';
+import { LocaleProvider } from './i18n';
 
 const Admin = lazy(() => import('./pages/Admin'));
 
@@ -76,6 +77,7 @@ const App = () => {
 
   return (
     <ToastProvider>
+      <LocaleProvider>
       <Router>
         <AppShell>
           <Routes>
@@ -96,6 +98,7 @@ const App = () => {
           </Routes>
         </AppShell>
       </Router>
+      </LocaleProvider>
     </ToastProvider>
   );
 };

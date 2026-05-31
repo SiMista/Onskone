@@ -1,8 +1,10 @@
-import { useState, useRef, useEffect, ReactNode } from 'react';
+import { useState, useRef, useEffect, ReactNode, useMemo } from 'react';
 import step1Img from '../assets/images/home/1-question_selection.png';
 import step2Img from '../assets/images/home/2-answering.png';
 import step3Img from '../assets/images/home/3-guessing.png';
 import step4Img from '../assets/images/home/4-reveal.png';
+import { useLocale } from '../i18n';
+import type { HowToPlayMarkers } from '../i18n/dictionary';
 
 type Step = {
   n: number;
@@ -13,58 +15,23 @@ type Step = {
 const ACCENT = '#F5B800';
 const ACCENT_PAUSED = '#b8860b';
 
-// Surligneurs : réutilisent l'utility .marker-highlight (même effet feutre que
-// les titres de modales), juste avec une couleur override par rôle.
-const Pilier = ({ children }: { children: ReactNode }) => (
-  <span className="marker-highlight marker-highlight--inline font-bold">{children}</span>
-);
-const Joueurs = ({ children }: { children: ReactNode }) => (
-  <span
-    className="marker-highlight marker-highlight--inline font-bold"
-    style={{ ['--marker-color' as string]: 'var(--color-brand-200)' }}
-  >
-    {children}
-  </span>
-);
+const STEP_IMAGES = [step1Img, step2Img, step3Img, step4Img];
 
-const STEPS: Step[] = [
-  {
-    n: 1,
-    image: step1Img,
-    text: (
-      <>
-        Chaque manche, un joueur devient <Pilier>pilier</Pilier> et choisit une question parmi celles proposées.
-      </>
-    ),
-  },
-  {
-    n: 2,
-    image: step2Img,
-    text: (
-      <>
-        <Joueurs>Les joueurs</Joueurs> reçoivent la question et écrivent leur réponse, <b>anonymement</b>.
-      </>
-    ),
-  },
-  {
-    n: 3,
-    image: step3Img,
-    text: (
-      <>
-        <Pilier>Le pilier</Pilier> attribue chaque réponse au joueur qui l'a écrite selon lui. <Joueurs>Les joueurs</Joueurs> montrent leur écran pour découvrir quelle réponse le pilier leur a attribuée.
-      </>
-    ),
-  },
-  {
-    n: 4,
-    image: step4Img,
-    text: (
-      <>
-        <Pilier>Le pilier</Pilier> dévoile qui a écrit quoi et il marque des points pour le groupe s'il a bien deviné.
-      </>
-    ),
-  },
-];
+// Surligneurs partagés : réutilisent l'utility .marker-highlight, palette dédiée
+// par rôle (pilier = jaune, joueurs = bleu).
+const MARKERS: HowToPlayMarkers = {
+  Pilier: (children) => (
+    <span className="marker-highlight marker-highlight--inline font-bold">{children}</span>
+  ),
+  Joueurs: (children) => (
+    <span
+      className="marker-highlight marker-highlight--inline font-bold"
+      style={{ ['--marker-color' as string]: 'var(--color-brand-200)' }}
+    >
+      {children}
+    </span>
+  ),
+};
 
 const SLIDE_DURATION = 7000;
 // Le step 3 a un texte plus long : on lui donne 1s de plus pour le lire.
@@ -75,11 +42,6 @@ const getStepDuration = (i: number) => STEP_DURATION_OVERRIDES[i] ?? SLIDE_DURAT
 
 const SLIDE_ANIM_MS = 600;
 const SLIDE_EASE = 'cubic-bezier(0.32, 0.72, 0, 1)';
-
-// Track avec un "ghost" à chaque extrémité (copie de la dernière slide à gauche,
-// copie de la première à droite) pour que la boucle 3→0 et 0→3 se joue toujours
-// dans le bon sens visuel. Après l'animation, on resync l'index sans transition.
-const TRACK_SLIDES: Step[] = [STEPS[STEPS.length - 1], ...STEPS, STEPS[0]];
 
 const Illustration = ({ image }: { image: string }) => (
   <div
@@ -101,12 +63,26 @@ const Illustration = ({ image }: { image: string }) => (
       alt=""
       aria-hidden
       draggable={false}
-      className="relative z-10 w-[280px] h-[280px] md:w-[370px] md:h-[370px] object-contain"
+      className="relative z-10 w-[max(200px,min(280px,38dvh))] h-[max(200px,min(280px,38dvh))] md:w-[max(260px,min(370px,46dvh))] md:h-[max(260px,min(370px,46dvh))] object-contain"
     />
   </div>
 );
 
 const HowToPlayCarousel = () => {
+  const { t } = useLocale();
+  const STEPS = useMemo<Step[]>(
+    () =>
+      t.howToPlay.steps.map((render, i) => ({
+        n: i + 1,
+        image: STEP_IMAGES[i],
+        text: render(MARKERS),
+      })),
+    [t.howToPlay.steps],
+  );
+  const TRACK_SLIDES = useMemo<Step[]>(
+    () => [STEPS[STEPS.length - 1], ...STEPS, STEPS[0]],
+    [STEPS],
+  );
   // displayIndex peut sortir de [0, STEPS.length) pour viser les ghosts (-1 ou STEPS.length).
   // index reste toujours l'index logique courant.
   const [displayIndex, setDisplayIndex] = useState(0);
@@ -211,7 +187,7 @@ const HowToPlayCarousel = () => {
 
   return (
     <div
-      className="w-full flex flex-col items-center gap-4 select-none pt-4 touch-pan-y"
+      className="w-full flex flex-col items-center gap-4 desktop-short:gap-2 select-none pt-4 desktop-short:pt-1 touch-pan-y"
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
@@ -224,8 +200,8 @@ const HowToPlayCarousel = () => {
           {/* overflow-x: clip + overflow-y: visible -> on bloque le débordement
               horizontal du track mais on laisse le halo / l'image dépasser verticalement. */}
           <div
-            className="relative w-full h-[210px] md:h-[240px]"
-            style={{ overflowX: 'clip', overflowY: 'visible' }}
+            className="relative w-full"
+            style={{ overflowX: 'clip', overflowY: 'visible', height: 'max(170px, min(240px, 30dvh))' }}
           >
             <div
               className="absolute inset-0 flex"
@@ -249,7 +225,7 @@ const HowToPlayCarousel = () => {
 
           {/* Numéro sticker - reste fixe, reflète l'index logique */}
           <div
-            className="absolute -top-2 left-1 z-20 w-11 h-11 rounded-full flex items-center justify-center font-display font-bold text-xl text-gray-900 border-[2.5px] border-black overflow-hidden"
+            className="absolute -top-2 left-1 z-20 w-11 h-11 desktop-short:w-8 desktop-short:h-8 rounded-full flex items-center justify-center font-display font-bold text-xl desktop-short:text-base text-gray-900 border-[2.5px] border-black overflow-hidden"
             style={{
               backgroundColor: '#ffffff',
               transform: `rotate(-8deg) scale(${isPaused ? 0.94 : 1})`,
@@ -288,7 +264,7 @@ const HowToPlayCarousel = () => {
               key={`txt-${i}`}
               className="w-full flex-shrink-0 px-1 text-center"
             >
-              <p className="text-sm md:text-base text-gray-800 m-0 leading-snug">
+              <p className="text-sm md:text-base desktop-short:text-xs text-gray-800 m-0 leading-snug">
                 {s.text}
               </p>
             </div>
@@ -305,7 +281,7 @@ const HowToPlayCarousel = () => {
               key={s.n}
               type="button"
               onClick={() => goTo(i)}
-              aria-label={`Aller à l'étape ${s.n}`}
+              aria-label={t.howToPlay.goToStep(s.n)}
               className="cursor-pointer transition-all duration-200"
               style={{
                 width: active ? 28 : 10,

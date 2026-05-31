@@ -12,6 +12,7 @@ import { IPlayer, RoundPhase, GameCard } from '@onskone/shared';
 import { playSound } from '../utils/sounds';
 import { useStartTimerDelayed } from '../hooks';
 import { getQuestionSubtitle } from '../utils/questionHelpers';
+import { useLocale } from '../i18n';
 
 interface AnswerPhaseProps {
   lobbyCode: string;
@@ -38,8 +39,9 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
   initialAnsweredPlayerIds,
   initialMyAnswer
 }) => {
+  const { t } = useLocale();
   const leader = players.find(p => p.id === leaderId);
-  const subtitle = leader ? getQuestionSubtitle(RoundPhase.ANSWERING, isLeader) : '';
+  const subtitle = leader ? getQuestionSubtitle(t.phases, RoundPhase.ANSWERING, isLeader) : '';
   const subtitleBadge = !isLeader && leader ? <PlayerBadge player={leader} size="sm" /> : undefined;
   useStartTimerDelayed(isLeader, lobbyCode, GAME_CONFIG.TIMERS.ANSWERING);
   const [answer, setAnswer] = useState(initialMyAnswer || '');
@@ -180,7 +182,7 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
             </div>
           </div>
           <p className="text-xs md:text-sm text-gray-600 mt-2 uppercase tracking-wide font-semibold">
-            Réponses reçues
+            {t.phases.answering.answersReceived}
           </p>
         </div>
 
@@ -204,7 +206,7 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
                   <Avatar avatarId={player.avatarId} name={player.name} size="sm" />
                   {!isDisconnected && hasAnswered && <LuCheck className="inline" aria-hidden />}
                   <span className="max-w-[80px] md:max-w-none truncate">
-                    {player.name}{isDisconnected && ' (déconnecté)'}
+                    {player.name}{isDisconnected && t.common.disconnectedSuffix}
                   </span>
                 </span>
               </div>
@@ -240,7 +242,7 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
       <QuestionCard question={question} card={card} variant="compact" />
 
       <p className="text-center text-sm md:text-base text-gray-700 italic m-0">
-        Écris ta propre réponse
+        {t.phases.answering.writeYourAnswer}
       </p>
 
       {showNotebook ? (
@@ -257,7 +259,7 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
             <textarea
               value={answer}
               onChange={(e) => setAnswer(e.target.value)}
-              placeholder="Écris ta réponse…"
+              placeholder={t.phases.answering.placeholder}
               maxLength={maxLen}
               disabled={stage !== 'idle'}
               autoFocus
@@ -286,7 +288,7 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
               onClick={handleSubmit}
               disabled={!answer.trim() || stage !== 'idle'}
             >
-              Envoyer
+              {t.phases.answering.send}
             </Button>
           </div>
         </div>
@@ -297,13 +299,13 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
             className="relative max-w-md w-full rounded-2xl border-[2.5px] border-black/40 stack-shadow texture-paper bg-gray-200/70 p-5 md:p-6 opacity-75"
             style={{ transform: 'rotate(-0.8deg)' }}
           >
-            <p className="text-gray-500 text-xs uppercase tracking-[0.15em] font-bold m-0 mb-2">Ta réponse</p>
+            <p className="text-gray-500 text-xs uppercase tracking-[0.15em] font-bold m-0 mb-2">{t.phases.answering.yourAnswer}</p>
             <p className="text-base md:text-lg text-gray-600 leading-relaxed break-words whitespace-pre-wrap m-0">
               {answer.length > 250 ? `${answer.slice(0, 250)}…` : answer}
             </p>
           </div>
           <p className="text-gray-700 text-center text-sm md:text-base italic">
-            En attente des autres joueurs…
+            {t.phases.answering.waitingForOthers}
           </p>
           <div className="flex flex-wrap justify-center gap-2 md:gap-3 max-w-2xl px-2">
             {respondingPlayers.map((player) => {

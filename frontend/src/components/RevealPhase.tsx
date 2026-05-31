@@ -7,6 +7,7 @@ import PlayerBadge from './PlayerBadge';
 import RevealedAnswerCard from './RevealedAnswerCard';
 import SimilarityPopover from './SimilarityPopover';
 import { IPlayer, RevealResult, LeaderboardEntry, GameCard, GameMode } from '@onskone/shared';
+import { useLocale } from '../i18n';
 
 interface RevealPhaseProps {
   lobbyCode: string;
@@ -25,6 +26,7 @@ const isPersonneGuess = (r: RevealResult) =>
   !r.guessedPlayerId || !r.guessedPlayerName || r.guessedPlayerName === 'Aucun' || r.guessedPlayerName === 'Personne';
 
 const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leader, currentPlayerId, isGameOver, results, initialRevealedIndices, gameMode }) => {
+  const { t } = useLocale();
   const leaderId = leader.id;
   const [revealedIndices, setRevealedIndices] = useState<Set<number>>(
     new Set(initialRevealedIndices || [])
@@ -232,17 +234,17 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leader, 
 
     const waitingFooter = allRevealed ? (
       <div className="flex items-center justify-center flex-wrap gap-x-2 gap-y-1 leading-none text-gray-900 text-base tablet:text-lg phone-landscape:text-xs">
-        <span>En attente que</span>
+        <span>{t.phases.reveal.waitingPrefix}</span>
         <Avatar avatarId={leader?.avatarId ?? 0} name={leader?.name} size="sm" />
         <span>{leader?.name}</span>
-        <span>{isGameOver ? 'révèle les résultats finaux…' : 'lance la manche suivante…'}</span>
+        <span>{isGameOver ? t.phases.reveal.waitingLeaderFinal : t.phases.reveal.waitingLeaderNext}</span>
       </div>
     ) : undefined;
 
     const rotateHint = (
       <p className="landscape:hidden flex items-center gap-1.5 text-xs text-gray-500/80 shrink-0">
         <Icon icon="mdi:phone-rotate-landscape" width={14} height={14} aria-hidden />
-        Tourne ton téléphone pour un affichage plus large
+        {t.phases.reveal.rotateForLandscape}
       </p>
     );
 
@@ -271,7 +273,7 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leader, 
       playerId: '',
       playerName: '',
       playerAvatarId: 0,
-      answer: `${leader.name} ne t'a attribué aucune réponse`,
+      answer: t.phases.reveal.noAttribution(leader.name),
       guessedPlayerId: '',
       guessedPlayerName: '',
       guessedPlayerAvatarId: 0,
@@ -334,20 +336,20 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leader, 
         <div className="flex flex-col h-full p-2 max-w-2xl mx-auto" style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom, 0px))' }}>
           <div className="flex-1 flex flex-col items-center justify-center gap-3 px-2 py-4">
             {isGameOver ? (
-              <p className="text-base md:text-lg font-semibold text-center">Partie terminée !</p>
+              <p className="text-base md:text-lg font-semibold text-center">{t.phases.reveal.gameOver}</p>
             ) : isLeader ? (
-              <p className="text-base md:text-lg font-semibold text-center">Prêt pour la suite ?</p>
+              <p className="text-base md:text-lg font-semibold text-center">{t.phases.reveal.readyNext}</p>
             ) : (
               <div className="flex items-center justify-center flex-wrap gap-x-2 gap-y-1 leading-none text-base md:text-lg">
-                <span>En attente que</span>
+                <span>{t.phases.reveal.waitingPrefix}</span>
                 <Avatar avatarId={leader?.avatarId ?? 0} name={leader?.name} size="sm" />
                 <span>{leader?.name}</span>
-                <span>lance la manche suivante…</span>
+                <span>{t.phases.reveal.waitingLeaderNext}</span>
               </div>
             )}
             {isLeader && (
               <Button
-                text={isGameOver ? 'Voir les résultats finaux' : 'Manche suivante'}
+                text={isGameOver ? t.phases.reveal.seeFinalResults : t.phases.reveal.nextRound}
                 variant="success"
                 rotateEffect
                 onClick={handleNextRound}
@@ -376,11 +378,11 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leader, 
           !isLeader ? (
             <div className="flex items-center gap-2">
               <PlayerBadge player={leader} size="sm" />
-              <p className="text-gray-500 text-xs md:text-sm italic m-0">révèle les résultats…</p>
+              <p className="text-gray-500 text-xs md:text-sm italic m-0">{t.phases.reveal.revealing}</p>
             </div>
           ) : (
             <p className="text-gray-900 text-sm md:text-base font-semibold text-center">
-              Réponse attribuée à <span className="text-brand-500">{currentResult.guessedPlayerName}</span>
+              {t.phases.reveal.remoteAttributedTo} <span className="text-brand-500">{currentResult.guessedPlayerName}</span>
             </p>
           )
         }
@@ -405,7 +407,7 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leader, 
                 {showEndButton ? (
                   <div className="animate-fade-in">
                     <Button
-                      text={isGameOver ? 'Voir les résultats finaux' : 'Manche suivante'}
+                      text={isGameOver ? t.phases.reveal.seeFinalResults : t.phases.reveal.nextRound}
                       variant="success"
                       size="lg"
                       rotateEffect
@@ -416,7 +418,7 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leader, 
                 ) : pilierPhase === 'revealed' && showNextButton && !isLastDisplayable ? (
                   <div key={`next-${pilierCursor}`} className="animate-fade-in">
                     <Button
-                      text="Suivant"
+                      text={t.phases.reveal.next}
                       variant="primary"
                       size="lg"
                       rotateEffect
@@ -426,7 +428,7 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leader, 
                   </div>
                 ) : (
                   <Button
-                    text="Révéler"
+                    text={t.phases.reveal.reveal}
                     variant="primary"
                     size="lg"
                     rotateEffect
@@ -473,7 +475,7 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leader, 
               {showEndButton ? (
                 <div className="animate-fade-in">
                   <Button
-                    text={isGameOver ? 'Voir les résultats finaux' : 'Manche suivante'}
+                    text={isGameOver ? t.phases.reveal.seeFinalResults : t.phases.reveal.nextRound}
                     variant="success"
                     size="lg"
                     rotateEffect
@@ -483,7 +485,7 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leader, 
                 </div>
               ) : (
                 <Button
-                  text="Révéler"
+                  text={t.phases.reveal.reveal}
                   variant="primary"
                   size="lg"
                   rotateEffect
@@ -550,7 +552,7 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leader, 
                       key={`next-${pilierCursor}`}
                       type="button"
                       onClick={handleNext}
-                      aria-label="Suivant"
+                      aria-label={t.phases.reveal.next}
                       className="animate-next-pop group flex flex-col items-center gap-1 cursor-pointer text-black hover:text-brand-500 transition-colors"
                     >
                       <svg
@@ -567,7 +569,7 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leader, 
                         <path d="M13 5l7 7-7 7" />
                       </svg>
                       <span className="font-display text-[11px] md:text-sm font-bold uppercase tracking-wider">
-                        Suivant
+                        {t.phases.reveal.next}
                       </span>
                     </button>
                   )}
@@ -589,7 +591,7 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leader, 
 
               <div className="text-center px-2 mt-1 md:mt-2">
                 <p className="text-gray-900 text-sm md:text-base font-semibold">
-                  Regarde son écran !
+                  {t.phases.reveal.watchScreen}
                 </p>
                 <p className="text-gray-700 text-xs md:text-sm mt-0.5">
                   {displayablePosition}/{displayableTotal}
@@ -599,7 +601,7 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leader, 
 
             {isLeader && !showEndButton && (
               <Button
-                text="Révéler sur son téléphone"
+                text={t.phases.reveal.revealOnPhone}
                 variant="primary"
                 size="lg"
                 rotateEffect
@@ -612,7 +614,7 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leader, 
             {isLeader && showEndButton && (
               <div className="animate-fade-in">
                 <Button
-                  text={isGameOver ? 'Voir les résultats finaux' : 'Manche suivante'}
+                  text={isGameOver ? t.phases.reveal.seeFinalResults : t.phases.reveal.nextRound}
                   variant="success"
                   size="lg"
                   rotateEffect
@@ -624,10 +626,10 @@ const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leader, 
         ) : (
           <div className="flex flex-col items-center gap-2 md:gap-3">
             <p className="text-base md:text-lg font-semibold">
-              {isGameOver ? 'Partie terminée !' : 'Prêt pour la suite ?'}
+              {isGameOver ? t.phases.reveal.gameOver : t.phases.reveal.readyNext}
             </p>
             <Button
-              text={isGameOver ? 'Voir les résultats finaux' : 'Manche suivante'}
+              text={isGameOver ? t.phases.reveal.seeFinalResults : t.phases.reveal.nextRound}
               variant="success"
               rotateEffect
               onClick={handleNextRound}

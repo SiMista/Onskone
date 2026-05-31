@@ -1,5 +1,6 @@
 import { IPlayer } from './player.js';
 import { SelectedDecks } from './decks.js';
+import { Locale } from './locale.js';
 
 /** Mode de jeu : en présentiel (locale) ou à distance (remote) */
 export type GameMode = 'local' | 'remote';
@@ -22,4 +23,7 @@ export interface ILobby {
 
   /** Mode "Devine ma réponse" : le pilier ne répond pas, un substitut écrit pour lui */
   guessMyAnswerMode: boolean;
+
+  /** Langue du contenu (questions, thèmes) - choisie par l'hôte à la création */
+  locale: Locale;
 }

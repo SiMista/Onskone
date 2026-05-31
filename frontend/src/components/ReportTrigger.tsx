@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Icon } from '@iconify/react';
 import ReportModal from './ReportModal';
 import type { TicketType } from '../utils/ticketsApi';
+import { useLocale } from '../i18n';
 
 type Variant = 'footer' | 'discreet';
 
@@ -15,12 +16,13 @@ interface ReportTriggerProps {
 
 const ReportTrigger = ({ variant = 'footer', label, className = '', extraContext, defaultType }: ReportTriggerProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  const { t } = useLocale();
 
   const baseClass = variant === 'footer'
     ? 'inline-flex items-center gap-1 hover:text-white transition-colors cursor-pointer'
     : 'inline-flex items-center gap-1 text-[11px] md:text-xs text-gray-600 hover:text-gray-900 italic cursor-pointer transition-colors';
 
-  const displayLabel = label ?? 'Signaler';
+  const displayLabel = label ?? t.report.trigger;
 
   return (
     <>

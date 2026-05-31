@@ -1,0 +1,2463 @@
+{
+  "ICEBREAKERS": {
+    "DAILY LIFE": {
+      "description": "Mornings, habits, routines. The small stuff that's actually everything.",
+      "subjects": [
+        {
+          "subject": "Morning Routine",
+          "questions": [
+            "What's the first thought that goes through your mind when you wake up most mornings?",
+            "If you could change one thing about your current morning routine, what would it be?"
+          ]
+        },
+        {
+          "subject": "The 5 Senses",
+          "questions": [
+            "Which of your five senses is the most developed?",
+            "If you had to lose one sense forever, which one would you sacrifice?"
+          ]
+        },
+        {
+          "subject": "Birthdays",
+          "questions": [
+            "How do you like to celebrate your birthday?",
+            "If you could choose your perfect birthday gift this year, what would it be?"
+          ]
+        },
+        {
+          "subject": "Sleep Habits",
+          "questions": [
+            "What time do you usually wake up?",
+            "How many hours do you sleep on average per night?"
+          ]
+        },
+        {
+          "subject": "Drinks",
+          "questions": [
+            "What's the most original or strange drink you've ever tasted?",
+            "What's your favorite cocktail?"
+          ]
+        },
+        {
+          "subject": "Sounds",
+          "questions": [
+            "What natural sound do you love to listen to?",
+            "If you could remove one sound from existence, which one would you choose?"
+          ]
+        },
+        {
+          "subject": "Living Together",
+          "questions": [
+            "Who would you want to live with as a roommate?",
+            "What's the worst habit you've had to put up with from someone you lived with?"
+          ]
+        },
+        {
+          "subject": "Messaging",
+          "questions": [
+            "What's your preferred way to communicate? (SMS, Messaging apps, Calls, Instagram...)",
+            "On average, how many messages do you send per day?"
+          ]
+        },
+        {
+          "subject": "Grocery Shopping",
+          "questions": [
+            "What's the first thing you put in your shopping cart?",
+            "What's your favorite store or website to shop at?"
+          ]
+        },
+        {
+          "subject": "Cooking",
+          "questions": [
+            "What ingredient do you put in absolutely everything you cook?",
+            "What type of cuisine do you prefer?"
+          ]
+        },
+        {
+          "subject": "Language Curiosities",
+          "questions": [
+            "What's your favorite word in a foreign language?",
+            "Is there a word whose meaning you misunderstood for a long time?"
+          ]
+        },
+        {
+          "subject": "Messages & Writing",
+          "questions": [
+            "Who do you message the most?",
+            "What was the last thing you wrote a real handwritten letter for?"
+          ]
+        },
+        {
+          "subject": "Holidays & Celebrations",
+          "questions": [
+            "What's your favorite holiday or celebration?",
+            "If you could create a national holiday, what would it be called?"
+          ]
+        },
+        {
+          "subject": "Time Management",
+          "questions": [
+            "On average, how long does it take you to get ready in the morning?",
+            "On average, how many hours a day do you spend on your phone?"
+          ]
+        },
+        {
+          "subject": "Sweet Tooth",
+          "questions": [
+            "What's your favorite candy or sweet?",
+            "What's your general guilty pleasure?"
+          ]
+        },
+        {
+          "subject": "Society Today",
+          "questions": [
+            "What current societal trend completely baffles you?",
+            "If you had to describe today's society in 3 words, what would they be?"
+          ]
+        },
+        {
+          "subject": "Books",
+          "questions": [
+            "What's the last book you read?",
+            "If you had to estimate the number of books you've read in your life, how many, honestly?"
+          ]
+        },
+        {
+          "subject": "Home",
+          "questions": [
+            "What's the one thing in your current home you couldn't live without?",
+            "What room in your home do you spend the most time in, and why?"
+          ]
+        },
+        {
+          "subject": "Food",
+          "questions": [
+            "What dish could you eat every single day?",
+            "What's the strangest thing you've ever eaten?"
+          ]
+        },
+        {
+          "subject": "Quirks",
+          "questions": [
+            "What quirk do you have that you know irritates the people around you?",
+            "What do you absolutely need to do a certain way, or the whole day starts off wrong?"
+          ]
+        },
+        {
+          "subject": "Everyday Words",
+          "questions": [
+            "What word do you use too often?",
+            "What word do you hate hearing?"
+          ]
+        },
+        {
+          "subject": "Specific Words",
+          "questions": [
+            "What's your most-used swear word?",
+            "What's the most beautiful word in the English language, according to you?"
+          ]
+        },
+        {
+          "subject": "Weird Objects",
+          "questions": [
+            "What's the strangest object you own?",
+            "What's the most useless object in your home that you still refuse to throw away?"
+          ]
+        },
+        {
+          "subject": "Everyday Objects",
+          "questions": [
+            "If you had to get through the whole day with just one object (no phone), what would you choose?",
+            "What everyday object that everyone uses have you never understood the point of?"
+          ]
+        },
+        {
+          "subject": "Smells",
+          "questions": [
+            "What smell can you absolutely not stand?",
+            "What's the most beautiful smell in the world to you?"
+          ]
+        },
+        {
+          "subject": "Tastes",
+          "questions": [
+            "What's your favorite fruit?",
+            "What's the food or meal you hate the most?"
+          ]
+        },
+        {
+          "subject": "Names",
+          "questions": [
+            "What name do you hate?",
+            "What name do you think is the coolest?"
+          ]
+        },
+        {
+          "subject": "Your Name",
+          "questions": [
+            "What's a nickname that's used for you the least?",
+            "If you had to change your name, what would you choose?"
+          ]
+        },
+        {
+          "subject": "Cooking Recipes",
+          "questions": [
+            "What recipe have you spectacularly failed at least once?",
+            "What's your signature recipe?"
+          ]
+        },
+        {
+          "subject": "Restaurants",
+          "questions": [
+            "What's your favorite restaurant?",
+            "What do you feel like eating right now, in this exact moment?"
+          ]
+        },
+        {
+          "subject": "Evening Rituals",
+          "questions": [
+            "What's your ideal ritual after a long day?",
+            "What's your ritual before going to sleep?"
+          ]
+        },
+        {
+          "subject": "Symbols",
+          "questions": [
+            "If you had to represent your personality with a single object, which one would you choose?",
+            "What's your lucky charm?"
+          ]
+        },
+        {
+          "subject": "Default Mode",
+          "questions": [
+            "If you could eliminate one chore forever, which one would you choose?",
+            "What mode of transport have you used the most throughout your life?"
+          ]
+        },
+        {
+          "subject": "Transport",
+          "questions": [
+            "If you could own any car with no budget limit, which would you choose?",
+            "What mode of transport would you love to try at least once in your life?"
+          ]
+        },
+        {
+          "subject": "Trivia",
+          "questions": [
+            "What's your date of birth (day and month)?",
+            "What are your favorite color and number? Example: Blue/7"
+          ]
+        },
+        {
+          "subject": "Habits",
+          "questions": [
+            "Do you have a daily habit that contributes to your personal growth?",
+            "What habit or quirk of yours does everyone notice?"
+          ]
+        },
+        {
+          "subject": "Planning",
+          "questions": [
+            "If you had one extra hour free every day, what would you honestly do with it?",
+            "How many blocks is your typical day broken up into on your calendar?"
+          ]
+        },
+        {
+          "subject": "Jobs",
+          "questions": [
+            "If you could spend a day in someone else's job just to see, which one would it be?",
+            "What job could you absolutely never do?"
+          ]
+        },
+        {
+          "subject": "Clothes",
+          "questions": [
+            "What item of clothing or accessory do you love to wear?",
+            "What's your favorite clothing brand?"
+          ]
+        },
+        {
+          "subject": "Nutrition",
+          "questions": [
+            "If your diet had a health score from A to E, what grade would you get?",
+            "What's your favorite snack?"
+          ]
+        }
+      ]
+    },
+    "HOBBIES & PASSIONS": {
+      "description": "The things that actually make you come alive.",
+      "subjects": [
+        {
+          "subject": "Activities",
+          "questions": [
+            "What manual skill are you currently trying to learn?",
+            "What activity completely relaxes you?"
+          ]
+        },
+        {
+          "subject": "Animals",
+          "questions": [
+            "If you could talk to any animal, which one would you choose?",
+            "What animal represents you best, and what does that say about you?"
+          ]
+        },
+        {
+          "subject": "Pets",
+          "questions": [
+            "If you could have any wild animal fully domesticated, which would you choose?",
+            "What's the name of the pet that left the biggest mark on you?"
+          ]
+        },
+        {
+          "subject": "Architecture",
+          "questions": [
+            "If you could design your dream home, what would it look like?",
+            "What building or place do you find the most beautiful in the world?"
+          ]
+        },
+        {
+          "subject": "Art",
+          "questions": [
+            "If you could master any art form perfectly, which one would you choose?",
+            "What work of art (painting, sculpture, photo...) once left you speechless?"
+          ]
+        },
+        {
+          "subject": "Celebrities",
+          "questions": [
+            "Which celebrity has disappointed you?",
+            "What's the last celebrity you spotted in real life?"
+          ]
+        },
+        {
+          "subject": "Collections",
+          "questions": [
+            "What's your most impressive collection of objects?",
+            "What's a collection you have that few people know about?"
+          ]
+        },
+        {
+          "subject": "Social Media Content",
+          "questions": [
+            "What type of content do you prefer to see on social media?",
+            "What do you post least on social media, but that best represents your real life?"
+          ]
+        },
+        {
+          "subject": "Creativity",
+          "questions": [
+            "What's your hidden talent?",
+            "What original idea have you had but never acted on?"
+          ]
+        },
+        {
+          "subject": "Curiosity",
+          "questions": [
+            "What field do you know nothing about but are genuinely drawn to?",
+            "What's the last thing that made you truly curious?"
+          ]
+        },
+        {
+          "subject": "Discoveries",
+          "questions": [
+            "What have you learned recently that really stuck with you?",
+            "What scientific or historical discovery impressed you the most?"
+          ]
+        },
+        {
+          "subject": "Future of Tech",
+          "questions": [
+            "What technological advance excites you the most for the next 20 years?",
+            "What current technology do you think we'll regret ever creating?"
+          ]
+        },
+        {
+          "subject": "Gadgets & Apps",
+          "questions": [
+            "What's the most useless tech gadget you've ever owned?",
+            "If you had to delete one app from your phone forever, which one would you choose?"
+          ]
+        },
+        {
+          "subject": "History",
+          "questions": [
+            "Which historical figure would you have loved to meet?",
+            "What historical period fascinates you the most?"
+          ]
+        },
+        {
+          "subject": "Artificial Intelligence",
+          "questions": [
+            "What's your last question to ChatGPT?",
+            "What topic do you use AI for the most?"
+          ]
+        },
+        {
+          "subject": "Internet",
+          "questions": [
+            "What's the last webpage you had open?",
+            "What's the website you visit the most?"
+          ]
+        },
+        {
+          "subject": "Inventions",
+          "questions": [
+            "What invention, not yet created, would make your life easier?",
+            "What's the greatest invention of all time, according to you?"
+          ]
+        },
+        {
+          "subject": "Board Games",
+          "questions": [
+            "What's your favorite board game?",
+            "What's the board game that drives you absolutely crazy?"
+          ]
+        },
+        {
+          "subject": "Video Games",
+          "questions": [
+            "What's your favorite video game?",
+            "What's your favorite video game character?"
+          ]
+        },
+        {
+          "subject": "Hard Lessons",
+          "questions": [
+            "What skill did you teach yourself, with no training, and that you're proud of?",
+            "What's the most expensive life lesson you've had to learn?"
+          ]
+        },
+        {
+          "subject": "Reading",
+          "questions": [
+            "What's your favorite book?",
+            "What's the book you recommend the most often?"
+          ]
+        },
+        {
+          "subject": "The Olympics",
+          "questions": [
+            "What sport do you have a shot at winning a medal in at the Olympics?",
+            "What's the most unusual sport you've ever watched live?"
+          ]
+        },
+        {
+          "subject": "Hobbies to Try",
+          "questions": [
+            "What's a hobby you find totally overrated?",
+            "What's the most expensive hobby you'd love to try?"
+          ]
+        },
+        {
+          "subject": "Unusual Hobbies",
+          "questions": [
+            "What activity do you love but are genuinely terrible at?",
+            "What's the most unusual hobby you've tried, even just once?"
+          ]
+        },
+        {
+          "subject": "Media",
+          "questions": [
+            "How do you keep up with current events?",
+            "What recent news surprised or shocked you the most?"
+          ]
+        },
+        {
+          "subject": "My Faves",
+          "questions": [
+            "What celebrity deserves more recognition?",
+            "Who's your favorite celebrity?"
+          ]
+        },
+        {
+          "subject": "New Activities",
+          "questions": [
+            "What activity have you never gotten around to doing, even though you've been talking about it for ages?",
+            "What's the most extreme activity you'd be capable of doing?"
+          ]
+        },
+        {
+          "subject": "Sports Goals",
+          "questions": [
+            "What physical feat would you love to be capable of?",
+            "What do you want to change this year?"
+          ]
+        },
+        {
+          "subject": "Photography",
+          "questions": [
+            "What photo on your phone will you never be able to delete, and why?",
+            "If you could capture your life in a single photo today, what scene would you show?"
+          ]
+        },
+        {
+          "subject": "Podcasts",
+          "questions": [
+            "If you hosted your own podcast, what would the topic and name be?",
+            "What podcast or audio show taught you the most outside of school?"
+          ]
+        },
+        {
+          "subject": "Phone Habits",
+          "questions": [
+            "What app do you waste the most time on pointlessly?",
+            "Draw the emoji you use the most."
+          ]
+        },
+        {
+          "subject": "Sports Practice",
+          "questions": [
+            "What sport are you genuinely terrible at, despite all your efforts?",
+            "What sport have you played the longest in your life?"
+          ]
+        },
+        {
+          "subject": "Social Networks",
+          "questions": [
+            "What was your last post on social media?",
+            "Who do you follow on social media that you don't fully own up to?"
+          ]
+        },
+        {
+          "subject": "Social Media",
+          "questions": [
+            "What's your favorite social network?",
+            "What's your favorite YouTube channel?"
+          ]
+        },
+        {
+          "subject": "Sports",
+          "questions": [
+            "What sports injury or physical mishap left you with the most memories?",
+            "If you had to sign up for a sports competition tomorrow, which one would you choose?"
+          ]
+        },
+        {
+          "subject": "Essential Tech",
+          "questions": [
+            "What tech device could you no longer live without?",
+            "What technology would you love to see invented?"
+          ]
+        },
+        {
+          "subject": "Your Passions",
+          "questions": [
+            "If you could turn one of your passions into a career, which one would it be?",
+            "What's your favorite hobby?"
+          ]
+        },
+        {
+          "subject": "TV",
+          "questions": [
+            "What's your favorite TV show?",
+            "How many hours a week do you spend in front of the TV on average?"
+          ]
+        }
+      ]
+    },
+    "MOVIES & MUSIC": {
+      "description": "What you watch, what you listen to, and what it says about you without you realizing it !",
+      "subjects": [
+        {
+          "subject": "Celebrity Crush",
+          "questions": [
+            "Which celebrity do you find the most attractive?",
+            "If you could be any celebrity for a day, who would you be?"
+          ]
+        },
+        {
+          "subject": "Animated Films",
+          "questions": [
+            "Which animated film takes you back to your childhood?",
+            "What's the most famous animated film you've never actually seen?"
+          ]
+        },
+        {
+          "subject": "Nostalgia Songs",
+          "questions": [
+            "What's your nostalgia song?",
+            "What's THE song that absolutely has to be played at a party to get everyone dancing?"
+          ]
+        },
+        {
+          "subject": "Songs",
+          "questions": [
+            "What's the greatest song of all time, according to you?",
+            "What song do you know by heart and always pick at karaoke without fail?"
+          ]
+        },
+        {
+          "subject": "Cinema",
+          "questions": [
+            "What's the last film you went to see at the cinema?",
+            "What film absolutely deserved to be seen on the big screen rather than streaming?"
+          ]
+        },
+        {
+          "subject": "Concerts & Dancing",
+          "questions": [
+            "What was the first concert you ever attended?",
+            "If you could master any dance style, which one would you choose?"
+          ]
+        },
+        {
+          "subject": "Disney",
+          "questions": [
+            "Who's your favorite Disney character?",
+            "What's your favorite Disney film?"
+          ]
+        },
+        {
+          "subject": "Fiction",
+          "questions": [
+            "If you could meet a fictional character, who would you choose?",
+            "If you could live in a fictional world, which one would you choose?"
+          ]
+        },
+        {
+          "subject": "Favorite Films",
+          "questions": [
+            "What's the film you've watched the most times?",
+            "Which film character inspires you the most?"
+          ]
+        },
+        {
+          "subject": "Favorites",
+          "questions": [
+            "What song would you choose as your permanent alarm tone?",
+            "If you could only listen to one song for the rest of your life, which one would it be?"
+          ]
+        },
+        {
+          "subject": "Music",
+          "questions": [
+            "Who's your favorite musician or band?",
+            "What musical instrument would you love to learn to play?"
+          ]
+        },
+        {
+          "subject": "Movie Scenes",
+          "questions": [
+            "What's your favorite movie scene?",
+            "If you could live in any film, which one would you choose?"
+          ]
+        },
+        {
+          "subject": "Favorite Series",
+          "questions": [
+            "What's your all-time favorite TV series?",
+            "What series have you recommended the most to others over the years?"
+          ]
+        },
+        {
+          "subject": "Binge-Watching",
+          "questions": [
+            "What's your binge-watching record for episodes watched in a row?",
+            "What's a series you never finished?"
+          ]
+        },
+        {
+          "subject": "Superpowers",
+          "questions": [
+            "If you had to become a superhero, what would their name be?",
+            "If you could have one superpower, which one would you choose?"
+          ]
+        },
+        {
+          "subject": "Your Life",
+          "questions": [
+            "If your life were a film, what song would be the soundtrack?",
+            "What song best describes your personality?"
+          ]
+        },
+        {
+          "subject": "Film Genres",
+          "questions": [
+            "What type of film do you categorically refuse to watch?",
+            "If your life were a film, what genre would it be? (Horror, Comedy, Drama, Adventure, Thriller...)"
+          ]
+        },
+        {
+          "subject": "Movies",
+          "questions": [
+            "What's a film you hate that everyone else seems to love?",
+            "What's the most unexpected film that made you cry?"
+          ]
+        },
+        {
+          "subject": "Biopic",
+          "questions": [
+            "If your life were a film, what would it be called?",
+            "Which celebrity deserves a biopic, and you'd be the first one to watch it?"
+          ]
+        }
+      ]
+    },
+    "PARTIES & TRAVEL": {
+      "description": "Where you travel, and what you get up to !",
+      "subjects": [
+        {
+          "subject": "Vibes",
+          "questions": [
+            "Describe your perfect party atmosphere in three specific elements.",
+            "What music do you put on when you want to get everyone in a good mood?"
+          ]
+        },
+        {
+          "subject": "Travel Destinations",
+          "questions": [
+            "What destination would you be capable of going to alone, you want it that badly?",
+            "What destination used to appeal to you but no longer does, and why?"
+          ]
+        },
+        {
+          "subject": "Specific Places",
+          "questions": [
+            "What's the first place that comes to mind when you think about your childhood, and why?",
+            "What's the most unusual place you've ever slept?"
+          ]
+        },
+        {
+          "subject": "Living Abroad",
+          "questions": [
+            "If you could start over in a different country, which one would you choose?",
+            "Where would you want to live for a year, regardless of the constraints?"
+          ]
+        },
+        {
+          "subject": "Travel Experiences",
+          "questions": [
+            "What are the best vacation you've ever had?",
+            "What was your worst travel experience?"
+          ]
+        },
+        {
+          "subject": "Historical",
+          "questions": [
+            "If you could travel to a past era, which one would you choose?",
+            "Is there a historical event that changed your life?"
+          ]
+        },
+        {
+          "subject": "Language Skills",
+          "questions": [
+            "What's your English level out of 10?",
+            "What language would you love to learn?"
+          ]
+        },
+        {
+          "subject": "Nature",
+          "questions": [
+            "If you had to live in one specific natural environment (mountains, ocean, forest, desert...), which would you choose?",
+            "What natural phenomenon has impressed you the most in your life?"
+          ]
+        },
+        {
+          "subject": "Outdoor Activities",
+          "questions": [
+            "What outdoor activity have you never tried but dream of doing?",
+            "What natural landscape in the world makes you dream?"
+          ]
+        },
+        {
+          "subject": "Countries",
+          "questions": [
+            "What country absolutely does NOT appeal to you?",
+            "If you could do a one-month road trip, which country would you choose?"
+          ]
+        },
+        {
+          "subject": "Dream Trips",
+          "questions": [
+            "What country do you dream of visiting?",
+            "What's the most impressive place you've ever visited?"
+          ]
+        },
+        {
+          "subject": "Travel Rituals",
+          "questions": [
+            "If you had to create a playlist for a road trip, what would the first song be?",
+            "What do you systematically do in every new country you visit?"
+          ]
+        },
+        {
+          "subject": "Parties & Nights Out",
+          "questions": [
+            "If you could invite one celebrity to a party, who would you choose?",
+            "What's the one essential element of a great party?"
+          ]
+        },
+        {
+          "subject": "Travel Memories",
+          "questions": [
+            "What's the best encounter you've had while traveling?",
+            "What's the most unusual mode of transport you've ever taken?"
+          ]
+        },
+        {
+          "subject": "Vacations",
+          "questions": [
+            "What's the one essential item you always take on vacation?",
+            "What type of vacation do you prefer?"
+          ]
+        },
+        {
+          "subject": "Cities",
+          "questions": [
+            "How many different cities have you lived in?",
+            "What city has had the biggest impact on your life?"
+          ]
+        },
+        {
+          "subject": "Unusual Travels",
+          "questions": [
+            "If you could travel through time, what era would you visit and why?",
+            "What's the most bizarre travel experience you've ever had?"
+          ]
+        },
+        {
+          "subject": "Places",
+          "questions": [
+            "Outside your home, where do you feel most at home?",
+            "What very common place have you never actually been to?"
+          ]
+        },
+        {
+          "subject": "Fictional Places",
+          "questions": [
+            "If you could live in a fictional place, which one would you choose?",
+            "What fictional place (from a film, series, book, or video game) would terrify you to visit?"
+          ]
+        },
+        {
+          "subject": "Time Travel",
+          "questions": [
+            "What historical moment would you have loved to witness?",
+            "You can travel back in time. Where do you go and to which era?"
+          ]
+        }
+      ]
+    },
+    "ABOUT YOU": {
+      "description": "Your intro. The first details that tell us who you really are.",
+      "subjects": [
+        {
+          "subject": "Astrology",
+          "questions": [
+            "What's your star sign and do you believe in it? Example answer: Scorpio/Yes",
+            "What superstition do you actually believe in?"
+          ]
+        },
+        {
+          "subject": "Comparisons",
+          "questions": [
+            "In what area do you still compare yourself to others too much, even knowing it's counterproductive?",
+            "Whose success genuinely motivates you to grow?"
+          ]
+        },
+        {
+          "subject": "Trust",
+          "questions": [
+            "What can shatter your self-confidence in a matter of seconds?",
+            "What instantly earns someone your trust?"
+          ]
+        },
+        {
+          "subject": "Conversations",
+          "questions": [
+            "If you could have a 30-minute conversation with anyone alive in the world today, who would it be?",
+            "What's the hardest conversation you've ever had to have?"
+          ]
+        },
+        {
+          "subject": "Your Body",
+          "questions": [
+            "What part of your body do you love the most, and why?",
+            "What's your biggest physical insecurity?"
+          ]
+        },
+        {
+          "subject": "Culture",
+          "questions": [
+            "What are you genuinely proud of about your country or culture of origin?",
+            "What custom or tradition from your culture do you think looks pretty strange from the outside?"
+          ]
+        },
+        {
+          "subject": "Culture & Ethnicity",
+          "questions": [
+            "If you had to explain your culture to someone who knows nothing about it, where would you start?",
+            "If you had to switch to a different culture or ethnicity, which would you choose?"
+          ]
+        },
+        {
+          "subject": "Costumes",
+          "questions": [
+            "What's the best costume you'd love to wear?",
+            "If you had to show up in costume tonight, what would you have chosen?"
+          ]
+        },
+        {
+          "subject": "Discuss",
+          "questions": [
+            "What's your favorite conversation topic?",
+            "What talent do you admire in others but don't have yourself?"
+          ]
+        },
+        {
+          "subject": "First Date",
+          "questions": [
+            "What's your ideal spot for a first date?",
+            "If you could live out a movie or TV love story, which one would you choose?"
+          ]
+        },
+        {
+          "subject": "Identity",
+          "questions": [
+            "How would you describe your identity in three words to a stranger?",
+            "What's your number one non-negotiable value?"
+          ]
+        },
+        {
+          "subject": "Introversion",
+          "questions": [
+            "What defines you best but isn't visible at first glance?",
+            "What aspect of your personality do people discover the latest?"
+          ]
+        },
+        {
+          "subject": "Comfort Zone",
+          "questions": [
+            "How do you recharge after a big meeting or social evening?",
+            "In what situation do you feel most in your comfort zone?"
+          ]
+        },
+        {
+          "subject": "Defense Mechanisms",
+          "questions": [
+            "What's your preferred defense mechanism when facing conflict?",
+            "What betrayal took you the longest to get over?"
+          ]
+        },
+        {
+          "subject": "Qualities in Question",
+          "questions": [
+            "Is there a quality you thought you had but eventually started to question?",
+            "What quality have you developed through time and experience?"
+          ]
+        },
+        {
+          "subject": "Nicknames",
+          "questions": [
+            "If you had to choose a nickname for yourself, what would it be?",
+            "What's the most unusual nickname you've ever been given?"
+          ]
+        },
+        {
+          "subject": "Your Look & Beauty",
+          "questions": [
+            "What would you rate yourself out of 10 in terms of looks?",
+            "What outfit or physical feature have you been complimented on the most?"
+          ]
+        }
+      ]
+    },
+    "WYD?": {
+      "description": "What would you do ? We put you in a scenario, show us how you act",
+      "subjects": [
+        {
+          "subject": "Friendship Conflict",
+          "questions": [
+            "A friend doesn't wish you happy birthday. What do you do?",
+            "You find out your friend group organized an event without inviting you. What do you do?"
+          ]
+        },
+        {
+          "subject": "Social Situations",
+          "questions": [
+            "You're about to cross a family member you can't stand in the street, and they haven't spotted you yet. What do you do?",
+            "You run into your ex in the street with their new partner. How do you handle the conversation?"
+          ]
+        },
+        {
+          "subject": "Moral Dilemma",
+          "questions": [
+            "You find a wallet with $500 and an ID on the subway. What do you do?",
+            "Your best friend tells you they've been cheating on their partner for 6 months and asks you to say nothing. What do you do?"
+          ]
+        },
+        {
+          "subject": "Travel Mishaps",
+          "questions": [
+            "You miss your flight by one minute for a highly anticipated trip. What do you do?",
+            "You arrive abroad with a dead phone and no passport. What do you do?"
+          ]
+        },
+        {
+          "subject": "Trust & Close Ones",
+          "questions": [
+            "You catch a close friend clearly lying about something important. What do you do?",
+            "In a group, someone openly mocks you and everyone else laughs. What do you do?"
+          ]
+        },
+        {
+          "subject": "Love & Timing",
+          "questions": [
+            "A close friend you care about tells you they have feelings for you. What do you do?",
+            "You've been in a relationship for 3 years and someone incredible suddenly confesses their feelings. What do you do?"
+          ]
+        },
+        {
+          "subject": "Reputation & Visibility",
+          "questions": [
+            "A video of you in an embarrassing situation goes viral with 2 million views. What's your reaction?",
+            "A very popular reality show contacts you to take part. What do you do?"
+          ]
+        },
+        {
+          "subject": "Responsibility",
+          "questions": [
+            "You realize your friend is too drunk and wants to drive home. What do you do?",
+            "You see someone isolated and lost at a party. What do you do?"
+          ]
+        },
+        {
+          "subject": "Work Integrity",
+          "questions": [
+            "You realize your colleague earns 20% more than you in the same role. What do you do?",
+            "You bomb an important presentation in front of 50 people due to a technical glitch. Five seconds of silence. What do you do?"
+          ]
+        },
+        {
+          "subject": "Absurd Situations",
+          "questions": [
+            "You receive a very intimate text from a stranger who sent it to the wrong person. What do you do?",
+            "You realize you swapped suitcases with someone at the airport. Inside theirs, something very personal. What do you do?"
+          ]
+        }
+      ]
+    }
+  },
+  "FUN": {
+    "BETWEEN US": {
+      "description": "Questions about the group itself. Let's get into it.",
+      "subjects": [
+        {
+          "subject": "Best In Group",
+          "questions": [
+            "Who's the most intelligent person in the group?",
+            "Who's the funniest person in the group?"
+          ]
+        },
+        {
+          "subject": "Sharing",
+          "questions": [
+            "What quality do you share with the person on your left?",
+            "If you had to give a gift to the person on your left, what would you give them?"
+          ]
+        },
+        {
+          "subject": "Surprising Appearances",
+          "questions": [
+            "Who in the group seems the most serious but is actually the most wild?",
+            "Who in the group seems the most intelligent but is actually the least?"
+          ]
+        },
+        {
+          "subject": "Gifts",
+          "questions": [
+            "If you could give a gift to the person on your left with no budget limit, what would you choose?",
+            "If the person on your right gave you a gift, what would it be?"
+          ]
+        },
+        {
+          "subject": "Breakthroughs",
+          "questions": [
+            "Who in the group has the best style?",
+            "Who in the group is most likely to become famous?"
+          ]
+        },
+        {
+          "subject": "Life Changes",
+          "questions": [
+            "If you could swap lives with someone in the group for a week, who would you choose?",
+            "Who has the life most similar to yours?"
+          ]
+        },
+        {
+          "subject": "Crisis Mode",
+          "questions": [
+            "Who in the group would survive longest on a survival show?",
+            "Who in the group would you call first if you had a major problem at 2am?"
+          ]
+        },
+        {
+          "subject": "Family",
+          "questions": [
+            "If this group were a family, what role would you play?",
+            "If this group had to go on a trip together, who would you trust to organize it?"
+          ]
+        },
+        {
+          "subject": "Group Laughs",
+          "questions": [
+            "Who in the group makes you laugh the most?",
+            "Give a nickname to the player on your right."
+          ]
+        },
+        {
+          "subject": "Unexpected",
+          "questions": [
+            "Who in the group could surprise everyone with a totally unexpected revelation?",
+            "Who in the group is the worst loser at Onskoné?"
+          ]
+        },
+        {
+          "subject": "Group Dynamics",
+          "questions": [
+            "If this group starred in a film, what role would you play?",
+            "What do you think about the person on your right that you've never said to their face?"
+          ]
+        },
+        {
+          "subject": "Bad Behaviors",
+          "questions": [
+            "Who in the group is always late?",
+            "Who in the group would stay calm in total chaos?"
+          ]
+        },
+        {
+          "subject": "Champion",
+          "questions": [
+            "Who in the group would win in a fight?",
+            "Who's best at bringing this group together and keeping it solid?"
+          ]
+        },
+        {
+          "subject": "Common Ground",
+          "questions": [
+            "What one word would you use to nickname this entire group?",
+            "What's the biggest thing the members of this group have in common?"
+          ]
+        },
+        {
+          "subject": "First Impressions",
+          "questions": [
+            "What's the first flaw that comes to mind about the person on your right?",
+            "What's the first quality that comes to mind about the person on your right?"
+          ]
+        },
+        {
+          "subject": "Group Revelations",
+          "questions": [
+            "If you could borrow someone from the group's wardrobe for a week, whose would you choose?",
+            "Who in the group would surprise you most if you learned they have a hidden artistic talent?"
+          ]
+        },
+        {
+          "subject": "Group Secrets",
+          "questions": [
+            "Who in the group would you trust the most to keep an absolutely shameful secret?",
+            "Who in the group knows the real you the best?"
+          ]
+        },
+        {
+          "subject": "Group Memories",
+          "questions": [
+            "What's your best memory with this group?",
+            "What group moment you missed do you wish you'd been there for?"
+          ]
+        },
+        {
+          "subject": "Group Talents",
+          "questions": [
+            "Who in the group would make the best mentor for the others?",
+            "Who in the group could teach you something useful? Now's the time to ask."
+          ]
+        },
+        {
+          "subject": "Group Tensions",
+          "questions": [
+            "Who in the group are you most likely to get into an argument with?",
+            "What recent group moment or event didn't sit right with you and you still haven't let go?"
+          ]
+        }
+      ]
+    },
+    "FAMILY & FRIENDS": {
+      "description": "Questions about the people who matter most. No sugarcoating.",
+      "subjects": [
+        {
+          "subject": "Lost Friends",
+          "questions": [
+            "Is there someone you've lost touch with and would love to reconnect with tomorrow?",
+            "What ended friendship taught you something important about yourself?"
+          ]
+        },
+        {
+          "subject": "Close Friends",
+          "questions": [
+            "What's the craziest thing you've done for a friend?",
+            "What's your favorite activity to do with your friends?"
+          ]
+        },
+        {
+          "subject": "Arguments",
+          "questions": [
+            "What's your way of handling arguments?",
+            "What argument with a friend actually brought you closer together?"
+          ]
+        },
+        {
+          "subject": "New Connections",
+          "questions": [
+            "How do you instantly know if someone is going to matter in your life?",
+            "Who recently entered your life in a significant way?"
+          ]
+        },
+        {
+          "subject": "Close Family",
+          "questions": [
+            "If your family had to go on a trip together, where would you go?",
+            "What one word describes your close family?"
+          ]
+        },
+        {
+          "subject": "Family Secrets",
+          "questions": [
+            "What family tradition or belief took you a while to realize was unique to your family?",
+            "What topic does your family carefully avoid bringing up at gatherings?"
+          ]
+        },
+        {
+          "subject": "Generations",
+          "questions": [
+            "What do you think the next generation will judge us harshly for?",
+            "What's the best generation, in your opinion?"
+          ]
+        },
+        {
+          "subject": "Friend Group",
+          "questions": [
+            "If you had to describe your friends in 3 words, which ones would you choose?",
+            "How many real friends do you think you have?"
+          ]
+        },
+        {
+          "subject": "Friendship Lessons",
+          "questions": [
+            "What truth about family did you learn that nobody told you?",
+            "What truth about friendship did you learn that nobody told you?"
+          ]
+        },
+        {
+          "subject": "The Older Generation",
+          "questions": [
+            "What did the older generation handle better than yours, in your opinion?",
+            "Who doesn't look their age at all?"
+          ]
+        },
+        {
+          "subject": "Best Friend",
+          "questions": [
+            "What's your best friend's name?",
+            "How many years have you known your best friend?"
+          ]
+        },
+        {
+          "subject": "What Gets Passed Down",
+          "questions": [
+            "What talent or trait from one of your parents did you inherit without choosing it?",
+            "What's the main thing you have in common with your siblings?"
+          ]
+        },
+        {
+          "subject": "Parenting",
+          "questions": [
+            "What values would you want to pass on to your kids?",
+            "What would be your golden rule if you were a parent?"
+          ]
+        },
+        {
+          "subject": "Parents & Kids",
+          "questions": [
+            "If you had a daughter tomorrow, what name would you give her?",
+            "If you had a son tomorrow, what name would you give him?"
+          ]
+        },
+        {
+          "subject": "Qualities",
+          "questions": [
+            "What quality do you value most in a friend?",
+            "What's the first quality people recognize in you?"
+          ]
+        },
+        {
+          "subject": "Reconciliation",
+          "questions": [
+            "What relationship have you managed to recover after a conflict?",
+            "Is there someone you'd like to reconcile with but haven't made the first move yet?"
+          ]
+        },
+        {
+          "subject": "Family Resemblances",
+          "questions": [
+            "Who in the family looks the most like you physically?",
+            "Who in the family is most similar to you in personality?"
+          ]
+        },
+        {
+          "subject": "Social Skills",
+          "questions": [
+            "What do you systematically do when you want someone to feel comfortable?",
+            "What excuse do you use most often to turn down an invitation and feel a little less guilty?"
+          ]
+        },
+        {
+          "subject": "Family Traditions",
+          "questions": [
+            "What family tradition will you absolutely pass on to your children?",
+            "What outdated family tradition are you nostalgic about?"
+          ]
+        },
+        {
+          "subject": "Lasting Friendships",
+          "questions": [
+            "How many real friendships of more than 10 years do you have?",
+            "How do you know a friendship is built to last?"
+          ]
+        },
+        {
+          "subject": "All For Mom",
+          "questions": [
+            "What's the last gift you gave your mother?",
+            "What's the first word that comes to mind when you think of your mother?"
+          ]
+        }
+      ]
+    },
+    "THE RECEIPTS": {
+      "description": "Sharp opinions, awkward confessions. We see you.",
+      "subjects": [
+        {
+          "subject": "Confessions",
+          "questions": [
+            "What conspiracy theory do you secretly believe in?",
+            "What unpopular opinion do you fully stand by?"
+          ]
+        },
+        {
+          "subject": "Jokes",
+          "questions": [
+            "What type of humor actually makes you laugh?",
+            "Tell us your best joke."
+          ]
+        },
+        {
+          "subject": "Changes",
+          "questions": [
+            "Is there a topic where you're clearly not objective?",
+            "What's the biggest change you'd like to see in the world in the next 10 years?"
+          ]
+        },
+        {
+          "subject": "Communication",
+          "questions": [
+            "What phrase do you use to end a conversation that's going on too long?",
+            "What's the biggest contradiction between what you preach and what you actually do?"
+          ]
+        },
+        {
+          "subject": "Stupid Stuff",
+          "questions": [
+            "What's the biggest stupid thing you've ever done?",
+            "Who have you led into doing something dumb, and what did they do?"
+          ]
+        },
+        {
+          "subject": "Guilty Pleasures",
+          "questions": [
+            "What's your guilty pleasure in music that you don't fully own up to?",
+            "What awful show or content do you still watch with pleasure?"
+          ]
+        },
+        {
+          "subject": "Debates",
+          "questions": [
+            "What's a topic you've completely changed your mind on?",
+            "What topic are you ready to debate with absolutely anyone?"
+          ]
+        },
+        {
+          "subject": "Political Decisions",
+          "questions": [
+            "What do you think is the main problem in your country right now?",
+            "What would be your first decision as President?"
+          ]
+        },
+        {
+          "subject": "Conflicts",
+          "questions": [
+            "What's the worst thing someone's accused you of during an argument?",
+            "What behavior can instantly set you off during an argument?"
+          ]
+        },
+        {
+          "subject": "Commitments",
+          "questions": [
+            "What cause or commitment have you been most involved in throughout your life?",
+            "Is there a petition, association, or movement you actively support?"
+          ]
+        },
+        {
+          "subject": "Epic Fails",
+          "questions": [
+            "What activity or thing do you waste the most time on?",
+            "What last-minute bad decision led to a massive fail for you?"
+          ]
+        },
+        {
+          "subject": "Illegal Stuff",
+          "questions": [
+            "What's the most illegal thing you've ever done?",
+            "If you were going to do something illegal tomorrow, what would it be?"
+          ]
+        },
+        {
+          "subject": "Jealousy",
+          "questions": [
+            "What area do you sometimes catch yourself feeling jealous about?",
+            "What success from someone close made you proud but also a little jealous?"
+          ]
+        },
+        {
+          "subject": "Justice",
+          "questions": [
+            "If you could change one law in your country, which one would it be?",
+            "What injustice in your personal life has outraged you the most?"
+          ]
+        },
+        {
+          "subject": "Hilarious Moments",
+          "questions": [
+            "What's a laughing fit you still remember?",
+            "What situation in your life became hilarious in hindsight, even though it was a disaster at the time?"
+          ]
+        },
+        {
+          "subject": "Scheming",
+          "questions": [
+            "What have you done — or considered doing — purely to manipulate someone for your own benefit?",
+            "What's a funny story you can tell about pulling a harmless scam on someone?"
+          ]
+        },
+        {
+          "subject": "Awkward Moments",
+          "questions": [
+            "What's the most embarrassing thing you've done recently?",
+            "What do you find the most awkward?"
+          ]
+        },
+        {
+          "subject": "Big Lies",
+          "questions": [
+            "What's the worst excuse you've ever made up to get out of a difficult situation?",
+            "What's the most convincing lie you've ever told?"
+          ]
+        },
+        {
+          "subject": "Surprising Truths",
+          "questions": [
+            "Who don't you like but haven't dared admit it (until now)?",
+            "Who do you secretly like but haven't dared admit it (until now)?"
+          ]
+        },
+        {
+          "subject": "Losses",
+          "questions": [
+            "What's the biggest object you've ever lost?",
+            "What do you spend the most money on pointlessly?"
+          ]
+        },
+        {
+          "subject": "Politics",
+          "questions": [
+            "Who did you vote for in the last election?",
+            "Who would you vote for in the next election?"
+          ]
+        },
+        {
+          "subject": "Thoughts",
+          "questions": [
+            "If you could read one person's mind, who would you choose?",
+            "What's a weird thought you had today?"
+          ]
+        },
+        {
+          "subject": "Seriously?",
+          "questions": [
+            "Who do you secretly dislike, and almost no one knows?",
+            "What's the most embarrassing thing on your phone?"
+          ]
+        },
+        {
+          "subject": "Taboos",
+          "questions": [
+            "What taboo topic do you prefer not to bring up with the group?",
+            "Say one sentence that would immediately get under the person on your left's skin."
+          ]
+        },
+        {
+          "subject": "Tattoos & Accessories",
+          "questions": [
+            "If you had to get a tattoo of one thing, what would it be and where?",
+            "What amount of money would it take for you to get an obscene tattoo on your arm?"
+          ]
+        },
+        {
+          "subject": "Reality TV",
+          "questions": [
+            "What would the title of your reality show be if your life were filmed 24/7?",
+            "If you were interviewed on a TV show about something dumb you did, what would it be?"
+          ]
+        }
+      ]
+    },
+    "SPICYYY": {
+      "description": "Adults only. No audience, no filter, no limits.",
+      "subjects": [
+        {
+          "subject": "Body Count",
+          "questions": [
+            "How many different people have you slept with?",
+            "How old were you when you had your first relationship?"
+          ]
+        },
+        {
+          "subject": "Wild Stories",
+          "questions": [
+            "What's the most unusual place you've ever had sex?",
+            "What's the boldest thing you've ever done in bed?"
+          ]
+        },
+        {
+          "subject": "Positions",
+          "questions": [
+            "What's your favorite position in bed?",
+            "What sexual activity would you never do?"
+          ]
+        },
+        {
+          "subject": "Qualities & Flaws",
+          "questions": [
+            "What physical flaw couldn't you tolerate in a partner?",
+            "What physical quality do you look for or appreciate the most in a partner?"
+          ]
+        },
+        {
+          "subject": "Intimacy",
+          "questions": [
+            "What's the ideal duration for sex, in your opinion?",
+            "What's your longest time having sex?"
+          ]
+        },
+        {
+          "subject": "Awkward Situations",
+          "questions": [
+            "What's the most embarrassing situation you've ever experienced in a romantic or intimate context?",
+            "When were you aroused at a moment you absolutely should not have been?"
+          ]
+        },
+        {
+          "subject": "Fantasies",
+          "questions": [
+            "What fantasy would you admit to in front of this group?",
+            "What's the most unexpected compliment you've ever received about your looks or sensuality?"
+          ]
+        },
+        {
+          "subject": "Preferences",
+          "questions": [
+            "What do you find sexy about someone that has nothing to do with their looks?",
+            "What's your type in 3 words?"
+          ]
+        }
+      ]
+    },
+    "HOT TAKES": {
+      "description": "Your opinions, out loud, on everything, on some … subjects.",
+      "subjects": [
+        {
+          "subject": "Ethnicities",
+          "questions": [
+            "What do you think about Arab people?",
+            "What do you think about Indian people?"
+          ]
+        },
+        {
+          "subject": "Political Figures",
+          "questions": [
+            "What do you think of Macron?",
+            "What do you think of Donald Trump?"
+          ]
+        },
+        {
+          "subject": "Beliefs",
+          "questions": [
+            "What do you think about religion?",
+            "What do you think about the world today?"
+          ]
+        },
+        {
+          "subject": "Influencers",
+          "questions": [
+            "What do you think about social media?",
+            "What do you think about influencers?"
+          ]
+        },
+        {
+          "subject": "Modern Love",
+          "questions": [
+            "What do you think about people who only look for a partner on dating apps?",
+            "What do you think about marriage?"
+          ]
+        },
+        {
+          "subject": "Money & Ethics",
+          "questions": [
+            "What do you think about very wealthy people who don't give anything back?",
+            "What do you think about happiness and its supposed connection to money?"
+          ]
+        },
+        {
+          "subject": "Deep Friendships",
+          "questions": [
+            "What do you think about people who have many friends but few deep relationships?",
+            "At what point can you truly call someone your best friend?"
+          ]
+        },
+        {
+          "subject": "Body & Appearance",
+          "questions": [
+            "What do you think about cosmetic surgery?",
+            "What do you think about society's beauty standards?"
+          ]
+        },
+        {
+          "subject": "Tech & AI",
+          "questions": [
+            "What do you think about artificial intelligence?",
+            "Artificial intelligence: an opportunity for humanity or a real threat?"
+          ]
+        },
+        {
+          "subject": "Personal Growth",
+          "questions": [
+            "What do you think about personal development?",
+            "What do you think about therapy?"
+          ]
+        },
+        {
+          "subject": "Life & Death",
+          "questions": [
+            "What's your opinion on euthanasia?",
+            "What's your opinion on the death penalty?"
+          ]
+        }
+      ]
+    }
+  },
+  "DEEP": {
+    "BACK IN THE DAY": {
+      "description": "Childhood, regrets, turning points. Everything that made you who you are.",
+      "subjects": [
+        {
+          "subject": "Life Moments",
+          "questions": [
+            "Is there a moment in your life you have no memory of, but that people have told you about many times?",
+            "What moment did you take for granted, only to later realize it was truly unique?"
+          ]
+        },
+        {
+          "subject": "School Days",
+          "questions": [
+            "What one word sums up your entire school life?",
+            "What was your favorite subject at school?"
+          ]
+        },
+        {
+          "subject": "Your Autobiography",
+          "questions": [
+            "What would the title of your autobiography be?",
+            "If you had to write a book about someone's life, whose would it be?"
+          ]
+        },
+        {
+          "subject": "This Year",
+          "questions": [
+            "What's your best memory from this year?",
+            "What's your worst moment this year?"
+          ]
+        },
+        {
+          "subject": "Younger Self",
+          "questions": [
+            "What advice would you give to your younger self?",
+            "What made your childhood self happy that you've stopped doing as an adult?"
+          ]
+        },
+        {
+          "subject": "Spending",
+          "questions": [
+            "What was your most pointless big expense?",
+            "What's your biggest expense category each month?"
+          ]
+        },
+        {
+          "subject": "Childhood",
+          "questions": [
+            "What was your favorite cartoon as a child?",
+            "If you could relive one day from your childhood, which one would you choose?"
+          ]
+        },
+        {
+          "subject": "Studies",
+          "questions": [
+            "If you had to go back to school today, what would you study?",
+            "Which teacher influenced you the most in life, and why?"
+          ]
+        },
+        {
+          "subject": "Childhood Games",
+          "questions": [
+            "What was your favorite toy as a child?",
+            "What was your favorite activity when you were a kid?"
+          ]
+        },
+        {
+          "subject": "Destiny",
+          "questions": [
+            "What moment do you think you missed, but that turned out to be an incredible opportunity?",
+            "How do you picture your destiny?"
+          ]
+        },
+        {
+          "subject": "Memory",
+          "questions": [
+            "What's the earliest memory you can recall with precision?",
+            "What do you systematically forget, no matter how hard you try?"
+          ]
+        },
+        {
+          "subject": "Key Moments",
+          "questions": [
+            "What sports moment most marked you as a spectator?",
+            "What seemingly ordinary moment turned out to be more significant over time?"
+          ]
+        },
+        {
+          "subject": "Defining Moments",
+          "questions": [
+            "What's the most memorable moment from your high school years?",
+            "What's your best memory from a party or night out?"
+          ]
+        },
+        {
+          "subject": "Nostalgia",
+          "questions": [
+            "What smell instantly transports you back to a specific memory?",
+            "What did you used to do often that you no longer do — and good riddance?"
+          ]
+        },
+        {
+          "subject": "Insomnia",
+          "questions": [
+            "What do you do when you can't sleep at 3am?",
+            "What's your best memory from an all-nighter?"
+          ]
+        },
+        {
+          "subject": "Most Beautiful Moment",
+          "questions": [
+            "What's been the most beautiful moment of your life so far?",
+            "What moment in your life do you find yourself thinking about a lot lately?"
+          ]
+        },
+        {
+          "subject": "Childhood Dreams",
+          "questions": [
+            "What job did you dream of having as a child?",
+            "What was your number one life goal when you were a kid?"
+          ]
+        },
+        {
+          "subject": "Surprises",
+          "questions": [
+            "When was the time you surprised everyone?",
+            "What's the most beautiful surprise you've ever received?"
+          ]
+        },
+        {
+          "subject": "By Chance",
+          "questions": [
+            "What's the most unusual thing you've ever found by chance?",
+            "What's the most improbable thing that has ever happened to you?"
+          ]
+        },
+        {
+          "subject": "At Work",
+          "questions": [
+            "What was your worst work day or internship experience, and what happened?",
+            "What was your first job or student job?"
+          ]
+        }
+      ]
+    },
+    "AMBITIONS": {
+      "description": "Your dreams, your money, your vision. What are you actually building?",
+      "subjects": [
+        {
+          "subject": "Big Purchases",
+          "questions": [
+            "If you won the lottery, what would be your first purchase?",
+            "What's the most expensive thing you own?"
+          ]
+        },
+        {
+          "subject": "Deep Aspirations",
+          "questions": [
+            "What vision of yourself in 10 years do you carry but almost never tell anyone?",
+            "If money and other people's opinions didn't exist, how would you spend your days?"
+          ]
+        },
+        {
+          "subject": "The Future",
+          "questions": [
+            "What aspect or challenge of the future scares you the most?",
+            "What three words come to mind when you think about the future?"
+          ]
+        },
+        {
+          "subject": "Budget",
+          "questions": [
+            "If you had $10,000 to spend in 24 hours without keeping any, how would you blow it?",
+            "What expense do you always justify but deep down know is excessive?"
+          ]
+        },
+        {
+          "subject": "Achievements",
+          "questions": [
+            "What can you do now that your self from 5 years ago would never have imagined?",
+            "What professional skill are you most proud of having developed?"
+          ]
+        },
+        {
+          "subject": "Savings",
+          "questions": [
+            "What's the smartest thing you've ever done with money?",
+            "What's the thing you saved up for the longest to buy?"
+          ]
+        },
+        {
+          "subject": "Teaching",
+          "questions": [
+            "If you could teach one skill to someone, which one would you choose?",
+            "If you became a teacher, what subject — even a ridiculous one — would you teach?"
+          ]
+        },
+        {
+          "subject": "Pride",
+          "questions": [
+            "What moment made you feel your parents were the most proud of you?",
+            "Who are you the most proud of?"
+          ]
+        },
+        {
+          "subject": "Future moments",
+          "questions": [
+            "What future moment in your life are you most looking forward to?",
+            "If you could see one moment of your future, which one would you choose?"
+          ]
+        },
+        {
+          "subject": "Work Team",
+          "questions": [
+            "What quality do you look for first in someone you work with?",
+            "What's your worst experience working in a team?"
+          ]
+        },
+        {
+          "subject": "Inspiration",
+          "questions": [
+            "What's the best piece of advice you've ever received?",
+            "Who is your role model in life?"
+          ]
+        },
+        {
+          "subject": "Career",
+          "questions": [
+            "What job do you picture yourself in 10 years?",
+            "What monthly salary would make you feel genuinely comfortable?"
+          ]
+        },
+        {
+          "subject": "Goals",
+          "questions": [
+            "What's your biggest goal in life?",
+            "What aspect of yourself would you most like to improve this year?"
+          ]
+        },
+        {
+          "subject": "Never-Kept Goals",
+          "questions": [
+            "What goal have you set for yourself 10 times but never managed to keep?",
+            "What decision have you been putting off for way too long?"
+          ]
+        },
+        {
+          "subject": "Forgiveness",
+          "questions": [
+            "What have you regretted doing recently?",
+            "What's something you never truly apologized for but should have?"
+          ]
+        },
+        {
+          "subject": "Dream Jobs",
+          "questions": [
+            "What imaginary or fictional job would you have loved to do?",
+            "What's your dream company to work at?"
+          ]
+        },
+        {
+          "subject": "Depth",
+          "questions": [
+            "If you could take a 3-month sabbatical tomorrow, how would you spend it?",
+            "What do you do every day that truly aligns with your values?"
+          ]
+        },
+        {
+          "subject": "Building Skills",
+          "questions": [
+            "If you could instantly master any subject, which one would you choose?",
+            "What's something you built, created, or accomplished entirely on your own that you're most proud of?"
+          ]
+        },
+        {
+          "subject": "Projects",
+          "questions": [
+            "If you had a budget and no one to judge you, what project would you launch?",
+            "What project have you had in mind for a long time but haven't launched yet?"
+          ]
+        },
+        {
+          "subject": "Success",
+          "questions": [
+            "What's the biggest challenge you've taken on?",
+            "What's your greatest achievement this year?"
+          ]
+        },
+        {
+          "subject": "Risks",
+          "questions": [
+            "What do you wish you had right now that you don't?",
+            "What's the biggest risk you've ever taken, telling yourself luck was on your side?"
+          ]
+        },
+        {
+          "subject": "Victories",
+          "questions": [
+            "What small daily win makes you irrationally proud?",
+            "What habit have you recently managed to build after multiple failed attempts?"
+          ]
+        },
+        {
+          "subject": "Long-Term Vision",
+          "questions": [
+            "What future scenario are you most hoping for?",
+            "In 30 years, how would you like people who know you today to describe you?"
+          ]
+        },
+        {
+          "subject": "Work Life",
+          "questions": [
+            "If you could change one thing about your current work life, what would it be?",
+            "In one word, what gives meaning to your work?"
+          ]
+        }
+      ]
+    },
+    "FEELINGS": {
+      "description": "What you're actually feeling. A little introspection goes a long way.",
+      "subjects": [
+        {
+          "subject": "Self-Love",
+          "questions": [
+            "What do you do purely for yourself, without it benefiting anyone else?",
+            "What compliment do you struggle to accept without downplaying it?"
+          ]
+        },
+        {
+          "subject": "Expectations",
+          "questions": [
+            "What unspoken expectation caused your biggest relational disappointment?",
+            "What's something that, once you got it, was way less good than expected?"
+          ]
+        },
+        {
+          "subject": "Good Laughs",
+          "questions": [
+            "What supposedly funny topic actually doesn't make you laugh that much?",
+            "What memory or topic is guaranteed to make you laugh even when you're alone?"
+          ]
+        },
+        {
+          "subject": "Compliments",
+          "questions": [
+            "What's the compliment that touched you the most in your life, and who gave it?",
+            "What compliment do you often give others but can't seem to apply to yourself?"
+          ]
+        },
+        {
+          "subject": "Under the Spell",
+          "questions": [
+            "How do you behave when you're genuinely falling for someone?",
+            "What behavior would make you leave a date within 10 seconds?"
+          ]
+        },
+        {
+          "subject": "Love Advice",
+          "questions": [
+            "What love advice would you give to your younger self?",
+            "What's your personal motto when it comes to love?"
+          ]
+        },
+        {
+          "subject": "Flirting",
+          "questions": [
+            "What's your foolproof technique to seduce someone?",
+            "How would you describe your flirting style in three words?"
+          ]
+        },
+        {
+          "subject": "Burnout",
+          "questions": [
+            "What's your warning sign that you're not doing well?",
+            "What recharges you the fastest when you're running on empty?"
+          ]
+        },
+        {
+          "subject": "Romance",
+          "questions": [
+            "What's your favorite romantic song?",
+            "What romantic film always gets to you?"
+          ]
+        },
+        {
+          "subject": "Generosity",
+          "questions": [
+            "What's the most generous thing anyone has ever done for you?",
+            "What do you do anonymously and generously, expecting nothing in return?"
+          ]
+        },
+        {
+          "subject": "Acts of Love",
+          "questions": [
+            "What's a recent act of love you received that really touched you?",
+            "What's your love language?"
+          ]
+        },
+        {
+          "subject": "Sadness",
+          "questions": [
+            "What's the last thing that made you cry?",
+            "What everyday moments make you the saddest?"
+          ]
+        },
+        {
+          "subject": "Gratitude",
+          "questions": [
+            "Who in your life deserves a thank-you that you've never actually said?",
+            "What everyday thing are you most grateful for?"
+          ]
+        },
+        {
+          "subject": "Mood",
+          "questions": [
+            "What emotion do you feel most often throughout the day?",
+            "How would you describe your current mood in one word?"
+          ]
+        },
+        {
+          "subject": "Idealizations",
+          "questions": [
+            "What have you idealized in your current life before actually experiencing it?",
+            "What do you hope for but know will probably never happen?"
+          ]
+        },
+        {
+          "subject": "Gut Feeling",
+          "questions": [
+            "Tell us about a time your gut feeling saved you from a bad situation.",
+            "In what area of your life do you follow your instincts the most?"
+          ]
+        },
+        {
+          "subject": "Little Pleasures",
+          "questions": [
+            "What instantly makes you happy?",
+            "What's your favorite moment of the day?"
+          ]
+        },
+        {
+          "subject": "Fears",
+          "questions": [
+            "What's your biggest fear?",
+            "What place or location makes you the most uncomfortable?"
+          ]
+        },
+        {
+          "subject": "Reality",
+          "questions": [
+            "Have you ever had a dream so real you took a while to realize it was a dream?",
+            "In what moment do you feel most present and truly alive?"
+          ]
+        },
+        {
+          "subject": "Dreams",
+          "questions": [
+            "What recurring dream do you have, and what do you think it means?",
+            "If you could program a dream for tonight, what would it be?"
+          ]
+        },
+        {
+          "subject": "Health",
+          "questions": [
+            "What health habit do you know you should adopt but keep putting off indefinitely?",
+            "How do you talk to yourself when you fail at something?"
+          ]
+        },
+        {
+          "subject": "Health Mishaps",
+          "questions": [
+            "How high is your pain tolerance?",
+            "What's the most ridiculous reason you've ever ended up in the ER or at the doctor's?"
+          ]
+        },
+        {
+          "subject": "Mental Health",
+          "questions": [
+            "What do you do to take care of your mental health?",
+            "Describe your mental health in one word."
+          ]
+        },
+        {
+          "subject": "Silence & Emotions",
+          "questions": [
+            "How do you handle awkward silences?",
+            "What emotion do you have the hardest time showing in front of others?"
+          ]
+        },
+        {
+          "subject": "Stress",
+          "questions": [
+            "How do you adapt your behavior under pressure?",
+            "What ordinary daily action or situation actually stresses you out?"
+          ]
+        },
+        {
+          "subject": "Seduction",
+          "questions": [
+            "What personality trait makes you fall for someone immediately?",
+            "How should someone go about showing you they're into you?"
+          ]
+        },
+        {
+          "subject": "Going Within",
+          "questions": [
+            "What's the best thing you've discovered about yourself when spending time alone?",
+            "When do you feel the most need to be alone?"
+          ]
+        },
+        {
+          "subject": "Solitude",
+          "questions": [
+            "What do you do when you find yourself alone and have to fill an entire day?",
+            "What moment of solitude stands out the most in your memory?"
+          ]
+        }
+      ]
+    },
+    "IN THE MIRROR": {
+      "description": "No filter. The things you know about yourself but rarely say out loud.",
+      "subjects": [
+        {
+          "subject": "Gifts Received",
+          "questions": [
+            "What's the typical last-minute gift you often give people?",
+            "What's the worst gift you've ever received?"
+          ]
+        },
+        {
+          "subject": "Luck & Bad Luck",
+          "questions": [
+            "What's the biggest stroke of luck you've ever had?",
+            "What's the biggest stroke of bad luck you think you've had?"
+          ]
+        },
+        {
+          "subject": "Things to Change",
+          "questions": [
+            "What's the one thing about yourself you'll never change?",
+            "What's something you regret not having done?"
+          ]
+        },
+        {
+          "subject": "Coincidences",
+          "questions": [
+            "What's the most unsettling coincidence you've ever experienced?",
+            "Have you ever had an intuition or premonition that came true in an inexplicable way?"
+          ]
+        },
+        {
+          "subject": "Self-Confidence",
+          "questions": [
+            "In what area has your self-confidence grown the most in recent years?",
+            "How do you mentally prepare yourself before an important moment?"
+          ]
+        },
+        {
+          "subject": "Contradictions",
+          "questions": [
+            "What do you have (a talent, trait, or situation) that you're not proud enough of?",
+            "What's the biggest contradiction between what you want and your everyday life?"
+          ]
+        },
+        {
+          "subject": "Flaws",
+          "questions": [
+            "What's your biggest character flaw?",
+            "What flaw in others do you struggle to tolerate?"
+          ]
+        },
+        {
+          "subject": "Progress",
+          "questions": [
+            "What resource (book, philosophy...) has helped you grow the most in life?",
+            "What personal development goal are you currently pursuing?"
+          ]
+        },
+        {
+          "subject": "Ideal Conversations",
+          "questions": [
+            "If you could receive the perfect compliment, what would you want to hear?",
+            "What question do you wish people asked you more often?"
+          ]
+        },
+        {
+          "subject": "Deep Talks",
+          "questions": [
+            "What theory about life do you believe in most deeply?",
+            "What subject would you like to talk about more?"
+          ]
+        },
+        {
+          "subject": "Energy",
+          "questions": [
+            "What's your main source of energy right now in your life?",
+            "What recently motivated you to change something in your life?"
+          ]
+        },
+        {
+          "subject": "Pet Peeves",
+          "questions": [
+            "What phrase, if you hear it, immediately drives you up the wall?",
+            "What's something totally normal or great that secretly drives you crazy?"
+          ]
+        },
+        {
+          "subject": "Exaggerations",
+          "questions": [
+            "What topic do you go overboard on?",
+            "What do you exaggerate about yourself?"
+          ]
+        },
+        {
+          "subject": "Defining Experiences",
+          "questions": [
+            "What's the craziest adventure or experience you've ever lived?",
+            "What difficult experience most changed your vision of the world?"
+          ]
+        },
+        {
+          "subject": "Mess-Ups",
+          "questions": [
+            "What's your most recent big slip-up?",
+            "What's your worst decision in the last 3 years?"
+          ]
+        },
+        {
+          "subject": "Legacy",
+          "questions": [
+            "What one thing would you want people to remember about you after you're gone?",
+            "If you had to leave a letter for your loved ones to open in 30 years, what would the first word be?"
+          ]
+        },
+        {
+          "subject": "Death & Legacy",
+          "questions": [
+            "If you were writing your own epitaph, what would you say in one sentence?",
+            "What would be your most likely cause of death, outside of natural causes?"
+          ]
+        },
+        {
+          "subject": "Life Itself",
+          "questions": [
+            "If you had to explain to a 10-year-old what truly matters in life, what would you say?",
+            "Summarize human life in one sentence."
+          ]
+        },
+        {
+          "subject": "Life Lessons",
+          "questions": [
+            "What mistake did you make multiple times before you truly learned from it?",
+            "If you could send a message to yourself 10 years ago, what would you say in one sentence?"
+          ]
+        },
+        {
+          "subject": "Freedom",
+          "questions": [
+            "If you could disappear from your current life for 6 months without anyone knowing where you are, what would you do?",
+            "If you had to restart your life at 18 keeping only your current memories, what would you do differently?"
+          ]
+        },
+        {
+          "subject": "Bad Habits",
+          "questions": [
+            "What's the most immature thing you still do?",
+            "What's been your worst addiction?"
+          ]
+        },
+        {
+          "subject": "Fashion",
+          "questions": [
+            "What outfit makes you feel 100% yourself?",
+            "Who has the most style, in your opinion, and that you'd love to look like?"
+          ]
+        },
+        {
+          "subject": "Lies & Myths",
+          "questions": [
+            "What's your most recent big lie?",
+            "What's been your worst excuse for canceling plans?"
+          ]
+        },
+        {
+          "subject": "Negotiation",
+          "questions": [
+            "What are you best at negotiating for?",
+            "What's the last time you successfully convinced someone to change their mind?"
+          ]
+        },
+        {
+          "subject": "Philosophy",
+          "questions": [
+            "What quote or phrase motivates you the most?",
+            "What philosophy resonates with you the most?"
+          ]
+        },
+        {
+          "subject": "Existential Questions",
+          "questions": [
+            "If you could have the answer to one question about the universe, what would it be?",
+            "If you had to reduce the meaning of your life to one sentence, what would it be?"
+          ]
+        },
+        {
+          "subject": "Relationship with Time",
+          "questions": [
+            "Do you live more in the past, the present, or the future?",
+            "What period of your life did time pass the fastest, and why?"
+          ]
+        },
+        {
+          "subject": "Reflections",
+          "questions": [
+            "Do you have a secret or special place where you like to go to think?",
+            "What past relationship taught you the most about what you truly deserve?"
+          ]
+        },
+        {
+          "subject": "Others' Opinions",
+          "questions": [
+            "What do you do purely because you want to, without needing to justify it to anyone?",
+            "What have you done out of fear of judgment that you now regret?"
+          ]
+        },
+        {
+          "subject": "Regrets",
+          "questions": [
+            "What's your biggest regret in life?",
+            "If you could erase one memory from your mind, which one would it be?"
+          ]
+        },
+        {
+          "subject": "Relationships",
+          "questions": [
+            "What boundary took you the longest to learn to set in your relationships?",
+            "How do you detect that a relationship (friendship or romantic) is no longer good for you?"
+          ]
+        },
+        {
+          "subject": "Religion",
+          "questions": [
+            "If you had to choose or change your religion, which would you choose?",
+            "Do you have a spiritual ritual or practice, even a discreet one, that you keep?"
+          ]
+        },
+        {
+          "subject": "Unexpected Encounters",
+          "questions": [
+            "What's the most unexpected encounter you've ever had?",
+            "What's the most memorable conversation you've ever had with a stranger?"
+          ]
+        },
+        {
+          "subject": "Spirituality",
+          "questions": [
+            "What moment in your life did you feel something truly 'mysterious' or inexplicable?",
+            "What's the strangest phenomenon you've ever witnessed?"
+          ]
+        },
+        {
+          "subject": "You & Time",
+          "questions": [
+            "If you could choose to know everything about your future or nothing at all, which do you prefer?",
+            "If you were a day of the week, which one would you be and why?"
+          ]
+        },
+        {
+          "subject": "Life Trajectory",
+          "questions": [
+            "What encounter has most changed your life's trajectory?",
+            "Where will you be in 10 years? In 3 words."
+          ]
+        },
+        {
+          "subject": "Hard Truths",
+          "questions": [
+            "What truth do you keep to yourself because you know it would hurt to hear?",
+            "What truth about yourself do you struggle to admit to yourself?"
+          ]
+        },
+        {
+          "subject": "Random",
+          "questions": [
+            "What's the most bizarre thing you do when you're alone?",
+            "What's your biggest everyday laziness?"
+          ]
+        }
+      ]
+    }
+  }
+}

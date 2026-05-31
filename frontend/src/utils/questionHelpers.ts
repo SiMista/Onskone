@@ -1,21 +1,23 @@
 import { RoundPhase } from '@onskone/shared';
+import type { Dictionary } from '../i18n/dictionary';
 
 /**
  * Sous-titre affiché sous la QuestionCard selon la phase et le rôle.
- * Centralise le wording pour ne pas avoir à le retoucher dans 4 fichiers.
+ * Reçoit `t.phases` pour rester traduit, on évite ainsi un hook côté util.
  */
 export function getQuestionSubtitle(
+  phases: Dictionary['phases'],
   phase: RoundPhase,
   isLeader: boolean
 ): string {
   if (phase === RoundPhase.ANSWERING) {
-    return isLeader ? 'Question posée aux autres joueurs' : 'Question posée par';
+    return isLeader ? phases.answering.questionAskedToOthers : phases.answering.questionAskedBy;
   }
   if (phase === RoundPhase.SUBSTITUTE_SELECTION) {
-    return isLeader ? 'Choisis qui devra deviner ta réponse' : 'Question posée par';
+    return isLeader ? phases.substituteSelection.chooseGuesser : phases.answering.questionAskedBy;
   }
   if (phase === RoundPhase.SUBSTITUTE_ANSWERING) {
-    return 'Question posée par';
+    return phases.answering.questionAskedBy;
   }
   return '';
 }

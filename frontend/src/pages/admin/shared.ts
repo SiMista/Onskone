@@ -1,4 +1,12 @@
 import type { TicketStatus, TicketType } from '../../utils/ticketsApi';
+import { TICKET_CATEGORY_BY_VALUE } from '../../constants/ticketCategories';
+
+// Admin reste FR-only : libellés codés en dur ici (l'app publique passe par i18n).
+const TICKET_TYPE_LABELS_FR: Record<TicketType, string> = {
+  question_report: 'Question pourrie',
+  bug: 'Bug technique',
+  suggestion: 'Idée / suggestion',
+};
 
 // Studio-style shared classes
 export const CLUSTER = 'flex items-center gap-1.5 bg-black/30 border border-white/[0.06] rounded-lg px-2 py-1';
@@ -7,33 +15,44 @@ export const INPUT_CLS =
   'focus:outline-none focus:border-amber-400/60 hover:border-white/20 transition-colors ' +
   'placeholder:text-white/25';
 
-// Type -> accent color (palette tickets - distincte des decks)
-export const TYPE_META: Record<TicketType, { label: string; glyph: string; dot: string; chip: string; bar: string; ring: string }> = {
+interface TicketTypeStyle {
+  dot: string;
+  chip: string;
+  bar: string;
+  ring: string;
+}
+
+// Styles admin-only (palette tickets - distincte des decks). Le label/glyph
+// proviennent de la source centralisée pour rester aligné avec ReportModal.
+const TYPE_STYLES: Record<TicketType, TicketTypeStyle> = {
   bug: {
-    label: 'Bug',
-    glyph: '✖',
     dot: 'bg-rose-400',
     chip: 'bg-rose-500/10 border-rose-400/40 text-rose-100',
     bar: 'bg-rose-400/70',
     ring: 'ring-rose-300/30',
   },
   question_report: {
-    label: 'Question',
-    glyph: '?',
     dot: 'bg-cyan-400',
     chip: 'bg-cyan-500/10 border-cyan-400/40 text-cyan-100',
     bar: 'bg-cyan-400/70',
     ring: 'ring-cyan-300/30',
   },
   suggestion: {
-    label: 'Idée',
-    glyph: '✦',
     dot: 'bg-fuchsia-400',
     chip: 'bg-fuchsia-500/10 border-fuchsia-400/40 text-fuchsia-100',
     bar: 'bg-fuchsia-400/70',
     ring: 'ring-fuchsia-300/30',
   },
 };
+
+export type TicketTypeMeta = TicketTypeStyle & { label: string; glyph: string };
+
+export const TYPE_META: Record<TicketType, TicketTypeMeta> = (Object.keys(TYPE_STYLES) as TicketType[])
+  .reduce((acc, type) => {
+    const cat = TICKET_CATEGORY_BY_VALUE[type];
+    acc[type] = { ...TYPE_STYLES[type], label: TICKET_TYPE_LABELS_FR[type], glyph: cat.glyph };
+    return acc;
+  }, {} as Record<TicketType, TicketTypeMeta>);
 
 export const STATUS_META: Record<TicketStatus, { label: string; accent: string; bar: string; pill: string; dot: string; text: string }> = {
   new: {

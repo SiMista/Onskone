@@ -19,7 +19,7 @@ const AvatarSelector = ({ selectedAvatarId, onSelect }: AvatarSelectorProps) => 
   const avatarUrl = getAvatarUrl(selectedAvatarId);
 
   return (
-    <div className="flex items-center justify-center gap-4 mb-4">
+    <div className="flex items-center justify-center gap-4 mb-2 md:mb-4">
       {/* Flèche gauche */}
       <button
         onClick={handlePrevious}
@@ -29,8 +29,12 @@ const AvatarSelector = ({ selectedAvatarId, onSelect }: AvatarSelectorProps) => 
         ‹
       </button>
 
-      {/* Avatar */}
-      <div className="w-40 h-40 rounded-full bg-white border-3 border-primary overflow-hidden shadow-lg">
+      {/* Avatar - taille capée par la hauteur de viewport pour rester visible sur PC court,
+          avec un plancher en px pour ne jamais devenir illisible. */}
+      <div
+        className="rounded-full bg-white border-3 border-primary overflow-hidden shadow-lg shrink-0"
+        style={{ width: 'max(7rem, min(10rem, 22dvh))', height: 'max(7rem, min(10rem, 22dvh))' }}
+      >
         <img
           src={avatarUrl}
           alt={`Avatar ${selectedAvatarId + 1}`}

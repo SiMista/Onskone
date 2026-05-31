@@ -4,6 +4,7 @@ import RevealAvatar from './RevealAvatar';
 import stickmanShowPhone from '../assets/images/game/stickman-show-phone-cropped.png';
 import { RevealResult } from '@onskone/shared';
 import { isNoResponse, getDisplayText, answerCardBg } from '../utils/answerHelpers';
+import { useLocale } from '../i18n';
 
 interface RevealedAnswerCardProps {
   /** Résultat à afficher (l'auteur réel est dévoilé via `revealed`). */
@@ -32,17 +33,11 @@ interface RevealedAnswerCardProps {
   waitingFor?: { name: string; avatarId: number };
 }
 
-const defaultHeader = (
-  <p className="text-gray-900 text-sm tablet:text-xl font-semibold text-center phone-landscape:text-xl shrink-0 -translate-x-4 tablet:-translate-x-8 phone-landscape:-translate-x-1">
-    Montre ton écran à tout le monde !
-  </p>
-);
-
 /**
  * Bloc "réponse révélée" partagé entre la vue joueur (sa propre attribution)
  * et la vue pilier "deviné par lui-même" en mode "Devine ma réponse".
  *
- * Layout : header → row (bulle avatar "Écrit par" + carte avec stickman) → footer.
+ * Layout : header -> row (bulle avatar "Écrit par" + carte avec stickman) -> footer.
  *
  * Évite ~120 lignes de duplication JSX dans RevealPhase.tsx.
  */
@@ -53,12 +48,21 @@ const RevealedAnswerCard: React.FC<RevealedAnswerCardProps> = ({
   cardClassName = '',
   swapAnimation = false,
   rowKey,
-  header = defaultHeader,
+  header,
   footer,
   showStickman = true,
   showBubble = true,
   waitingFor,
 }) => {
+  const { t } = useLocale();
+  const resolvedHeader =
+    header === undefined ? (
+      <p className="text-gray-900 text-sm tablet:text-xl font-semibold text-center phone-landscape:text-xl shrink-0 -translate-x-4 tablet:-translate-x-8 phone-landscape:-translate-x-1">
+        {t.phases.reveal.showYourScreen}
+      </p>
+    ) : (
+      header
+    );
   return (
     <div className="flex flex-col h-full p-2 tablet:p-4 max-w-3xl mx-auto landscape:max-w-5xl w-full">
       {/* En paysage phone, on prend la pleine hauteur (flex-1 min-h-0) pour que
@@ -66,7 +70,7 @@ const RevealedAnswerCard: React.FC<RevealedAnswerCardProps> = ({
           comme avant - le wrapper sort en hauteur naturelle. */}
       <div className="phone-landscape:flex-1 phone-landscape:min-h-0 flex flex-col items-center gap-3 tablet:gap-4 pt-6 tablet:pt-12 pb-3 px-2 phone-landscape:gap-2 phone-landscape:pt-2 phone-landscape:pb-2">
         <div className="shrink-0 w-full flex justify-center">
-          {header}
+          {resolvedHeader}
         </div>
 
         <div
@@ -78,7 +82,7 @@ const RevealedAnswerCard: React.FC<RevealedAnswerCardProps> = ({
             <div className="shrink-0 self-center w-16 tablet:w-24 phone-landscape:w-14 h-0 relative z-20">
               <div className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 flex flex-col items-center gap-1 tablet:gap-1.5 phone-landscape:gap-0.5">
                 <p className="text-gray-700 text-[10px] tablet:text-xs font-semibold uppercase tracking-wide whitespace-nowrap">
-                  Écrit par
+                  {t.phases.reveal.writtenBy}
                 </p>
                 <RevealAvatar
                   avatarId={result.playerAvatarId ?? 0}

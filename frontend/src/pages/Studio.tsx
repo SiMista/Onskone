@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { GameMode } from '@onskone/shared';
 import { AVATARS } from '../constants/game';
 import { purgeStudioSlot } from '../utils/studioStorage';
 import {
@@ -30,6 +31,7 @@ const Studio = () => {
   const [layout, setLayout] = useState<Layout>(saved?.layout ?? 'cols3');
   const [zoom, setZoom] = useState<number>(saved?.zoom ?? 0.8);
   const [debugTimers, setDebugTimers] = useState<boolean>(saved?.debugTimers ?? true);
+  const [gameMode, setGameMode] = useState<GameMode>(saved?.gameMode ?? 'local');
 
   const [view, setView] = useState<'rigging' | 'gallery'>('rigging');
   const [running, setRunning] = useState(false);
@@ -45,9 +47,9 @@ const Studio = () => {
 
   useEffect(() => {
     try {
-      localStorage.setItem('onskone:studio:config:v3', JSON.stringify({ slots, layout, zoom, debugTimers }));
+      localStorage.setItem('onskone:studio:config:v3', JSON.stringify({ slots, layout, zoom, debugTimers, gameMode }));
     } catch { /* silent */ }
-  }, [slots, layout, zoom, debugTimers]);
+  }, [slots, layout, zoom, debugTimers, gameMode]);
 
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
@@ -218,6 +220,7 @@ const Studio = () => {
       if (!isRunning) return `${base}/?${params.toString()}`;
       if (index === 0) {
         params.set('autoCreate', '1');
+        params.set('studioGameMode', gameMode);
         return `${base}/?${params.toString()}`;
       }
       if (!code) return null;
@@ -225,7 +228,7 @@ const Studio = () => {
       params.set('autoJoin', '1');
       return `${base}/?${params.toString()}`;
     },
-    [debugTimers]
+    [debugTimers, gameMode]
   );
 
   const cols = useMemo(() => {
@@ -270,6 +273,8 @@ const Studio = () => {
         setZoom={setZoom}
         debugTimers={debugTimers}
         setDebugTimers={setDebugTimers}
+        gameMode={gameMode}
+        setGameMode={setGameMode}
         running={running}
         allBots={allBots}
         burstCount={burstCount}

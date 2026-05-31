@@ -11,6 +11,7 @@ import { IPlayer, RoundPhase, GameCard, GameMode, RevealResult } from '@onskone/
 import { isNoResponse } from '../utils/answerHelpers';
 import { useStartTimerDelayed } from '../hooks';
 import ScrollFade from './ScrollFade';
+import { useLocale } from '../i18n';
 
 interface Answer {
   id: string;
@@ -31,6 +32,7 @@ interface GuessingPhaseProps {
 }
 
 const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, leader, currentPlayerId, question, card, initialGuesses, playerCount, roundNumber, gameMode }) => {
+  const { t } = useLocale();
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [players, setPlayers] = useState<IPlayer[]>([]);
   const [guesses, setGuesses] = useState<Record<string, string>>(initialGuesses || {});
@@ -281,7 +283,7 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
           <Icon icon="fluent-emoji-flat:hourglass-not-done" className="animate-spin text-4xl md:text-6xl mb-4" width="1em" height="1em" aria-hidden />
-          <p className="text-base md:text-xl text-gray-800">Chargement des réponses...</p>
+          <p className="text-base md:text-xl text-gray-800">{t.phases.guessing.loading}</p>
         </div>
       </div>
     );
@@ -321,11 +323,11 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
           correct={false}
           showBubble={false}
           cardClassName={myAssignedAnswer ? 'animate-card-receive' : ''}
-          waitingFor={myAssignedAnswer ? undefined : { name: leader?.name ?? 'le pilier', avatarId: leader?.avatarId ?? 0 }}
+          waitingFor={myAssignedAnswer ? undefined : { name: leader?.name ?? t.phases.guessing.leaderFallback, avatarId: leader?.avatarId ?? 0 }}
           footer={
             <p className="landscape:hidden flex items-center gap-1.5 text-xs text-gray-500/80 mt-1">
               <Icon icon="mdi:phone-rotate-landscape" width={14} height={14} aria-hidden />
-              Tourne ton téléphone pour un affichage plus large
+              {t.phases.guessing.rotateForLandscape}
             </p>
           }
         />
@@ -339,13 +341,13 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
         <QuestionCard question={question} card={card} variant="compact" />
         {isLeader ? (
           <h2 className="text-sm md:text-lg font-bold text-gray-800 mt-2 md:mt-3 mb-1 md:mb-2 text-center">
-            <span className="tablet:hidden">Tape une réponse puis un joueur</span>
-            <span className="hidden tablet:inline">Glisse chaque réponse vers son auteur présumé</span>
+            <span className="tablet:hidden">{t.phases.guessing.instructionMobile}</span>
+            <span className="hidden tablet:inline">{t.phases.guessing.instructionDesktop}</span>
           </h2>
         ) : (
           <div className="flex flex-col items-center gap-1 mt-1.5">
             <PlayerBadge player={leader} size="sm" />
-            <p className="text-xs text-center text-gray-500 italic">assigne les réponses…</p>
+            <p className="text-xs text-center text-gray-500 italic">{t.phases.guessing.assignWaiting}</p>
           </div>
         )}
         <HourglassTimer
@@ -365,7 +367,7 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
             cartes joueurs. En landscape mobile, la liste passe en 2 colonnes
             pour rester lisible quand le tel est tourné. */}
         <div className="relative bg-gray-100 rounded-lg p-2 md:p-3 border-2 border-gray-300 flex flex-col min-h-0 max-h-[35dvh] tablet:max-h-none tablet:flex-1 overflow-hidden">
-          <h3 className="shrink-0 text-sm md:text-base font-bold text-gray-800 mb-1.5 md:mb-2 m-0 uppercase tracking-wider">Réponses</h3>
+          <h3 className="shrink-0 text-sm md:text-base font-bold text-gray-800 mb-1.5 md:mb-2 m-0 uppercase tracking-wider">{t.phases.guessing.answers}</h3>
           <div ref={answersScrollRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain no-scrollbar space-y-1.5 md:space-y-2 landscape-2col pr-1 md:pr-2">
             {unassignedAnswers.map((answer, i) => {
               const noResponse = isNoResponse(answer.text);
@@ -399,7 +401,7 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
             })}
             {unassignedAnswers.length === 0 && (
               <p className="text-gray-500 text-center py-4 md:py-8 text-sm">
-                Toutes les réponses ont été attribuées
+                {t.phases.guessing.allAssigned}
               </p>
             )}
           </div>
@@ -466,7 +468,7 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
                                   handleRemoveGuess(answer.id);
                                 }}
                                 className="ml-1.5 md:ml-2 shrink-0 flex items-center justify-center group"
-                                aria-label="Retirer"
+                                aria-label={t.phases.guessing.removeAria}
                               >
                                 <svg
                                   width="22"
@@ -502,7 +504,7 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
                   ) : (
                     <div className="border-2 border-dashed border-gray-400 rounded-lg p-2 md:p-4 text-center bg-white h-full flex items-center justify-center min-h-[40px] md:min-h-[60px]">
                       <p className="text-gray-500 text-xs md:text-sm">
-                        {isLeader ? (selectedAnswerId ? 'Dépose ici' : 'Tape pour assigner') : '…'}
+                        {isLeader ? (selectedAnswerId ? t.phases.guessing.dropHere : t.phases.guessing.tapToAssign) : '…'}
                       </p>
                     </div>
                   )}
@@ -522,7 +524,7 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
         >
           {unassignedAnswers.length > 0 && (
             <p className="mb-2 text-xs md:text-sm font-medium text-gray-500">
-              Il reste {unassignedAnswers.length} réponse{unassignedAnswers.length > 1 ? 's' : ''} à attribuer
+              {t.phases.guessing.remainingCount(unassignedAnswers.length)}
             </p>
           )}
           <Button
@@ -531,7 +533,7 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
             onClick={handleSubmit}
             disabled={unassignedAnswers.length > 0}
           >
-            Valider mes choix
+            {t.phases.guessing.validate}
           </Button>
         </div>
       )}

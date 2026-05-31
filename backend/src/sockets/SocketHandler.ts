@@ -6,8 +6,8 @@ import { Player } from "../models/Player";
 import { Lobby } from "../models/Lobby";
 import { Round } from "../models/Round";
 import { Game } from "../models/Game";
-import type { ServerToClientEvents, ClientToServerEvents, IGame } from '@onskone/shared';
-import { GAME_CONSTANTS, RoundPhase } from '@onskone/shared';
+import type { ServerToClientEvents, ClientToServerEvents, IGame, ReconnectionData } from '@onskone/shared';
+import { GAME_CONSTANTS, RoundPhase, DEFAULT_LOCALE, isLocale } from '@onskone/shared';
 import { validatePlayerName, validateAnswer, validateLobbyCode, validatePlayerId, validateAvatarId, sanitizeInput } from '../utils/validation.js';
 import { rateLimiters } from '../utils/rateLimiter.js';
 import { shuffleArray } from '../utils/helpers.js';
@@ -112,6 +112,49 @@ export class SocketHandler {
                 correct: guessedPlayerId === playerId || corrections.includes(index)
             };
         });
+    }
+
+    /**
+     * Construit le payload `IGame` sérialisable envoyé aux clients
+     * (sans référence circulaire).
+     */
+    private serializeGame(lobby: Lobby): IGame {
+        const game = lobby.game!;
+        return {
+            lobby: {
+                code: lobby.code,
+                players: lobby.players,
+                selectedDecks: lobby.selectedDecks,
+                gameMode: lobby.gameMode,
+                guessMyAnswerMode: lobby.guessMyAnswerMode,
+                locale: lobby.locale,
+            },
+            currentRound: game.currentRound,
+            status: game.status,
+            rounds: game.rounds,
+        };
+    }
+
+    /**
+     * Broadcast l'état des decks/mode du lobby à toute la room (ou au socket si fourni).
+     */
+    private emitLobbyDecksState(
+        target: Socket<ClientToServerEvents, ServerToClientEvents> | null,
+        lobby: Lobby,
+    ): void {
+        const payload = {
+            catalog: GameManager.getDecksCatalog(lobby.locale),
+            catalogWithMeta: GameManager.getDecksCatalogWithMeta(lobby.locale),
+            selected: lobby.selectedDecks,
+            gameMode: lobby.gameMode,
+            guessMyAnswerMode: lobby.guessMyAnswerMode,
+            locale: lobby.locale,
+        };
+        if (target) {
+            target.emit('lobbyDecksState', payload);
+        } else {
+            this.io.to(lobby.code).emit('lobbyDecksState', payload);
+        }
     }
 
     private cancelDisconnectTimeout(lobbyCode: string, playerName: string): void {
@@ -414,18 +457,17 @@ export class SocketHandler {
 
                     const sanitizedName = sanitizeInput(data.playerName);
                     const avatarId = validateAvatarId(data.avatarId);
-                    const lobbyCode = LobbyManager.create();
+                    const locale = isLocale(data.locale) ? data.locale : DEFAULT_LOCALE;
+                    const lobbyCode = LobbyManager.create(locale);
                     const lobby = LobbyManager.getLobby(lobbyCode);
                     const hostPlayer = new Player(sanitizedName, socket.id, true, avatarId);
                     lobby?.addPlayer(hostPlayer);
+                    if (lobby && (data.gameMode === 'local' || data.gameMode === 'remote')) {
+                        lobby.gameMode = data.gameMode;
+                    }
                     socket.join(lobbyCode);
                     socket.emit('lobbyCreated', { lobbyCode });
-                    socket.emit('lobbyDecksState', {
-                        catalog: GameManager.getDecksCatalog(),
-                        selected: lobby!.selectedDecks,
-                        gameMode: lobby!.gameMode,
-                        guessMyAnswerMode: lobby!.guessMyAnswerMode,
-                    });
+                    this.emitLobbyDecksState(socket, lobby!);
                     logger.game.created(lobbyCode, sanitizedName);
                 } catch (error) {
                     logger.error('Error creating lobby', { error: (error as Error).message });
@@ -486,23 +528,12 @@ export class SocketHandler {
                         existingPlayerBySocket.isActive = true; // Marquer comme actif (rejouer)
                         socket.join(lobby.code);
                         socket.emit('joinedLobby', { player: existingPlayerBySocket });
-                        socket.emit('lobbyDecksState', {
-                            catalog: GameManager.getDecksCatalog(),
-                            selected: lobby.selectedDecks,
-                            gameMode: lobby.gameMode,
-                            guessMyAnswerMode: lobby.guessMyAnswerMode,
-                        });
+                        this.emitLobbyDecksState(socket, lobby);
                         this.io.to(lobby.code).emit('updatePlayersList', { players: lobby.players });
 
                         // Si une partie est en cours, envoyer gameStarted pour rediriger vers la page de jeu
                         if (lobby.game && lobby.game.status === 'IN_PROGRESS') {
-                            const gameData = {
-                                lobby: { code: lobby.code, players: lobby.players, selectedDecks: lobby.selectedDecks, gameMode: lobby.gameMode, guessMyAnswerMode: lobby.guessMyAnswerMode },
-                                currentRound: lobby.game.currentRound,
-                                status: lobby.game.status,
-                                rounds: lobby.game.rounds
-                            };
-                            socket.emit('gameStarted', { game: gameData });
+                            socket.emit('gameStarted', { game: this.serializeGame(lobby) });
                             logger.info(`Partie en cours détectée, envoi gameStarted à ${existingPlayerBySocket.name}`);
                         }
                         return;
@@ -541,23 +572,12 @@ export class SocketHandler {
 
                             socket.join(lobby.code);
                             socket.emit('joinedLobby', { player: existingPlayerByName });
-                            socket.emit('lobbyDecksState', {
-                                catalog: GameManager.getDecksCatalog(),
-                                selected: lobby.selectedDecks,
-                                gameMode: lobby.gameMode,
-                                guessMyAnswerMode: lobby.guessMyAnswerMode,
-                            });
+                            this.emitLobbyDecksState(socket, lobby);
                             this.io.to(lobby.code).emit('updatePlayersList', { players: lobby.players });
 
                             // Si une partie est en cours, envoyer gameStarted pour rediriger vers la page de jeu
                             if (lobby.game && lobby.game.status === 'IN_PROGRESS') {
-                                const gameData = {
-                                    lobby: { code: lobby.code, players: lobby.players, selectedDecks: lobby.selectedDecks, gameMode: lobby.gameMode, guessMyAnswerMode: lobby.guessMyAnswerMode },
-                                    currentRound: lobby.game.currentRound,
-                                    status: lobby.game.status,
-                                    rounds: lobby.game.rounds
-                                };
-                                socket.emit('gameStarted', { game: gameData });
+                                socket.emit('gameStarted', { game: this.serializeGame(lobby) });
                                 logger.info(`Partie en cours détectée, envoi gameStarted à ${existingPlayerByName.name}`);
                             }
                         } finally {
@@ -581,12 +601,7 @@ export class SocketHandler {
 
                     socket.join(lobby.code);
                     socket.emit('joinedLobby', { player: newPlayer });
-                    socket.emit('lobbyDecksState', {
-                        catalog: GameManager.getDecksCatalog(),
-                        selected: lobby.selectedDecks,
-                        gameMode: lobby.gameMode,
-                        guessMyAnswerMode: lobby.guessMyAnswerMode,
-                    });
+                    this.emitLobbyDecksState(socket, lobby);
                     this.io.to(lobby.code).emit('updatePlayersList', { players: lobby.players });
                     logger.info(`${sanitizedName} a rejoint le lobby ${lobby.code}`, { playerCount: lobby.players.length });
 
@@ -652,7 +667,7 @@ export class SocketHandler {
                         return;
                     }
 
-                    const sanitized = GameManager.sanitizeSelectedDecks(data.selected || {});
+                    const sanitized = GameManager.sanitizeSelectedDecks(data.selected || {}, lobby.locale);
                     const totalSelected = Object.values(sanitized).reduce((acc, arr) => acc + arr.length, 0);
                     if (totalSelected === 0) {
                         socket.emit('error', { message: 'Au moins un thème doit être sélectionné' });
@@ -662,60 +677,9 @@ export class SocketHandler {
                     lobby.selectedDecks = sanitized;
                     lobby.updateActivity();
 
-                    this.io.to(lobby.code).emit('lobbyDecksState', {
-                        catalog: GameManager.getDecksCatalog(),
-                        selected: lobby.selectedDecks,
-                        gameMode: lobby.gameMode,
-                        guessMyAnswerMode: lobby.guessMyAnswerMode,
-                    });
+                    this.emitLobbyDecksState(null, lobby);
                 } catch (error) {
                     logger.error('Error updating selected decks', { error: (error as Error).message });
-                    socket.emit('error', { message: (error as Error).message });
-                }
-            });
-
-            // Update Game Mode (host only)
-            socket.on('updateGameMode', (data) => {
-                try {
-                    if (!rateLimiters.lobbySettings.isAllowed(socket.id)) {
-                        socket.emit('error', { message: 'Trop de requêtes. Veuillez patienter.' });
-                        return;
-                    }
-
-                    const codeValidation = validateLobbyCode(data.lobbyCode);
-                    if (!codeValidation.isValid) {
-                        socket.emit('error', { message: codeValidation.error || 'Code invalide' });
-                        return;
-                    }
-
-                    const lobby = LobbyManager.getLobby(data.lobbyCode);
-                    if (!lobby) {
-                        socket.emit('error', { message: 'Salon introuvable' });
-                        return;
-                    }
-
-                    const host = lobby.players.find(p => p.isHost);
-                    if (!host || host.socketId !== socket.id) {
-                        socket.emit('error', { message: "Seul l'hôte peut modifier le mode de jeu" });
-                        return;
-                    }
-
-                    if (lobby.game && lobby.game.status === 'IN_PROGRESS') {
-                        socket.emit('error', { message: 'La partie est déjà en cours' });
-                        return;
-                    }
-
-                    lobby.gameMode = data.gameMode;
-                    lobby.updateActivity();
-
-                    this.io.to(lobby.code).emit('lobbyDecksState', {
-                        catalog: GameManager.getDecksCatalog(),
-                        selected: lobby.selectedDecks,
-                        gameMode: lobby.gameMode,
-                        guessMyAnswerMode: lobby.guessMyAnswerMode,
-                    });
-                } catch (error) {
-                    logger.error('Error updating game mode', { error: (error as Error).message });
                     socket.emit('error', { message: (error as Error).message });
                 }
             });
@@ -754,12 +718,7 @@ export class SocketHandler {
                     lobby.guessMyAnswerMode = !!data.guessMyAnswerMode;
                     lobby.updateActivity();
 
-                    this.io.to(lobby.code).emit('lobbyDecksState', {
-                        catalog: GameManager.getDecksCatalog(),
-                        selected: lobby.selectedDecks,
-                        gameMode: lobby.gameMode,
-                        guessMyAnswerMode: lobby.guessMyAnswerMode,
-                    });
+                    this.emitLobbyDecksState(null, lobby);
                     this.io.to(lobby.code).emit('guessMyAnswerModeUpdated', {
                         guessMyAnswerMode: lobby.guessMyAnswerMode,
                     });
@@ -1094,22 +1053,8 @@ export class SocketHandler {
                     // Démarrer le premier round automatiquement
                     game.nextRound();
 
-                    // Créer un objet sérialisable sans référence circulaire
-                    const gameData = {
-                        lobby: {
-                            code: lobby.code,
-                            players: lobby.players,
-                            selectedDecks: lobby.selectedDecks,
-                            gameMode: lobby.gameMode,
-                            guessMyAnswerMode: lobby.guessMyAnswerMode
-                        },
-                        currentRound: game.currentRound,
-                        status: game.status,
-                        rounds: game.rounds
-                    };
-
                     // Envoyer les événements aux clients
-                    this.io.to(data.lobbyCode).emit('gameStarted', { game: gameData });
+                    this.io.to(data.lobbyCode).emit('gameStarted', { game: this.serializeGame(lobby) });
                     if (game.currentRound) {
                         this.io.to(data.lobbyCode).emit('roundStarted', { round: game.currentRound });
                     }
@@ -1423,38 +1368,8 @@ export class SocketHandler {
                         }
                     }
 
-                    // Créer un objet sérialisable sans référence circulaire
-                    const gameData = {
-                        lobby: {
-                            code: lobby.code,
-                            players: lobby.players,
-                            selectedDecks: lobby.selectedDecks,
-                            gameMode: lobby.gameMode,
-                            guessMyAnswerMode: lobby.guessMyAnswerMode
-                        },
-                        currentRound: game.currentRound,
-                        status: game.status,
-                        rounds: game.rounds
-                    };
-
                     // Données de reconnexion pour restaurer l'état du joueur
-                    const reconnectionData: {
-                        answeredPlayerIds: string[];
-                        myAnswer?: string;
-                        currentGuesses?: Record<string, string>;
-                        relancesUsed?: number;
-                        revealResults?: Array<{
-                            playerId: string;
-                            playerName: string;
-                            playerAvatarId: number;
-                            answer: string;
-                            guessedPlayerId: string;
-                            guessedPlayerName: string;
-                            guessedPlayerAvatarId: number;
-                            correct: boolean;
-                        }>;
-                        revealedIndices?: number[];
-                    } = {
+                    const reconnectionData: ReconnectionData = {
                         answeredPlayerIds: game.currentRound ? Object.keys(game.currentRound.answers) : []
                     };
 
@@ -1468,11 +1383,6 @@ export class SocketHandler {
                         reconnectionData.currentGuesses = game.currentRound.currentGuesses;
                     }
 
-                    // Restaurer le nombre de relances utilisées pour QUESTION_SELECTION
-                    if (game.currentRound?.relancesUsed !== undefined) {
-                        reconnectionData.relancesUsed = game.currentRound.relancesUsed;
-                    }
-
                     // Restaurer les résultats pour la phase REVEAL
                     if (game.currentRound && game.currentRound.phase === RoundPhase.REVEAL) {
                         reconnectionData.revealResults = this.buildRevealResults(lobby, game.currentRound);
@@ -1480,7 +1390,7 @@ export class SocketHandler {
                     }
 
                     socket.emit('gameState', {
-                        game: gameData,
+                        game: this.serializeGame(lobby),
                         players: lobby.players,
                         leaderboard: game.getLeaderboard(),
                         reconnectionData

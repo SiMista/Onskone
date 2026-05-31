@@ -1,5 +1,6 @@
 import { LuX } from 'react-icons/lu';
 import Button from './Button';
+import { useLocale } from '../i18n';
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -18,10 +19,11 @@ const ConfirmModal = ({
   onConfirm,
   title,
   message,
-  confirmText = 'Confirmer',
-  cancelText = 'Annuler',
+  confirmText,
+  cancelText,
   confirmVariant = 'primary'
 }: ConfirmModalProps) => {
+  const { t } = useLocale();
   if (!isOpen) return null;
 
   return (
@@ -46,7 +48,7 @@ const ConfirmModal = ({
 
             <button
               onClick={onClose}
-              aria-label="Fermer"
+              aria-label={t.common.close}
               className="shrink-0 w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-900 active:scale-90 transition-all duration-200 cursor-pointer"
             >
               <LuX size={20} strokeWidth={2.5} />
@@ -64,7 +66,7 @@ const ConfirmModal = ({
           {/* Footer */}
           <div className="px-5 pb-5 pt-1 flex flex-row gap-3 justify-center">
             <Button
-              text={confirmText}
+              text={confirmText ?? t.common.confirm}
               variant={confirmVariant}
               size="sm"
               onClick={() => {
@@ -73,7 +75,7 @@ const ConfirmModal = ({
               }}
             />
             <Button
-              text={cancelText}
+              text={cancelText ?? t.common.cancel}
               variant="quit"
               size="sm"
               onClick={onClose}

@@ -9,6 +9,7 @@ import PlayerBadge from './PlayerBadge';
 import { GAME_CONFIG } from '../constants/game';
 import { IPlayer, RoundPhase, GameCard, GameMode } from '@onskone/shared';
 import { useStartTimerDelayed } from '../hooks';
+import { useLocale } from '../i18n';
 
 interface SubstituteAnsweringPhaseProps {
   lobbyCode: string;
@@ -31,6 +32,7 @@ const SubstituteAnsweringPhase: React.FC<SubstituteAnsweringPhaseProps> = ({
   substitutePlayerId,
   gameMode,
 }) => {
+  const { t } = useLocale();
   const leader = players.find(p => p.id === leaderId);
   const substitute = players.find(p => p.id === substitutePlayerId);
   const isPilier = currentPlayerId === leaderId;
@@ -86,15 +88,15 @@ const SubstituteAnsweringPhase: React.FC<SubstituteAnsweringPhaseProps> = ({
       {isSubstitute ? (
         <div className="flex-1 flex flex-col min-h-0">
           <div className="flex items-center justify-center flex-wrap gap-x-2 gap-y-3 mt-7 md:mt-9 mb-7 md:mb-9 text-sm md:text-base text-gray-800">
-            <span>Écris la réponse que</span>
+            <span>{t.phases.substituteAnswering.writePrefix}</span>
             <Avatar avatarId={leader?.avatarId ?? 0} name={leader?.name} size="sm" />
-            <span className="font-semibold text-gray-900">{leader?.name ?? 'le pilier'}</span>
-            <span>aurait donnée</span>
+            <span className="font-semibold text-gray-900">{leader?.name ?? t.phases.substituteAnswering.leaderFallback}</span>
+            <span>{t.phases.substituteAnswering.writeSuffix}</span>
           </div>
 
           {submitted ? (
             <div className="flex-1 flex items-center justify-center">
-              <p className="text-gray-700 italic">Réponse envoyée, en attente...</p>
+              <p className="text-gray-700 italic">{t.phases.substituteAnswering.sentWaiting}</p>
             </div>
           ) : (
             <>
@@ -102,7 +104,7 @@ const SubstituteAnsweringPhase: React.FC<SubstituteAnsweringPhaseProps> = ({
                 <textarea
                   value={answer}
                   onChange={(e) => setAnswer(e.target.value)}
-                  placeholder={`Écris ce que ${leader?.name ?? 'le pilier'} aurait répondu…`}
+                  placeholder={t.phases.substituteAnswering.placeholder(leader?.name ?? t.phases.substituteAnswering.leaderFallback)}
                   maxLength={maxLen}
                   autoFocus
                   onKeyDown={(e) => {
@@ -122,7 +124,7 @@ const SubstituteAnsweringPhase: React.FC<SubstituteAnsweringPhaseProps> = ({
                   onClick={handleSubmit}
                   disabled={!answer.trim()}
                 >
-                  Envoyer
+                  {t.phases.substituteAnswering.send}
                 </Button>
               </div>
             </>
@@ -130,25 +132,25 @@ const SubstituteAnsweringPhase: React.FC<SubstituteAnsweringPhaseProps> = ({
         </div>
       ) : isPilier ? (
         <div className="flex-1 flex flex-col items-center px-3 pt-3 md:pt-16">
-          <PlayerBadge player={substitute} fallbackName="Le substitut" />
+          <PlayerBadge player={substitute} fallbackName={t.phases.substituteAnswering.substituteFallback} />
           <p className="mt-1 md:mt-3 text-center text-base md:text-lg text-gray-800">
-            écrit la réponse que tu aurais donnée...
+            {t.phases.substituteAnswering.pilierWaiting}
           </p>
           <p className="mt-6 md:mt-8 text-center text-xs md:text-sm text-gray-500 italic">
-            Tu devras ensuite deviner ce qu'il a écrit pour toi.
+            {t.phases.substituteAnswering.thenGuess}
           </p>
         </div>
       ) : (
         <div className="flex-1 flex flex-col items-center justify-center gap-6 md:gap-8 px-3">
           <div className="flex items-center justify-center flex-wrap gap-x-3 gap-y-4 mt-6 md:mt-8">
-            <PlayerBadge player={substitute} fallbackName="Le substitut" size="sm" />
-            <span className="text-sm md:text-base text-gray-800 italic">écrit la réponse de</span>
-            <PlayerBadge player={leader} fallbackName="le pilier" size="sm" />
+            <PlayerBadge player={substitute} fallbackName={t.phases.substituteAnswering.substituteFallback} size="sm" />
+            <span className="text-sm md:text-base text-gray-800 italic">{t.phases.substituteAnswering.writingAnswerOf}</span>
+            <PlayerBadge player={leader} fallbackName={t.phases.substituteAnswering.leaderFallback} size="sm" />
           </div>
           <p className="text-center text-sm text-gray-600 italic">
             {gameMode === 'remote'
-              ? 'Envoie lui des messages privés pour l\'aider à répondre'
-              : 'Chuchote-lui dans l\'oreille et aide-le à répondre'}
+              ? t.phases.substituteAnswering.remoteHelp
+              : t.phases.substituteAnswering.localHelp}
           </p>
         </div>
       )}

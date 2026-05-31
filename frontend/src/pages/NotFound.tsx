@@ -4,9 +4,11 @@ import Logo from '../components/Logo';
 import Frame from '../components/Frame';
 import Button from '../components/Button';
 import Footer from '../components/Footer';
+import { useLocale } from '../i18n';
 
 const NotFound = () => {
   const navigate = useNavigate();
+  const { t } = useLocale();
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
@@ -30,14 +32,14 @@ const NotFound = () => {
             style={{ animationDelay: '320ms' }}
           >
             <Icon icon="fluent-emoji-flat:thinking-face" width={32} height={32} aria-hidden />
-            <h2 className="text-xl md:text-2xl font-display m-0">Heu... cette page existe pas</h2>
+            <h2 className="text-xl md:text-2xl font-display m-0">{t.notFound.title}</h2>
           </div>
 
           <p
             className="text-base md:text-lg text-gray-700 max-w-md animate-step-drop"
             style={{ animationDelay: '500ms' }}
           >
-            T'as dû te tromper d'adresse, ou le lien est cassé. Pas de panique, on te ramène à la maison !
+            {t.notFound.body}
           </p>
 
           <div
@@ -45,7 +47,7 @@ const NotFound = () => {
             style={{ animationDelay: '700ms' }}
           >
             <Button
-              text="Retour à l'accueil"
+              text={t.notFound.backHome}
               variant="primary"
               size="lg"
               hero
