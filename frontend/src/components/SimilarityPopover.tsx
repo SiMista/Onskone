@@ -1,4 +1,5 @@
 import Button from './Button';
+import { useLocale } from '../i18n';
 
 interface SimilarityPopoverProps {
   guessedPlayerName: string;
@@ -15,6 +16,7 @@ const SimilarityPopover: React.FC<SimilarityPopoverProps> = ({
   onConfirm,
   onDismiss,
 }) => {
+  const { t } = useLocale();
   return (
     <div className="flex justify-center mt-1.5 md:mt-2 animate-popover-bounce">
       <div className="relative bg-white rounded-lg border-2 md:border-[3px] border-black shadow-[0_4px_12px_rgba(0,0,0,0.15)] px-3 py-2 md:py-2.5 w-56 md:w-64">
@@ -23,19 +25,23 @@ const SimilarityPopover: React.FC<SimilarityPopoverProps> = ({
         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-[-5px] w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[6px] border-b-white" />
 
         <p className="text-xs md:text-sm text-gray-800 text-center font-semibold mb-2">
-          <span className="text-brand-500">{playerName}</span> a la même réponse que <span className="text-brand-500">{guessedPlayerName}</span>, c'est la même ?
+          {t.phases.similarity.promptPrefix}
+          <span className="text-brand-500">{playerName}</span>
+          {' '}{t.phases.similarity.promptMiddle}{' '}
+          <span className="text-brand-500">{guessedPlayerName}</span>
+          {t.phases.similarity.promptSuffix}
         </p>
 
         {isLeader ? (
           <div className="flex justify-center gap-2">
             <Button
-              text="Oui"
+              text={t.phases.similarity.yes}
               variant="success"
               size="sm"
               onClick={onConfirm}
             />
             <Button
-              text="Non"
+              text={t.phases.similarity.no}
               variant="quit"
               size="sm"
               onClick={onDismiss}
@@ -43,7 +49,7 @@ const SimilarityPopover: React.FC<SimilarityPopoverProps> = ({
           </div>
         ) : (
           <p className="text-[10px] md:text-xs text-gray-400 text-center italic">
-            En attente du pilier...
+            {t.phases.similarity.waitingLeader}
           </p>
         )}
       </div>

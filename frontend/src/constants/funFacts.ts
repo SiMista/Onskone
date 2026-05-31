@@ -1,36 +1,19 @@
 /**
- * Faits insolites affichés pendant les phases d'attente
- * Ajoutez vos propres faits rigolos ici !
+ * Helpers de sélection aléatoire de fun fact. Le tableau lui-même vit dans le
+ * dictionnaire i18n (t.funFacts) - l'appelant passe le tableau au moment de
+ * l'utilisation.
  */
-export const FUN_FACTS = [
-  "Le jour de sa naissance, la première phrase prononcée par Squeezie a été : 'Est-ce que c'est bon pour vous ?'",
-  "Au casino, tu peux remporter 4000 fois ta mise, mais tu ne peux perdre qu’1 fois ta mise, donc mise tout la prochaine fois ;)",
-  "Un joueur de League of Legends se lave en moyenne une fois par semaine",
-  "Il est statistiquement plus sûr de parier sur un but de Kylian Mbappé que sur un but de l’arbitre.",
-  "Aller à la salle de sport régulièrement confère en plus du gain musculaire, une odeur corporelle nauséabonde",
-  "Ne pas se brosser les dents entraîne systématiquement une haleine de dragon",
-  "Manger du KFC tous les jours augmente fortement tes dépenses en papier toilette",
-  "Celui qui s'endort avec les fesses qui grattent, se réveille avec les doigts qui puent",
-  "Si dans une musique de rap, tu entends 'numéro 10 comme ...', ce rappeur est forcément nul",
-  "4 hommes sur 5 ne comprennent pas la douleur subie par les femmes au quotidien (je suis le 5ème)"
-];
 
-/**
- * Retourne un fait aléatoire
- */
-export const getRandomFunFact = (): string => {
-  return FUN_FACTS[Math.floor(Math.random() * FUN_FACTS.length)];
+export const getRandomFunFact = (facts: readonly string[]): string => {
+  if (facts.length === 0) return '';
+  return facts[Math.floor(Math.random() * facts.length)];
 };
 
-/**
- * Retourne un fait aléatoire différent du précédent
- */
-export const getNextFunFact = (currentFact: string): string => {
-  if (FUN_FACTS.length <= 1) return FUN_FACTS[0] || "";
-
-  let newFact = currentFact;
-  while (newFact === currentFact) {
-    newFact = FUN_FACTS[Math.floor(Math.random() * FUN_FACTS.length)];
+export const getNextFunFact = (facts: readonly string[], currentFact: string): string => {
+  if (facts.length <= 1) return facts[0] || '';
+  let next = currentFact;
+  while (next === currentFact) {
+    next = facts[Math.floor(Math.random() * facts.length)];
   }
-  return newFact;
+  return next;
 };

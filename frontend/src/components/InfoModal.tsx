@@ -1,6 +1,7 @@
 import { ReactNode, useRef } from 'react';
 import { LuX } from 'react-icons/lu';
 import ScrollFade from './ScrollFade';
+import { useLocale } from '../i18n';
 
 interface InfoModalProps {
   isOpen: boolean;
@@ -24,6 +25,7 @@ const InfoModal = ({
   disableScrollFade = false,
 }: InfoModalProps) => {
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const { t } = useLocale();
 
   if (!isOpen) return null;
 
@@ -71,7 +73,7 @@ const InfoModal = ({
             {/* Bouton X discret */}
             <button
               onClick={onClose}
-              aria-label="Fermer"
+              aria-label={t.common.close}
               className="shrink-0 w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-900 active:scale-90 transition-all duration-200 cursor-pointer"
             >
               <LuX size={20} strokeWidth={2.5} />

@@ -9,6 +9,11 @@
    Sert à compacter les vues "montre ton écran" quand le joueur tourne son tel. */
 @custom-variant phone-landscape (@media (orientation: landscape) and (max-height: 599px));
 
+/* Variant "PC large mais peu haut" : largeur desktop + viewport court.
+   Cible 1440x600, 1280x720, MacBook 13" avec dock. Sert à compacter
+   paddings, marges et tailles fixes qui écrasent un viewport bas. */
+@custom-variant desktop-short (@media (min-width: 768px) and (max-height: 760px));
+
 @theme {
   --font-sans: 'Nunito', sans-serif;
   --font-display: 'Fredoka', 'Nunito', sans-serif;

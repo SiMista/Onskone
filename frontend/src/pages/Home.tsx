@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import socket from '../utils/socket';
 import Logo from '../components/Logo';
 import Frame from '../components/Frame';
@@ -8,12 +8,17 @@ import PseudoPlate from '../components/PseudoPlate';
 import Footer from '../components/Footer';
 import AvatarSelector from '../components/AvatarSelector';
 import InfoModal from '../components/InfoModal';
+import GameModeModal from '../components/GameModeModal';
 import HowToPlayCarousel from '../components/HowToPlayCarousel';
 import HowToPlayButton from '../components/HowToPlayButton';
+import LanguageSwitcher from '../components/LanguageSwitcher';
+import { useLocale } from '../i18n';
 import { useToast } from '../components/Toast';
+import type { Locale } from '@onskone/shared';
 import BackButton from '../components/BackButton';
 import { Icon } from '@iconify/react';
-import { useSocketEvent, useQueryParams } from '../hooks';
+import { useSocketEvent } from '../hooks';
+import { GameMode } from '@onskone/shared';
 import { GAME_CONFIG, AVATARS } from '../constants/game';
 import {
   getStats,
@@ -24,6 +29,7 @@ import {
 } from '../utils/playerStats';
 
 const Home = () => {
+  const { locale, t } = useLocale();
   // Pré-remplit depuis le profil persistant (lazy init -> 1 lecture localStorage).
   const initialStats = (() => {
     try { return getStats(); } catch { return null; }
@@ -36,6 +42,7 @@ const Home = () => {
   );
   const [isInfoOpen, setIsInfoOpen] = useState(false);
   const [isStatsOpen, setIsStatsOpen] = useState(false);
+  const [isGameModeOpen, setIsGameModeOpen] = useState(false);
   const [unseenAchievementIds, setUnseenAchievementIds] = useState<string[]>(() => {
     try { return getUnseenAchievementIds(); } catch { return []; }
   });
@@ -43,15 +50,15 @@ const Home = () => {
   const [highlightedAchievementIds, setHighlightedAchievementIds] = useState<Set<string>>(new Set());
   const [hostName, setHostName] = useState<string | null>(null);
   const [lobbyExists, setLobbyExists] = useState<boolean | null>(null);
-  const queryParams = useQueryParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const showToast = useToast();
 
-  const lobbyCode = queryParams.get('lobbyCode');
-  const urlPlayerName = queryParams.get('playerName');
-  const urlAvatarId = queryParams.get('avatarId');
-  const autoCreate = queryParams.get('autoCreate') === '1';
-  const autoJoin = queryParams.get('autoJoin') === '1';
+  const lobbyCode = searchParams.get('lobbyCode');
+  const urlPlayerName = searchParams.get('playerName');
+  const urlAvatarId = searchParams.get('avatarId');
+  const autoCreate = searchParams.get('autoCreate') === '1';
+  const autoJoin = searchParams.get('autoJoin') === '1';
 
   // Studio: pre-fill identity from URL params so iframes don't need user input.
   useEffect(() => {
@@ -78,8 +85,10 @@ const Home = () => {
     const name = urlPlayerName || playerName;
     if (!name?.trim()) return;
     autoFiredRef.current = true;
-    socket.emit('createLobby', { playerName: name, avatarId });
-  }, [autoCreate, lobbyCode, urlPlayerName, playerName, avatarId]);
+    const studioGameMode = searchParams.get('studioGameMode');
+    const mode: GameMode = studioGameMode === 'remote' ? 'remote' : 'local';
+    socket.emit('createLobby', { playerName: name, avatarId, gameMode: mode, locale });
+  }, [autoCreate, lobbyCode, urlPlayerName, playerName, avatarId, searchParams, locale]);
 
   // Studio: auto-join existing lobby (slot 1+).
   useEffect(() => {
@@ -93,25 +102,30 @@ const Home = () => {
 
   const createLobby = useCallback(() => {
     if (!playerName.trim()) {
-      showToast('Entre ton pseudo avant de créer un salon', 'warning');
+      showToast(t.home.toasts.enterPseudoCreate, 'warning');
       return;
     }
+    setIsGameModeOpen(true);
+  }, [playerName, showToast, t]);
+
+  const handleGameModeSelected = useCallback((mode: GameMode, deckLocale: Locale) => {
+    setIsGameModeOpen(false);
     rememberIdentity(playerName, avatarId);
-    socket.emit('createLobby', { playerName, avatarId });
-  }, [playerName, avatarId, showToast]);
+    socket.emit('createLobby', { playerName, avatarId, gameMode: mode, locale: deckLocale });
+  }, [playerName, avatarId]);
 
   const joinLobby = useCallback(() => {
     if (!playerName.trim()) {
-      showToast('Entre ton pseudo avant de rejoindre un salon', 'warning');
+      showToast(t.home.toasts.enterPseudoJoin, 'warning');
       return;
     }
     if (!lobbyCode) {
-      showToast('Code de salon invalide', 'error');
+      showToast(t.home.toasts.invalidLobbyCode, 'error');
       return;
     }
     rememberIdentity(playerName, avatarId);
     socket.emit('checkPlayerName', { lobbyCode, playerName });
-  }, [lobbyCode, playerName, avatarId, showToast]);
+  }, [lobbyCode, playerName, avatarId, showToast, t]);
 
   const handleLobbyCreated = useCallback((data: { lobbyCode: string }) => {
     // Studio: notify parent window that the lobby exists so siblings can auto-join.
@@ -125,8 +139,8 @@ const Home = () => {
   }, [navigate, playerName, urlPlayerName, avatarId]);
 
   const handlePlayerNameExists = useCallback((data: { playerName: string }) => {
-    showToast(`Le pseudo "${data.playerName}" est déjà pris dans ce salon`, 'warning');
-  }, [showToast]);
+    showToast(t.home.toasts.pseudoTaken(data.playerName), 'warning');
+  }, [showToast, t]);
 
   const handlePlayerNameValid = useCallback(() => {
     const name = urlPlayerName || playerName;
@@ -172,22 +186,32 @@ const Home = () => {
   useSocketEvent('error', handleError, [handleError]);
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="relative h-full flex flex-col overflow-hidden">
+      <div className="absolute top-3 right-3 z-30 safe-pt">
+        <LanguageSwitcher />
+      </div>
+
       {/* Modal d'information */}
       <InfoModal
         isOpen={isInfoOpen}
         onClose={() => setIsInfoOpen(false)}
-        title="Comment jouer ?"
+        title={t.home.howToPlayHeading}
         variant="comic"
         disableScrollFade
       >
         <HowToPlayCarousel />
       </InfoModal>
 
+      <GameModeModal
+        isOpen={isGameModeOpen}
+        onClose={() => setIsGameModeOpen(false)}
+        onSelect={handleGameModeSelected}
+      />
+
       <InfoModal
         isOpen={isStatsOpen}
         onClose={closeStats}
-        title="Mes succès"
+        title={t.home.achievementsTitle}
       >
         {(() => {
           const stats = getStats();
@@ -199,11 +223,11 @@ const Home = () => {
               <div className="grid grid-cols-2 gap-2 text-center mb-1">
                 <div className="bg-cream-player border-2 border-black rounded-xl p-2 stack-shadow-sm">
                   <div className="text-lg font-display font-bold tabular-nums leading-none">{stats.gamesPlayed}</div>
-                  <div className="text-[11px] font-display font-semibold text-gray-600 mt-1">Parties jouées</div>
+                  <div className="text-[11px] font-display font-semibold text-gray-600 mt-1">{t.home.stats.gamesPlayed}</div>
                 </div>
                 <div className="bg-cream-player border-2 border-black rounded-xl p-2 stack-shadow-sm">
                   <div className="text-lg font-display font-bold tabular-nums leading-none">{stats.totalPoints}</div>
-                  <div className="text-[11px] font-display font-semibold text-gray-600 mt-1">Points marqués</div>
+                  <div className="text-[11px] font-display font-semibold text-gray-600 mt-1">{t.home.stats.pointsScored}</div>
                 </div>
               </div>
 
@@ -213,6 +237,7 @@ const Home = () => {
                   // Succès caché non débloqué -> on masque titre/description/icône.
                   const isMystery = !!ach.hidden && !isUnlocked;
                   const isHighlighted = highlightedAchievementIds.has(ach.id);
+                  const meta = t.achievements[ach.id];
                   // Stagger doux entre nouveaux succès pour qu'ils ne bondissent pas tous en même temps.
                   const highlightedOrder = isHighlighted
                     ? Array.from(highlightedAchievementIds).indexOf(ach.id)
@@ -241,10 +266,10 @@ const Home = () => {
                       </div>
                       <div className="flex-1 text-left min-w-0">
                         <div className="font-display font-bold text-sm text-gray-900 leading-tight">
-                          {isMystery ? '???' : ach.title}
+                          {isMystery ? '???' : meta?.title ?? ach.id}
                         </div>
                         <div className={`text-xs leading-snug ${isUnlocked ? 'text-gray-800' : 'text-gray-600'}`}>
-                          {isMystery ? '...' : ach.description}
+                          {isMystery ? '...' : meta?.description ?? ''}
                         </div>
                       </div>
                     </div>
@@ -257,9 +282,9 @@ const Home = () => {
       </InfoModal>
 
       {/* Contenu principal */}
-      <div className="flex-1 min-h-0 w-full max-w-screen-xl mx-auto px-4 py-4 md:py-4 flex flex-col justify-center md:justify-start overflow-y-auto overscroll-contain no-scrollbar safe-pt">
+      <div className="flex-1 min-h-0 w-full max-w-screen-xl mx-auto px-4 py-4 desktop-short:py-1 flex flex-col justify-center md:justify-start pb-24 md:pb-4 overflow-y-auto overscroll-contain no-scrollbar safe-pt">
         {/* Logo */}
-        <div className="flex justify-center mb-4 md:mb-8">
+        <div className="flex justify-center mb-5 md:mb-4 lg:mb-6 desktop-short:mb-0">
           <Logo size="large" />
         </div>
 
@@ -271,7 +296,7 @@ const Home = () => {
           {/* Bloc "Joue maintenant" */}
           <div className="md:col-span-4 flex flex-col gap-2">
             {lobbyCode && (
-              <BackButton onClick={() => navigate('/')} label="Quitter" tone="danger" />
+              <BackButton onClick={() => navigate('/')} label={t.home.exit} tone="danger" />
             )}
             <div className="relative">
               <button
@@ -279,8 +304,8 @@ const Home = () => {
                 onClick={openStats}
                 aria-label={
                   unseenAchievementIds.length > 0
-                    ? `Voir mes succès (${unseenAchievementIds.length} nouveau${unseenAchievementIds.length > 1 ? 'x' : ''})`
-                    : 'Voir mes succès'
+                    ? t.home.aria.seeAchievementsWithNew(unseenAchievementIds.length)
+                    : t.home.aria.seeAchievements
                 }
                 className="absolute top-3 right-3 z-10 hover:scale-110 active:scale-95 transition-transform cursor-pointer"
               >
@@ -307,9 +332,9 @@ const Home = () => {
               </button>
               <Frame>
                 {lobbyCode && lobbyExists ? (
-                  <h3 className="text-sm md:text-base font-normal"><b className="font-bold">{hostName || 'Un ami'}</b> t'invite à rejoindre son salon !</h3>
+                  <h3 className="text-sm md:text-base font-normal">{t.home.invite(hostName || t.home.fallbackFriend)}</h3>
                 ) : (
-                  <h3 className="font-accent text-display-lg">Joue maintenant !</h3>
+                  <h3 className="font-accent text-display-lg">{t.home.playNow}</h3>
                 )}
                 <AvatarSelector
                   selectedAvatarId={avatarId}
@@ -319,7 +344,7 @@ const Home = () => {
                   <PseudoPlate
                     value={playerName}
                     onChange={(e) => setPlayerName(e.target.value)}
-                    placeholder="TON PSEUDO"
+                    placeholder={t.common.pseudoPlaceholderUpper}
                     maxLength={GAME_CONFIG.MAX_NAME_LENGTH}
                     onSubmit={undefined}
                   />
@@ -327,7 +352,7 @@ const Home = () => {
                 {!lobbyCode ? (
                   <div className="text-center space-y-2">
                     <Button
-                      text="Créer un salon"
+                      text={t.home.createLobby}
                       variant="primary"
                       size="md"
                       onClick={createLobby}
@@ -335,18 +360,18 @@ const Home = () => {
                   </div>
                 ) : lobbyExists === null ? (
                   <div className="text-center">
-                    <span className="text-sm text-gray-500">Vérification du salon...</span>
+                    <span className="text-sm text-gray-500">{t.home.checking}</span>
                   </div>
                 ) : (
                   <div>
-                    <Button text="Rejoindre" variant="warning" size="md" onClick={joinLobby} />
+                    <Button text={t.home.join} variant="warning" size="md" onClick={joinLobby} />
                   </div>
                 )}
               </Frame>
             </div>
 
             {/* Bouton Comment jouer - mobile uniquement (PC: carousel inline à droite) */}
-            <div className="md:hidden mt-4 flex justify-center">
+            <div className="md:hidden mt-2 flex justify-center">
               <HowToPlayButton onClick={() => setIsInfoOpen(true)} />
             </div>
           </div>
@@ -354,10 +379,10 @@ const Home = () => {
           {/* Bloc explications - desktop only (même carousel que la modale mobile) */}
           <div className="hidden md:block md:col-span-6">
             <Frame textAlign="left">
-              <div className="w-full border-b-2 border-dashed border-gray-300 pb-3 mb-4 flex items-center gap-2">
-                <Icon icon="fluent-emoji-flat:direct-hit" width={26} height={26} aria-hidden />
-                <h2 className="marker-highlight font-accent text-display-lg text-gray-900 m-0">
-                  Comment jouer ?
+              <div className="w-full border-b-2 border-dashed border-gray-300 pb-3 mb-4 desktop-short:pb-1 desktop-short:mb-1 flex items-center gap-2">
+                <Icon icon="fluent-emoji-flat:direct-hit" className="desktop-short:w-5 desktop-short:h-5" width={26} height={26} aria-hidden />
+                <h2 className="marker-highlight font-accent text-display-lg desktop-short:text-display-md text-gray-900 m-0">
+                  {t.home.howToPlayHeading}
                 </h2>
               </div>
               <HowToPlayCarousel />
@@ -369,9 +394,14 @@ const Home = () => {
         </div>
       </div>
 
-      {/* Footer - shrink-0 pour rester collé en bas, safe-area déjà gérée dans le composant */}
-      <div className="shrink-0">
-        <Footer />
+      {/* Footer transparent en overlay : ne mange pas la place verticale,
+          le contenu peut passer dessous. pointer-events-none sur le wrapper +
+          auto sur le Footer pour garder les liens cliquables et laisser
+          les zones vides traversables. */}
+      <div className="absolute bottom-0 left-0 right-0 pointer-events-none z-10">
+        <div className="pointer-events-auto">
+          <Footer />
+        </div>
       </div>
 
       {import.meta.env.DEV && window.self === window.top && (
@@ -379,7 +409,7 @@ const Home = () => {
           type="button"
           onClick={() => navigate('/studio')}
           className="fixed bottom-4 right-4 z-50 px-3 py-2 rounded-lg bg-black/80 text-white text-xs font-display border-2 border-white/20 hover:bg-black hover:scale-105 transition-all stack-shadow-sm"
-          title="Mode debug : ouvrir le Studio multi-écrans"
+          title={t.home.studioButtonTitle}
         >
           🎬 Studio
         </button>

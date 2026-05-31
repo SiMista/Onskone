@@ -1,5 +1,6 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Avatar from './Avatar';
+import { useLocale } from '../i18n';
 
 const SOFT_HYPHEN = '­';
 
@@ -47,6 +48,7 @@ const PlayerAnswerCard: React.FC<PlayerAnswerCardProps> = ({
   placeholder = false,
   waitingFor,
 }) => {
+  const { t } = useLocale();
   const textClass = placeholder
     ? 'italic text-gray-500 font-normal'
     : isNoResponse
@@ -118,12 +120,12 @@ const PlayerAnswerCard: React.FC<PlayerAnswerCardProps> = ({
         ) : waitingFor ? (
           <div className="w-full h-full flex items-center justify-center overflow-hidden px-2">
             <p className="text-gray-700 text-sm tablet:text-base phone-landscape:text-lg font-medium text-center italic leading-snug flex items-center justify-center flex-wrap gap-x-1.5 gap-y-1">
-              <span>En attente que</span>
+              <span>{t.phases.playerAnswerWaiting.prefix}</span>
               <span className="inline-flex items-center gap-1.5 not-italic font-semibold text-gray-900">
                 <Avatar avatarId={waitingFor.avatarId} name={waitingFor.name} size="sm" />
                 <span>{waitingFor.name}</span>
               </span>
-              <span>t'attribue une réponse…</span>
+              <span>{t.phases.playerAnswerWaiting.suffix}</span>
             </p>
           </div>
         ) : (

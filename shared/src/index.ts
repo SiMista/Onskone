@@ -13,8 +13,12 @@ export { IPlayer } from './types/player.js';
 // Lobby
 export { ILobby, GameMode } from './types/lobby.js';
 
+// Locale (langues supportées pour les questions + textes du site)
+export { SUPPORTED_LOCALES, DEFAULT_LOCALE, isLocale } from './types/locale.js';
+export type { Locale } from './types/locale.js';
+
 // Decks
-export { DecksCatalog, SelectedDecks } from './types/decks.js';
+export { DecksCatalog, DecksCatalogWithMeta, ThemeInfo, SelectedDecks } from './types/decks.js';
 
 // Round
 export {
@@ -36,7 +40,8 @@ export {
 export {
   ServerToClientEvents,
   ClientToServerEvents,
-  RevealResult
+  RevealResult,
+  ReconnectionData
 } from './types/socket-events.js';
 
 // Admin

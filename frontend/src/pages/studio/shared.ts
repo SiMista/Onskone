@@ -1,3 +1,4 @@
+import { GameMode } from '@onskone/shared';
 import { AVATARS } from '../../constants/game';
 
 export type Orientation = 'portrait' | 'landscape';
@@ -73,6 +74,7 @@ export interface SavedConfig {
   layout: Layout;
   zoom: number;
   debugTimers: boolean;
+  gameMode?: GameMode;
 }
 
 export const loadSavedConfig = (): SavedConfig | null => {

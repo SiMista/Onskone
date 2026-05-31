@@ -2,11 +2,17 @@ import { useEffect, useState } from 'react';
 import { Icon } from '@iconify/react';
 import { GAME_CONSTANTS } from '@onskone/shared';
 import { TIERS } from '../EndGame';
-import { FUN_FACTS } from '../../constants/funFacts';
 import { ACHIEVEMENTS } from '../../utils/playerStats';
 import { AVATARS, getAvatarUrl } from '../../constants/game';
-import { LEGAL_CONTENT } from '../../constants/legal';
 import { buildShareCard } from '../../utils/shareCard';
+import { fr } from '../../i18n/fr';
+
+// Admin reste FR-only -> on lit directement les strings depuis le dico FR
+// sans passer par useLocale (qui suivrait la préférence UI globale).
+const FUN_FACTS = fr.funFacts;
+const TIER_TEXTS = fr.endGame.tiers;
+const ACHIEVEMENT_TEXTS = fr.achievements;
+const LEGAL_CONTENT = fr.legal;
 
 const PREVIEW_TOP_PLAYERS = [
   { name: 'Simi', score: 8, avatarId: 3 },
@@ -59,6 +65,7 @@ const TiersSection = () => {
   const [shareLoading, setShareLoading] = useState(false);
 
   const previewTier = previewIdx !== null ? TIERS[previewIdx] : null;
+  const previewTexts = previewIdx !== null ? TIER_TEXTS[previewIdx] : null;
 
   const openPreview = (idx: number, msgIdx: number) => {
     setPreviewIdx(idx);
@@ -66,21 +73,22 @@ const TiersSection = () => {
   };
 
   useEffect(() => {
-    if (!previewTier) {
+    if (!previewTier || !previewTexts) {
       setShareUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return null; });
       return;
     }
     let cancelled = false;
     let url: string | null = null;
     setShareLoading(true);
-    const msg = previewTier.messages[previewMessageIdx] ?? previewTier.messages[0];
+    const msg = previewTexts.messages[previewMessageIdx] ?? previewTexts.messages[0];
     buildShareCard({
       pct: previewTier.midPct,
-      verdictTitle: previewTier.title,
+      verdictTitle: previewTexts.title,
       verdictMessage: msg,
       color: previewTier.color,
       tierEmoji: previewTier.emoji,
       topPlayers: PREVIEW_TOP_PLAYERS,
+      texts: fr.shareCard,
     })
       .then((blob) => {
         if (cancelled) return;
@@ -96,7 +104,7 @@ const TiersSection = () => {
         setShareLoading(false);
       });
     return () => { cancelled = true; };
-  }, [previewTier, previewMessageIdx]);
+  }, [previewTier, previewTexts, previewMessageIdx]);
 
   return (
     <div>
@@ -140,7 +148,7 @@ const TiersSection = () => {
               {shareUrl ? (
                 <img
                   src={shareUrl}
-                  alt={`Aperçu ${previewTier.title}`}
+                  alt={`Aperçu ${previewTexts?.title ?? ''}`}
                   className="block w-full max-w-[260px] aspect-[9/16] object-contain rounded-md"
                 />
               ) : (
@@ -159,6 +167,8 @@ const TiersSection = () => {
             const isPreviewed = previewIdx === idx;
             const isOpen = openAll || isExpanded;
             const localMessageIdx = isExpanded ? messageIdx : 0;
+            const tierTitle = TIER_TEXTS[idx]?.title ?? '';
+            const tierMessages = TIER_TEXTS[idx]?.messages ?? [];
             return (
               <div
                 key={idx}
@@ -191,7 +201,7 @@ const TiersSection = () => {
                   <Icon icon={tier.icon} className="w-7 h-7 shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-[15px] font-semibold tracking-tight text-white truncate">
-                      {tier.title}
+                      {tierTitle}
                     </p>
                     <p className="text-[12px] text-white/45">
                       de {prev}% à {tier.max}%
@@ -224,7 +234,7 @@ const TiersSection = () => {
                 </button>
                 {isOpen && (
                   <ol className="px-4 py-3 space-y-1.5 animate-fade-in">
-                    {tier.messages.map((m, i) => {
+                    {tierMessages.map((m, i) => {
                       const messageActive = isExpanded && messageIdx === i;
                       return (
                         <li key={i}>
@@ -276,7 +286,7 @@ const TiersSection = () => {
                     {shareUrl ? (
                       <img
                         src={shareUrl}
-                        alt={`Aperçu ${previewTier.title}`}
+                        alt={`Aperçu ${previewTexts?.title ?? ''}`}
                         className="block w-full max-w-[260px] aspect-[9/16] object-contain rounded-md"
                       />
                     ) : (
@@ -291,7 +301,7 @@ const TiersSection = () => {
                       {previewTier.midPct}%
                     </span>
                     <span className="ml-auto font-mono text-[10px] text-white/35">
-                      message {previewMessageIdx + 1}/{previewTier.messages.length}
+                      message {previewMessageIdx + 1}/{previewTexts?.messages.length ?? 0}
                     </span>
                   </div>
                 </div>
@@ -340,20 +350,23 @@ const AchievementsSection = () => (
       Badges débloqués par le joueur en fin de partie, sauvegardés sur son appareil.
     </p>
     <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-      {ACHIEVEMENTS.map((a) => (
+      {ACHIEVEMENTS.map((a) => {
+        const meta = ACHIEVEMENT_TEXTS[a.id];
+        return (
         <div
           key={a.id}
           className="rounded-lg surface-glass p-3 flex items-start gap-3"
         >
           <Icon icon={a.icon} className="w-9 h-9 shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-[14px] font-semibold text-white truncate">{a.title}</p>
+            <p className="text-[14px] font-semibold text-white truncate">{meta?.title ?? a.id}</p>
             <p className="text-[12.5px] text-white/65 leading-snug mt-0.5">
-              {a.description}
+              {meta?.description ?? ''}
             </p>
           </div>
         </div>
-      ))}
+        );
+      })}
     </div>
   </div>
 );

@@ -1,8 +1,31 @@
 import { IPlayer } from './player.js';
 import { IGame, LeaderboardEntry } from './game.js';
 import { IRound, GameCard, RoundPhase } from './round.js';
-import { DecksCatalog, SelectedDecks } from './decks.js';
+import { DecksCatalog, DecksCatalogWithMeta, SelectedDecks } from './decks.js';
 import { GameMode } from './lobby.js';
+import { Locale } from './locale.js';
+
+/**
+ * Données envoyées sur reconnexion pour restaurer l'état local du joueur
+ * dans la phase courante (réponses déjà soumises, attributions en cours,
+ * indices révélés, etc.).
+ */
+export interface ReconnectionData {
+  /** IDs des joueurs ayant déjà soumis une réponse */
+  answeredPlayerIds: string[];
+
+  /** Réponse soumise par le joueur courant (si applicable) */
+  myAnswer?: string;
+
+  /** État intermédiaire du drag & drop pour la phase GUESSING */
+  currentGuesses?: Record<string, string>;
+
+  /** Résultats déjà calculés pour la phase REVEAL */
+  revealResults?: RevealResult[];
+
+  /** Indices des réponses déjà révélées en phase REVEAL */
+  revealedIndices?: number[];
+}
 
 /**
  * Résultat d'une réponse dans la phase de révélation
@@ -67,7 +90,14 @@ export interface ServerToClientEvents {
   gameAlreadyStarted: (data: { message: string }) => void;
 
   /** Catalogue des decks disponibles + sélection actuelle du lobby */
-  lobbyDecksState: (data: { catalog: DecksCatalog; selected: SelectedDecks; gameMode: GameMode; guessMyAnswerMode: boolean }) => void;
+  lobbyDecksState: (data: {
+    catalog: DecksCatalog;
+    catalogWithMeta: DecksCatalogWithMeta;
+    selected: SelectedDecks;
+    gameMode: GameMode;
+    guessMyAnswerMode: boolean;
+    locale: Locale;
+  }) => void;
 
   /** Le mode "Devine ma réponse" a été mis à jour */
   guessMyAnswerModeUpdated: (data: { guessMyAnswerMode: boolean }) => void;
@@ -103,14 +133,7 @@ export interface ServerToClientEvents {
     game: IGame;
     players: IPlayer[];
     leaderboard: LeaderboardEntry[];
-    reconnectionData?: {
-      answeredPlayerIds: string[];
-      myAnswer?: string;
-      currentGuesses?: Record<string, string>;
-      relancesUsed?: number;
-      revealResults?: RevealResult[];
-      revealedIndices?: number[];
-    };
+    reconnectionData?: ReconnectionData;
   }) => void;
 
   /** Démarrage d'un nouveau round */
@@ -236,6 +259,8 @@ export interface ClientToServerEvents {
   createLobby: (data: {
     playerName: string;
     avatarId?: number;
+    gameMode: GameMode;
+    locale?: Locale;
   }) => void;
 
   /** Rejoindre un lobby existant */
@@ -278,12 +303,6 @@ export interface ClientToServerEvents {
   updateSelectedDecks: (data: {
     lobbyCode: string;
     selected: SelectedDecks;
-  }) => void;
-
-  /** Mettre à jour le mode de jeu (réservé à l'hôte) */
-  updateGameMode: (data: {
-    lobbyCode: string;
-    gameMode: GameMode;
   }) => void;
 
   /** Mettre à jour le mode "Devine ma réponse" (réservé à l'hôte) */

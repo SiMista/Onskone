@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import socket from '../utils/socket';
@@ -11,16 +11,18 @@ import SubstituteAnsweringPhase from '../components/SubstituteAnsweringPhase';
 import HourglassTimer from '../components/HourglassTimer';
 import { useToast } from '../components/Toast';
 import { GAME_CONFIG } from '../constants/game';
-import { useLeavePrompt, useReconnectOnVisible } from '../hooks';
+import { useLeavePrompt, useReconnectOnVisible, useSocketEvent } from '../hooks';
 import { getCurrentPlayerFromStorage } from '../utils/playerHelpers';
-import { IPlayer, IRound, IGame, RoundPhase, GameStatus, RevealResult, GameCard } from '@onskone/shared';
+import { IPlayer, IRound, IGame, RoundPhase, GameStatus, RevealResult, GameCard, ReconnectionData } from '@onskone/shared';
 import { isStudioFrame, studioSlotIndex } from '../utils/studioStorage';
 import { useStudioBot } from '../hooks/useStudioBot';
+import { useLocale } from '../i18n';
 
 const GamePage: React.FC = () => {
   const { lobbyCode } = useParams<{ lobbyCode: string }>();
   const navigate = useNavigate();
   const showToast = useToast();
+  const { t, locale } = useLocale();
 
   // Redirect if no lobby code
   useEffect(() => {
@@ -33,13 +35,12 @@ const GamePage: React.FC = () => {
   const [players, setPlayers] = useState<IPlayer[]>([]);
   const [currentPlayer, setCurrentPlayer] = useState<IPlayer | null>(null);
   const [revealResults, setRevealResults] = useState<RevealResult[]>([]);
-  const [reconnectionData, setReconnectionData] = useState<{
-    answeredPlayerIds: string[];
-    myAnswer?: string;
-    currentGuesses?: Record<string, string>;
-    revealResults?: RevealResult[];
-    revealedIndices?: number[];
-  } | null>(null);
+  const [reconnectionData, setReconnectionData] = useState<ReconnectionData | null>(null);
+
+  // Réf à jour de la liste de joueurs, lue par les handlers socket pour rester
+  // stables (sinon roundStarted se réabonne à chaque updatePlayersList).
+  const playersRef = useRef(players);
+  playersRef.current = players;
 
   // Calculer isLeader directement (pas de useEffect) pour éviter les race conditions
   const isLeader = !!(game?.currentRound && currentPlayer && game.currentRound.leader.id === currentPlayer.id);
@@ -84,175 +85,140 @@ const GamePage: React.FC = () => {
   // Écouter les reconnexions socket + visibilitychange
   useReconnectOnVisible(fetchGameState);
 
+  // Récupération initiale : joueur depuis le storage + état du jeu depuis le serveur.
   useEffect(() => {
-    // Récupérer le joueur courant pour l'état local
     const player = getCurrentPlayerFromStorage();
     if (player) setCurrentPlayer(player);
-
-    // Demander l'état actuel du jeu au serveur
     fetchGameState();
+  }, [fetchGameState]);
 
-    // ===== Handlers nommés (cleanup ciblé pour ne pas affecter d'autres composants) =====
-    const onGameState = (data: {
-      game: IGame;
-      players: IPlayer[];
-      reconnectionData?: {
-        answeredPlayerIds: string[];
-        myAnswer?: string;
-        currentGuesses?: Record<string, string>;
-        revealResults?: RevealResult[];
-        revealedIndices?: number[];
-      };
-    }) => {
-      setGame(data.game);
-      setPlayers(data.players);
-      if (data.reconnectionData) {
-        setReconnectionData(data.reconnectionData);
-        if (data.reconnectionData.revealResults) {
-          setRevealResults(data.reconnectionData.revealResults);
-        }
+  // ===== Handlers socket =====
+  const handleGameState = useCallback((data: { game: IGame; players: IPlayer[]; reconnectionData?: ReconnectionData }) => {
+    setGame(data.game);
+    setPlayers(data.players);
+    if (data.reconnectionData) {
+      setReconnectionData(data.reconnectionData);
+      if (data.reconnectionData.revealResults) {
+        setRevealResults(data.reconnectionData.revealResults);
       }
-    };
+    }
+  }, []);
 
-    const onGameStarted = (data: { game: IGame }) => {
-      setGame(data.game);
-    };
+  const handleGameStarted = useCallback((data: { game: IGame }) => {
+    setGame(data.game);
+  }, []);
 
-    const onQuestionSelected = (data: { question: string; phase: RoundPhase; auto?: boolean; card?: GameCard }) => {
-      setGame(prev => prev ? {
-        ...prev,
-        currentRound: prev.currentRound ? {
-          ...prev.currentRound,
-          selectedQuestion: data.question,
-          phase: data.phase,
-          gameCard: data.card ?? prev.currentRound.gameCard
-        } : null
-      } : null);
-    };
+  const handleQuestionSelected = useCallback((data: { question: string; phase: RoundPhase; auto?: boolean; card?: GameCard }) => {
+    setGame(prev => prev ? {
+      ...prev,
+      currentRound: prev.currentRound ? {
+        ...prev.currentRound,
+        selectedQuestion: data.question,
+        phase: data.phase,
+        gameCard: data.card ?? prev.currentRound.gameCard
+      } : null
+    } : null);
+  }, []);
 
-    const onAllAnswersSubmitted = (data: { phase: RoundPhase; answersCount: number; forced?: boolean }) => {
-      setGame(prev => prev ? {
-        ...prev,
-        currentRound: prev.currentRound ? {
-          ...prev.currentRound,
-          phase: data.phase
-        } : null
-      } : null);
-    };
+  const handleAllAnswersSubmitted = useCallback((data: { phase: RoundPhase; answersCount: number; forced?: boolean }) => {
+    setGame(prev => prev ? {
+      ...prev,
+      currentRound: prev.currentRound ? { ...prev.currentRound, phase: data.phase } : null
+    } : null);
+  }, []);
 
-    const onSubstituteSelected = (data: { substitutePlayerId: string; phase: RoundPhase; auto?: boolean }) => {
-      setGame(prev => prev ? {
-        ...prev,
-        currentRound: prev.currentRound ? {
-          ...prev.currentRound,
-          substitutePlayerId: data.substitutePlayerId,
-          phase: data.phase
-        } : null
-      } : null);
-    };
+  const handleSubstituteSelected = useCallback((data: { substitutePlayerId: string; phase: RoundPhase; auto?: boolean }) => {
+    setGame(prev => prev ? {
+      ...prev,
+      currentRound: prev.currentRound ? {
+        ...prev.currentRound,
+        substitutePlayerId: data.substitutePlayerId,
+        phase: data.phase
+      } : null
+    } : null);
+  }, []);
 
-    const onSubstituteAnswerSubmitted = (data: { phase: RoundPhase; forced?: boolean }) => {
-      setGame(prev => prev ? {
-        ...prev,
-        currentRound: prev.currentRound ? {
-          ...prev.currentRound,
-          phase: data.phase
-        } : null
-      } : null);
-    };
+  const handleSubstituteAnswerSubmitted = useCallback((data: { phase: RoundPhase; forced?: boolean }) => {
+    setGame(prev => prev ? {
+      ...prev,
+      currentRound: prev.currentRound ? { ...prev.currentRound, phase: data.phase } : null
+    } : null);
+  }, []);
 
-    const onRevealResults = (data: { phase: RoundPhase; results: RevealResult[]; scores: Record<string, number> }) => {
-      setGame(prev => prev ? {
-        ...prev,
-        currentRound: prev.currentRound ? {
-          ...prev.currentRound,
-          phase: data.phase
-        } : null
-      } : null);
-      setRevealResults(data.results);
-    };
+  const handleRevealResults = useCallback((data: { phase: RoundPhase; results: RevealResult[]; scores: Record<string, number> }) => {
+    setGame(prev => prev ? {
+      ...prev,
+      currentRound: prev.currentRound ? { ...prev.currentRound, phase: data.phase } : null
+    } : null);
+    setRevealResults(data.results);
+  }, []);
 
-    const onRoundSkipped = (data: { skippedLeaderName: string; reason: 'leader_disconnected' }) => {
-      showToast(`${data.skippedLeaderName} s'est déconnecté - round passé`, 'warning', 5000);
-    };
+  const handleRoundSkipped = useCallback((data: { skippedLeaderName: string; reason: 'leader_disconnected' }) => {
+    showToast(t.game.leaderDisconnected(data.skippedLeaderName), 'warning', 5000);
+  }, [showToast, t]);
 
-    const onRoundStarted = (data: { round: IRound }) => {
-      // Réinitialiser les données de reconnexion pour la nouvelle manche
-      setReconnectionData(null);
-      setGame(prev => {
-        if (prev) {
-          // Dédoublonnage : un round peut déjà avoir été ajouté via gameState
-          // (race entre reconnexion immédiate et roundStarted).
-          const filtered = (prev.rounds || []).filter(r => r.roundNumber !== data.round.roundNumber);
-          return {
-            ...prev,
-            currentRound: data.round,
-            rounds: [...filtered, data.round]
-          };
-        }
-        // Si game n'existe pas encore, créer un lobby minimal
-        const minimalLobby: IGame['lobby'] = {
-          code: lobbyCode || '',
-          players: players,
-          selectedDecks: {},
-          gameMode: 'local',
-          guessMyAnswerMode: false
-        };
+  const handleRoundStarted = useCallback((data: { round: IRound }) => {
+    // Réinitialiser les données de reconnexion pour la nouvelle manche
+    setReconnectionData(null);
+    setGame(prev => {
+      if (prev) {
+        // Dédoublonnage : un round peut déjà avoir été ajouté via gameState
+        // (race entre reconnexion immédiate et roundStarted).
+        const filtered = (prev.rounds || []).filter(r => r.roundNumber !== data.round.roundNumber);
         return {
-          lobby: minimalLobby,
+          ...prev,
           currentRound: data.round,
-          status: GameStatus.IN_PROGRESS,
-          rounds: [data.round]
+          rounds: [...filtered, data.round]
         };
-      });
-    };
+      }
+      // Si game n'existe pas encore, créer un lobby minimal
+      const minimalLobby: IGame['lobby'] = {
+        code: lobbyCode || '',
+        players: playersRef.current,
+        selectedDecks: {},
+        gameMode: 'local',
+        guessMyAnswerMode: false,
+        locale
+      };
+      return {
+        lobby: minimalLobby,
+        currentRound: data.round,
+        status: GameStatus.IN_PROGRESS,
+        rounds: [data.round]
+      };
+    });
+  }, [lobbyCode, locale]);
 
-    const onGameEnded = () => {
-      navigate(`/endgame/${lobbyCode}`);
-    };
+  const handleGameEnded = useCallback(() => {
+    navigate(`/endgame/${lobbyCode}`);
+  }, [navigate, lobbyCode]);
 
-    const onUpdatePlayersList = (data: { players: IPlayer[] }) => {
-      setPlayers(data.players);
-    };
+  const handleUpdatePlayersList = useCallback((data: { players: IPlayer[] }) => {
+    setPlayers(data.players);
+  }, []);
 
-    const onError = (data: { message: string }) => {
-      showToast(data.message, 'error', 5000);
-    };
+  const handleSocketError = useCallback((data: { message: string }) => {
+    showToast(data.message, 'error', 5000);
+  }, [showToast]);
 
-    socket.on('gameState', onGameState);
-    socket.on('gameStarted', onGameStarted);
-    socket.on('questionSelected', onQuestionSelected);
-    socket.on('allAnswersSubmitted', onAllAnswersSubmitted);
-    socket.on('substituteSelected', onSubstituteSelected);
-    socket.on('substituteAnswerSubmitted', onSubstituteAnswerSubmitted);
-    socket.on('revealResults', onRevealResults);
-    socket.on('roundSkipped', onRoundSkipped);
-    socket.on('roundStarted', onRoundStarted);
-    socket.on('gameEnded', onGameEnded);
-    socket.on('updatePlayersList', onUpdatePlayersList);
-    socket.on('error', onError);
-
-    return () => {
-      socket.off('gameState', onGameState);
-      socket.off('gameStarted', onGameStarted);
-      socket.off('questionSelected', onQuestionSelected);
-      socket.off('allAnswersSubmitted', onAllAnswersSubmitted);
-      socket.off('substituteSelected', onSubstituteSelected);
-      socket.off('substituteAnswerSubmitted', onSubstituteAnswerSubmitted);
-      socket.off('revealResults', onRevealResults);
-      socket.off('roundSkipped', onRoundSkipped);
-      socket.off('roundStarted', onRoundStarted);
-      socket.off('gameEnded', onGameEnded);
-      socket.off('updatePlayersList', onUpdatePlayersList);
-      socket.off('error', onError);
-    };
-  }, [navigate, lobbyCode, fetchGameState, showToast]);
+  useSocketEvent('gameState', handleGameState, [handleGameState]);
+  useSocketEvent('gameStarted', handleGameStarted, [handleGameStarted]);
+  useSocketEvent('questionSelected', handleQuestionSelected, [handleQuestionSelected]);
+  useSocketEvent('allAnswersSubmitted', handleAllAnswersSubmitted, [handleAllAnswersSubmitted]);
+  useSocketEvent('substituteSelected', handleSubstituteSelected, [handleSubstituteSelected]);
+  useSocketEvent('substituteAnswerSubmitted', handleSubstituteAnswerSubmitted, [handleSubstituteAnswerSubmitted]);
+  useSocketEvent('revealResults', handleRevealResults, [handleRevealResults]);
+  useSocketEvent('roundSkipped', handleRoundSkipped, [handleRoundSkipped]);
+  useSocketEvent('roundStarted', handleRoundStarted, [handleRoundStarted]);
+  useSocketEvent('gameEnded', handleGameEnded, [handleGameEnded]);
+  useSocketEvent('updatePlayersList', handleUpdatePlayersList, [handleUpdatePlayersList]);
+  useSocketEvent('error', handleSocketError, [handleSocketError]);
 
   const renderPhase = () => {
     if (!game || !game.currentRound || !currentPlayer) {
       return (
         <div className="flex items-center justify-center h-full">
-          <p className="text-xl text-white">Chargement du jeu...</p>
+          <p className="text-xl text-white">{t.game.loading}</p>
         </div>
       );
     }
@@ -307,7 +273,7 @@ const GamePage: React.FC = () => {
           <AnswerPhase
             key={`answer-phase-${game.currentRound.roundNumber}`}
             lobbyCode={lobbyCode!}
-            question={game.currentRound.selectedQuestion || 'Chargement...'}
+            question={game.currentRound.selectedQuestion || t.common.loading}
             card={game.currentRound.gameCard}
             isLeader={isLeader}
             currentPlayerId={currentPlayer.id}

@@ -1,0 +1,137 @@
+{
+  "DAILY": {
+    "category": "ICEBREAKERS",
+    "emoji": "fluent-emoji-flat:sun",
+    "labels": { "fr": "QUOTIDIEN", "en": "DAILY LIFE" },
+    "descriptions": {
+      "fr": "Le matin, les habitudes, les petits riens !",
+      "en": "Mornings, habits, routines. The small stuff that's actually everything."
+    }
+  },
+  "HOBBIES": {
+    "category": "ICEBREAKERS",
+    "emoji": "fluent-emoji-flat:bullseye",
+    "labels": { "fr": "PASSIONS & ACTIVITÉS", "en": "HOBBIES & PASSIONS" },
+    "descriptions": {
+      "fr": "Ce qui te fait vibrer dans la vie !",
+      "en": "The things that actually make you come alive."
+    }
+  },
+  "MOVIES": {
+    "category": "ICEBREAKERS",
+    "emoji": "fluent-emoji-flat:clapper-board",
+    "labels": { "fr": "CINÉ & MUSIQUE", "en": "MOVIES & MUSIC" },
+    "descriptions": {
+      "fr": "Ce que tu écoutes, ce que tu regardes, ce que ça dit de toi sans que tu t'en rendes compte !",
+      "en": "What you watch, what you listen to, and what it says about you without you realizing it !"
+    }
+  },
+  "TRAVEL": {
+    "category": "ICEBREAKERS",
+    "emoji": "fluent-emoji-flat:globe-showing-europe-africa",
+    "labels": { "fr": "VOYAGES & SORTIE", "en": "PARTIES & TRAVEL" },
+    "descriptions": {
+      "fr": "Où tu vas et où tu sors !",
+      "en": "Where you travel, and what you get up to !"
+    }
+  },
+  "ABOUT_YOU": {
+    "category": "ICEBREAKERS",
+    "emoji": "fluent-emoji-flat:dna",
+    "labels": { "fr": "QUI ES-TU ?", "en": "ABOUT YOU" },
+    "descriptions": {
+      "fr": "Ton introduction, et les premiers détails qui apprennent à savoir qui tu es !",
+      "en": "Your intro. The first details that tell us who you really are."
+    }
+  },
+  "WYD": {
+    "category": "ICEBREAKERS",
+    "emoji": "fluent-emoji-flat:performing-arts",
+    "labels": { "fr": "MISE EN SITUATION", "en": "WYD?" },
+    "descriptions": {
+      "fr": "On te met dans un contexte, et on juge ce que ça donne !",
+      "en": "What would you do ? We put you in a scenario, show us how you act."
+    }
+  },
+  "BETWEEN_US": {
+    "category": "FUN",
+    "emoji": "fluent-emoji-flat:eyes",
+    "labels": { "fr": "ENTRE NOUS", "en": "BETWEEN US" },
+    "descriptions": {
+      "fr": "Des questions sur la dynamique de groupe elle-même !",
+      "en": "Questions about the group itself. Let's get into it."
+    }
+  },
+  "FAMILY": {
+    "category": "FUN",
+    "emoji": "fluent-emoji-flat:people-hugging",
+    "labels": { "fr": "AMIS & FAMILLE", "en": "FAMILY & FRIENDS" },
+    "descriptions": {
+      "fr": "Des questions sur tes liens avec ceux qui comptent vraiment !",
+      "en": "Questions about the people who matter most. No sugarcoating."
+    }
+  },
+  "RECEIPTS": {
+    "category": "FUN",
+    "emoji": "fluent-emoji-flat:open-file-folder",
+    "labels": { "fr": "LES DOSSIERS", "en": "THE RECEIPTS" },
+    "descriptions": {
+      "fr": "Opinions tranchées, aveux gênants, Onskoné ou Onvastapé !",
+      "en": "Sharp opinions, awkward confessions. We see you."
+    }
+  },
+  "SPICY": {
+    "category": "FUN",
+    "emoji": "fluent-emoji-flat:no-one-under-eighteen",
+    "labels": { "fr": "HOT", "en": "SPICYYY" },
+    "descriptions": {
+      "fr": "En dehors des regards ! Pour les adultes uniquement.",
+      "en": "Adults only. No audience, no filter, no limits."
+    }
+  },
+  "HOT_TAKES": {
+    "category": "FUN",
+    "emoji": "fluent-emoji-flat:speaking-head",
+    "labels": { "fr": "TES OPINIONS", "en": "HOT TAKES" },
+    "descriptions": {
+      "fr": "Ce que tu penses à voix haute, sur plusieurs sujets... particuliers !",
+      "en": "Your opinions, out loud, on everything, on some ... subjects."
+    }
+  },
+  "THROWBACK": {
+    "category": "DEEP",
+    "emoji": "fluent-emoji-flat:fast-reverse-button",
+    "labels": { "fr": "RETOUR EN ARRIÈRE", "en": "BACK IN THE DAY" },
+    "descriptions": {
+      "fr": "L'enfance, les regrets, les tournants. Tout ce qui t'a construit !",
+      "en": "Childhood, regrets, turning points. Everything that made you who you are."
+    }
+  },
+  "AMBITIONS": {
+    "category": "DEEP",
+    "emoji": "fluent-emoji-flat:rocket",
+    "labels": { "fr": "AMBITIONS", "en": "AMBITIONS" },
+    "descriptions": {
+      "fr": "Tes rêves, ton argent, ta vision ! Que veux-tu vraiment construire ?",
+      "en": "Your dreams, your money, your vision. What are you actually building?"
+    }
+  },
+  "FEELINGS": {
+    "category": "DEEP",
+    "emoji": "fluent-emoji-flat:yellow-heart",
+    "labels": { "fr": "ÉMOTIONS & BIEN-ÊTRE", "en": "FEELINGS" },
+    "descriptions": {
+      "fr": "Ce que tu ressens vraiment ! Petite introspection.",
+      "en": "What you're actually feeling. A little introspection goes a long way."
+    }
+  },
+  "MIRROR": {
+    "category": "DEEP",
+    "emoji": "fluent-emoji-flat:framed-picture",
+    "labels": { "fr": "FACE À TOI-MÊME", "en": "IN THE MIRROR" },
+    "descriptions": {
+      "fr": "Pas de filtre : ce que tu sais de toi mais que tu dis rarement.",
+      "en": "No filter. The things you know about yourself but rarely say out loud."
+    }
+  }
+}

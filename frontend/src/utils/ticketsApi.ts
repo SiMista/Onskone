@@ -1,6 +1,7 @@
 import { SERVER_URL } from '../constants/game';
+import type { TicketType } from '../constants/ticketCategories';
 
-export type TicketType = 'question_report' | 'bug' | 'suggestion';
+export type { TicketType };
 export type TicketStatus = 'new' | 'in_progress' | 'resolved' | 'wont_fix';
 
 export interface Ticket {
@@ -42,6 +43,40 @@ const apiUrl = (path: string): string => {
   return `${base}/api${path}`;
 };
 
+/**
+ * Code d'erreur stable retourné par cette API. L'app publique traduit via
+ * `t.apiErrors[code]`. Admin reste FR-only et peut lire le `.message` brut.
+ */
+export type TicketsApiErrorCode =
+  | 'tooManyReports'
+  | 'reportFailed'
+  | 'tooManyAttempts'
+  | 'wrongPassword'
+  | 'sessionExpired'
+  | 'loadError'
+  | 'updateError'
+  | 'deleteError';
+
+// Messages FR par défaut : admin reste FR-only et continue à lire `.message`.
+const DEFAULT_FR_MESSAGES: Record<TicketsApiErrorCode, string> = {
+  tooManyReports: 'Trop de signalements, réessaie plus tard.',
+  reportFailed: "Impossible d'envoyer le signalement.",
+  tooManyAttempts: 'Trop de tentatives, réessaie plus tard.',
+  wrongPassword: 'Mot de passe incorrect.',
+  sessionExpired: 'Session expirée. Reconnecte-toi.',
+  loadError: 'Erreur de chargement.',
+  updateError: 'Erreur de mise à jour.',
+  deleteError: 'Erreur de suppression.',
+};
+
+export class TicketsApiError extends Error {
+  readonly code: TicketsApiErrorCode;
+  constructor(code: TicketsApiErrorCode) {
+    super(DEFAULT_FR_MESSAGES[code]);
+    this.code = code;
+  }
+}
+
 export async function submitTicket(payload: SubmitTicketPayload): Promise<void> {
   const res = await fetch(apiUrl('/tickets'), {
     method: 'POST',
@@ -49,8 +84,8 @@ export async function submitTicket(payload: SubmitTicketPayload): Promise<void> 
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
-    if (res.status === 429) throw new Error('Trop de signalements, réessaie plus tard.');
-    throw new Error('Impossible d\'envoyer le signalement.');
+    if (res.status === 429) throw new TicketsApiError('tooManyReports');
+    throw new TicketsApiError('reportFailed');
   }
 }
 
@@ -61,8 +96,8 @@ export async function adminLogin(password: string): Promise<string> {
     body: JSON.stringify({ password }),
   });
   if (!res.ok) {
-    if (res.status === 429) throw new Error('Trop de tentatives, réessaie plus tard.');
-    throw new Error('Mot de passe incorrect.');
+    if (res.status === 429) throw new TicketsApiError('tooManyAttempts');
+    throw new TicketsApiError('wrongPassword');
   }
   const data = await res.json();
   return data.token as string;
@@ -80,7 +115,7 @@ export async function adminFetch(path: string, init?: RequestInit): Promise<Resp
   });
   if (res.status === 401) {
     clearAdminToken();
-    throw new Error('Session expirée. Reconnecte-toi.');
+    throw new TicketsApiError('sessionExpired');
   }
   return res;
 }
@@ -91,7 +126,7 @@ export async function fetchTickets(filters?: { status?: TicketStatus; type?: Tic
   if (filters?.type) params.set('type', filters.type);
   const qs = params.toString();
   const res = await adminFetch(`/admin/tickets${qs ? `?${qs}` : ''}`);
-  if (!res.ok) throw new Error('Erreur de chargement.');
+  if (!res.ok) throw new TicketsApiError('loadError');
   const data = await res.json();
   return data.tickets as Ticket[];
 }
@@ -101,12 +136,12 @@ export async function updateTicketStatus(id: number, status: TicketStatus): Prom
     method: 'PATCH',
     body: JSON.stringify({ status }),
   });
-  if (!res.ok) throw new Error('Erreur de mise à jour.');
+  if (!res.ok) throw new TicketsApiError('updateError');
 }
 
 export async function deleteTicket(id: number): Promise<void> {
   const res = await adminFetch(`/admin/tickets/${id}`, { method: 'DELETE' });
-  if (!res.ok) throw new Error('Erreur de suppression.');
+  if (!res.ok) throw new TicketsApiError('deleteError');
 }
 
 export async function checkAdminAuth(): Promise<boolean> {

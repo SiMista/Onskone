@@ -1,30 +1,33 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import socket from '../utils/socket';
 import Button from '../components/Button';
 import Footer from '../components/Footer';
 import ConfirmModal from '../components/ConfirmModal';
 import InfoModal from '../components/InfoModal';
+import Checkbox from '../components/Checkbox';
 import HowToPlayCarousel from '../components/HowToPlayCarousel';
 import HowToPlayButton from '../components/HowToPlayButton';
 import { Icon } from '@iconify/react';
 import PlayerCard from '../components/PlayerCard';
-import DeckSelector from '../components/DeckSelector';
+import ThemePickerModal from '../components/ThemePickerModal';
 import BackButton from '../components/BackButton';
 import ScrollFade from '../components/ScrollFade';
-import { IPlayer, DecksCatalog, SelectedDecks, GameMode } from '@onskone/shared';
-import { useSocketEvent, useQueryParams, useLeavePrompt, useReconnectOnVisible } from '../hooks';
+import { IPlayer, DecksCatalog, DecksCatalogWithMeta, SelectedDecks } from '@onskone/shared';
+import { useSocketEvent, useLeavePrompt, useReconnectOnVisible } from '../hooks';
 import { useToast } from '../components/Toast';
-import { GAME_CONFIG, AVATARS } from '../constants/game';
+import { useLocale } from '../i18n';
+import { GAME_CONFIG, AVATARS, getSoftCategoryColor } from '../constants/game';
 import { studioStorage, isStudioFrame } from '../utils/studioStorage';
 
 const RECOMMENDED_PLAYERS = 4;
 
 const Lobby = () => {
     const { lobbyCode } = useParams<{ lobbyCode: string }>();
-    const queryParams = useQueryParams();
+    const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const showToast = useToast();
+    const { t } = useLocale();
 
     // Redirect if no lobby code
     useEffect(() => {
@@ -40,7 +43,9 @@ const Lobby = () => {
     const [isHowToPlayOpen, setIsHowToPlayOpen] = useState(false);
     const [fallbackLink, setFallbackLink] = useState<string | null>(null);
     const [decksCatalog, setDecksCatalog] = useState<DecksCatalog>({});
+    const [decksCatalogMeta, setDecksCatalogMeta] = useState<DecksCatalogWithMeta>({});
     const [selectedDecks, setSelectedDecks] = useState<SelectedDecks>({});
+    const [isThemePickerOpen, setIsThemePickerOpen] = useState(false);
     const [lobbyTab, setLobbyTab] = useState<'settings' | 'players'>('settings');
     const lobbyTabScrollRef = useRef<HTMLDivElement | null>(null);
     // Le scroll-container est partagé entre les 2 tabs (grid stacking).
@@ -50,12 +55,11 @@ const Lobby = () => {
         const el = lobbyTabScrollRef.current;
         if (el) el.scrollTop = 0;
     }, [lobbyTab]);
-    const [gameMode, setGameMode] = useState<GameMode>('local');
     const [guessMyAnswerMode, setGuessMyAnswerMode] = useState<boolean>(false);
     const initialPlayerIdsRef = useRef<Set<string> | null>(null);
     const prevHostIdRef = useRef<string | null>(null);
     const [playerName] = useState<string>(() => {
-        const urlPlayerName = queryParams.get('playerName');
+        const urlPlayerName = searchParams.get('playerName');
         if (urlPlayerName) {
             studioStorage.setItem(`playerName_${lobbyCode}`, urlPlayerName);
             return urlPlayerName;
@@ -70,7 +74,7 @@ const Lobby = () => {
     });
 
     const [avatarId] = useState<number>(() => {
-        const urlAvatarId = queryParams.get('avatarId');
+        const urlAvatarId = searchParams.get('avatarId');
         if (urlAvatarId !== null) {
             const id = parseInt(urlAvatarId, 10);
             if (!isNaN(id)) {
@@ -93,7 +97,7 @@ const Lobby = () => {
         const link = `${window.location.origin}/?lobbyCode=${lobbyCode!}`;
 
         const showCopied = () => {
-            showToast('Lien copié ! Envoie le à tes amis', 'success');
+            showToast(t.lobby.toasts.linkCopied, 'success');
         };
 
         // Fonction de fallback pour copier sans l'API Clipboard (HTTP non-localhost)
@@ -122,7 +126,7 @@ const Lobby = () => {
         } else {
             fallbackCopy(link);
         }
-    }, [lobbyCode, showToast]);
+    }, [lobbyCode, showToast, t]);
 
     const leaveLobby = useCallback(() => {
         const isAlone = players.filter(p => p.isActive).length <= 1;
@@ -130,10 +134,10 @@ const Lobby = () => {
             socket.emit('leaveLobby', { lobbyCode, currentPlayerId: currentPlayer.id });
         }
         if (isAlone) {
-            showToast('Tu étais seul dans le salon, il a été supprimé', 'info', 5000);
+            showToast(t.lobby.toasts.aloneRemoved, 'info', 5000);
         }
         navigate(`/?lobbyCode=${lobbyCode}`);
-    }, [currentPlayer, lobbyCode, navigate, players, showToast]);
+    }, [currentPlayer, lobbyCode, navigate, players, showToast, t]);
 
     const kickPlayer = useCallback((playerId: string) => {
         if (lobbyCode) {
@@ -191,11 +195,11 @@ const Lobby = () => {
         // - if nothing is preselected, pick the first available theme.
         if (Object.values(selectedDecks).reduce((acc, arr) => acc + arr.length, 0) === 0) {
             const firstCat = Object.keys(decksCatalog)[0];
-            const firstTheme = firstCat ? Object.keys(decksCatalog[firstCat] ?? {})[0] : undefined;
-            if (firstCat && firstTheme) {
+            const firstCode = firstCat ? decksCatalog[firstCat]?.[0] : undefined;
+            if (firstCat && firstCode) {
                 socket.emit('updateSelectedDecks', {
                     lobbyCode: lobbyCode!,
-                    selected: { [firstCat]: [firstTheme] },
+                    selected: { [firstCat]: [firstCode] },
                 });
                 return; // wait for state update, will retry next effect run
             }
@@ -218,9 +222,9 @@ const Lobby = () => {
         if (prevHostIdRef.current !== null && newHostId !== null && prevHostIdRef.current !== newHostId) {
             const me = data.players.find(p => p.socketId === socket.id);
             if (me?.isHost) {
-                showToast('Tu es maintenant le chef du salon !', 'success', 4000);
+                showToast(t.lobby.toasts.promoted, 'success', 4000);
             } else if (newHost) {
-                showToast(`${newHost.name} est maintenant le chef du salon`, 'info', 4000);
+                showToast(t.lobby.toasts.newHost(newHost.name), 'info', 4000);
             }
         }
         prevHostIdRef.current = newHostId;
@@ -230,7 +234,7 @@ const Lobby = () => {
         if (potentialCurrentPlayer) {
             setCurrentPlayer(potentialCurrentPlayer);
         }
-    }, [showToast]);
+    }, [showToast, t]);
 
     const handleJoinedLobby = useCallback((data: { player: IPlayer }) => {
         setCurrentPlayer(data.player);
@@ -238,11 +242,11 @@ const Lobby = () => {
 
     const handleKickedFromLobby = useCallback((data?: { hostName?: string }) => {
         const message = data?.hostName
-            ? `${data.hostName} t'a expulsé du salon`
-            : 'Tu as été expulsé du salon';
+            ? t.lobby.toasts.kicked(data.hostName)
+            : t.lobby.toasts.kickedAnon;
         showToast(message, 'error', 4500);
         navigate('/');
-    }, [navigate, showToast]);
+    }, [navigate, showToast, t]);
 
     const handleError = useCallback((data: { message: string }) => {
         switch (data.message) {
@@ -267,14 +271,14 @@ const Lobby = () => {
     }, []);
 
     const handleLobbyClosed = useCallback(() => {
-        showToast('Ce salon a été fermé pour inactivité', 'error', 4500);
+        showToast(t.lobby.toasts.closedInactive, 'error', 4500);
         navigate('/');
-    }, [navigate, showToast]);
+    }, [navigate, showToast, t]);
 
-    const handleLobbyDecksState = useCallback((data: { catalog: DecksCatalog; selected: SelectedDecks; gameMode: GameMode; guessMyAnswerMode?: boolean }) => {
+    const handleLobbyDecksState = useCallback((data: { catalog: DecksCatalog; catalogWithMeta?: DecksCatalogWithMeta; selected: SelectedDecks; guessMyAnswerMode?: boolean }) => {
         setDecksCatalog(data.catalog);
+        if (data.catalogWithMeta) setDecksCatalogMeta(data.catalogWithMeta);
         setSelectedDecks(data.selected);
-        setGameMode(data.gameMode);
         setGuessMyAnswerMode(!!data.guessMyAnswerMode);
     }, []);
 
@@ -317,14 +321,6 @@ const Lobby = () => {
         });
     }, [lobbyCode, queueSettingEmit]);
 
-    const handleGameModeChange = useCallback((next: GameMode) => {
-        setGameMode(next);
-        if (!lobbyCode) return;
-        queueSettingEmit('gameMode', () => {
-            socket.emit('updateGameMode', { lobbyCode, gameMode: next });
-        });
-    }, [lobbyCode, queueSettingEmit]);
-
     useSocketEvent('updatePlayersList', handleUpdatePlayersList, [handleUpdatePlayersList]);
     useSocketEvent('joinedLobby', handleJoinedLobby, [handleJoinedLobby]);
     useSocketEvent('kickedFromLobby', handleKickedFromLobby, [handleKickedFromLobby]);
@@ -336,7 +332,7 @@ const Lobby = () => {
     useSocketEvent('guessMyAnswerModeUpdated', handleGuessMyAnswerModeUpdated, [handleGuessMyAnswerModeUpdated]);
 
     const activePlayers = players.filter(p => p.isActive);
-    const hostName = players.find(p => p.isHost)?.name ?? 'le host';
+    const hostName = players.find(p => p.isHost)?.name ?? t.lobby.hostFallback;
     const enoughPlayers = activePlayers.length >= GAME_CONFIG.MIN_PLAYERS;
     const totalThemesSelected = Object.values(selectedDecks).reduce((acc, arr) => acc + arr.length, 0);
     const hasThemeSelected = totalThemesSelected > 0;
@@ -346,8 +342,8 @@ const Lobby = () => {
     const playersListMobile = (
         <div className="flex flex-col gap-2">
             <div className="flex items-baseline gap-2">
-                <p className="m-0 font-display font-bold text-sm text-gray-800">Dans le salon</p>
-                <p className="m-0 text-xs text-gray-400">{activePlayers.length} joueur{activePlayers.length > 1 ? 's' : ''} connecté{activePlayers.length > 1 ? 's' : ''}</p>
+                <p className="m-0 font-display font-bold text-sm text-gray-800">{t.lobby.inTheRoom}</p>
+                <p className="m-0 text-xs text-gray-400">{t.lobby.connectedCount(activePlayers.length)}</p>
             </div>
             <ul className="list-none w-full m-0 p-0 grid grid-cols-3 md:grid-cols-4 gap-2">
                 {players.map((player, index) => (
@@ -381,8 +377,6 @@ const Lobby = () => {
 
     const isHost = !!currentPlayer?.isHost;
 
-    const localActive = gameMode === 'local';
-
     const settingsPanelEl = (
         <div className="flex flex-col gap-4">
             {!isHost && (
@@ -390,18 +384,18 @@ const Lobby = () => {
                     <div className="relative rotate-[-1.2deg] hover:rotate-0 transition-transform duration-300 ease-out">
                         <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-cream-kraft border-[2.5px] border-black rounded-lg stack-shadow-sm texture-paper">
                             <span className="font-display text-[13px] tracking-tight text-black leading-snug whitespace-nowrap">
-                                Seul{' '}
+                                {t.lobby.settingsHostOnlyPrefix}{' '}
                                 <span className="relative inline-block font-bold uppercase bg-black text-warning-500 px-1.5 py-0.5 rounded-md">
                                     <Icon
                                         icon="fluent-emoji-flat:crown"
                                         width={20}
                                         height={20}
                                         aria-hidden
-                                        className="absolute -top-3.5 left-1/2 -translate-x-1/2 [filter:drop-shadow(1px_1.5px_0_rgba(0,0,0,0.5))]"
+                                        className="absolute -top-3.5 left-1/2 -translate-x-1/2 [filter:drop-shadow(1px_0_0_#000)_drop-shadow(-1px_0_0_#000)_drop-shadow(0_1px_0_#000)_drop-shadow(0_-1px_0_#000)_drop-shadow(1px_2px_0_rgba(0,0,0,0.35))]"
                                     />
                                     {hostName && hostName.length > 10 ? `${hostName.slice(0, 10)}…` : hostName}
                                 </span>{' '}
-                                peut modifier les paramètres
+                                {t.lobby.settingsHostOnlySuffix}
                             </span>
                         </div>
                         {/* ruban adhésif par dessus */}
@@ -412,114 +406,79 @@ const Lobby = () => {
                     </div>
                 </div>
             )}
-            {/* Slider mode de jeu - tout en haut, sans titre de section */}
-            <div className={`flex items-start gap-3.5 ${!isHost ? 'opacity-65 pointer-events-none' : ''}`}>
-                <button
-                    type="button"
-                    role="switch"
-                    aria-checked={!localActive}
-                    aria-label={`Mode ${localActive ? 'sur place' : 'à distance'} - cliquer pour basculer`}
-                    disabled={!isHost}
-                    onClick={() => handleGameModeChange(localActive ? 'remote' : 'local')}
-                    className="relative inline-flex shrink-0 w-[6rem] h-10 md:w-[7.25rem] md:h-12 border-[2.5px] border-black rounded-full overflow-hidden bg-cream-player stack-shadow-sm texture-paper transition-transform duration-150 active:scale-[0.96] cursor-pointer"
-                >
-                    <span
-                        className={`absolute top-0.5 h-[1.85rem] w-[1.85rem] md:h-[2.25rem] md:w-[2.25rem] rounded-full border-[2.5px] border-black shadow-[1.5px_1.5px_0_0_rgba(0,0,0,0.85)] transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${localActive
-                            ? 'left-0.5 bg-warning-500'
-                            : 'left-[calc(100%-2.1rem)] md:left-[calc(100%-2.5rem)] bg-brand-200'
-                            }`}
-                        aria-hidden
-                    />
-                    <span className="relative z-10 flex w-full items-center justify-between px-2">
-                        <Icon
-                            icon="fluent-emoji-flat:busts-in-silhouette"
-                            width="1em"
-                            height="1em"
-                            className={`text-[18px] md:text-[22px] -translate-y-1 [filter:drop-shadow(1px_1.5px_0_rgba(0,0,0,0.55))] transition-all duration-300 ease-out ${localActive ? 'scale-110 rotate-[-6deg]' : 'scale-75 saturate-0 opacity-40'}`}
-                            aria-hidden
-                        />
-                        <Icon
-                            icon="fluent-emoji-flat:globe-showing-europe-africa"
-                            width="1em"
-                            height="1em"
-                            className={`text-[18px] md:text-[22px] -translate-x-0.5 -translate-y-0.5 [filter:drop-shadow(1px_1.5px_0_rgba(0,0,0,0.55))] transition-all duration-300 ease-out ${!localActive ? 'scale-110 rotate-[6deg]' : 'scale-75 saturate-0 opacity-40'}`}
-                            aria-hidden
-                        />
-                    </span>
-                </button>
-                <div className="flex items-center gap-3">
-                    <div
-                        key={gameMode}
-                        className="flex-1 min-w-0 animate-phase-enter translate-y-[7px]"
-                    >
-                        <div className="font-display text-sm md:text-base font-bold uppercase tracking-tight text-black leading-none">
-                            {localActive ? 'Sur place' : 'À distance'}
-                        </div>
+            {/* Mode "Devine ma réponse" - décoché = mode Classique */}
+            <Checkbox
+                checked={guessMyAnswerMode}
+                onChange={handleGuessMyAnswerModeChange}
+                disabled={!isHost}
+                label={t.lobby.guessMyAnswer.label}
+                description={t.lobby.guessMyAnswer.description}
+            />
 
-                        <div className="font-sans text-[11px] text-gray-600 leading-snug mt-1">
-                            {localActive
-                                ? 'Dans la même pièce, les joueurs sont à proximité pour montrer leur téléphone'
-                                : 'Chacun chez soi, les joueurs suivent la partie en direct sur leur écran'}
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Slider mode "Devine ma réponse" */}
-            <div className={`flex items-start gap-3.5 ${!isHost ? 'opacity-65 pointer-events-none' : ''}`}>
-                <button
-                    type="button"
-                    role="switch"
-                    aria-checked={guessMyAnswerMode}
-                    aria-label={`Mode "Devine ma réponse" - ${guessMyAnswerMode ? 'activé' : 'désactivé'}`}
-                    disabled={!isHost}
-                    onClick={() => handleGuessMyAnswerModeChange(!guessMyAnswerMode)}
-                    className="relative inline-flex shrink-0 w-[6rem] h-10 md:w-[7.25rem] md:h-12 border-[2.5px] border-black rounded-full overflow-hidden bg-cream-player stack-shadow-sm texture-paper transition-transform duration-150 active:scale-[0.96] cursor-pointer"
-                >
-                    <span
-                        className={`absolute top-0.5 h-[1.85rem] w-[1.85rem] md:h-[2.25rem] md:w-[2.25rem] rounded-full border-[2.5px] border-black shadow-[1.5px_1.5px_0_0_rgba(0,0,0,0.85)] transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${guessMyAnswerMode
-                            ? 'left-[calc(100%-2.1rem)] md:left-[calc(100%-2.5rem)] bg-brand-200'
-                            : 'left-0.5 bg-warning-500'
-                            }`}
-                        aria-hidden
-                    />
-                </button>
-                <div className="flex items-center gap-3">
-                    <div
-                        key={guessMyAnswerMode ? 'on' : 'off'}
-                        className="flex-1 min-w-0 animate-phase-enter translate-y-[7px]"
-                    >
-                        <div className="font-display text-sm md:text-base font-bold uppercase tracking-tight text-black leading-none">
-                            {guessMyAnswerMode ? 'Devine ma réponse' : 'Classique'}
-                        </div>
-
-                        <div className="font-sans text-[11px] text-gray-600 leading-snug mt-1">
-                            {guessMyAnswerMode
-                                ? 'Un joueur est désigné pour écrire la réponse que le pilier aurait répondu'
-                                : 'Seuls les joueurs répondent et le pilier devine qui a écrit quoi'}
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Section Thèmes */}
-            <div className={`flex flex-col gap-2.5 ${!isHost ? 'opacity-65' : ''}`}>
+            {/* Section Thèmes - liste compacte des activés + bouton Modifier */}
+            <div className="flex flex-col gap-2.5">
                 <div className="flex items-baseline gap-2">
-                    <span className="font-display text-base font-bold uppercase tracking-tight text-black">Thèmes</span>
+                    <span className="font-display text-base font-bold uppercase tracking-tight text-black">{t.lobby.themes}</span>
                     <span className="flex-1 h-px bg-black/10" />
+                    <span className="font-display text-xs font-bold text-gray-500 whitespace-nowrap">
+                        {totalThemesSelected}/{Object.values(decksCatalog).reduce((acc, arr) => acc + arr.length, 0)}
+                    </span>
                 </div>
-                <DeckSelector
-                    catalog={decksCatalog}
-                    selected={selectedDecks}
-                    readOnly={!isHost}
-                    onChange={handleSelectedDecksChange}
-                />
+                <button
+                    type="button"
+                    onClick={() => setIsThemePickerOpen(true)}
+                    className="group relative w-full flex flex-wrap items-center gap-1.5 p-2.5 pr-3 pt-9 rounded-2xl border-[2.5px] border-black bg-white texture-paper stack-shadow-sm text-left cursor-pointer active:scale-[0.98] transition-transform"
+                    aria-label={isHost ? t.themePicker.modify : t.themePicker.view}
+                >
+                    {/* Bouton Modifier / Voir - absolu top centré */}
+                    <span
+                        aria-hidden
+                        className="absolute top-2 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md border-[2px] border-black bg-cream-paper font-display text-[11px] font-bold uppercase tracking-tight text-black stack-shadow-sm group-hover:scale-[1.05] group-active:scale-[0.95] transition-transform"
+                    >
+                        <Icon
+                            icon={isHost ? 'fluent-emoji-flat:pencil' : 'fluent-emoji-flat:eye'}
+                            width={12}
+                            height={12}
+                            aria-hidden
+                            style={{ filter: 'drop-shadow(1px 0 0 #000) drop-shadow(-1px 0 0 #000) drop-shadow(0 1px 0 #000) drop-shadow(0 -1px 0 #000) drop-shadow(1px 2px 0 rgba(0,0,0,0.35))' }}
+                        />
+                        {isHost ? t.themePicker.modify : t.themePicker.view}
+                    </span>
+
+                    {totalThemesSelected === 0 ? (
+                        <span className="font-display text-sm italic text-gray-500 px-1">{t.themePicker.emptyState}</span>
+                    ) : (
+                        Object.entries(decksCatalogMeta).flatMap(([cat, infos]) =>
+                            infos
+                                .filter(info => selectedDecks[cat]?.includes(info.code))
+                                .map(info => (
+                                    <span
+                                        key={info.code}
+                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border-[2px] border-black font-display text-xs font-bold tracking-tight text-black"
+                                        style={{ backgroundColor: getSoftCategoryColor(cat) }}
+                                    >
+                                        <Icon
+                                            icon={info.emoji}
+                                            width={14}
+                                            height={14}
+                                            aria-hidden
+                                            style={{ filter: 'drop-shadow(1px 0 0 #000) drop-shadow(-1px 0 0 #000) drop-shadow(0 1px 0 #000) drop-shadow(0 -1px 0 #000) drop-shadow(1px 2px 0 rgba(0,0,0,0.35))' }}
+                                        />
+                                        <span>{info.name}</span>
+                                    </span>
+                                ))
+                        )
+                    )}
+                </button>
             </div>
         </div>
     );
 
     return (
-        <div className="h-full flex flex-col items-center justify-center overflow-hidden animate-phase-enter">
+        <div className="relative h-full flex flex-col overflow-hidden animate-phase-enter">
+            {/* Zone centrale qui prend toute la place dispo et centre le contenu.
+                Le Footer (en dessous) reste collé au bas de l'écran sur desktop. */}
+            <div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center overflow-hidden">
             {/* Contenu principal - sized to content, centré dans la fenêtre.
                 Le panel a son propre cap dvh pour scroller si le contenu dépasse. */}
             <div className="w-full max-w-2xl md:max-w-3xl max-h-full min-h-0 mx-auto px-3 md:px-4 py-2 md:py-4 flex flex-col safe-pt">
@@ -527,7 +486,7 @@ const Lobby = () => {
                 <div className="min-h-0 flex flex-col gap-2 md:gap-4">
                     {/* Bouton retour + raccourci "Comment jouer ?" sur la même ligne. */}
                     <div className="shrink-0 flex items-center justify-between gap-2">
-                        <BackButton onClick={leaveLobby} label="Retour" tone="danger" />
+                        <BackButton onClick={leaveLobby} label={t.common.back} tone="danger" />
                         <HowToPlayButton onClick={() => setIsHowToPlayOpen(true)} />
                     </div>
 
@@ -537,31 +496,31 @@ const Lobby = () => {
                             {
                                 id: 'settings' as const,
                                 color: 'var(--color-warning-500)',
-                                label: 'Paramètres',
+                                label: t.lobby.tabs.settings,
                                 badge: null,
                                 outer: 'left' as const,
                             },
                             {
                                 id: 'players' as const,
                                 color: 'var(--color-brand-500)',
-                                label: 'Joueurs',
+                                label: t.lobby.tabs.players,
                                 badge: `${activePlayers.length}/${GAME_CONFIG.MAX_PLAYERS}`,
                                 outer: 'right' as const,
                             },
-                        ]).map(t => {
-                            const active = lobbyTab === t.id;
+                        ]).map(tab => {
+                            const active = lobbyTab === tab.id;
                             // Coin "extérieur" généreusement arrondi (bord du panel),
                             // coin "intérieur" (entre les deux tabs) légèrement biseauté.
-                            const radiusClasses = t.outer === 'left'
+                            const radiusClasses = tab.outer === 'left'
                                 ? 'rounded-tl-[22px] rounded-tr-md'
                                 : 'rounded-tr-[22px] rounded-tl-md';
                             return (
                                 <button
-                                    key={t.id}
+                                    key={tab.id}
                                     type="button"
                                     role="tab"
                                     aria-selected={active}
-                                    onClick={() => setLobbyTab(t.id)}
+                                    onClick={() => setLobbyTab(tab.id)}
                                     className={`flex-1 relative inline-flex items-center justify-center gap-2 px-3 md:px-4 pt-2 md:pt-2.5 pb-3 md:pb-3.5 bg-white ${radiusClasses} border-[2.5px] border-b-0 border-black cursor-pointer transition-all duration-200 origin-bottom overflow-hidden
                                         ${active
                                             ? 'shadow-[3px_-3px_0_0_rgba(0,0,0,0.18)] z-20'
@@ -571,7 +530,7 @@ const Lobby = () => {
                                     {/* Bande accent inférieure colorée - plus haute si actif */}
                                     <span
                                         className={`absolute left-0 right-0 bottom-0 pointer-events-none transition-[height] duration-200 ${active ? 'h-2 md:h-2.5' : 'h-1.5'}`}
-                                        style={{ backgroundColor: t.color }}
+                                        style={{ backgroundColor: tab.color }}
                                         aria-hidden
                                     />
 
@@ -579,15 +538,15 @@ const Lobby = () => {
                                         className={`relative font-display font-bold tracking-[0.08em] uppercase text-sm md:text-base ${active ? 'text-black' : 'text-gray-600'
                                             }`}
                                     >
-                                        {t.label}
+                                        {tab.label}
                                     </span>
 
-                                    {t.badge && (
+                                    {tab.badge && (
                                         <span
                                             className={`relative shrink-0 font-display text-[11px] md:text-xs font-bold tabular-nums whitespace-nowrap bg-white/80 rounded-full px-2 py-0.5 border border-black/15 ${active ? 'text-black/85' : 'text-black/60'
                                                 }`}
                                         >
-                                            {t.badge}
+                                            {tab.badge}
                                         </span>
                                     )}
                                 </button>
@@ -604,7 +563,7 @@ const Lobby = () => {
                         <div
                             ref={lobbyTabScrollRef}
                             role="tabpanel"
-                            className="max-h-[67dvh] overflow-y-auto overscroll-contain no-scrollbar p-3 md:p-4"
+                            className="max-h-[67dvh] overflow-y-auto overscroll-contain no-scrollbar px-3 pb-3 pt-5 md:px-4 md:pb-4 md:pt-6"
                         >
                             {/* Grid stacking : settings est toujours rendu (visible
                                 ou non) pour dicter la hauteur ; players se cale
@@ -632,7 +591,7 @@ const Lobby = () => {
                         <div className="flex flex-row items-center justify-center gap-3 md:gap-4 w-full flex-wrap">
                             {currentPlayer?.isHost ? (
                                 <Button
-                                    text="Démarrer"
+                                    text={t.lobby.start}
                                     variant="success"
                                     size="md"
                                     hero
@@ -643,11 +602,11 @@ const Lobby = () => {
                             ) : (
                                 <div className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white/85 border-[2.5px] border-black stack-shadow-sm text-gray-700">
                                     <Icon icon="fluent-emoji-flat:hourglass-not-done" className="animate-spin-slow [filter:drop-shadow(1px_1.5px_0_rgba(0,0,0,0.5))]" width="1.1em" height="1.1em" aria-hidden />
-                                    <span className="text-sm font-display italic truncate">Seul {hostName && hostName.length > 10 ? `${hostName.slice(0, 10)}…` : hostName} peut démarrer la partie</span>
+                                    <span className="text-sm font-display italic truncate">{t.lobby.startHostOnly(hostName && hostName.length > 10 ? `${hostName.slice(0, 10)}…` : hostName)}</span>
                                 </div>
                             )}
                             <Button
-                                text="Copier le lien d'invitation"
+                                text={t.lobby.copyInviteLink}
                                 variant="warning"
                                 size="sm"
                                 className="!text-xs md:!text-sm whitespace-nowrap"
@@ -658,21 +617,26 @@ const Lobby = () => {
                         {/* Helper text sous l'action row */}
                         {currentPlayer?.isHost && !enoughPlayers && (
                             <small className="text-[11px] md:text-xs text-white/85 italic drop-shadow text-center">
-                                Il faut au moins {GAME_CONFIG.MIN_PLAYERS} joueurs pour lancer
+                                {t.lobby.minPlayers(GAME_CONFIG.MIN_PLAYERS)}
                             </small>
                         )}
                         {currentPlayer?.isHost && enoughPlayers && !hasThemeSelected && (
                             <small className="text-[11px] md:text-xs text-white/85 italic drop-shadow text-center">
-                                Sélectionne au moins 1 thème
+                                {t.lobby.selectAtLeastOneTheme}
                             </small>
                         )}
                     </div>
                 </div>
             </div>
 
-            {/* Footer - desktop uniquement (caché par la sticky bar sur mobile) */}
-            <div className="hidden md:block">
-                <Footer />
+            </div>
+
+            {/* Footer transparent en overlay (desktop uniquement) : ne mange pas
+                la place verticale, le contenu peut passer dessous. */}
+            <div className="hidden md:block absolute bottom-0 left-0 right-0 pointer-events-none z-10">
+                <div className="pointer-events-auto">
+                    <Footer />
+                </div>
             </div>
 
             {/* Modal de confirmation pour peu de joueurs */}
@@ -680,10 +644,10 @@ const Lobby = () => {
                 isOpen={showFewPlayersModal}
                 onClose={() => setShowFewPlayersModal(false)}
                 onConfirm={doStartGame}
-                title="Pas beaucoup de joueurs :("
-                message="La partie serait plus amusante avec au moins 4 joueurs. Démarrer la partie quand même ?"
-                confirmText="Lancer"
-                cancelText="Attendre"
+                title={t.lobby.modals.fewPlayers.title}
+                message={t.lobby.modals.fewPlayers.message}
+                confirmText={t.lobby.modals.fewPlayers.confirm}
+                cancelText={t.lobby.modals.fewPlayers.cancel}
                 confirmVariant="success"
             />
 
@@ -694,15 +658,15 @@ const Lobby = () => {
                     setShowGameAlreadyStarted(false);
                     navigate('/');
                 }}
-                title="Partie déjà lancée"
+                title={t.lobby.modals.alreadyStarted.title}
             >
                 <div className="text-center space-y-4">
                     <Icon icon="fluent-emoji-flat:crying-face" className="mx-auto" width="4rem" height="4rem" aria-hidden />
                     <p className="text-gray-700">
-                        Ohhhhhh mince ! La partie a déjà été lancée et tu ne peux pas la rejoindre en cours de route...
+                        {t.lobby.modals.alreadyStarted.body}
                     </p>
                     <p className="text-sm text-gray-500 italic">
-                        Petit conseil : changer d'amis.
+                        {t.lobby.modals.alreadyStarted.tip}
                     </p>
                 </div>
             </InfoModal>
@@ -711,7 +675,7 @@ const Lobby = () => {
             <InfoModal
                 isOpen={isHowToPlayOpen}
                 onClose={() => setIsHowToPlayOpen(false)}
-                title="Comment jouer ?"
+                title={t.lobby.modals.howToPlay}
                 variant="comic"
             >
                 <HowToPlayCarousel />
@@ -721,11 +685,11 @@ const Lobby = () => {
             <InfoModal
                 isOpen={fallbackLink !== null}
                 onClose={() => setFallbackLink(null)}
-                title="Copie le lien à la main"
+                title={t.lobby.modals.copyLink.title}
             >
                 <div className="space-y-3">
                     <p className="text-sm text-gray-700 m-0">
-                        Le copier-coller automatique n'a pas fonctionné. Sélectionne le lien ci-dessous :
+                        {t.lobby.modals.copyLink.body}
                     </p>
                     <input
                         type="text"
@@ -736,6 +700,17 @@ const Lobby = () => {
                     />
                 </div>
             </InfoModal>
+
+            {/* Modal de sélection des thèmes (édition pour host, lecture seule sinon) */}
+            <ThemePickerModal
+                isOpen={isThemePickerOpen}
+                onClose={() => setIsThemePickerOpen(false)}
+                catalog={decksCatalogMeta}
+                selected={selectedDecks}
+                mode={isHost ? 'edit' : 'readonly'}
+                hostName={hostName}
+                onChange={handleSelectedDecksChange}
+            />
         </div>
     );
 };

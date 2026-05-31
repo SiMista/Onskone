@@ -97,7 +97,7 @@ export const GAME_CONFIG = {
 } as const;
 
 // Couleurs associées à chaque catégorie de cartes (utilisées pour le fond du
-// header de catégorie dans le DeckSelector et pour les thèmes sélectionnés).
+// bloc illustration des thèmes et le surlignage des pills sélectionnées).
 // Les catégories non listées tombent sur DEFAULT_CATEGORY_COLOR.
 export const CATEGORY_COLORS: Record<string, string> = {
   ICEBREAKERS: '#1aafda', // bleu
@@ -108,6 +108,22 @@ export const DEFAULT_CATEGORY_COLOR = '#9ca3af'; // gris par défaut
 
 export const getCategoryColor = (category: string): string =>
   CATEGORY_COLORS[category] ?? DEFAULT_CATEGORY_COLOR;
+
+// Mix linéaire entre un hex et une cible (255 = blanc, 0 = noir).
+const mixHex = (hex: string, target: number, ratio: number): string => {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const channel = (c: number) =>
+    Math.round(Math.max(0, Math.min(255, c + (target - c) * ratio))).toString(16).padStart(2, '0');
+  return `#${channel(r)}${channel(g)}${channel(b)}`;
+};
+export const lightenHex = (hex: string, amount: number) => mixHex(hex, 255, amount);
+export const darkenHex = (hex: string, amount: number) => mixHex(hex, 0, amount);
+
+// Version pastel/adoucie pour les pilules de fond.
+export const getSoftCategoryColor = (category: string, amount = 0.35): string =>
+  lightenHex(getCategoryColor(category), amount);
 
 // Configuration de l'URL du serveur backend
 const getServerUrl = () => {

@@ -1,4 +1,4 @@
-import { ILobby, IPlayer, GAME_CONSTANTS, SelectedDecks, GameMode } from '@onskone/shared';
+import { ILobby, IPlayer, GAME_CONSTANTS, SelectedDecks, GameMode, Locale, DEFAULT_LOCALE } from '@onskone/shared';
 import { IGame } from '../types/IGame';
 import { getDefaultSelectedDecks } from '../managers/GameManager';
 
@@ -10,13 +10,15 @@ export class Lobby implements ILobby {
     selectedDecks: SelectedDecks;
     gameMode: GameMode;
     guessMyAnswerMode: boolean;
+    locale: Locale;
 
-    constructor(lobbyCode: string) {
+    constructor(lobbyCode: string, locale: Locale = DEFAULT_LOCALE) {
         this.code = lobbyCode;
         this.players = [];
         this.game = null;
         this.lastActivity = new Date();
-        this.selectedDecks = getDefaultSelectedDecks();
+        this.locale = locale;
+        this.selectedDecks = getDefaultSelectedDecks(locale);
         this.gameMode = 'local';
         this.guessMyAnswerMode = false;
     }

@@ -33,6 +33,8 @@ export interface AdminDeckSubject {
 export interface AdminDeckSummary {
   category: string;
   theme: string;
+  /** Description du thème (depuis l'onglet "Noms Themes" de l'Excel source) */
+  description: string;
   subjectCount: number;
   questionCount: number;
   subjects: AdminDeckSubject[];

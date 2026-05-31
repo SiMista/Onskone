@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import Modal from '../Modal';
-import { LEGAL_CONTENT } from '../../constants/legal';
+import { useLocale } from '../../i18n';
 
 interface MentionsModalProps {
   isOpen: boolean;
@@ -19,6 +19,7 @@ const tabClass = (active: boolean): string =>
 
 const MentionsModal: React.FC<MentionsModalProps> = ({ isOpen, onClose }) => {
   const [tab, setTab] = useState<Tab>('mentions');
+  const { t } = useLocale();
 
   const tabs = (
     <div className="flex border-b border-gray-200">
@@ -27,14 +28,14 @@ const MentionsModal: React.FC<MentionsModalProps> = ({ isOpen, onClose }) => {
         onClick={() => setTab('mentions')}
         className={tabClass(tab === 'mentions')}
       >
-        Mentions légales
+        {t.legal.mentions.title}
       </button>
       <button
         type="button"
         onClick={() => setTab('privacy')}
         className={tabClass(tab === 'privacy')}
       >
-        Confidentialité
+        {t.legal.privacy.title}
       </button>
     </div>
   );
@@ -43,13 +44,13 @@ const MentionsModal: React.FC<MentionsModalProps> = ({ isOpen, onClose }) => {
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Mentions & Confidentialité"
+      title={`${t.legal.mentions.title} & ${t.legal.privacy.title}`}
       subHeader={tabs}
     >
       <div className="text-gray-700">
         {tab === 'mentions' && (
           <div className="space-y-4">
-            {LEGAL_CONTENT.mentions.sections.map((section, index) => (
+            {t.legal.mentions.sections.map((section, index) => (
               <section key={index}>
                 <h3 className="font-bold text-lg mb-2">{section.title}</h3>
                 <p dangerouslySetInnerHTML={{ __html: section.content }} />
@@ -63,7 +64,7 @@ const MentionsModal: React.FC<MentionsModalProps> = ({ isOpen, onClose }) => {
 
         {tab === 'privacy' && (
           <div className="space-y-4">
-            {LEGAL_CONTENT.privacy.sections.map((section, index) => (
+            {t.legal.privacy.sections.map((section, index) => (
               <section key={index}>
                 <h3 className="font-bold text-lg mb-2">{section.title}</h3>
                 <p>{section.content}</p>

@@ -1,5 +1,5 @@
 import {Lobby} from "../models/Lobby";
-import { IPlayer, ServerToClientEvents, ClientToServerEvents } from '@onskone/shared';
+import { IPlayer, ServerToClientEvents, ClientToServerEvents, Locale, DEFAULT_LOCALE } from '@onskone/shared';
 import { Server } from 'socket.io';
 import {generateLobbyCode} from '../utils/helpers';
 import logger from '../utils/logger';
@@ -15,7 +15,7 @@ let cleanupIntervalId: NodeJS.Timeout | null = null;
  * Create a lobby and return lobby code
  * Ensures unique lobby codes
  */
-export const create = (): string => {
+export const create = (locale: Locale = DEFAULT_LOCALE): string => {
     let lobbyCode: string;
     let attempts = 0;
     const maxAttempts = 10;
@@ -29,7 +29,7 @@ export const create = (): string => {
         }
     } while (lobbies.has(lobbyCode));
 
-    const lobby = new Lobby(lobbyCode);
+    const lobby = new Lobby(lobbyCode, locale);
     lobbies.set(lobbyCode, lobby);
     return lobbyCode;
 };

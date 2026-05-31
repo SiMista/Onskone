@@ -11,66 +11,27 @@ import { buildShareCard, shareBlob } from '../utils/shareCard';
 import { useToast } from '../components/Toast';
 import ReportTrigger from '../components/ReportTrigger';
 import { recordGameEnd } from '../utils/playerStats';
+import { useLocale } from '../i18n';
 
+/**
+ * Métadonnées structurelles du tier (palier de score). Le titre + messages
+ * vivent dans le dictionnaire i18n (t.endGame.tiers) - même index, même ordre.
+ */
 export interface Tier {
   max: number;
   midPct: number;
-  title: string;
-  messages: string[];
   color: string;
   icon: string;
   emoji: string;
 }
 
 export const TIERS: Tier[] = [
-  {
-    max: 20, midPct: 10, title: 'C\'est gênant là...', color: '#ff4f4f', icon: 'fluent-emoji-flat:neutral-face', emoji: '😐',
-    messages: [
-      'Vous vous êtes croisés une fois dans un ascenseur en 2019, c\'est ça ?',
-      'Vous partagez le wifi, c\'est déjà une base solide.',
-      'Faut peut-être commencer par un café ensemble, non ?',
-      'Tranquille, vous apprendrez à vous connaître… un jour.',
-    ],
-  },
-  {
-    max: 40, midPct: 30, title: 'Pas encore ça', color: '#ff8c3a', icon: 'fluent-emoji-flat:eyes', emoji: '👀',
-    messages: [
-      'Les bases sont là, reste juste à construire au-dessus.',
-      'Vous avancez, doucement mais sûrement… enfin surtout doucement.',
-      'Un apéro ou deux et ça devrait décoller.',
-    ],
-  },
-  {
-    max: 60, midPct: 50, title: 'Pas mal, pas mal', color: '#ffc700', icon: 'fluent-emoji-flat:handshake', emoji: '🤝',
-    messages: [
-      'Un pas de plus et vous êtes une vraie team.',
-      'Vous pourriez covoiturer 3h sans tuer personne. C\'est déjà énorme.',
-      'Y\'a de la confiance, mais le mot de passe Netflix reste sacré.',
-    ],
-  },
-  {
-    max: 80, midPct: 70, title: 'Super team', color: '#8bd94d', icon: 'fluent-emoji-flat:sparkles', emoji: '✨',
-    messages: [
-      'Vous vous captez presque sans parler, c\'est beau à voir.',
-      'Vous finissez les phrases des autres, et aussi leurs frites.',
-      'Vous pourriez braquer une banque ensemble',
-    ],
-  },
-  {
-    max: 99, midPct: 90, title: 'Inséparables', color: '#30c94d', icon: 'fluent-emoji-flat:people-hugging', emoji: '🫂',
-    messages: [
-      'À ce stade c\'est plus de l\'amitié, c\'est de la famille.',
-      'Chaque moment ensemble devient une anecdote.',
-      'Vos souvenirs communs pourraient remplir une saison Netflix.',
-    ],
-  },
-  {
-    max: 100, midPct: 100, title: 'Onskoné !', color: '#b46cff', icon: 'fluent-emoji-flat:partying-face', emoji: '🥳',
-    messages: [
-      'Score parfait. Vous êtes la même personne en plusieurs exemplaires.',
-      'À ce stade vous partagez l\'ADN, le mot de passe Wi-Fi et la même vie',
-    ],
-  },
+  { max: 20, midPct: 10, color: '#ff4f4f', icon: 'fluent-emoji-flat:neutral-face', emoji: '😐' },
+  { max: 40, midPct: 30, color: '#ff8c3a', icon: 'fluent-emoji-flat:eyes', emoji: '👀' },
+  { max: 60, midPct: 50, color: '#ffc700', icon: 'fluent-emoji-flat:handshake', emoji: '🤝' },
+  { max: 80, midPct: 70, color: '#8bd94d', icon: 'fluent-emoji-flat:sparkles', emoji: '✨' },
+  { max: 99, midPct: 90, color: '#30c94d', icon: 'fluent-emoji-flat:people-hugging', emoji: '🫂' },
+  { max: 100, midPct: 100, color: '#b46cff', icon: 'fluent-emoji-flat:partying-face', emoji: '🥳' },
 ];
 
 const ONSKONE_INDEX = TIERS.length - 1;
@@ -103,6 +64,7 @@ const EndGame: React.FC = () => {
   const popoverRef = useRef<HTMLDivElement | null>(null);
   const preparedBlobRef = useRef<Blob | null>(null);
   const showToast = useToast();
+  const { t } = useLocale();
 
   // Pour chaque joueur, retrouver le round où il a été pilier (sa question)
   const roundByLeaderId = useMemo(() => {
@@ -197,15 +159,17 @@ const EndGame: React.FC = () => {
   }, [leaderboard, rounds]);
 
   const verdict = useMemo(() => getVerdict(pct), [pct]);
+  const verdictIdx = useMemo(() => getTierIndex(pct), [pct]);
+  const verdictTexts = t.endGame.tiers[verdictIdx];
   // Sélection déterministe basée sur lobbyCode + pct + nb de rounds pour que
   // tous les clients de la même partie voient le même message.
   const verdictMessage = useMemo(() => {
     const seed = `${lobbyCode ?? ''}|${pct}|${rounds.length}`;
     let h = 0;
     for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) | 0;
-    const idx = Math.abs(h) % verdict.messages.length;
-    return verdict.messages[idx];
-  }, [verdict, lobbyCode, pct, rounds.length]);
+    const idx = Math.abs(h) % verdictTexts.messages.length;
+    return verdictTexts.messages[idx];
+  }, [verdictTexts, lobbyCode, pct, rounds.length]);
   const liveVerdict = useMemo(() => {
     if (onskoneRevealed) return TIERS[ONSKONE_INDEX];
     const idx = Math.min(ONSKONE_INDEX - 1, getTierIndex(displayPct));
@@ -315,10 +279,11 @@ const EndGame: React.FC = () => {
 
     unlocked.forEach((ach, idx) => {
       setTimeout(() => {
-        showToast(`Succès débloqué - ${ach.title}`, 'achievement', 4500);
+        const meta = t.achievements[ach.id];
+        showToast(t.endGame.toasts.achievementUnlocked(meta?.title ?? ach.id), 'achievement', 4500);
       }, 2000 + idx * 1200);
     });
-  }, [lobbyCode, currentPlayer, leaderboard, rounds, pct, showToast]);
+  }, [lobbyCode, currentPlayer, leaderboard, rounds, pct, showToast, t]);
 
   const handleBackToLobby = () => {
     if (lobbyCode) navigate(`/lobby/${lobbyCode}`);
@@ -340,7 +305,7 @@ const EndGame: React.FC = () => {
     let cancelled = false;
     buildShareCard({
       pct,
-      verdictTitle: verdict.title,
+      verdictTitle: verdictTexts.title,
       verdictMessage: verdictMessage,
       color: verdict.color,
       tierEmoji: verdict.emoji,
@@ -349,28 +314,29 @@ const EndGame: React.FC = () => {
         score: e.score,
         avatarId: e.player.avatarId,
       })),
+      texts: t.shareCard,
     })
       .then(blob => { if (!cancelled) preparedBlobRef.current = blob; })
       .catch(err => console.error('buildShareCard failed', err));
     return () => { cancelled = true; };
-  }, [revealed, leaderboard, pct, verdict, verdictMessage]);
+  }, [revealed, leaderboard, pct, verdict, verdictTexts, verdictMessage, t]);
 
   const handleShare = async () => {
     if (isSharing) return;
     const blob = preparedBlobRef.current;
     if (!blob) {
-      showToast('Image en cours de préparation…', 'info');
+      showToast(t.endGame.toasts.imagePreparing, 'info');
       return;
     }
-    const text = `${verdict.title} - ${pct}% · ${verdictMessage}`;
+    const text = `${verdictTexts.title} - ${pct}% · ${verdictMessage}`;
     setIsSharing(true);
     try {
       const result = await shareBlob(blob, text);
-      if (result === 'copied') showToast('Image copiée ! Colle-la où tu veux', 'success');
-      else if (result === 'failed') showToast('Partage non supporté', 'warning');
+      if (result === 'copied') showToast(t.endGame.toasts.imageCopied, 'success');
+      else if (result === 'failed') showToast(t.endGame.toasts.shareUnsupported, 'warning');
     } catch (err) {
       console.error('Share failed', err);
-      showToast('Oups, partage échoué', 'error');
+      showToast(t.endGame.toasts.shareFailed, 'error');
     } finally {
       setIsSharing(false);
     }
@@ -427,7 +393,7 @@ const EndGame: React.FC = () => {
         </div>
       )}
 
-      <div className="h-full max-h-[820px] min-h-0 max-w-3xl mx-auto w-full overflow-y-auto overscroll-contain no-scrollbar relative z-20">
+      <div className="h-full max-h-[820px] desktop-short:max-h-none min-h-0 max-w-3xl mx-auto w-full overflow-y-auto overscroll-contain no-scrollbar relative z-20">
         <div className="flex flex-col items-center mb-5 md:mb-8 mt-2 md:mt-4">
           <div
             className="relative flex flex-col items-center px-5 pt-5 pb-4"
@@ -440,11 +406,11 @@ const EndGame: React.FC = () => {
               aria-hidden
             />
             <p className="relative z-20 text-white/80 font-display text-sm md:text-lg uppercase tracking-[0.25em]">
-              Vous vous connaissez à
+              {t.endGame.eyebrow}
             </p>
 
-            <div className="relative z-20 w-[320px] h-[320px] md:w-[380px] md:h-[380px] max-w-full -mt-6 md:-mt-8">
-              <svg className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[200px] h-[200px] md:w-[250px] md:h-[250px] -rotate-90 overflow-visible" viewBox="0 0 240 240" style={{ overflow: 'visible' }}>
+            <div className="relative z-20 w-[min(320px,52dvh)] h-[min(320px,52dvh)] md:w-[min(380px,55dvh)] md:h-[min(380px,55dvh)] max-w-full -mt-6 md:-mt-8">
+              <svg className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(200px,34dvh)] h-[min(200px,34dvh)] md:w-[min(250px,38dvh)] md:h-[min(250px,38dvh)] -rotate-90 overflow-visible" viewBox="0 0 240 240" style={{ overflow: 'visible' }}>
                 <defs>
                   <filter id="ring-glow" x="-50%" y="-50%" width="200%" height="200%">
                     <feGaussianBlur in="SourceGraphic" stdDeviation="6" />
@@ -520,7 +486,7 @@ const EndGame: React.FC = () => {
                       className="font-display font-bold text-white text-xl md:text-2xl mt-1 tracking-wide"
                       style={{ textShadow: '0 2px 8px rgba(0,0,0,0.35)' }}
                     >
-                      Onskoné !
+                      {t.endGame.perfectBadge}
                     </span>
                   </div>
                 </div>
@@ -535,9 +501,10 @@ const EndGame: React.FC = () => {
                 const radius = 40;
                 const x = 50 + Math.sin(a) * radius;
                 const y = 50 - Math.cos(a) * radius;
+                const tierTitle = t.endGame.tiers[idx]?.title ?? '';
                 return (
                   <div
-                    key={tier.title}
+                    key={idx}
                     className="absolute flex flex-col items-center text-center whitespace-nowrap"
                     style={{
                       left: `${x}%`,
@@ -565,7 +532,7 @@ const EndGame: React.FC = () => {
                         letterSpacing: isActive ? '0.02em' : '0',
                       }}
                     >
-                      {tier.title}
+                      {tierTitle}
                     </span>
                   </div>
                 );
@@ -601,14 +568,14 @@ const EndGame: React.FC = () => {
             ) : (
               <Icon icon="mdi:share-variant-outline" width="1.1em" height="1.1em" aria-hidden />
             )}
-            <span>Partager</span>
+            <span>{t.endGame.share}</span>
           </button>
           <div className="flex flex-row justify-center items-center gap-3 md:gap-6">
             <Button variant="success" size="lg" onClick={handleBackToLobby}>
-              Rejouer
+              {t.endGame.playAgain}
             </Button>
             <Button variant="quit" size="lg" onClick={handleBackToHome}>
-              Quitter
+              {t.endGame.quit}
             </Button>
           </div>
         </div>
@@ -617,7 +584,7 @@ const EndGame: React.FC = () => {
           className={`bg-white border-[2.5px] border-black rounded-2xl stack-shadow texture-paper p-3 md:p-5 transition-all duration-500 ${showLeaderboard ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
         >
           <h2 className="text-base md:text-xl font-display font-bold text-gray-900 mb-2 md:mb-3 text-center uppercase tracking-wider m-0">
-            Scores individuels
+            {t.endGame.individualScores}
           </h2>
           <div className="space-y-1.5 md:space-y-2">
             {leaderboard.map((entry, index) => {
@@ -662,13 +629,13 @@ const EndGame: React.FC = () => {
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                     <span className="text-base md:text-xl font-display font-bold tabular-nums text-gray-900">
-                      {entry.score} pt{entry.score > 1 ? 's' : ''}
+                      {t.endGame.points(entry.score)}
                     </span>
                     {hasQuestion && (
                       <div className="relative">
                         <button
                           type="button"
-                          aria-label="Voir la question reçue"
+                          aria-label={t.endGame.aria.seeReceivedQuestion}
                           aria-expanded={isOpen}
                           onClick={(e) => {
                             e.stopPropagation();
@@ -686,20 +653,20 @@ const EndGame: React.FC = () => {
                             onClick={(e) => e.stopPropagation()}
                           >
                             <p className="text-xs font-display font-bold uppercase tracking-wider text-gray-500 leading-tight">
-                              Question reçue
+                              {t.endGame.receivedQuestion}
                             </p>
                             <p className="text-sm md:text-base font-semibold text-gray-900 mb-2.5 leading-snug">
                               « {round.selectedQuestion} »
                             </p>
                             <p className="text-xs font-display font-bold uppercase tracking-wider text-gray-500 leading-tight">
-                              {respondentNames.length} Bonne{respondentNames.length > 1 ? 's' : ''} réponse{respondentNames.length > 1 ? 's' : ''}
+                              {t.endGame.correctAnswersCount(respondentNames.length)}
                             </p>
                             {respondentNames.length > 0 ? (
                               <p className="text-sm text-gray-900 leading-snug">
                                 {respondentNames.join(', ')}
                               </p>
                             ) : (
-                              <p className="text-sm text-gray-500 italic">Aucun joueur</p>
+                              <p className="text-sm text-gray-500 italic">{t.endGame.noPlayers}</p>
                             )}
                             <span className="popover-notch" aria-hidden />
                           </div>
@@ -717,7 +684,7 @@ const EndGame: React.FC = () => {
       <div
         className={`shrink-0 relative z-20 w-full text-center pt-2 pb-2 text-white/60 text-[10px] md:text-xs safe-pb transition-all duration-500 ${showLeaderboard ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}
       >
-        <ReportTrigger variant="footer" label="Signaler un bug ou une suggestion" />
+        <ReportTrigger variant="footer" label={t.endGame.reportLabel} />
       </div>
 
       <style>{`

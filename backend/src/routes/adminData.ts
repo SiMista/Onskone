@@ -1,9 +1,10 @@
 import { Router, Request, Response } from 'express';
-import { GameStatus } from '@onskone/shared';
+import { GameStatus, SUPPORTED_LOCALES, DEFAULT_LOCALE, isLocale } from '@onskone/shared';
 import type {
   AdminLobbySummary,
   AdminLobbyPhase,
   AdminDeckSummary,
+  Locale,
 } from '@onskone/shared';
 import { requireAdmin } from './admin.js';
 import * as LobbyManager from '../managers/LobbyManager.js';
@@ -72,23 +73,23 @@ import * as fs from 'fs';
 import * as path from 'path';
 import logger from '../utils/logger.js';
 
-type QuestionsFile = Record<string, Record<string, { subject: string; questions: string[] }[]>>;
+type QuestionsFile = Record<string, Record<string, { description: string; subjects: { subject: string; questions: string[] }[] }>>;
 
-let cachedDecks: AdminDeckSummary[] | null = null;
-let cachedAt = 0;
+const decksCache: Partial<Record<Locale, { decks: AdminDeckSummary[]; at: number }>> = {};
 const DECKS_CACHE_TTL_MS = 60 * 1000;
 
-function loadDecks(): AdminDeckSummary[] {
+function loadDecks(locale: Locale): AdminDeckSummary[] {
   const now = Date.now();
-  if (cachedDecks && now - cachedAt < DECKS_CACHE_TTL_MS) return cachedDecks;
-  const questionsPath = path.join(process.cwd(), 'src/data/questions.json');
+  const cached = decksCache[locale];
+  if (cached && now - cached.at < DECKS_CACHE_TTL_MS) return cached.decks;
+  const questionsPath = path.join(process.cwd(), `src/data/questions_${locale}.json`);
   try {
     const raw = fs.readFileSync(questionsPath, 'utf-8');
     const data = JSON.parse(raw) as QuestionsFile;
     const out: AdminDeckSummary[] = [];
     for (const [category, themes] of Object.entries(data)) {
-      for (const [theme, subjects] of Object.entries(themes)) {
-        const subjectSummaries = subjects.map(s => ({
+      for (const [theme, themeData] of Object.entries(themes)) {
+        const subjectSummaries = themeData.subjects.map(s => ({
           subject: s.subject,
           questionCount: Array.isArray(s.questions) ? s.questions.length : 0,
           questions: Array.isArray(s.questions) ? s.questions : [],
@@ -97,24 +98,26 @@ function loadDecks(): AdminDeckSummary[] {
         out.push({
           category,
           theme,
+          description: themeData.description ?? '',
           subjectCount: subjectSummaries.length,
           questionCount,
           subjects: subjectSummaries,
         });
       }
     }
-    cachedDecks = out;
-    cachedAt = now;
+    decksCache[locale] = { decks: out, at: now };
     return out;
   } catch (err) {
-    logger.error('Failed to read questions.json for admin decks', { error: err instanceof Error ? err.message : String(err) });
-    return cachedDecks ?? [];
+    logger.error(`Failed to read questions_${locale}.json for admin decks`, { error: err instanceof Error ? err.message : String(err) });
+    return cached?.decks ?? [];
   }
 }
 
-router.get('/admin/decks', requireAdmin, (_req: Request, res: Response) => {
-  const decks = loadDecks();
-  res.json({ decks });
+router.get('/admin/decks', requireAdmin, (req: Request, res: Response) => {
+  const raw = req.query.locale ?? req.query.lang;
+  const locale: Locale = isLocale(raw) ? raw : DEFAULT_LOCALE;
+  const decks = loadDecks(locale);
+  res.json({ decks, locale, availableLocales: SUPPORTED_LOCALES });
 });
 
 export default router;

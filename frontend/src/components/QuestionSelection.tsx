@@ -8,6 +8,7 @@ import { getRandomFunFact, getNextFunFact } from '../constants/funFacts';
 import { playSound } from '../utils/sounds';
 import PlayerBadge from './PlayerBadge';
 import ReportTrigger from './ReportTrigger';
+import { useLocale } from '../i18n';
 
 interface QuestionSelectionProps {
   lobbyCode: string;
@@ -16,11 +17,12 @@ interface QuestionSelectionProps {
 }
 
 const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLeader, leader }) => {
+  const { t } = useLocale();
   const [cards, setCards] = useState<GameCard[]>([]);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [selectedQuestion, setSelectedQuestion] = useState<string | null>(null);
   const [loading, setLoading] = useState(isLeader);
-  const [funFact, setFunFact] = useState<string>(getRandomFunFact());
+  const [funFact, setFunFact] = useState<string>(() => getRandomFunFact(t.funFacts));
   const [factFading, setFactFading] = useState(false);
   const factFadeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Ref pour éviter de démarrer le timer plusieurs fois (React Strict Mode, re-renders)
@@ -49,7 +51,7 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
         clearTimeout(factFadeTimeoutRef.current);
       }
       factFadeTimeoutRef.current = setTimeout(() => {
-        setFunFact(prev => getNextFunFact(prev));
+        setFunFact(prev => getNextFunFact(t.funFacts, prev));
         setFactFading(false);
       }, 300); // Durée du fade out avant de changer
     }, 12000);
@@ -60,7 +62,7 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
         clearTimeout(factFadeTimeoutRef.current);
       }
     };
-  }, [isLeader]);
+  }, [isLeader, t.funFacts]);
 
   useEffect(() => {
     // Petit délai pour laisser le temps aux listeners socket de s'initialiser sur tous les clients
@@ -204,10 +206,10 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
         <div className="text-center w-full max-w-2xl">
           <div className="bg-primary-light rounded-lg px-3 md:px-4 py-1.5 md:py-2 max-w-2xl">
             <div className="flex items-center justify-center flex-wrap gap-x-1.5 gap-y-1">
-              <p className="text-base md:text-2xl m-0">Le pilier de cette manche est</p>
+              <p className="text-base md:text-2xl m-0">{t.phases.questionSelection.leaderIs}</p>
               <PlayerBadge player={leader} size="sm" />
             </div>
-            <p className="text-center text-xs md:text-base mt-1.5">En attente de sa sélection de question…</p>
+            <p className="text-center text-xs md:text-base mt-1.5">{t.phases.questionSelection.waitingSelection}</p>
             <Timer duration={GAME_CONFIG.TIMERS.QUESTION_SELECTION} onExpire={handleTimerExpire} phase={RoundPhase.QUESTION_SELECTION} lobbyCode={lobbyCode} hidden />
           </div>
         </div>
@@ -215,7 +217,7 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
         {/* Fait insolite - min-h figée pour que le changement de fait
             ne décale pas l'emoji situé en dessous. mt-* descend le bloc. */}
         <div className="w-full max-w-md text-center px-3 mt-4 md:mt-8 min-h-[72px] md:min-h-[88px] flex flex-col justify-start">
-          <p className="text-[10px] md:text-xs text-gray-500 uppercase font-semibold mb-1">Le saviez-vous ?</p>
+          <p className="text-[10px] md:text-xs text-gray-500 uppercase font-semibold mb-1">{t.phases.questionSelection.didYouKnow}</p>
           <p
             className={`text-gray-700 text-xs md:text-base italic leading-snug transition-opacity duration-300 ${factFading ? 'opacity-0' : 'opacity-100'}`}
           >
@@ -232,7 +234,7 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <p className="text-base md:text-lg text-gray-800">Chargement des questions...</p>
+          <p className="text-base md:text-lg text-gray-800">{t.phases.questionSelection.loading}</p>
         </div>
       </div>
     );
@@ -251,7 +253,7 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
         <div className="flex-1 flex flex-col items-center justify-center">
           <div className="bg-primary text-base tablet:text-xl px-3 tablet:px-6 py-1 tablet:py-1.5 rounded-2xl mb-0 w-full text-center">
             <p className="font-display text-base tablet:text-2xl m-0 tracking-tight leading-tight">
-              Tu es le pilier, choisis une question !
+              {t.phases.questionSelection.chooseQuestion}
             </p>
             <Timer
               duration={GAME_CONFIG.TIMERS.QUESTION_SELECTION}
@@ -265,12 +267,12 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
           <div className="flex flex-col items-center gap-0 w-full">
             <span className="flex md:hidden items-center justify-center gap-1 text-[10px] text-gray-500 italic font-sans mt-0.5 mb-2">
               <Icon icon="ph:hand-swipe-left-duotone" className="text-sm animate-wiggle" aria-hidden />
-              swipe pour changer de carte
+              {t.phases.questionSelection.swipeHintMobile}
             </span>
 
             {/* Main de cartes - hauteur stable, indépendante du contenu */}
             <div
-              className="card-hand relative w-full max-w-xl mx-auto pt-3 tablet:pt-10 min-h-[340px] tablet:min-h-[480px] touch-pan-y select-none"
+              className="card-hand relative w-full max-w-xl mx-auto pt-3 tablet:pt-10 min-h-[min(340px,60dvh)] tablet:min-h-[min(480px,70dvh)] touch-pan-y select-none"
               onTouchStart={handleTouchStart}
               onTouchEnd={handleTouchEnd}
               onMouseDown={handleMouseDown}
@@ -309,10 +311,10 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
                     aria-hidden
                   />
                   <p className="mt-4 text-white text-xl font-display tracking-tight uppercase drop-shadow">
-                    Swipe
+                    {t.phases.questionSelection.swipeOverlayTitle}
                   </p>
                   <p className="mt-1 text-white/85 text-sm italic px-6 text-center">
-                    pour changer de carte
+                    {t.phases.questionSelection.swipeOverlaySub}
                   </p>
                 </div>
               )}
@@ -354,10 +356,10 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
                     }}
                     onClick={() => !isActive && handleCardClick(idx)}
                     role={!isActive ? 'button' : undefined}
-                    aria-label={!isActive ? `Voir la carte ${card.theme}` : undefined}
+                    aria-label={!isActive ? t.phases.questionSelection.goToCard(card.theme) : undefined}
                   >
                     <div
-                      className={`bg-cream-question border-4 tablet:border-[6px] rounded-2xl tablet:rounded-3xl p-2.5 tablet:p-5 relative overflow-hidden min-h-[290px] tablet:min-h-[400px] flex flex-col transition-shadow duration-500 ${revealedIdx.has(idx) ? 'animate-card-deal-in' : 'opacity-0'}`}
+                      className={`bg-cream-question border-4 tablet:border-[6px] rounded-2xl tablet:rounded-3xl p-2.5 tablet:p-5 relative overflow-hidden min-h-[min(290px,52dvh)] tablet:min-h-[min(400px,60dvh)] flex flex-col transition-shadow duration-500 ${revealedIdx.has(idx) ? 'animate-card-deal-in' : 'opacity-0'}`}
                       style={{ borderColor: color, boxShadow: cardShadow }}
                     >
                       <div
@@ -439,7 +441,7 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
                     type="button"
                     onClick={goPrev}
                     disabled={navDisabled}
-                    aria-label="Carte précédente"
+                    aria-label={t.phases.questionSelection.prevCard}
                     className="hidden md:flex group items-center justify-center text-black hover:-translate-x-0.5 active:translate-x-0 transition-transform duration-200 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:translate-x-0"
                   >
                     <svg
@@ -469,7 +471,7 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
                           type="button"
                           onClick={() => !locked && goToCard(idx)}
                           disabled={locked}
-                          aria-label={`Aller à la carte ${idx + 1}`}
+                          aria-label={t.phases.questionSelection.goToCardIdx(idx + 1)}
                           className={`rounded-full transition-all duration-300 ease-out ${active ? 'w-7 h-2.5 md:w-9 md:h-3' : 'w-2.5 h-2.5 md:w-3 md:h-3 hover:scale-125'}`}
                           style={{
                             backgroundColor: active ? c : 'rgba(255,255,255,0.55)',
@@ -484,7 +486,7 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
                     type="button"
                     onClick={goNext}
                     disabled={navDisabled}
-                    aria-label="Carte suivante"
+                    aria-label={t.phases.questionSelection.nextCard}
                     className="hidden md:flex group items-center justify-center text-black hover:translate-x-0.5 active:translate-x-0 transition-transform duration-200 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:translate-x-0"
                   >
                     <svg
@@ -513,7 +515,7 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
             <div className="text-center mt-2">
               <ReportTrigger
                 variant="discreet"
-                label="Signaler une question"
+                label={t.phases.questionSelection.reportQuestion}
                 defaultType="question_report"
                 extraContext={[
                   `Catégorie: ${currentCard.category}`,
@@ -530,7 +532,7 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
           {locked && (
             <div className="text-center mt-3 md:mt-4">
               <p className="text-white text-base md:text-xl font-semibold drop-shadow">
-                Question sélectionnée ! Passage à la phase suivante…
+                {t.phases.questionSelection.selected}
               </p>
             </div>
           )}

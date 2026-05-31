@@ -15,6 +15,9 @@ import MentionsModal from '../../components/Footer/MentionsModal';
 import { useToast } from '../../components/Toast';
 import { Icon } from '@iconify/react';
 import { ACHIEVEMENTS } from '../../utils/playerStats';
+import { fr } from '../../i18n/fr';
+import Dropdown from '../../components/Dropdown';
+import Avatar from '../../components/Avatar';
 
 type ButtonVariant = 'primary' | 'success' | 'danger' | 'warning' | 'secondary' | 'ghost' | 'quit';
 
@@ -63,6 +66,35 @@ const SHARE_TOP_PLAYERS = [
   { name: 'Thomas', score: 5, avatarId: 16 },
 ];
 
+// Échantillons pour la galerie du Dropdown
+const DROPDOWN_PLAYERS = [
+  { id: 'p1', name: 'Léa', avatarId: 9 },
+  { id: 'p2', name: 'Thomas', avatarId: 16 },
+  { id: 'p3', name: 'Mathilde', avatarId: 22 },
+  { id: 'p4', name: 'Nico', avatarId: 5 },
+];
+
+const DROPDOWN_CATEGORIES = [
+  {
+    value: 'question_report',
+    label: 'Question pourrie',
+    description: 'Une question gênante, ambiguë ou mal formulée.',
+    icon: 'fluent-emoji-flat:warning',
+  },
+  {
+    value: 'bug',
+    label: 'Bug technique',
+    description: 'Un truc qui marche pas comme attendu.',
+    icon: 'fluent-emoji-flat:bug',
+  },
+  {
+    value: 'suggestion',
+    label: 'Idée / suggestion',
+    description: 'Une proposition de fonctionnalité ou de contenu.',
+    icon: 'fluent-emoji-flat:light-bulb',
+  },
+];
+
 export const Gallery = () => {
   const showToast = useToast();
   const [pseudoValue, setPseudoValue] = useState('Simi');
@@ -94,6 +126,8 @@ export const Gallery = () => {
     setAchievementsOpen(false);
     setAnimatedIds(new Set());
   };
+  const [dropdownPlayerId, setDropdownPlayerId] = useState<string>(DROPDOWN_PLAYERS[0].id);
+  const [dropdownCategory, setDropdownCategory] = useState<string>('');
   const [shareIdx, setShareIdx] = useState(3);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [shareLoading, setShareLoading] = useState(false);
@@ -111,6 +145,7 @@ export const Gallery = () => {
       color: preset.color,
       tierEmoji: preset.emoji,
       topPlayers: SHARE_TOP_PLAYERS,
+      texts: fr.shareCard,
     })
       .then(blob => {
         if (cancelled) return;
@@ -240,10 +275,10 @@ export const Gallery = () => {
                     ? 'border-amber-300/60 bg-amber-300/10 text-amber-100'
                     : 'border-white/[0.08] bg-[#1a1d28] text-white/60 hover:bg-[#23273a]'
                     }`}
-                  title={ach.description}
+                  title={fr.achievements[ach.id]?.description ?? ''}
                 >
                   <Icon icon={ach.icon} width={18} height={18} aria-hidden style={on ? undefined : { filter: 'grayscale(1)', opacity: 0.6 }} />
-                  <span>{ach.title}</span>
+                  <span>{fr.achievements[ach.id]?.title ?? ach.id}</span>
                 </button>
               );
             })}
@@ -345,10 +380,10 @@ export const Gallery = () => {
                   </div>
                   <div className="flex-1 text-left min-w-0">
                     <div className="font-display font-bold text-sm text-gray-900 leading-tight">
-                      {ach.title}
+                      {fr.achievements[ach.id]?.title ?? ach.id}
                     </div>
                     <div className={`text-xs leading-snug ${isUnlocked ? 'text-gray-800' : 'text-gray-600'}`}>
-                      {ach.description}
+                      {fr.achievements[ach.id]?.description ?? ''}
                     </div>
                   </div>
                 </div>
@@ -426,6 +461,74 @@ export const Gallery = () => {
                 onChange={(e) => setAnswerValue(e.target.value)}
                 placeholder="Écris ta réponse…"
                 className="w-full h-full bg-transparent resize-none outline-none text-gray-900 text-base leading-relaxed px-4 py-3 placeholder:text-gray-400"
+              />
+            </div>
+          </Tile>
+        </div>
+      </Section>
+
+      <Section title="Dropdown" subtitle="composant générique - 4 cas d'usage">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Tile label="Joueurs (avatar + nom) - SubstituteSelection">
+            <div className="w-full max-w-xs">
+              <Dropdown
+                value={dropdownPlayerId}
+                onChange={setDropdownPlayerId}
+                options={DROPDOWN_PLAYERS.map(p => ({
+                  value: p.id,
+                  label: p.name,
+                  prefix: <Avatar avatarId={p.avatarId} name={p.name} size="sm" />,
+                }))}
+                placeholder="Aucun joueur disponible"
+              />
+            </div>
+          </Tile>
+
+          <Tile label="Catégories (titre + description) - ReportModal">
+            <div className="w-full max-w-xs">
+              <Dropdown
+                value={dropdownCategory}
+                onChange={setDropdownCategory}
+                options={DROPDOWN_CATEGORIES.map(c => ({
+                  value: c.value,
+                  label: (
+                    <span className="flex flex-col min-w-0 leading-tight">
+                      <span>{c.label}</span>
+                      <span className="font-normal text-gray-500 text-xs whitespace-normal mt-0.5">
+                        {c.description}
+                      </span>
+                    </span>
+                  ),
+                  selectedLabel: c.label,
+                  prefix: <Icon icon={c.icon} className="w-5 h-5" />,
+                }))}
+                placeholder="Sélectionne une catégorie…"
+              />
+            </div>
+          </Tile>
+
+          <Tile label="Désactivé">
+            <div className="w-full max-w-xs">
+              <Dropdown
+                value={DROPDOWN_PLAYERS[1].id}
+                onChange={() => {}}
+                options={DROPDOWN_PLAYERS.map(p => ({
+                  value: p.id,
+                  label: p.name,
+                  prefix: <Avatar avatarId={p.avatarId} name={p.name} size="sm" />,
+                }))}
+                disabled
+              />
+            </div>
+          </Tile>
+
+          <Tile label="Vide (aucune option)">
+            <div className="w-full max-w-xs">
+              <Dropdown
+                value=""
+                onChange={() => {}}
+                options={[]}
+                placeholder="Aucune option disponible"
               />
             </div>
           </Tile>

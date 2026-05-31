@@ -1,6 +1,7 @@
 import logoSloganImg from '../assets/logos/logo_slogan.png';
 import bgImg from '../assets/images/interrogation_bg_transparent.png';
 import { getAvatarUrl } from '../constants/game';
+import type { Dictionary } from '../i18n/dictionary';
 
 export interface ShareCardOptions {
   pct: number;
@@ -9,6 +10,8 @@ export interface ShareCardOptions {
   color: string;
   tierEmoji: string;
   topPlayers: { name: string; score: number; avatarId?: number }[];
+  /** Textes localisés (canvas n'a pas accès au contexte React) */
+  texts: Dictionary['shareCard'];
 }
 
 const loadImage = (src: string): Promise<HTMLImageElement> =>
@@ -216,7 +219,7 @@ export async function buildShareCard(opts: ShareCardOptions): Promise<Blob> {
   ctx.shadowBlur = 10;
   ctx.shadowOffsetY = 2;
   const eyebrowY = glassY + 78;
-  const eyebrow = 'VOUS VOUS CONNAISSEZ À';
+  const eyebrow = opts.texts.eyebrow;
   // letter-spacing manuel
   const letters = eyebrow.split('');
   const spacing = 6;
@@ -377,7 +380,7 @@ export async function buildShareCard(opts: ShareCardOptions): Promise<Blob> {
     ctx.textAlign = 'center';
     ctx.shadowColor = 'rgba(0,0,0,0.4)';
     ctx.shadowBlur = 10;
-    const labelText = 'TOP 3';
+    const labelText = opts.texts.top3Label;
     const lblLetters = labelText.split('');
     const lblSpacing = 8;
     const lblTotal = lblLetters.reduce((s, l) => s + ctx.measureText(l).width, 0) + lblSpacing * (lblLetters.length - 1);
@@ -560,10 +563,10 @@ export async function buildShareCard(opts: ShareCardOptions): Promise<Blob> {
   ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = '#1f2937';
   ctx.font = 'bold 40px Fredoka, Nunito, sans-serif';
-  ctx.fillText('Viens jouer sur', ctaX + ctaW / 2, ctaY + 60);
+  ctx.fillText(opts.texts.ctaLine1, ctaX + ctaW / 2, ctaY + 60);
   ctx.fillStyle = '#1f5d90';
   ctx.font = 'bold 60px Fredoka, Nunito, sans-serif';
-  ctx.fillText('onskone.fr !', ctaX + ctaW / 2, ctaY + 122);
+  ctx.fillText(opts.texts.ctaLine2, ctaX + ctaW / 2, ctaY + 122);
   ctx.restore();
 
   return await new Promise<Blob>((resolve, reject) => {

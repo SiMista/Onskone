@@ -3,6 +3,7 @@ import AboutModal from './AboutModal';
 import ContactModal from './ContactModal';
 import MentionsModal from './MentionsModal';
 import ReportTrigger from '../ReportTrigger';
+import { useLocale } from '../../i18n';
 
 type ModalType = 'about' | 'mentions' | 'contact' | null;
 
@@ -10,6 +11,7 @@ const footerLinkClass = 'hover:text-white transition-colors underline cursor-poi
 
 const Footer: React.FC = () => {
   const [activeModal, setActiveModal] = useState<ModalType>(null);
+  const { t } = useLocale();
 
   const closeModal = () => setActiveModal(null);
 
@@ -20,7 +22,7 @@ const Footer: React.FC = () => {
         style={{ paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom, 0px))' }}
       >
         <div className="mb-2">
-          <ReportTrigger variant="footer" label="Signaler un problème" />
+          <ReportTrigger variant="footer" label={t.report.footerLabel} />
         </div>
         <div className="flex justify-center items-center gap-3 md:gap-5 whitespace-nowrap">
           <button
@@ -28,7 +30,7 @@ const Footer: React.FC = () => {
             onClick={() => setActiveModal('about')}
             className={footerLinkClass}
           >
-            À propos
+            {t.footer.about}
           </button>
           <span aria-hidden="true">|</span>
           <button
@@ -36,7 +38,7 @@ const Footer: React.FC = () => {
             onClick={() => setActiveModal('mentions')}
             className={footerLinkClass}
           >
-            Mentions
+            {t.footer.mentions}
           </button>
           <span aria-hidden="true">|</span>
           <button
@@ -44,7 +46,7 @@ const Footer: React.FC = () => {
             onClick={() => setActiveModal('contact')}
             className={footerLinkClass}
           >
-            Contact
+            {t.footer.contact}
           </button>
           <span aria-hidden="true">|</span>
           <a
@@ -53,7 +55,7 @@ const Footer: React.FC = () => {
             rel="noopener noreferrer"
             className={footerLinkClass}
           >
-            Ne clique pas
+            {t.footer.dontClick}
           </a>
         </div>
       </footer>
