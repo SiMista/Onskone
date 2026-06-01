@@ -1,15 +1,13 @@
 import { GameCard } from '@onskone/shared';
 import { getCategoryColor } from '../constants/game';
 
-interface QuestionCardProps {
+const QuestionCard = ({ question, card, variant = 'full', subtitle, subtitleBadge }: {
   question: string;
   card?: GameCard;
   variant?: 'full' | 'compact';
   subtitle?: string;
   subtitleBadge?: React.ReactNode;
-}
-
-const QuestionCard: React.FC<QuestionCardProps> = ({ question, card, variant = 'full', subtitle, subtitleBadge }) => {
+}) => {
   const color = card ? getCategoryColor(card.category) : 'var(--color-brand-400)';
   const isCompact = variant === 'compact';
 

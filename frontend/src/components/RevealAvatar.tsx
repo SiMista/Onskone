@@ -15,13 +15,13 @@ interface RevealAvatarProps {
  * Avatar avec animation cross-fade entre un cercle "?" pointillé et le vrai Avatar.
  * Utilisé en phase REVEAL pour masquer puis dévoiler qui a écrit la réponse.
  */
-const RevealAvatar: React.FC<RevealAvatarProps> = ({
+const RevealAvatar = ({
   avatarId,
   name,
   revealed,
   size = 'lg',
   className = 'relative w-16 h-16 tablet:w-24 tablet:h-24 phone-landscape:w-16 phone-landscape:h-16',
-}) => {
+}: RevealAvatarProps) => {
   return (
     <div className={className}>
       <div

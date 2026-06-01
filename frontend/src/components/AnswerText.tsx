@@ -1,6 +1,16 @@
 import { isNoResponse, getDisplayText } from '../utils/answerHelpers';
 
-interface AnswerTextProps {
+/**
+ * Affiche un texte de réponse en gérant automatiquement le préfixe __NO_RESPONSE__
+ * (strip + style italique grisé). Évite d'oublier `getDisplayText` à chaque usage.
+ */
+const AnswerText = ({
+  text,
+  className = '',
+  normalClass = 'text-gray-900',
+  noResponseClass = 'text-gray-400 italic',
+  as = 'p',
+}: {
   /** Texte brut (peut contenir le préfixe __NO_RESPONSE__) */
   text: string;
   /** Classes additionnelles (taille, m-0, etc.) */
@@ -11,18 +21,6 @@ interface AnswerTextProps {
   noResponseClass?: string;
   /** Élément HTML (défaut: p) */
   as?: 'p' | 'span' | 'div';
-}
-
-/**
- * Affiche un texte de réponse en gérant automatiquement le préfixe __NO_RESPONSE__
- * (strip + style italique grisé). Évite d'oublier `getDisplayText` à chaque usage.
- */
-const AnswerText: React.FC<AnswerTextProps> = ({
-  text,
-  className = '',
-  normalClass = 'text-gray-900',
-  noResponseClass = 'text-gray-400 italic',
-  as = 'p',
 }) => {
   const noResponse = isNoResponse(text);
   const Tag = as;

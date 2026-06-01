@@ -6,7 +6,7 @@ interface AboutModalProps {
   onClose: () => void;
 }
 
-const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
+const AboutModal = ({ isOpen, onClose }: AboutModalProps) => {
   const { t } = useLocale();
   return (
     <Modal

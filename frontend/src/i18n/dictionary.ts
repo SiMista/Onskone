@@ -39,11 +39,6 @@ export interface Dictionary {
     cancel: string;
     confirm: string;
     loading: string;
-    send: string;
-    validate: string;
-    next: string;
-    yes: string;
-    no: string;
     disconnectedSuffix: string;
     pseudoPlaceholderUpper: string;
     pseudoPlaceholder: string;
@@ -80,11 +75,19 @@ export interface Dictionary {
     settingsHostOnlyPrefix: string;
     settingsHostOnlySuffix: string;
     guessMyAnswer: { label: string; description: string };
+    gameSpeed: {
+      label: string;
+      fast: string;
+      normal: string;
+      slow: string;
+      estimate: (minutes: number) => string;
+    };
     themes: string;
     start: string;
     copyInviteLink: string;
     minPlayers: (n: number) => string;
     selectAtLeastOneTheme: string;
+    loadingThemes: string;
     startHostOnly: (hostName: string) => string;
     hostFallback: string;
     modals: {
@@ -212,6 +215,13 @@ export interface Dictionary {
     counter: (n: number, total: number) => string;
     hostHint: string;
     readOnlyHint: (hostName: string) => string;
+    matureBadge: string;
+    matureConfirm: {
+      title: string;
+      message: string;
+      confirm: string;
+      cancel: string;
+    };
   };
 
   phases: {

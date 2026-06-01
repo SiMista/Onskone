@@ -10,6 +10,7 @@ export class Lobby implements ILobby {
     selectedDecks: SelectedDecks;
     gameMode: GameMode;
     guessMyAnswerMode: boolean;
+    timeMultiplier: number;
     locale: Locale;
 
     constructor(lobbyCode: string, locale: Locale = DEFAULT_LOCALE) {
@@ -21,6 +22,7 @@ export class Lobby implements ILobby {
         this.selectedDecks = getDefaultSelectedDecks(locale);
         this.gameMode = 'local';
         this.guessMyAnswerMode = false;
+        this.timeMultiplier = GAME_CONSTANTS.TIME_MULTIPLIER_DEFAULT;
     }
 
     updateActivity(): void {

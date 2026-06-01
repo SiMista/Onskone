@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { getAvatarUrl } from '../constants/game';
 
 interface AvatarProps {
@@ -29,6 +29,7 @@ const Avatar = ({ avatarId, name = '', size = 'md', className = '' }: AvatarProp
   };
 
   const [imageError, setImageError] = useState(false);
+  useEffect(() => { setImageError(false); }, [avatarId]);
   const avatarUrl = getAvatarUrl(avatarId);
 
   return (

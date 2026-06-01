@@ -81,5 +81,3 @@ export const playSound = (soundName: SoundName, volume: number = 0.5): void => {
   soundManager.play(soundName, volume);
 };
 
-export { SOUNDS };
-export type { SoundName };

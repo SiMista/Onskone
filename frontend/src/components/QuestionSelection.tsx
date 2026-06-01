@@ -3,20 +3,20 @@ import { Icon } from '@iconify/react';
 import socket from '../utils/socket';
 import Timer from './Timer';
 import { GameCard, IPlayer, RoundPhase } from '@onskone/shared';
-import { GAME_CONFIG, getCategoryColor } from '../constants/game';
+import { getPhaseDuration, getCategoryColor } from '../constants/game';
+import { STICKER_FILTER } from '../constants/icons';
 import { getRandomFunFact, getNextFunFact } from '../constants/funFacts';
 import { playSound } from '../utils/sounds';
 import PlayerBadge from './PlayerBadge';
 import ReportTrigger from './ReportTrigger';
 import { useLocale } from '../i18n';
 
-interface QuestionSelectionProps {
+const QuestionSelection = ({ lobbyCode, isLeader, leader, timeMultiplier }: {
   lobbyCode: string;
   isLeader: boolean;
   leader: Pick<IPlayer, 'id' | 'name' | 'avatarId'>;
-}
-
-const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLeader, leader }) => {
+  timeMultiplier: number;
+}) => {
   const { t } = useLocale();
   const [cards, setCards] = useState<GameCard[]>([]);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
@@ -34,6 +34,7 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
   const [revealedIdx, setRevealedIdx] = useState<Set<number>>(new Set());
 
   const currentCard = cards.length > 0 ? cards[currentCardIndex] : null;
+  const phaseDuration = getPhaseDuration(RoundPhase.QUESTION_SELECTION, timeMultiplier);
 
   // Jouer le son au début de la phase
   useEffect(() => {
@@ -72,7 +73,7 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
         timerStartedRef.current = true;
         // Le pilier demande 3 cartes
         socket.emit('requestQuestions', { lobbyCode, count: 3 });
-        socket.emit('startTimer', { lobbyCode, duration: GAME_CONFIG.TIMERS.QUESTION_SELECTION });
+        socket.emit('startTimer', { lobbyCode, duration: phaseDuration });
       }
     }, 500);
 
@@ -91,7 +92,7 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
       // useStudioBot (et de tout autre consommateur du même évènement).
       socket.off('questionsReceived', onQuestionsReceived);
     };
-  }, [isLeader, lobbyCode]);
+  }, [isLeader, lobbyCode, phaseDuration]);
 
   // Stagger reveal : retourne la carte active d'abord, puis les autres dans l'ordre
   useEffect(() => {
@@ -210,7 +211,7 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
               <PlayerBadge player={leader} size="sm" />
             </div>
             <p className="text-center text-xs md:text-base mt-1.5">{t.phases.questionSelection.waitingSelection}</p>
-            <Timer duration={GAME_CONFIG.TIMERS.QUESTION_SELECTION} onExpire={handleTimerExpire} phase={RoundPhase.QUESTION_SELECTION} lobbyCode={lobbyCode} hidden />
+            <Timer duration={phaseDuration} onExpire={handleTimerExpire} phase={RoundPhase.QUESTION_SELECTION} lobbyCode={lobbyCode} hidden />
           </div>
         </div>
 
@@ -225,7 +226,7 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
           </p>
         </div>
 
-        <Icon icon="fluent-emoji-flat:thinking-face" className="text-3xl md:text-5xl animate-bounce" width="1em" height="1em" aria-hidden />
+        <Icon icon="fluent-emoji-flat:thinking-face" className="text-3xl md:text-5xl animate-bounce" width="1em" height="1em" aria-hidden style={{ filter: STICKER_FILTER }} />
       </div>
     );
   }
@@ -256,7 +257,7 @@ const QuestionSelection: React.FC<QuestionSelectionProps> = ({ lobbyCode, isLead
               {t.phases.questionSelection.chooseQuestion}
             </p>
             <Timer
-              duration={GAME_CONFIG.TIMERS.QUESTION_SELECTION}
+              duration={phaseDuration}
               onExpire={handleTimerExpire}
               phase={RoundPhase.QUESTION_SELECTION}
               lobbyCode={lobbyCode}

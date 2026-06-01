@@ -17,7 +17,7 @@ const tabClass = (active: boolean): string =>
       : 'border-transparent text-gray-500 hover:text-gray-800',
   ].join(' ');
 
-const MentionsModal: React.FC<MentionsModalProps> = ({ isOpen, onClose }) => {
+const MentionsModal = ({ isOpen, onClose }: MentionsModalProps) => {
   const [tab, setTab] = useState<Tab>('mentions');
   const { t } = useLocale();
 
@@ -44,7 +44,7 @@ const MentionsModal: React.FC<MentionsModalProps> = ({ isOpen, onClose }) => {
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`${t.legal.mentions.title} & ${t.legal.privacy.title}`}
+      title={tab === 'mentions' ? t.legal.mentions.title : t.legal.privacy.title}
       subHeader={tabs}
     >
       <div className="text-gray-700">

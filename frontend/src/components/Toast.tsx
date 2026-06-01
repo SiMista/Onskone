@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, ReactNode } from 'react';
 import { Icon } from '@iconify/react';
+import { STICKER_FILTER } from '../constants/icons';
 
 export type ToastVariant = 'info' | 'success' | 'warning' | 'error' | 'achievement';
 
@@ -35,9 +36,6 @@ const VARIANT_STYLE: Record<ToastVariant, VariantStyle> = {
     iconOutlined: true,
   },
 };
-
-const OUTLINE_FILTER =
-  'drop-shadow(1px 0 0 #000) drop-shadow(-1px 0 0 #000) drop-shadow(0 1px 0 #000) drop-shadow(0 -1px 0 #000) drop-shadow(1px 2px 0 rgba(0,0,0,0.35))';
 
 const EXIT_DURATION = 280; // ms - doit matcher .animate-toast-out
 
@@ -122,7 +120,7 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
                 height={style.iconOutlined ? 26 : 22}
                 aria-hidden
                 className="shrink-0"
-                style={style.iconOutlined ? { filter: OUTLINE_FILTER } : undefined}
+                style={style.iconOutlined ? { filter: STICKER_FILTER } : undefined}
               />
               <p className="flex-1 text-sm font-display font-bold text-gray-900 m-0 leading-tight">{t.message}</p>
             </div>

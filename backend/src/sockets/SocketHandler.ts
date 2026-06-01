@@ -7,10 +7,10 @@ import { Lobby } from "../models/Lobby";
 import { Round } from "../models/Round";
 import { Game } from "../models/Game";
 import type { ServerToClientEvents, ClientToServerEvents, IGame, ReconnectionData } from '@onskone/shared';
-import { GAME_CONSTANTS, RoundPhase, DEFAULT_LOCALE, isLocale } from '@onskone/shared';
+import { GAME_CONSTANTS, RoundPhase, GameStatus, DEFAULT_LOCALE, isLocale, formatNoResponse, NO_RESPONSE_PREFIX } from '@onskone/shared';
 import { validatePlayerName, validateAnswer, validateLobbyCode, validatePlayerId, validateAvatarId, sanitizeInput } from '../utils/validation.js';
 import { rateLimiters } from '../utils/rateLimiter.js';
-import { shuffleArray } from '../utils/helpers.js';
+import { shuffleArray, errMessage } from '../utils/helpers.js';
 import { areAnswersSimilar } from '../utils/similarity.js';
 import logger from '../utils/logger.js';
 
@@ -22,18 +22,16 @@ export class SocketHandler {
     private leaderDisconnectTimeouts: Map<string, NodeJS.Timeout> = new Map();
     // Set pour empêcher les reconnexions simultanées (clé: lobbyCode_playerName)
     private reconnectionLocks: Set<string> = new Set();
-    // Délai de grâce pour la reconnexion (30 secondes)
-    private readonly RECONNECT_GRACE_PERIOD = 30000;
-    // Délai avant de sauter le round du pilier déconnecté (15 secondes - pour le changement d'app mobile)
-    private readonly LEADER_DISCONNECT_DELAY = 15000;
-    // Délai avant de marquer un joueur comme inactif (5 secondes - pour le changement d'app mobile)
-    private readonly INACTIVE_DELAY = 5000;
+    // Délais de gestion des déconnexions — source de vérité dans shared/constants.ts
+    // pour rester en phase avec d'éventuels usages côté frontend (toast countdowns, etc.).
+    private readonly RECONNECT_GRACE_PERIOD = GAME_CONSTANTS.RECONNECT_GRACE_PERIOD_MS;
+    private readonly LEADER_DISCONNECT_DELAY = GAME_CONSTANTS.LEADER_DISCONNECT_DELAY_MS;
+    private readonly INACTIVE_DELAY = GAME_CONSTANTS.INACTIVE_DELAY_MS;
+    private readonly KICK_BLOCK_DURATION = GAME_CONSTANTS.KICK_BLOCK_DURATION_MS;
     // Map pour stocker les timeouts d'inactivité (clé: lobbyCode_playerName)
     private inactiveTimeouts: Map<string, NodeJS.Timeout> = new Map();
     // Map pour stocker les joueurs kickés temporairement (clé: lobbyCode_playerName, valeur: timestamp d'expiration)
     private kickedPlayers: Map<string, number> = new Map();
-    // Durée du blocage après kick (5 minutes)
-    private readonly KICK_BLOCK_DURATION = 5 * 60 * 1000;
 
     constructor(io: Server<ClientToServerEvents, ServerToClientEvents>) {
         this.io = io;
@@ -127,6 +125,7 @@ export class SocketHandler {
                 selectedDecks: lobby.selectedDecks,
                 gameMode: lobby.gameMode,
                 guessMyAnswerMode: lobby.guessMyAnswerMode,
+                timeMultiplier: lobby.timeMultiplier,
                 locale: lobby.locale,
             },
             currentRound: game.currentRound,
@@ -148,6 +147,7 @@ export class SocketHandler {
             selected: lobby.selectedDecks,
             gameMode: lobby.gameMode,
             guessMyAnswerMode: lobby.guessMyAnswerMode,
+            timeMultiplier: lobby.timeMultiplier,
             locale: lobby.locale,
         };
         if (target) {
@@ -323,7 +323,7 @@ export class SocketHandler {
         const respondingPlayers = lobby.players.filter(p => p.id !== currentRound.leader.id);
         for (const player of respondingPlayers) {
             if (!currentRound.answers[player.id]) {
-                currentRound.addAnswer(player.id, `__NO_RESPONSE__${player.name} n'a pas répondu à temps`);
+                currentRound.addAnswer(player.id, formatNoResponse(player.name, "n'a pas répondu à temps"));
                 logger.debug(`Réponse auto ajoutée pour ${player.name}`);
             }
         }
@@ -374,7 +374,7 @@ export class SocketHandler {
     private handleSubstituteAnsweringTimeout(lobbyCode: string, lobby: Lobby, currentRound: Round): void {
         if (currentRound.substituteAnswer === null || currentRound.substituteAnswer === undefined) {
             const substituteName = lobby.players.find(p => p.id === currentRound.substitutePlayerId)?.name ?? 'Substitut';
-            currentRound.setSubstituteAnswer(`__NO_RESPONSE__${substituteName} n'a pas répondu à temps`);
+            currentRound.setSubstituteAnswer(formatNoResponse(substituteName, "n'a pas répondu à temps"));
         }
         this.io.to(lobbyCode).emit('substituteAnswerSubmitted', {
             phase: RoundPhase.GUESSING,
@@ -470,8 +470,8 @@ export class SocketHandler {
                     this.emitLobbyDecksState(socket, lobby!);
                     logger.game.created(lobbyCode, sanitizedName);
                 } catch (error) {
-                    logger.error('Error creating lobby', { error: (error as Error).message });
-                    socket.emit('error', { message: (error as Error).message });
+                    logger.error('Error creating lobby', { error: errMessage(error) });
+                    socket.emit('error', { message: 'Une erreur inattendue est survenue' });
                 }
             });
             // Event: Join Lobby with player name
@@ -606,8 +606,8 @@ export class SocketHandler {
                     logger.info(`${sanitizedName} a rejoint le lobby ${lobby.code}`, { playerCount: lobby.players.length });
 
                 } catch (error) {
-                    logger.error('Error joining lobby', { error: (error as Error).message });
-                    socket.emit('error', { message: (error as Error).message });
+                    logger.error('Error joining lobby', { error: errMessage(error) });
+                    socket.emit('error', { message: 'Une erreur inattendue est survenue' });
                 }
             });
 
@@ -631,7 +631,7 @@ export class SocketHandler {
                         hostName: host?.name || null
                     });
                 } catch (error) {
-                    logger.error('Error getting lobby info', { error: (error as Error).message });
+                    logger.error('Error getting lobby info', { error: errMessage(error) });
                     socket.emit('lobbyInfo', { exists: false });
                 }
             });
@@ -679,8 +679,8 @@ export class SocketHandler {
 
                     this.emitLobbyDecksState(null, lobby);
                 } catch (error) {
-                    logger.error('Error updating selected decks', { error: (error as Error).message });
-                    socket.emit('error', { message: (error as Error).message });
+                    logger.error('Error updating selected decks', { error: errMessage(error) });
+                    socket.emit('error', { message: 'Une erreur inattendue est survenue' });
                 }
             });
 
@@ -723,40 +723,57 @@ export class SocketHandler {
                         guessMyAnswerMode: lobby.guessMyAnswerMode,
                     });
                 } catch (error) {
-                    logger.error('Error updating guess my answer mode', { error: (error as Error).message });
-                    socket.emit('error', { message: (error as Error).message });
+                    logger.error('Error updating guess my answer mode', { error: errMessage(error) });
+                    socket.emit('error', { message: 'Une erreur inattendue est survenue' });
                 }
             });
 
-            // Réactions emoji dans le lobby (diffusées à tous les joueurs du lobby)
-            socket.on('sendLobbyReaction', (data) => {
+            // Update phase time multiplier (host only)
+            socket.on('updateTimeMultiplier', (data) => {
                 try {
-                    if (!rateLimiters.lobbyReaction.isAllowed(socket.id)) {
-                        // Silencieux : on n'émet pas d'erreur pour éviter de spammer le client
+                    if (!rateLimiters.lobbySettings.isAllowed(socket.id)) {
+                        socket.emit('error', { message: 'Trop de requêtes. Veuillez patienter.' });
                         return;
                     }
 
                     const codeValidation = validateLobbyCode(data.lobbyCode);
-                    if (!codeValidation.isValid) return;
+                    if (!codeValidation.isValid) {
+                        socket.emit('error', { message: codeValidation.error || 'Code invalide' });
+                        return;
+                    }
 
                     const lobby = LobbyManager.getLobby(data.lobbyCode);
-                    if (!lobby) return;
+                    if (!lobby) {
+                        socket.emit('error', { message: 'Salon introuvable' });
+                        return;
+                    }
 
-                    const player = lobby.players.find(p => p.socketId === socket.id);
-                    if (!player) return;
+                    const host = lobby.players.find(p => p.isHost);
+                    if (!host || host.socketId !== socket.id) {
+                        socket.emit('error', { message: "Seul l'hôte peut modifier ce réglage" });
+                        return;
+                    }
 
-                    // Whitelist stricte d'emojis autorisés pour éviter toute injection
-                    const ALLOWED_EMOJIS = new Set(['👍', '😂', '🔥', '❤️', '🤡']);
-                    if (typeof data.emoji !== 'string' || !ALLOWED_EMOJIS.has(data.emoji)) return;
+                    if (lobby.game && lobby.game.status === 'IN_PROGRESS') {
+                        socket.emit('error', { message: 'La partie est déjà en cours' });
+                        return;
+                    }
 
-                    this.io.to(lobby.code).emit('lobbyReaction', {
-                        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-                        playerId: player.id,
-                        playerName: player.name,
-                        emoji: data.emoji,
+                    // Snap à l'un des 3 niveaux autorisés (le plus proche), fallback DEFAULT si NaN.
+                    const raw = Number(data.timeMultiplier);
+                    const levels = GAME_CONSTANTS.TIME_MULTIPLIER_LEVELS;
+                    lobby.timeMultiplier = Number.isFinite(raw)
+                        ? levels.reduce((best, lvl) => (Math.abs(lvl - raw) < Math.abs(best - raw) ? lvl : best), levels[0])
+                        : GAME_CONSTANTS.TIME_MULTIPLIER_DEFAULT;
+                    lobby.updateActivity();
+
+                    this.emitLobbyDecksState(null, lobby);
+                    this.io.to(lobby.code).emit('timeMultiplierUpdated', {
+                        timeMultiplier: lobby.timeMultiplier,
                     });
                 } catch (error) {
-                    logger.error('Error broadcasting lobby reaction', { error: (error as Error).message });
+                    logger.error('Error updating time multiplier', { error: errMessage(error) });
+                    socket.emit('error', { message: 'Une erreur inattendue est survenue' });
                 }
             });
 
@@ -795,8 +812,8 @@ export class SocketHandler {
                         socket.emit('playerNameValid');
                     }
                 } catch (error) {
-                    logger.error('Error checking player name', { error: (error as Error).message });
-                    socket.emit('error', { message: (error as Error).message });
+                    logger.error('Error checking player name', { error: errMessage(error) });
+                    socket.emit('error', { message: 'Une erreur inattendue est survenue' });
                 }
             });
 
@@ -853,8 +870,8 @@ export class SocketHandler {
                     }
 
                 } catch (error) {
-                    logger.error('Error leaving lobby', { error: (error as Error).message });
-                    socket.emit('error', { message: (error as Error).message });
+                    logger.error('Error leaving lobby', { error: errMessage(error) });
+                    socket.emit('error', { message: 'Une erreur inattendue est survenue' });
                 }
             });
 
@@ -906,6 +923,18 @@ export class SocketHandler {
                         return;
                     }
 
+                    // Pendant qu'une partie est en cours, on ne peut pas kicker le pilier :
+                    // sa déconnexion brutale gèlerait le round et perdrait les scores.
+                    // Le host devra attendre la fin du round (ou utiliser le mécanisme
+                    // automatique de leader-disconnect).
+                    if (
+                        lobby.game?.status === GameStatus.IN_PROGRESS &&
+                        lobby.game.currentRound?.leader.id === kickedPlayer.id
+                    ) {
+                        socket.emit('error', { message: 'Impossible d\'expulser le pilier en plein round. Attends la fin de la manche.' });
+                        return;
+                    }
+
                     // Sauvegarder les infos avant suppression
                     const kickedSocketId = kickedPlayer.socketId;
                     const kickedPlayerName = kickedPlayer.name;
@@ -935,7 +964,7 @@ export class SocketHandler {
 
                     logger.info(`Player ${kickedPlayerName} expulsé du lobby ${lobbyCode}`);
                 } catch (error) {
-                    logger.error('Error kicking player', { error: (error as Error).message });
+                    logger.error('Error kicking player', { error: errMessage(error) });
                     socket.emit('error', { message: 'Erreur lors de l\'expulsion du joueur' });
                 }
             });
@@ -993,8 +1022,8 @@ export class SocketHandler {
                     this.io.to(lobbyCode).emit('updatePlayersList', { players: lobby.players });
                     logger.info(`Player ${playerToPromote.name} promu hôte dans ${lobbyCode}`);
                 } catch (error) {
-                    logger.error('Error promoting player', { error: (error as Error).message });
-                    socket.emit('error', { message: (error as Error).message });
+                    logger.error('Error promoting player', { error: errMessage(error) });
+                    socket.emit('error', { message: 'Une erreur inattendue est survenue' });
                 }
             });
 
@@ -1060,8 +1089,8 @@ export class SocketHandler {
                     }
                     logger.game.started(data.lobbyCode, activePlayers.length);
                 } catch (error) {
-                    logger.error('Error starting game', { error: (error as Error).message });
-                    socket.emit('error', { message: (error as Error).message });
+                    logger.error('Error starting game', { error: errMessage(error) });
+                    socket.emit('error', { message: 'Une erreur inattendue est survenue' });
                 }
             });
 
@@ -1118,8 +1147,8 @@ export class SocketHandler {
                     socket.emit('questionsReceived', { questions });
                     logger.debug(`${questions.length} carte(s) envoyée(s) au leader (${excludeCards.length} exclues)`, { lobbyCode: data.lobbyCode });
                 } catch (error) {
-                    logger.error('Error requesting questions', { error: (error as Error).message });
-                    socket.emit('error', { message: (error as Error).message });
+                    logger.error('Error requesting questions', { error: errMessage(error) });
+                    socket.emit('error', { message: 'Une erreur inattendue est survenue' });
                 }
             });
 
@@ -1136,6 +1165,14 @@ export class SocketHandler {
                     const game = lobby?.game;
                     if (!this.requireLeader(socket, game, 'sélectionner une question')) return;
                     const currentRound = game!.currentRound!;
+
+                    // Guard de phase : seul un client malveillant (ou un double-tap) peut envoyer
+                    // selectQuestion en dehors de la phase QUESTION_SELECTION. Refuser silencieusement
+                    // les double-soumissions, throw seulement en cas de phase franchement incohérente.
+                    if (currentRound.phase !== RoundPhase.QUESTION_SELECTION) {
+                        logger.debug('selectQuestion ignoré : phase incorrecte', { lobbyCode: data.lobbyCode, phase: currentRound.phase });
+                        return;
+                    }
 
                     // Valider que la question sélectionnée est bien une des questions proposées
                     const validQuestion = typeof data.selectedQuestion === 'string'
@@ -1174,8 +1211,8 @@ export class SocketHandler {
                     });
                     logger.debug(`Question sélectionnée`, { lobbyCode: data.lobbyCode });
                 } catch (error) {
-                    logger.error('Error selecting question', { error: (error as Error).message });
-                    socket.emit('error', { message: (error as Error).message });
+                    logger.error('Error selecting question', { error: errMessage(error) });
+                    socket.emit('error', { message: 'Une erreur inattendue est survenue' });
                 }
             });
 
@@ -1198,6 +1235,14 @@ export class SocketHandler {
                     // Vérifier que c'est le leader du round actuel qui demande le prochain round
                     if (game.currentRound && socket.id !== game.currentRound.leader.socketId) {
                         socket.emit('error', { message: 'Seul le pilier peut passer au round suivant' });
+                        return;
+                    }
+
+                    // Guard de phase : on ne passe au round suivant qu'après REVEAL.
+                    // Sinon un double-tap peut sauter une phase ou avancer le tour pendant
+                    // qu'un joueur écrit encore sa réponse.
+                    if (game.currentRound && game.currentRound.phase !== RoundPhase.REVEAL) {
+                        logger.debug('nextRound ignoré : phase incorrecte', { lobbyCode: data.lobbyCode, phase: game.currentRound.phase });
                         return;
                     }
 
@@ -1225,8 +1270,8 @@ export class SocketHandler {
                         logger.game.roundStarted(data.lobbyCode, game.currentRound.roundNumber, game.currentRound.leader.name);
                     }
                 } catch (error) {
-                    logger.error('Error starting next round', { error: (error as Error).message });
-                    socket.emit('error', { message: (error as Error).message });
+                    logger.error('Error starting next round', { error: errMessage(error) });
+                    socket.emit('error', { message: 'Une erreur inattendue est survenue' });
                 }
             });
 
@@ -1266,8 +1311,8 @@ export class SocketHandler {
                         rounds: game.rounds
                     });
                 } catch (error) {
-                    logger.error('Error getting game results', { error: (error as Error).message });
-                    socket.emit('error', { message: (error as Error).message });
+                    logger.error('Error getting game results', { error: errMessage(error) });
+                    socket.emit('error', { message: 'Une erreur inattendue est survenue' });
                 }
             });
 
@@ -1396,8 +1441,8 @@ export class SocketHandler {
                         reconnectionData
                     });
                 } catch (error) {
-                    logger.error('Error getting game state', { error: (error as Error).message });
-                    socket.emit('error', { message: (error as Error).message });
+                    logger.error('Error getting game state', { error: errMessage(error) });
+                    socket.emit('error', { message: 'Une erreur inattendue est survenue' });
                 }
             });
 
@@ -1455,6 +1500,13 @@ export class SocketHandler {
                         return;
                     }
 
+                    // Guard de phase : un client malveillant pourrait essayer de spammer submitAnswer
+                    // hors de la phase ANSWERING. Refuser silencieusement.
+                    if (game.currentRound.phase !== RoundPhase.ANSWERING) {
+                        logger.debug('submitAnswer ignoré : phase incorrecte', { lobbyCode: data.lobbyCode, phase: game.currentRound.phase });
+                        return;
+                    }
+
                     // Vérifier que le joueur n'a pas déjà répondu
                     if (game.currentRound.answers[data.playerId]) {
                         socket.emit('error', { message: 'Vous avez déjà soumis une réponse' });
@@ -1490,7 +1542,7 @@ export class SocketHandler {
                         const inactivePlayers = lobby.players.filter(p => !p.isActive && p.id !== game.currentRound!.leader.id);
                         for (const inactivePlayer of inactivePlayers) {
                             if (!game.currentRound.answers[inactivePlayer.id]) {
-                                game.currentRound.addAnswer(inactivePlayer.id, `__NO_RESPONSE__${inactivePlayer.name} s'est déconnecté`);
+                                game.currentRound.addAnswer(inactivePlayer.id, formatNoResponse(inactivePlayer.name, "s'est déconnecté"));
                                 logger.debug(`Réponse auto ajoutée pour joueur inactif ${inactivePlayer.name}`);
                             }
                         }
@@ -1510,8 +1562,8 @@ export class SocketHandler {
                         }
                     }
                 } catch (error) {
-                    logger.error('Error submitting answer', { error: (error as Error).message });
-                    socket.emit('error', { message: (error as Error).message });
+                    logger.error('Error submitting answer', { error: errMessage(error) });
+                    socket.emit('error', { message: 'Une erreur inattendue est survenue' });
                 }
             });
 
@@ -1567,8 +1619,8 @@ export class SocketHandler {
                     });
                     logger.info('Substitut sélectionné', { lobbyCode: data.lobbyCode, substitutePlayerId: substitute.id });
                 } catch (error) {
-                    logger.error('Error selecting substitute', { error: (error as Error).message });
-                    socket.emit('error', { message: (error as Error).message });
+                    logger.error('Error selecting substitute', { error: errMessage(error) });
+                    socket.emit('error', { message: 'Une erreur inattendue est survenue' });
                 }
             });
 
@@ -1631,8 +1683,8 @@ export class SocketHandler {
                     this.transitionToGuessing(data.lobbyCode, lobby!, currentRound, false);
                     logger.info('Réponse du substitut soumise, passage à GUESSING', { lobbyCode: data.lobbyCode });
                 } catch (error) {
-                    logger.error('Error submitting substitute answer', { error: (error as Error).message });
-                    socket.emit('error', { message: (error as Error).message });
+                    logger.error('Error submitting substitute answer', { error: errMessage(error) });
+                    socket.emit('error', { message: 'Une erreur inattendue est survenue' });
                 }
             });
 
@@ -1690,8 +1742,8 @@ export class SocketHandler {
                         socket.emit('shuffledAnswersReceived', shuffledPayload);
                     }
                 } catch (error) {
-                    logger.error('Error requesting shuffled answers', { error: (error as Error).message });
-                    socket.emit('error', { message: (error as Error).message });
+                    logger.error('Error requesting shuffled answers', { error: errMessage(error) });
+                    socket.emit('error', { message: 'Une erreur inattendue est survenue' });
                 }
             });
 
@@ -1720,6 +1772,12 @@ export class SocketHandler {
                     if (!lobby) return;
                     const currentRound = game!.currentRound!;
 
+                    // Guard de phase : updateGuess n'a de sens qu'en GUESSING.
+                    if (currentRound.phase !== RoundPhase.GUESSING) {
+                        logger.debug('updateGuess ignoré : phase incorrecte', { lobbyCode: data.lobbyCode, phase: currentRound.phase });
+                        return;
+                    }
+
                     // Validation stricte : filtrer answerId et playerId via les sets du round.
                     // Empêche pollution d'objet (ex __proto__, constructor) et data garbage.
                     const round = currentRound as Round;
@@ -1745,8 +1803,8 @@ export class SocketHandler {
                         // Note: currentGuesses retiré - le client reconstruit l'état à partir des deltas
                     });
                 } catch (error) {
-                    logger.error('Error updating guess', { error: (error as Error).message });
-                    socket.emit('error', { message: (error as Error).message });
+                    logger.error('Error updating guess', { error: errMessage(error) });
+                    socket.emit('error', { message: 'Une erreur inattendue est survenue' });
                 }
             });
 
@@ -1768,6 +1826,14 @@ export class SocketHandler {
                     if (!this.requireLeader(socket, game, 'valider les attributions')) return;
                     if (!lobby) return; // Type narrowing for lobby
                     const currentRound = game!.currentRound!;
+
+                    // Guard de phase : submitGuesses n'est valide qu'en GUESSING.
+                    // Évite qu'un double-tap du pilier ou un client malveillant déclenche
+                    // la transition vers REVEAL plusieurs fois.
+                    if (currentRound.phase !== RoundPhase.GUESSING) {
+                        logger.debug('submitGuesses ignoré : phase incorrecte', { lobbyCode: data.lobbyCode, phase: currentRound.phase });
+                        return;
+                    }
 
                     // Valider et filtrer les guesses (Sets pour lookups O(1))
                     // En mode "Devine ma réponse" : la réponse du substitut (clé = leader.id) est un answer
@@ -1826,8 +1892,8 @@ export class SocketHandler {
 
                     logger.info(`Attributions validées`, { lobbyCode: data.lobbyCode, leaderScore: currentRound.scores[currentRound.leader.id] || 0 });
                 } catch (error) {
-                    logger.error('Error submitting guesses', { error: (error as Error).message });
-                    socket.emit('error', { message: (error as Error).message });
+                    logger.error('Error submitting guesses', { error: errMessage(error) });
+                    socket.emit('error', { message: 'Une erreur inattendue est survenue' });
                 }
             });
 
@@ -1844,6 +1910,12 @@ export class SocketHandler {
                     const game = lobby?.game;
                     if (!this.requireLeader(socket, game, 'révéler les réponses')) return;
                     const currentRound = game!.currentRound!;
+
+                    // Guard de phase : revealAnswer n'a de sens qu'en REVEAL.
+                    if (currentRound.phase !== RoundPhase.REVEAL) {
+                        logger.debug('revealAnswer ignoré : phase incorrecte', { lobbyCode: data.lobbyCode, phase: currentRound.phase });
+                        return;
+                    }
 
                     // Validation stricte : answerIndex doit être un entier dans [0, totalAnswers)
                     const totalAnswers = Object.keys((currentRound as Round).getGuessingAnswers()).length;
@@ -1878,7 +1950,7 @@ export class SocketHandler {
                     const result = results[data.answerIndex];
                     if (result && !result.correct) {
                         const guessedPlayerAnswer = results.find(r => r.playerId === result.guessedPlayerId)?.answer;
-                        if (guessedPlayerAnswer && !guessedPlayerAnswer.startsWith('__NO_RESPONSE__') && !result.answer.startsWith('__NO_RESPONSE__')) {
+                        if (guessedPlayerAnswer && !guessedPlayerAnswer.startsWith(NO_RESPONSE_PREFIX) && !result.answer.startsWith(NO_RESPONSE_PREFIX)) {
                             if (areAnswersSimilar(result.answer, guessedPlayerAnswer)) {
                                 similarityPayload = {
                                     answerIndex: data.answerIndex,
@@ -1898,8 +1970,8 @@ export class SocketHandler {
                         revealedIndices: currentRound.revealedIndices
                     });
                 } catch (error) {
-                    logger.error('Error revealing answer', { error: (error as Error).message });
-                    socket.emit('error', { message: (error as Error).message });
+                    logger.error('Error revealing answer', { error: errMessage(error) });
+                    socket.emit('error', { message: 'Une erreur inattendue est survenue' });
                 }
             });
 
@@ -1926,8 +1998,8 @@ export class SocketHandler {
                     }
                     this.io.to(data.lobbyCode).emit('revealCursorAdvanced', { nextIndex: data.nextIndex });
                 } catch (error) {
-                    logger.error('Error advancing reveal cursor', { error: (error as Error).message });
-                    socket.emit('error', { message: (error as Error).message });
+                    logger.error('Error advancing reveal cursor', { error: errMessage(error) });
+                    socket.emit('error', { message: 'Une erreur inattendue est survenue' });
                 }
             });
 
@@ -1983,8 +2055,8 @@ export class SocketHandler {
 
                     logger.info('Similarité confirmée', { lobbyCode: data.lobbyCode, answerIndex: data.answerIndex });
                 } catch (error) {
-                    logger.error('Error confirming similarity', { error: (error as Error).message });
-                    socket.emit('error', { message: (error as Error).message });
+                    logger.error('Error confirming similarity', { error: errMessage(error) });
+                    socket.emit('error', { message: 'Une erreur inattendue est survenue' });
                 }
             });
 
@@ -2005,8 +2077,8 @@ export class SocketHandler {
                         answerIndex: data.answerIndex
                     });
                 } catch (error) {
-                    logger.error('Error dismissing similarity', { error: (error as Error).message });
-                    socket.emit('error', { message: (error as Error).message });
+                    logger.error('Error dismissing similarity', { error: errMessage(error) });
+                    socket.emit('error', { message: 'Une erreur inattendue est survenue' });
                 }
             });
 
@@ -2062,8 +2134,8 @@ export class SocketHandler {
                     });
                     logger.debug(`Timer démarré: ${timerDuration}s`, { lobbyCode: data.lobbyCode, phase: currentRound.phase });
                 } catch (error) {
-                    logger.error('Error starting timer', { error: (error as Error).message });
-                    socket.emit('error', { message: (error as Error).message });
+                    logger.error('Error starting timer', { error: errMessage(error) });
+                    socket.emit('error', { message: 'Une erreur inattendue est survenue' });
                 }
             });
 
@@ -2107,7 +2179,7 @@ export class SocketHandler {
 
                     socket.emit('timerState', null);
                 } catch (error) {
-                    logger.error('Error getting timer state', { error: (error as Error).message });
+                    logger.error('Error getting timer state', { error: errMessage(error) });
                     socket.emit('timerState', null);
                 }
             });
@@ -2170,8 +2242,8 @@ export class SocketHandler {
                             break;
                     }
                 } catch (error) {
-                    logger.error('Error handling timer expiration', { error: (error as Error).message });
-                    socket.emit('error', { message: (error as Error).message });
+                    logger.error('Error handling timer expiration', { error: errMessage(error) });
+                    socket.emit('error', { message: 'Une erreur inattendue est survenue' });
                 }
             });
 
@@ -2301,7 +2373,7 @@ export class SocketHandler {
                                                 newLeader: currentGame.currentRound!.leader.name
                                             });
                                         } catch (error) {
-                                            logger.error('Erreur lors du démarrage du round suivant', { error: (error as Error).message });
+                                            logger.error('Erreur lors du démarrage du round suivant', { error: errMessage(error) });
                                             // Terminer la partie si impossible de continuer
                                             currentGame.end();
                                             currentLobby.players.forEach(p => p.isActive = false);
@@ -2340,6 +2412,16 @@ export class SocketHandler {
 
                             const playerToRemove = currentLobby.players.find(p => p.name === playerName && !p.isActive);
                             if (playerToRemove) {
+                                // En pleine partie, on NE supprime PAS le joueur déconnecté :
+                                // ses réponses/scores sont déjà dans le round, et `getLeaderboard`
+                                // itère sur `lobby.players`. Le retirer du tableau lui ferait perdre
+                                // ses points au moment du calcul final. On le laisse en inactif jusqu'à
+                                // `gameEnded`, où le lobby sera nettoyé normalement.
+                                if (currentLobby.game?.status === GameStatus.IN_PROGRESS) {
+                                    logger.info(`Période de grâce expirée pour ${playerToRemove.name}, mais partie en cours : conservation pour le leaderboard`);
+                                    return;
+                                }
+
                                 logger.info(`Période de grâce expirée, suppression de ${playerToRemove.name}`);
 
                                 const isLobbyRemoved = LobbyManager.removePlayer(currentLobby, playerToRemove);

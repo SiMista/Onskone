@@ -6,23 +6,12 @@ import Button from './Button';
 import QuestionCard from './QuestionCard';
 import QuestionByline from './QuestionByline';
 import PlayerBadge from './PlayerBadge';
-import { GAME_CONFIG } from '../constants/game';
+import { GAME_CONFIG, getPhaseDuration } from '../constants/game';
 import { IPlayer, RoundPhase, GameCard, GameMode } from '@onskone/shared';
 import { useStartTimerDelayed } from '../hooks';
 import { useLocale } from '../i18n';
 
-interface SubstituteAnsweringPhaseProps {
-  lobbyCode: string;
-  question: string;
-  card?: GameCard;
-  currentPlayerId: string;
-  players: IPlayer[];
-  leaderId: string;
-  substitutePlayerId: string | null | undefined;
-  gameMode: GameMode;
-}
-
-const SubstituteAnsweringPhase: React.FC<SubstituteAnsweringPhaseProps> = ({
+const SubstituteAnsweringPhase = ({
   lobbyCode,
   question,
   card,
@@ -31,6 +20,17 @@ const SubstituteAnsweringPhase: React.FC<SubstituteAnsweringPhaseProps> = ({
   leaderId,
   substitutePlayerId,
   gameMode,
+  timeMultiplier,
+}: {
+  lobbyCode: string;
+  question: string;
+  card?: GameCard;
+  currentPlayerId: string;
+  players: IPlayer[];
+  leaderId: string;
+  substitutePlayerId: string | null | undefined;
+  gameMode: GameMode;
+  timeMultiplier: number;
 }) => {
   const { t } = useLocale();
   const leader = players.find(p => p.id === leaderId);
@@ -42,7 +42,8 @@ const SubstituteAnsweringPhase: React.FC<SubstituteAnsweringPhaseProps> = ({
   const [submitted, setSubmitted] = useState(false);
   const expireTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useStartTimerDelayed(isPilier, lobbyCode, GAME_CONFIG.TIMERS.SUBSTITUTE_ANSWERING);
+  const phaseDuration = getPhaseDuration(RoundPhase.SUBSTITUTE_ANSWERING, timeMultiplier);
+  useStartTimerDelayed(isPilier, lobbyCode, phaseDuration);
 
   useEffect(() => {
     return () => {
@@ -74,7 +75,7 @@ const SubstituteAnsweringPhase: React.FC<SubstituteAnsweringPhaseProps> = ({
   return (
     <div className={`flex flex-col h-full max-w-2xl mx-auto w-full px-3 md:px-4 py-3 md:py-4 gap-3 overflow-hidden ${isSubstitute && !submitted ? 'min-h-[70dvh]' : ''}`}>
       <HourglassTimer
-        duration={GAME_CONFIG.TIMERS.SUBSTITUTE_ANSWERING}
+        duration={phaseDuration}
         onExpire={handleTimerExpire}
         phase={RoundPhase.SUBSTITUTE_ANSWERING}
         lobbyCode={lobbyCode}

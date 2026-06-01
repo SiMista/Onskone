@@ -7,14 +7,27 @@ import QuestionCard from './QuestionCard';
 import QuestionByline from './QuestionByline';
 import PlayerBadge from './PlayerBadge';
 import Button from './Button';
-import { GAME_CONFIG } from '../constants/game';
+import { GAME_CONFIG, getPhaseDuration } from '../constants/game';
 import { IPlayer, RoundPhase, GameCard } from '@onskone/shared';
 import { playSound } from '../utils/sounds';
 import { useStartTimerDelayed } from '../hooks';
 import { getQuestionSubtitle } from '../utils/questionHelpers';
 import { useLocale } from '../i18n';
 
-interface AnswerPhaseProps {
+type SubmitStage = 'idle' | 'shaking' | 'done';
+
+const AnswerPhase = ({
+  lobbyCode,
+  question,
+  card,
+  isLeader,
+  currentPlayerId,
+  players,
+  leaderId,
+  initialAnsweredPlayerIds,
+  initialMyAnswer,
+  timeMultiplier
+}: {
   lobbyCode: string;
   question: string;
   card?: GameCard;
@@ -24,26 +37,14 @@ interface AnswerPhaseProps {
   leaderId: string;
   initialAnsweredPlayerIds?: string[];
   initialMyAnswer?: string;
-}
-
-type SubmitStage = 'idle' | 'shaking' | 'done';
-
-const AnswerPhase: React.FC<AnswerPhaseProps> = ({
-  lobbyCode,
-  question,
-  card,
-  isLeader,
-  currentPlayerId,
-  players,
-  leaderId,
-  initialAnsweredPlayerIds,
-  initialMyAnswer
+  timeMultiplier: number;
 }) => {
   const { t } = useLocale();
   const leader = players.find(p => p.id === leaderId);
   const subtitle = leader ? getQuestionSubtitle(t.phases, RoundPhase.ANSWERING, isLeader) : '';
   const subtitleBadge = !isLeader && leader ? <PlayerBadge player={leader} size="sm" /> : undefined;
-  useStartTimerDelayed(isLeader, lobbyCode, GAME_CONFIG.TIMERS.ANSWERING);
+  const phaseDuration = getPhaseDuration(RoundPhase.ANSWERING, timeMultiplier);
+  useStartTimerDelayed(isLeader, lobbyCode, phaseDuration);
   const [answer, setAnswer] = useState(initialMyAnswer || '');
   const [submitted, setSubmitted] = useState(!!initialMyAnswer);
   const [stage, setStage] = useState<SubmitStage>(initialMyAnswer ? 'done' : 'idle');
@@ -153,7 +154,7 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
         </div>
 
         <HourglassTimer
-          duration={GAME_CONFIG.TIMERS.ANSWERING}
+          duration={phaseDuration}
           onExpire={handleTimerExpire}
           phase={RoundPhase.ANSWERING}
           lobbyCode={lobbyCode}
@@ -230,7 +231,7 @@ const AnswerPhase: React.FC<AnswerPhaseProps> = ({
     >
       {/* Timer en logique seulement (affichage géré par le header du Game) */}
       <HourglassTimer
-        duration={GAME_CONFIG.TIMERS.ANSWERING}
+        duration={phaseDuration}
         onExpire={handleTimerExpire}
         phase={RoundPhase.ANSWERING}
         lobbyCode={lobbyCode}

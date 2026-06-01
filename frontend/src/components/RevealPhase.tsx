@@ -9,7 +9,10 @@ import SimilarityPopover from './SimilarityPopover';
 import { IPlayer, RevealResult, LeaderboardEntry, GameCard, GameMode } from '@onskone/shared';
 import { useLocale } from '../i18n';
 
-interface RevealPhaseProps {
+const isPersonneGuess = (r: RevealResult) =>
+  !r.guessedPlayerId || !r.guessedPlayerName || r.guessedPlayerName === 'Aucun' || r.guessedPlayerName === 'Personne';
+
+const RevealPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, isGameOver, results, initialRevealedIndices, gameMode }: {
   lobbyCode: string;
   isLeader: boolean;
   leader: Pick<IPlayer, 'id' | 'name' | 'avatarId'>;
@@ -20,12 +23,7 @@ interface RevealPhaseProps {
   card?: GameCard;
   initialRevealedIndices?: number[];
   gameMode: GameMode;
-}
-
-const isPersonneGuess = (r: RevealResult) =>
-  !r.guessedPlayerId || !r.guessedPlayerName || r.guessedPlayerName === 'Aucun' || r.guessedPlayerName === 'Personne';
-
-const RevealPhase: React.FC<RevealPhaseProps> = ({ lobbyCode, isLeader, leader, currentPlayerId, isGameOver, results, initialRevealedIndices, gameMode }) => {
+}) => {
   const { t } = useLocale();
   const leaderId = leader.id;
   const [revealedIndices, setRevealedIndices] = useState<Set<number>>(

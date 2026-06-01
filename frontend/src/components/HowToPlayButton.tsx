@@ -6,7 +6,7 @@ type HowToPlayButtonProps = {
 };
 
 // Pill ghost : miroir du BackButton, translation hover vers la droite.
-const HowToPlayButton: React.FC<HowToPlayButtonProps> = ({ onClick, className = '' }) => {
+const HowToPlayButton = ({ onClick, className = '' }: HowToPlayButtonProps) => {
   const { t } = useLocale();
   return (
     <button

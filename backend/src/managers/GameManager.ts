@@ -20,10 +20,11 @@ import logger from '../utils/logger';
 // Forme du JSON produit par build-questions.mjs : { [category]: { [theme]: { description, subjects: [{subject, questions}] } } }
 type QuestionsFile = Record<string, Record<string, { description: string; subjects: { subject: string; questions: string[] }[] }>>;
 
-// Forme de themes.json : { [code]: { category, emoji, labels: {fr,en}, descriptions: {fr,en} } }
+// Forme de themes.json : { [code]: { category, emoji, mature?, labels: {fr,en}, descriptions: {fr,en} } }
 type ThemesMeta = Record<string, {
     category: string;
     emoji: string;
+    mature?: boolean;
     labels: Record<Locale, string>;
     descriptions: Record<Locale, string>;
 }>;
@@ -97,6 +98,7 @@ const loadOne = (locale: Locale): boolean => {
                 name: label,
                 description: meta.descriptions[locale] ?? '',
                 emoji: meta.emoji,
+                ...(meta.mature ? { mature: true } : {}),
             };
             p.catalog[cat].push(code);
             p.catalogWithMeta[cat].push(info);
@@ -141,8 +143,15 @@ export const getDecksCatalogWithMeta = (locale: Locale = DEFAULT_LOCALE): DecksC
 
 export const getDefaultSelectedDecks = (locale: Locale = DEFAULT_LOCALE): SelectedDecks => {
     const selected: SelectedDecks = {};
+    const matureCodes = new Set(
+        Object.entries(THEMES_META)
+            .filter(([, meta]) => meta.mature)
+            .map(([code]) => code)
+    );
     for (const [category, codes] of Object.entries(pools[locale].catalog)) {
-        selected[category] = [...codes];
+        // Les thèmes mature sont exclus par défaut, l'host doit les activer manuellement
+        // (avec confirmation explicite côté front).
+        selected[category] = codes.filter(code => !matureCodes.has(code));
     }
     return selected;
 };
@@ -159,7 +168,8 @@ export const sanitizeSelectedDecks = (selected: SelectedDecks, locale: Locale = 
             clean[category] = [];
             continue;
         }
-        clean[category] = requested.filter(c => codes.includes(c));
+        const codeSet = new Set(codes);
+        clean[category] = requested.filter(c => codeSet.has(c));
     }
     return clean;
 };
@@ -171,11 +181,15 @@ export const sanitizeSelectedDecks = (selected: SelectedDecks, locale: Locale = 
  */
 const filterPoolBySelection = (pool: GameCard[], selected: SelectedDecks, locale: Locale): GameCard[] => {
     const codeByLabel = pools[locale].codeByLabel;
+    const codeSetsByCategory: Record<string, Set<string>> = {};
+    for (const [category, codes] of Object.entries(selected)) {
+        if (Array.isArray(codes)) codeSetsByCategory[category] = new Set(codes);
+    }
     return pool.filter(card => {
         const code = codeByLabel[card.theme];
         if (!code) return false;
-        const codes = selected[card.category];
-        return Array.isArray(codes) && codes.includes(code);
+        const codeSet = codeSetsByCategory[card.category];
+        return codeSet !== undefined && codeSet.has(code);
     });
 };
 
@@ -237,8 +251,3 @@ export const getRandomQuestions = (
  */
 export const isQuestionsLoaded = (): boolean => SUPPORTED_LOCALES.some(isLoaded);
 
-/**
- * Get the number of available questions (all locales combined).
- */
-export const getQuestionsCount = (): number =>
-    SUPPORTED_LOCALES.reduce((acc, l) => acc + pools[l].pool.length, 0);

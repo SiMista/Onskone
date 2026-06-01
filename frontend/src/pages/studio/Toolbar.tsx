@@ -1,4 +1,4 @@
-import { GameMode } from '@onskone/shared';
+import { GameMode, GAME_CONSTANTS } from '@onskone/shared';
 import { Layout, SlotConfig, SELECT_CLS } from './shared';
 
 // Variants compacts (locaux) pour la Toolbar, sans toucher au CLUSTER/PILL_*
@@ -20,6 +20,8 @@ interface ToolbarProps {
   setDebugTimers: (v: boolean | ((prev: boolean) => boolean)) => void;
   gameMode: GameMode;
   setGameMode: (m: GameMode) => void;
+  timeMultiplier: number;
+  setTimeMultiplier: (m: number) => void;
   running: boolean;
   allBots: boolean;
   burstCount: number;
@@ -38,6 +40,7 @@ export const Toolbar = ({
   view, setView,
   slots, layout, setLayout, zoom, setZoom, debugTimers, setDebugTimers,
   gameMode, setGameMode,
+  timeMultiplier, setTimeMultiplier,
   running, allBots, burstCount, setBurstCount,
   limitBreaker, onToggleLimitBreaker,
   onAddSlot, onRemoveLastSlot, onToggleAllBots,
@@ -120,6 +123,28 @@ export const Toolbar = ({
               className="w-16 accent-amber-400"
             />
             <span className="font-mono text-[10px] tabular-nums w-8 text-center text-white/80">{Math.round(zoom * 100)}%</span>
+          </div>
+
+          <div
+            className={COMPACT_CLUSTER}
+            title={debugTimers
+              ? 'Rythme de jeu — SANS EFFET tant que les slow timers (⏱ 1h) sont actifs. Décoche ⏱ pour le tester.'
+              : 'Rythme de jeu — multiplicateur de durée des phases (appliqué à la création du lobby).'}
+          >
+            {GAME_CONSTANTS.TIME_MULTIPLIER_LEVELS.map((lvl, i) => {
+              const on = lvl === timeMultiplier;
+              const emoji = i === 0 ? '🐇' : i === 1 ? '⏱' : '🐢';
+              return (
+                <button
+                  key={lvl}
+                  type="button"
+                  onClick={() => setTimeMultiplier(lvl)}
+                  disabled={running}
+                  className={`${COMPACT_ICON} disabled:opacity-25 disabled:cursor-not-allowed ${on ? '!bg-amber-300/15 !border-amber-300/50 !text-amber-100' : ''}`}
+                  title={`${lvl}×`}
+                >{emoji}</button>
+              );
+            })}
           </div>
 
           <div className={COMPACT_CLUSTER}>

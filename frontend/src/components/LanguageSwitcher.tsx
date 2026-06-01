@@ -2,14 +2,23 @@ import { useEffect, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
 import { useLocale, LOCALE_META, SUPPORTED_LOCALES } from '../i18n';
 
-interface LanguageSwitcherProps {
-  className?: string;
-}
-
-const LanguageSwitcher = ({ className = '' }: LanguageSwitcherProps) => {
+const LanguageSwitcher = () => {
   const { locale, setLocale, t } = useLocale();
   const [open, setOpen] = useState(false);
+  // `render` garde le <ul> monté le temps de l'anim de fermeture ; `closing` choisit l'anim.
+  const [render, setRender] = useState(false);
+  const [closing, setClosing] = useState(false);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
+
+  // Ouvrir = monter + lancer l'anim d'ouverture ; fermer = lancer l'anim de close (démontage à la fin).
+  useEffect(() => {
+    if (open) {
+      setRender(true);
+      setClosing(false);
+    } else if (render) {
+      setClosing(true);
+    }
+  }, [open, render]);
 
   useEffect(() => {
     if (!open) return;
@@ -28,7 +37,7 @@ const LanguageSwitcher = ({ className = '' }: LanguageSwitcherProps) => {
   const current = LOCALE_META[locale];
 
   return (
-    <div ref={wrapperRef} className={`relative ${className}`}>
+    <div ref={wrapperRef} className="relative">
       <button
         type="button"
         onClick={() => setOpen(v => !v)}
@@ -42,11 +51,12 @@ const LanguageSwitcher = ({ className = '' }: LanguageSwitcherProps) => {
         <Icon icon="mdi:chevron-down" className={`w-4 h-4 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden />
       </button>
 
-      {open && (
+      {render && (
         <ul
           role="listbox"
           aria-label={t.common.language}
-          className="absolute right-0 mt-1.5 min-w-[10rem] rounded-xl border-2 border-black bg-cream-paper stack-shadow-sm overflow-hidden z-50"
+          onAnimationEnd={() => { if (closing) { setRender(false); setClosing(false); } }}
+          className={`absolute right-0 mt-1.5 min-w-[10rem] rounded-xl border-2 border-black bg-cream-paper stack-shadow-sm overflow-hidden z-50 ${closing ? 'animate-menu-close' : 'animate-menu-open'}`}
         >
           {SUPPORTED_LOCALES.map(code => {
             const meta = LOCALE_META[code];

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import socket from '../utils/socket';
 import Button from '../components/Button';
+import Logo from '../components/Logo';
 import Footer from '../components/Footer';
 import ConfirmModal from '../components/ConfirmModal';
 import InfoModal from '../components/InfoModal';
@@ -13,11 +14,12 @@ import PlayerCard from '../components/PlayerCard';
 import ThemePickerModal from '../components/ThemePickerModal';
 import BackButton from '../components/BackButton';
 import ScrollFade from '../components/ScrollFade';
-import { IPlayer, DecksCatalog, DecksCatalogWithMeta, SelectedDecks } from '@onskone/shared';
+import { IPlayer, DecksCatalog, DecksCatalogWithMeta, SelectedDecks, GAME_CONSTANTS } from '@onskone/shared';
 import { useSocketEvent, useLeavePrompt, useReconnectOnVisible } from '../hooks';
 import { useToast } from '../components/Toast';
 import { useLocale } from '../i18n';
-import { GAME_CONFIG, AVATARS, getSoftCategoryColor } from '../constants/game';
+import { GAME_CONFIG, AVATARS, getSoftCategoryColor, estimateGameMinutes } from '../constants/game';
+import { STICKER_FILTER } from '../constants/icons';
 import { studioStorage, isStudioFrame } from '../utils/studioStorage';
 
 const RECOMMENDED_PLAYERS = 4;
@@ -56,6 +58,7 @@ const Lobby = () => {
         if (el) el.scrollTop = 0;
     }, [lobbyTab]);
     const [guessMyAnswerMode, setGuessMyAnswerMode] = useState<boolean>(false);
+    const [timeMultiplier, setTimeMultiplier] = useState<number>(GAME_CONSTANTS.TIME_MULTIPLIER_DEFAULT);
     const initialPlayerIdsRef = useRef<Set<string> | null>(null);
     const prevHostIdRef = useRef<string | null>(null);
     const [playerName] = useState<string>(() => {
@@ -91,7 +94,7 @@ const Lobby = () => {
     });
 
     // Avertissement avant de quitter la page (le serveur gère la déconnexion automatiquement via socket.disconnect)
-    useLeavePrompt(undefined, !!currentPlayer);
+    useLeavePrompt(!!currentPlayer);
 
     const generateLink = useCallback(() => {
         const link = `${window.location.origin}/?lobbyCode=${lobbyCode!}`;
@@ -275,15 +278,20 @@ const Lobby = () => {
         navigate('/');
     }, [navigate, showToast, t]);
 
-    const handleLobbyDecksState = useCallback((data: { catalog: DecksCatalog; catalogWithMeta?: DecksCatalogWithMeta; selected: SelectedDecks; guessMyAnswerMode?: boolean }) => {
+    const handleLobbyDecksState = useCallback((data: { catalog: DecksCatalog; catalogWithMeta?: DecksCatalogWithMeta; selected: SelectedDecks; guessMyAnswerMode?: boolean; timeMultiplier?: number }) => {
         setDecksCatalog(data.catalog);
         if (data.catalogWithMeta) setDecksCatalogMeta(data.catalogWithMeta);
         setSelectedDecks(data.selected);
         setGuessMyAnswerMode(!!data.guessMyAnswerMode);
+        if (typeof data.timeMultiplier === 'number') setTimeMultiplier(data.timeMultiplier);
     }, []);
 
     const handleGuessMyAnswerModeUpdated = useCallback((data: { guessMyAnswerMode: boolean }) => {
         setGuessMyAnswerMode(!!data.guessMyAnswerMode);
+    }, []);
+
+    const handleTimeMultiplierUpdated = useCallback((data: { timeMultiplier: number }) => {
+        setTimeMultiplier(data.timeMultiplier);
     }, []);
 
     const settingsEmitTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
@@ -313,6 +321,14 @@ const Lobby = () => {
         });
     }, [lobbyCode, queueSettingEmit]);
 
+    const handleTimeMultiplierChange = useCallback((next: number) => {
+        setTimeMultiplier(next);
+        if (!lobbyCode) return;
+        queueSettingEmit('timeMultiplier', () => {
+            socket.emit('updateTimeMultiplier', { lobbyCode, timeMultiplier: next });
+        });
+    }, [lobbyCode, queueSettingEmit]);
+
     const handleSelectedDecksChange = useCallback((next: SelectedDecks) => {
         setSelectedDecks(next);
         if (!lobbyCode) return;
@@ -330,12 +346,14 @@ const Lobby = () => {
     useSocketEvent('lobbyClosed', handleLobbyClosed, [handleLobbyClosed]);
     useSocketEvent('lobbyDecksState', handleLobbyDecksState, [handleLobbyDecksState]);
     useSocketEvent('guessMyAnswerModeUpdated', handleGuessMyAnswerModeUpdated, [handleGuessMyAnswerModeUpdated]);
+    useSocketEvent('timeMultiplierUpdated', handleTimeMultiplierUpdated, [handleTimeMultiplierUpdated]);
 
     const activePlayers = players.filter(p => p.isActive);
     const hostName = players.find(p => p.isHost)?.name ?? t.lobby.hostFallback;
     const enoughPlayers = activePlayers.length >= GAME_CONFIG.MIN_PLAYERS;
     const totalThemesSelected = Object.values(selectedDecks).reduce((acc, arr) => acc + arr.length, 0);
     const hasThemeSelected = totalThemesSelected > 0;
+    const decksLoading = Object.keys(decksCatalog).length === 0;
     const canStartGame = enoughPlayers && hasThemeSelected;
 
     // Liste des joueurs - mobile : 3/ligne, desktop : 4/ligne (même format carré)
@@ -391,7 +409,8 @@ const Lobby = () => {
                                         width={20}
                                         height={20}
                                         aria-hidden
-                                        className="absolute -top-3.5 left-1/2 -translate-x-1/2 [filter:drop-shadow(1px_0_0_#000)_drop-shadow(-1px_0_0_#000)_drop-shadow(0_1px_0_#000)_drop-shadow(0_-1px_0_#000)_drop-shadow(1px_2px_0_rgba(0,0,0,0.35))]"
+                                        className="absolute -top-3.5 left-1/2 -translate-x-1/2"
+                                        style={{ filter: STICKER_FILTER }}
                                     />
                                     {hostName && hostName.length > 10 ? `${hostName.slice(0, 10)}…` : hostName}
                                 </span>{' '}
@@ -415,36 +434,101 @@ const Lobby = () => {
                 description={t.lobby.guessMyAnswer.description}
             />
 
-            {/* Section Thèmes - liste compacte des activés + bouton Modifier */}
-            <div className="flex flex-col gap-2.5">
-                <div className="flex items-baseline gap-2">
+            {/* Rythme de jeu : 3 niveaux discrets, chacun incarné par un emoji animé. */}
+            {(() => {
+                const estMinutes = estimateGameMinutes(
+                    Math.max(GAME_CONFIG.MIN_PLAYERS, activePlayers.length),
+                    timeMultiplier,
+                    guessMyAnswerMode,
+                );
+                const LEVELS = [
+                    { value: 0.7, emoji: 'fluent-emoji-flat:rabbit-face', label: t.lobby.gameSpeed.fast, anim: 'group-data-[on=true]:animate-hourglass-nudge' },
+                    { value: 1, emoji: 'fluent-emoji-flat:hourglass-not-done', label: t.lobby.gameSpeed.normal, anim: 'group-data-[on=true]:animate-float' },
+                    { value: 1.5, emoji: 'fluent-emoji-flat:turtle', label: t.lobby.gameSpeed.slow, anim: 'group-data-[on=true]:animate-float' },
+                ];
+                // Niveau actif = le plus proche (le state peut venir d'un vieux lobby continu).
+                const activeValue = LEVELS.reduce((best, l) =>
+                    Math.abs(l.value - timeMultiplier) < Math.abs(best - timeMultiplier) ? l.value : best, LEVELS[0].value);
+                return (
+                    <div className={`flex flex-col gap-2.5 p-3 rounded-2xl border-[2.5px] border-black bg-cream-player texture-paper stack-shadow-sm transition-opacity ${!isHost ? 'opacity-70' : ''}`}>
+                        <div className="flex items-center gap-2.5">
+                            <span className="font-display text-base font-bold uppercase tracking-tight text-black">{t.lobby.gameSpeed.label}</span>
+                            <span className="flex-1" />
+                            <span className="font-display text-xs font-bold tabular-nums text-black/55">
+                                {t.lobby.gameSpeed.estimate(estMinutes)}
+                            </span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                            {LEVELS.map((lvl) => {
+                                const on = lvl.value === activeValue;
+                                return (
+                                    <button
+                                        key={lvl.value}
+                                        type="button"
+                                        data-on={on}
+                                        disabled={!isHost}
+                                        aria-pressed={on}
+                                        onClick={() => handleTimeMultiplierChange(lvl.value)}
+                                        className={`group relative flex flex-col items-center gap-1 pt-3 pb-2 px-1 rounded-xl border-[2.5px] transition-all duration-200 disabled:cursor-not-allowed
+                                            ${on
+                                                ? 'border-black bg-warning-100 -translate-y-0.5 [box-shadow:0_4px_0_0_#000]'
+                                                : 'border-black/15 bg-cream-paper/60 hover:border-black/40 hover:-translate-y-px enabled:hover:bg-cream-paper'}`}
+                                    >
+                                        {/* Ruban adhésif sur la carte active */}
+                                        {on && (
+                                            <span
+                                                aria-hidden
+                                                className="absolute -top-[7px] left-1/2 -translate-x-1/2 z-10 w-9 h-3 bg-warning-500/85 border-[1.5px] border-black/60 rounded-[2px] rotate-[-4deg] [box-shadow:1px_1px_0_0_rgba(0,0,0,0.3)]"
+                                            />
+                                        )}
+                                        <Icon
+                                            icon={lvl.emoji}
+                                            width={32}
+                                            height={32}
+                                            aria-hidden
+                                            className={`transition-transform duration-200 ${on ? `scale-110 ${lvl.anim}` : 'scale-90 grayscale-[0.4] opacity-70 group-hover:grayscale-0 group-hover:opacity-100'}`}
+                                            style={{ filter: STICKER_FILTER }}
+                                        />
+                                        <span className={`font-display text-[12px] font-bold uppercase tracking-tight leading-none transition-colors ${on ? 'text-black' : 'text-black/45'}`}>
+                                            {lvl.label}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                );
+            })()}
+
+            {/* Section Thèmes — variante 2 finale : UNE seule carte cliquable, fond crème
+                (même teinte que la Checkbox). En-tête (label + compteur + action texte "Modifier/Voir"
+                + chevron, sans emoji) puis les chips des thèmes DANS la carte. Tap n'importe où ouvre. */}
+            <button
+                type="button"
+                onClick={() => setIsThemePickerOpen(true)}
+                aria-label={isHost ? t.themePicker.modify : t.themePicker.view}
+                className="group w-full flex flex-col gap-2.5 p-3 rounded-2xl border-[2.5px] border-black bg-cream-player texture-paper stack-shadow-sm text-left cursor-pointer transition-all duration-200 hover:-translate-y-0.5 active:translate-y-[1px] active:[box-shadow:none!important]"
+            >
+                {/* En-tête de la carte */}
+                <span className="flex items-center gap-2.5 w-full">
                     <span className="font-display text-base font-bold uppercase tracking-tight text-black">{t.lobby.themes}</span>
-                    <span className="flex-1 h-px bg-black/10" />
-                    <span className="font-display text-xs font-bold text-gray-500 whitespace-nowrap">
+                    <span aria-hidden className="w-px h-4 bg-black/15" />
+                    <span className="font-display text-xs font-bold text-gray-500 tabular-nums whitespace-nowrap">
                         {totalThemesSelected}/{Object.values(decksCatalog).reduce((acc, arr) => acc + arr.length, 0)}
                     </span>
-                </div>
-                <button
-                    type="button"
-                    onClick={() => setIsThemePickerOpen(true)}
-                    className="group relative w-full flex flex-wrap items-center gap-1.5 p-2.5 pr-3 pt-9 rounded-2xl border-[2.5px] border-black bg-white texture-paper stack-shadow-sm text-left cursor-pointer active:scale-[0.98] transition-transform"
-                    aria-label={isHost ? t.themePicker.modify : t.themePicker.view}
-                >
-                    {/* Bouton Modifier / Voir - absolu top centré */}
-                    <span
-                        aria-hidden
-                        className="absolute top-2 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md border-[2px] border-black bg-cream-paper font-display text-[11px] font-bold uppercase tracking-tight text-black stack-shadow-sm group-hover:scale-[1.05] group-active:scale-[0.95] transition-transform"
-                    >
-                        <Icon
-                            icon={isHost ? 'fluent-emoji-flat:pencil' : 'fluent-emoji-flat:eye'}
-                            width={12}
-                            height={12}
-                            aria-hidden
-                            style={{ filter: 'drop-shadow(1px 0 0 #000) drop-shadow(-1px 0 0 #000) drop-shadow(0 1px 0 #000) drop-shadow(0 -1px 0 #000) drop-shadow(1px 2px 0 rgba(0,0,0,0.35))' }}
-                        />
+                    <span className="flex-1" />
+                    {/* Action en texte (sans emoji) + chevron pour signaler l'ouverture. */}
+                    <span className="shrink-0 inline-flex items-center gap-0.5 font-display text-xs font-bold uppercase tracking-tight text-black/70 group-hover:text-black transition-colors">
                         {isHost ? t.themePicker.modify : t.themePicker.view}
+                        <Icon icon="lucide:chevron-right" width={18} height={18} aria-hidden className="transition-transform duration-200 group-hover:translate-x-0.5" />
                     </span>
+                </span>
 
+                {/* Séparateur en pointillé pour démarquer l'en-tête du contenu */}
+                <span aria-hidden className="w-full border-t-[1.5px] border-dashed border-black/15" />
+
+                {/* Chips des thèmes sélectionnés (dans la carte) */}
+                <span className="flex flex-wrap items-center gap-1.5 min-h-[1.75rem]">
                     {totalThemesSelected === 0 ? (
                         <span className="font-display text-sm italic text-gray-500 px-1">{t.themePicker.emptyState}</span>
                     ) : (
@@ -462,20 +546,24 @@ const Lobby = () => {
                                             width={14}
                                             height={14}
                                             aria-hidden
-                                            style={{ filter: 'drop-shadow(1px 0 0 #000) drop-shadow(-1px 0 0 #000) drop-shadow(0 1px 0 #000) drop-shadow(0 -1px 0 #000) drop-shadow(1px 2px 0 rgba(0,0,0,0.35))' }}
+                                            style={{ filter: STICKER_FILTER }}
                                         />
                                         <span>{info.name}</span>
                                     </span>
                                 ))
                         )
                     )}
-                </button>
-            </div>
+                </span>
+            </button>
         </div>
     );
 
     return (
         <div className="relative h-full flex flex-col overflow-hidden animate-phase-enter">
+            {/* Logo desktop uniquement - positionné absolu pour ne pas perturber le centrage vertical */}
+            <div className="hidden md:flex absolute top-0 left-0 right-0 justify-center pointer-events-none z-0">
+                <Logo size="small" />
+            </div>
             {/* Zone centrale qui prend toute la place dispo et centre le contenu.
                 Le Footer (en dessous) reste collé au bas de l'écran sur desktop. */}
             <div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center overflow-hidden">
@@ -622,7 +710,7 @@ const Lobby = () => {
                         )}
                         {currentPlayer?.isHost && enoughPlayers && !hasThemeSelected && (
                             <small className="text-[11px] md:text-xs text-white/85 italic drop-shadow text-center">
-                                {t.lobby.selectAtLeastOneTheme}
+                                {decksLoading ? t.lobby.loadingThemes : t.lobby.selectAtLeastOneTheme}
                             </small>
                         )}
                     </div>
@@ -661,7 +749,7 @@ const Lobby = () => {
                 title={t.lobby.modals.alreadyStarted.title}
             >
                 <div className="text-center space-y-4">
-                    <Icon icon="fluent-emoji-flat:crying-face" className="mx-auto" width="4rem" height="4rem" aria-hidden />
+                    <Icon icon="fluent-emoji-flat:crying-face" className="mx-auto" width="4rem" height="4rem" aria-hidden style={{ filter: STICKER_FILTER }} />
                     <p className="text-gray-700">
                         {t.lobby.modals.alreadyStarted.body}
                     </p>
@@ -676,7 +764,6 @@ const Lobby = () => {
                 isOpen={isHowToPlayOpen}
                 onClose={() => setIsHowToPlayOpen(false)}
                 title={t.lobby.modals.howToPlay}
-                variant="comic"
             >
                 <HowToPlayCarousel />
             </InfoModal>

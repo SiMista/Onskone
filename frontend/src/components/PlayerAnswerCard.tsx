@@ -22,7 +22,19 @@ const insertSoftHyphens = (text: string, threshold = 12, interval = 6): string =
     .join('');
 };
 
-interface PlayerAnswerCardProps {
+const FIT_MAX = 128;
+const FIT_MIN = 14;
+
+const PlayerAnswerCard = ({
+  answer,
+  isNoResponse = false,
+  bgClass = 'bg-cream-answer',
+  pulse = false,
+  className = '',
+  heading = null,
+  placeholder = false,
+  waitingFor,
+}: {
   answer: string;
   isNoResponse?: boolean;
   bgClass?: string;
@@ -33,20 +45,6 @@ interface PlayerAnswerCardProps {
   /** Si défini, affiche un état d'attente "En attente que {name} t'attribue une réponse…"
    *  avec avatar inline et police modérée, à la place du texte auto-fit. */
   waitingFor?: { name: string; avatarId: number };
-}
-
-const FIT_MAX = 128;
-const FIT_MIN = 14;
-
-const PlayerAnswerCard: React.FC<PlayerAnswerCardProps> = ({
-  answer,
-  isNoResponse = false,
-  bgClass = 'bg-cream-answer',
-  pulse = false,
-  className = '',
-  heading = null,
-  placeholder = false,
-  waitingFor,
 }) => {
   const { t } = useLocale();
   const textClass = placeholder

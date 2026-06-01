@@ -1,5 +1,5 @@
 // Game configuration constants
-import { GAME_CONSTANTS } from '@onskone/shared';
+import { GAME_CONSTANTS, RoundPhase } from '@onskone/shared';
 
 // Mode debug: met les timers à 1 heure pour travailler sur le front tranquillement
 // Activé via VITE_DEBUG_MODE=true dans .env OU via le query param ?debug=1
@@ -80,21 +80,79 @@ export const GAME_CONFIG = {
   // Character limits (from shared constants)
   MAX_NAME_LENGTH: GAME_CONSTANTS.MAX_NAME_LENGTH,
   MAX_ANSWER_LENGTH: GAME_CONSTANTS.MAX_ANSWER_LENGTH,
-
-  // Timer durations (in seconds) - with debug override
-  TIMERS: {
-    QUESTION_SELECTION: DEBUG_MODE ? DEBUG_TIMER : GAME_CONSTANTS.TIMERS.QUESTION_SELECTION,
-    SUBSTITUTE_SELECTION: DEBUG_MODE ? DEBUG_TIMER : GAME_CONSTANTS.TIMERS.SUBSTITUTE_SELECTION,
-    ANSWERING: DEBUG_MODE ? DEBUG_TIMER : GAME_CONSTANTS.TIMERS.ANSWERING,
-    SUBSTITUTE_ANSWERING: DEBUG_MODE ? DEBUG_TIMER : GAME_CONSTANTS.TIMERS.SUBSTITUTE_ANSWERING,
-    GUESSING: DEBUG_MODE ? DEBUG_TIMER : GAME_CONSTANTS.TIMERS.GUESSING,
-  },
-
-  // UI
-  COPIED_MESSAGE_DURATION: 2000, // milliseconds
-  CONFETTI_DURATION: 5000, // milliseconds
-  CONFETTI_COUNT: 50,
 } as const;
+
+// ===== Durée des phases avec multiplicateur de temps réglable =====
+// Le multiplicateur (réglé par l'hôte dans le lobby) scale toutes les durées de
+// phase. On centralise ici plutôt que de multiplier inline dans chaque composant
+// de phase (il y en a 6) — single source of truth.
+
+// Borne le multiplicateur dans la plage des niveaux autorisés (fallback DEFAULT si NaN).
+const clampMultiplier = (m: number): number => {
+  if (!Number.isFinite(m)) return GAME_CONSTANTS.TIME_MULTIPLIER_DEFAULT;
+  const levels = GAME_CONSTANTS.TIME_MULTIPLIER_LEVELS;
+  return Math.min(Math.max(m, levels[0]), levels[levels.length - 1]);
+};
+
+// Durée "de base" (avant multiplicateur) d'une phase, en secondes.
+// La phase GUESSING a une durée dynamique : 120s à 3 joueurs, +20s par joueur
+// supplémentaire (règle historiquement portée par GuessingPhase.tsx).
+const GUESSING_BASE = 120;
+const GUESSING_EXTRA_PER_PLAYER = 20;
+const basePhaseDuration = (phase: RoundPhase, playerCount: number): number => {
+  if (phase === RoundPhase.GUESSING) {
+    return GUESSING_BASE + Math.max(0, playerCount - 3) * GUESSING_EXTRA_PER_PLAYER;
+  }
+  switch (phase) {
+    case RoundPhase.QUESTION_SELECTION: return GAME_CONSTANTS.TIMERS.QUESTION_SELECTION;
+    case RoundPhase.SUBSTITUTE_SELECTION: return GAME_CONSTANTS.TIMERS.SUBSTITUTE_SELECTION;
+    case RoundPhase.ANSWERING: return GAME_CONSTANTS.TIMERS.ANSWERING;
+    case RoundPhase.SUBSTITUTE_ANSWERING: return GAME_CONSTANTS.TIMERS.SUBSTITUTE_ANSWERING;
+    default: return 0; // REVEAL (pas de timer)
+  }
+};
+
+/**
+ * Durée effective d'une phase en secondes, multiplicateur appliqué.
+ * En mode DEBUG, on ignore le multiplicateur et on renvoie la durée de debug (1h).
+ */
+export const getPhaseDuration = (
+  phase: RoundPhase,
+  timeMultiplier: number = GAME_CONSTANTS.TIME_MULTIPLIER_DEFAULT,
+  playerCount = 3,
+): number => {
+  if (DEBUG_MODE) return DEBUG_TIMER;
+  const base = basePhaseDuration(phase, playerCount);
+  return Math.max(1, Math.round(base * clampMultiplier(timeMultiplier)));
+};
+
+// Marge approximative pour la phase REVEAL (pas de timer serveur) dans l'estimation.
+const REVEAL_ESTIMATE_SECONDS = 20;
+
+/**
+ * Estimation de la durée totale d'une partie en MINUTES, pour l'affichage "~X min"
+ * dans le lobby. Total ≈ durée d'un round × nombre de joueurs (1 round par joueur).
+ * Le multiplicateur DEBUG n'est volontairement PAS pris en compte ici (l'estimation
+ * reflète les vraies durées de jeu, pas le mode debug).
+ */
+export const estimateGameMinutes = (
+  playerCount: number,
+  timeMultiplier: number,
+  guessMyAnswerMode: boolean,
+): number => {
+  const m = clampMultiplier(timeMultiplier);
+  const dur = (phase: RoundPhase) => Math.round(basePhaseDuration(phase, playerCount) * m);
+  let roundSeconds =
+    dur(RoundPhase.QUESTION_SELECTION) +
+    dur(RoundPhase.ANSWERING) +
+    dur(RoundPhase.GUESSING) +
+    REVEAL_ESTIMATE_SECONDS;
+  if (guessMyAnswerMode) {
+    roundSeconds += dur(RoundPhase.SUBSTITUTE_SELECTION) + dur(RoundPhase.SUBSTITUTE_ANSWERING);
+  }
+  const totalSeconds = roundSeconds * Math.max(1, playerCount);
+  return Math.max(1, Math.round(totalSeconds / 60));
+};
 
 // Couleurs associées à chaque catégorie de cartes (utilisées pour le fond du
 // bloc illustration des thèmes et le surlignage des pills sélectionnées).

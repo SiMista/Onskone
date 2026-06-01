@@ -75,6 +75,7 @@ export interface SavedConfig {
   zoom: number;
   debugTimers: boolean;
   gameMode?: GameMode;
+  timeMultiplier?: number;
 }
 
 export const loadSavedConfig = (): SavedConfig | null => {

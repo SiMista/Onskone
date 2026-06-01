@@ -96,11 +96,15 @@ export interface ServerToClientEvents {
     selected: SelectedDecks;
     gameMode: GameMode;
     guessMyAnswerMode: boolean;
+    timeMultiplier: number;
     locale: Locale;
   }) => void;
 
   /** Le mode "Devine ma réponse" a été mis à jour */
   guessMyAnswerModeUpdated: (data: { guessMyAnswerMode: boolean }) => void;
+
+  /** Le multiplicateur de temps des phases a été mis à jour */
+  timeMultiplierUpdated: (data: { timeMultiplier: number }) => void;
 
   /** Un substitut a été sélectionné par le pilier */
   substituteSelected: (data: {
@@ -113,14 +117,6 @@ export interface ServerToClientEvents {
   substituteAnswerSubmitted: (data: {
     phase: RoundPhase;
     forced?: boolean;
-  }) => void;
-
-  /** Réaction emoji d'un joueur diffusée dans le lobby */
-  lobbyReaction: (data: {
-    id: string;
-    playerId: string;
-    playerName: string;
-    emoji: string;
   }) => void;
 
   // ===== GAME EVENTS =====
@@ -311,6 +307,12 @@ export interface ClientToServerEvents {
     guessMyAnswerMode: boolean;
   }) => void;
 
+  /** Mettre à jour le multiplicateur de temps des phases (réservé à l'hôte) */
+  updateTimeMultiplier: (data: {
+    lobbyCode: string;
+    timeMultiplier: number;
+  }) => void;
+
   /** Sélectionner le joueur substitut (réservé au pilier, mode "Devine ma réponse") */
   selectSubstitute: (data: {
     lobbyCode: string;
@@ -321,12 +323,6 @@ export interface ClientToServerEvents {
   submitSubstituteAnswer: (data: {
     lobbyCode: string;
     answer: string;
-  }) => void;
-
-  /** Envoyer une réaction emoji dans le lobby */
-  sendLobbyReaction: (data: {
-    lobbyCode: string;
-    emoji: string;
   }) => void;
 
   // ===== GAME EVENTS =====

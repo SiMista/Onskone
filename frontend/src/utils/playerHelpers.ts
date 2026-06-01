@@ -5,7 +5,7 @@ import { studioStorage } from './studioStorage';
  * Validates that an object has the required IPlayer fields
  * Returns the player if valid, null otherwise
  */
-export function parseStoredPlayer(jsonString: string | null): IPlayer | null {
+function parseStoredPlayer(jsonString: string | null): IPlayer | null {
   if (!jsonString) return null;
 
   try {

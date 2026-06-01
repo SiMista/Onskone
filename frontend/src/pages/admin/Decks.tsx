@@ -5,7 +5,7 @@ import type { AdminDeckSummary } from '@onskone/shared';
 import { useToast } from '../../components/Toast';
 import { fetchAdminDecks } from '../../utils/adminDataApi';
 import { CLUSTER } from './shared';
-import { StatTile } from './Overview';
+import { StatTile } from '../../components/admin/StatTile';
 
 interface CategoryStyle {
   strip: string;
