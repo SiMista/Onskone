@@ -5,6 +5,7 @@ import type { Locale } from '@onskone/shared';
 import InfoModal from './InfoModal';
 import { useLocale, LOCALE_META, SUPPORTED_LOCALES } from '../i18n';
 import type { Dictionary } from '../i18n/dictionary';
+import { STICKER_FILTER } from '../constants/icons';
 
 interface GameModeModalProps {
   isOpen: boolean;
@@ -36,9 +37,6 @@ const MODES: ModeOption[] = [
 
 const modeText = (mode: GameMode, modes: Dictionary['modes']) =>
   mode === 'local' ? modes.local : modes.remote;
-
-const ICON_STICKER_FILTER =
-  'drop-shadow(1px 0 0 #000) drop-shadow(-1px 0 0 #000) drop-shadow(0 1px 0 #000) drop-shadow(0 -1px 0 #000) drop-shadow(1px 2px 0 rgba(0,0,0,0.35))';
 
 const GameModeModal = ({ isOpen, onClose, onSelect }: GameModeModalProps) => {
   const { locale: uiLocale, t } = useLocale();
@@ -99,7 +97,7 @@ const GameModeModal = ({ isOpen, onClose, onSelect }: GameModeModalProps) => {
                   height={44}
                   aria-hidden
                   className="relative transition-transform duration-300 ease-out group-hover:rotate-[-6deg] group-hover:scale-110"
-                  style={{ filter: ICON_STICKER_FILTER }}
+                  style={{ filter: STICKER_FILTER }}
                 />
               </div>
               <div className="flex-1 min-w-0 px-3.5 py-3 md:px-4 md:py-3.5 flex flex-col justify-center gap-1">

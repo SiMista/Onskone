@@ -20,6 +20,7 @@ import { Icon } from '@iconify/react';
 import { useSocketEvent } from '../hooks';
 import { GameMode } from '@onskone/shared';
 import { GAME_CONFIG, AVATARS } from '../constants/game';
+import { STICKER_FILTER } from '../constants/icons';
 import {
   getStats,
   rememberIdentity,
@@ -134,9 +135,18 @@ const Home = () => {
         window.parent.postMessage({ type: 'studio:lobbyCreated', lobbyCode: data.lobbyCode }, '*');
       } catch { /* silent */ }
     }
+    // Studio: appliquer le multiplicateur de temps choisi dans la toolbar. Le créateur
+    // est l'hôte et déjà dans la room, donc le handler host-only passe.
+    const studioMult = searchParams.get('studioTimeMultiplier');
+    if (studioMult !== null) {
+      const m = Number(studioMult);
+      if (Number.isFinite(m)) {
+        socket.emit('updateTimeMultiplier', { lobbyCode: data.lobbyCode, timeMultiplier: m });
+      }
+    }
     const name = urlPlayerName || playerName;
     navigate(`/lobby/${data.lobbyCode}?playerName=${encodeURIComponent(name)}&avatarId=${avatarId}`);
-  }, [navigate, playerName, urlPlayerName, avatarId]);
+  }, [navigate, playerName, urlPlayerName, avatarId, searchParams]);
 
   const handlePlayerNameExists = useCallback((data: { playerName: string }) => {
     showToast(t.home.toasts.pseudoTaken(data.playerName), 'warning');
@@ -196,7 +206,6 @@ const Home = () => {
         isOpen={isInfoOpen}
         onClose={() => setIsInfoOpen(false)}
         title={t.home.howToPlayHeading}
-        variant="comic"
         disableScrollFade
       >
         <HowToPlayCarousel />
@@ -251,9 +260,7 @@ const Home = () => {
                       <div
                         className="flex-shrink-0"
                         style={{
-                          filter: isUnlocked
-                            ? 'drop-shadow(1px 0 0 #000) drop-shadow(-1px 0 0 #000) drop-shadow(0 1px 0 #000) drop-shadow(0 -1px 0 #000) drop-shadow(1px 2px 0 rgba(0,0,0,0.35))'
-                            : 'grayscale(1)',
+                          filter: isUnlocked ? STICKER_FILTER : 'grayscale(1)',
                           opacity: isUnlocked ? 1 : 0.5,
                         }}
                       >
@@ -283,8 +290,10 @@ const Home = () => {
 
       {/* Contenu principal */}
       <div className="flex-1 min-h-0 w-full max-w-screen-xl mx-auto px-4 py-4 desktop-short:py-1 flex flex-col justify-center md:justify-start pb-24 md:pb-4 overflow-y-auto overscroll-contain no-scrollbar safe-pt">
-        {/* Logo */}
-        <div className="flex justify-center mb-5 md:mb-4 lg:mb-6 desktop-short:mb-0">
+        {/* Logo - le wrapper ne porte plus de marge bas asymétrique ;
+            la marge verticale (top = bot) est gérée par le <Logo> via son my-*,
+            sinon en desktop-short (PC large mais court) le logo collait le haut. */}
+        <div className="flex justify-center">
           <Logo size="large" />
         </div>
 
@@ -294,9 +303,11 @@ const Home = () => {
           <div className="hidden md:block md:col-span-1" />
 
           {/* Bloc "Joue maintenant" */}
-          <div className="md:col-span-4 flex flex-col gap-2">
+          <div className="md:col-span-4 flex flex-col gap-2 relative">
             {lobbyCode && (
-              <BackButton onClick={() => navigate('/')} label={t.home.exit} tone="danger" />
+              <div className="absolute -top-7 left-0 z-10">
+                <BackButton onClick={() => navigate('/')} label={t.home.exit} tone="danger" />
+              </div>
             )}
             <div className="relative">
               <button
@@ -311,10 +322,7 @@ const Home = () => {
               >
                 <span
                   className="block"
-                  style={{
-                    filter:
-                      'drop-shadow(1px 0 0 #000) drop-shadow(-1px 0 0 #000) drop-shadow(0 1px 0 #000) drop-shadow(0 -1px 0 #000) drop-shadow(1px 2px 0 rgba(0,0,0,0.35))',
-                  }}
+                  style={{ filter: STICKER_FILTER }}
                 >
                   <Icon
                     icon="fluent-emoji-flat:trophy"
@@ -346,7 +354,6 @@ const Home = () => {
                     onChange={(e) => setPlayerName(e.target.value)}
                     placeholder={t.common.pseudoPlaceholderUpper}
                     maxLength={GAME_CONFIG.MAX_NAME_LENGTH}
-                    onSubmit={undefined}
                   />
                 </div>
                 {!lobbyCode ? (

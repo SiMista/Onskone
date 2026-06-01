@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Icon } from '@iconify/react';
 import { GAME_CONSTANTS } from '@onskone/shared';
-import { TIERS } from '../EndGame';
+import { TIERS } from '../../constants/tiers';
 import { ACHIEVEMENTS } from '../../utils/playerStats';
 import { AVATARS, getAvatarUrl } from '../../constants/game';
 import { buildShareCard } from '../../utils/shareCard';

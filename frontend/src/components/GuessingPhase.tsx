@@ -8,6 +8,7 @@ import PlayerBadge from './PlayerBadge';
 import RevealedAnswerCard from './RevealedAnswerCard';
 import AnswerText from './AnswerText';
 import { IPlayer, RoundPhase, GameCard, GameMode, RevealResult } from '@onskone/shared';
+import { getPhaseDuration } from '../constants/game';
 import { isNoResponse } from '../utils/answerHelpers';
 import { useStartTimerDelayed } from '../hooks';
 import ScrollFade from './ScrollFade';
@@ -18,7 +19,7 @@ interface Answer {
   text: string;
 }
 
-interface GuessingPhaseProps {
+const GuessingPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, question, card, initialGuesses, playerCount, roundNumber, gameMode, timeMultiplier }: {
   lobbyCode: string;
   isLeader: boolean;
   leader: IPlayer;
@@ -29,9 +30,8 @@ interface GuessingPhaseProps {
   playerCount: number;
   roundNumber: number;
   gameMode: GameMode;
-}
-
-const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, leader, currentPlayerId, question, card, initialGuesses, playerCount, roundNumber, gameMode }) => {
+  timeMultiplier: number;
+}) => {
   const { t } = useLocale();
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [players, setPlayers] = useState<IPlayer[]>([]);
@@ -43,6 +43,7 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
   // Cartes qui viennent d'être attribuées (leader view) : déclenche snap-bounce
   const [justAssignedAnswerId, setJustAssignedAnswerId] = useState<string | null>(null);
   const justAssignedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Refs pour les cartes joueurs (pour le scroll)
   const playerCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -52,12 +53,12 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
   const playersScrollRef = useRef<HTMLDivElement | null>(null);
 
 
-  // Calculer la durée du timer: 120s pour 3 joueurs, +20s par joueur supplémentaire
-  const timerDuration = useMemo(() => {
-    const baseTime = 120; // 3 joueurs = 120s
-    const extraTimePerPlayer = 20;
-    return baseTime + Math.max(0, playerCount - 3) * extraTimePerPlayer;
-  }, [playerCount]);
+  // Durée du timer GUESSING (120s à 3 joueurs, +20s/joueur), scalée par le
+  // multiplicateur de temps du lobby. La formule de base vit dans getPhaseDuration.
+  const timerDuration = useMemo(
+    () => getPhaseDuration(RoundPhase.GUESSING, timeMultiplier, playerCount),
+    [playerCount, timeMultiplier]
+  );
 
   useStartTimerDelayed(isLeader, lobbyCode, timerDuration);
 
@@ -84,7 +85,6 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
     const onShuffledAnswersReceived = (data: { answers: Answer[]; players: IPlayer[]; roundNumber?: number }) => {
       // Ignorer les événements d'anciens rounds (race condition sur reconnexion)
       if (data.roundNumber !== undefined && data.roundNumber !== roundNumber) {
-        console.log(`Ignoring stale shuffledAnswersReceived for round ${data.roundNumber}, current is ${roundNumber}`);
         return;
       }
 
@@ -124,7 +124,8 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
           playerCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
         setHighlightedAnswerId(data.answerId);
-        setTimeout(() => setHighlightedAnswerId(null), 1500);
+        if (highlightTimeoutRef.current) clearTimeout(highlightTimeoutRef.current);
+        highlightTimeoutRef.current = setTimeout(() => setHighlightedAnswerId(null), 1500);
 
         // En mode remote, les spectateurs voient aussi l'animation snap-bounce
         if (gameMode === 'remote') {
@@ -140,6 +141,7 @@ const GuessingPhase: React.FC<GuessingPhaseProps> = ({ lobbyCode, isLeader, lead
       socket.off('shuffledAnswersReceived', onShuffledAnswersReceived);
       socket.off('guessUpdated', onGuessUpdated);
       if (justAssignedTimeoutRef.current) clearTimeout(justAssignedTimeoutRef.current);
+      if (highlightTimeoutRef.current) clearTimeout(highlightTimeoutRef.current);
     };
   }, [lobbyCode, isLeader, roundNumber]);
 

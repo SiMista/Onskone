@@ -13,6 +13,7 @@ import AboutModal from '../../components/Footer/AboutModal';
 import ContactModal from '../../components/Footer/ContactModal';
 import MentionsModal from '../../components/Footer/MentionsModal';
 import { useToast } from '../../components/Toast';
+import { STICKER_FILTER } from '../../constants/icons';
 import { Icon } from '@iconify/react';
 import { ACHIEVEMENTS } from '../../utils/playerStats';
 import { fr } from '../../i18n/fr';
@@ -312,7 +313,7 @@ export const Gallery = () => {
         </div>
       </Section>
 
-      <InfoModal isOpen={howToPlayOpen} onClose={() => setHowToPlayOpen(false)} title="Comment jouer ?" variant="comic">
+      <InfoModal isOpen={howToPlayOpen} onClose={() => setHowToPlayOpen(false)} title="Comment jouer ?">
         <HowToPlayCarousel />
       </InfoModal>
       <ConfirmModal
@@ -370,9 +371,7 @@ export const Gallery = () => {
                   <div
                     className="flex-shrink-0"
                     style={{
-                      filter: isUnlocked
-                        ? 'drop-shadow(1px 0 0 #000) drop-shadow(-1px 0 0 #000) drop-shadow(0 1px 0 #000) drop-shadow(0 -1px 0 #000) drop-shadow(1px 2px 0 rgba(0,0,0,0.35))'
-                        : 'grayscale(1)',
+                      filter: isUnlocked ? STICKER_FILTER : 'grayscale(1)',
                       opacity: isUnlocked ? 1 : 0.5,
                     }}
                   >

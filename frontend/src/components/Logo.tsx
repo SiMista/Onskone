@@ -19,7 +19,7 @@ const Logo = ({
     <img
       src={logoSloganImg}
       alt="Logo"
-      className={`block mt-3 md:mt-5 mb-1.5 desktop-short:mt-1 desktop-short:mb-0 mx-auto h-auto object-contain ${sizeClasses}`}
+      className={`block my-3 md:my-5 desktop-short:my-2 mx-auto h-auto object-contain ${sizeClasses}`}
     />
   );
 };

@@ -60,7 +60,7 @@ export const ACHIEVEMENTS: Achievement[] = [
 
 const ACHIEVEMENT_BY_ID = new Map(ACHIEVEMENTS.map(a => [a.id, a]));
 
-export const getAchievement = (id: string): Achievement | undefined => ACHIEVEMENT_BY_ID.get(id);
+const getAchievement = (id: string): Achievement | undefined => ACHIEVEMENT_BY_ID.get(id);
 
 export function getStats(): PlayerStats {
   try {

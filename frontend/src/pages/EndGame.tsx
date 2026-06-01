@@ -4,6 +4,9 @@ import { Icon } from '@iconify/react';
 import socket from '../utils/socket';
 import { IPlayer, LeaderboardEntry, IRound } from '@onskone/shared';
 import Button from '../components/Button';
+import Logo from '../components/Logo';
+import { STICKER_FILTER } from '../constants/icons';
+import { TIERS, PUBLIC_TIERS, ONSKONE_INDEX, type Tier } from '../constants/tiers';
 import Avatar from '../components/Avatar';
 import { getCurrentPlayerFromStorage } from '../utils/playerHelpers';
 import { studioStorage } from '../utils/studioStorage';
@@ -12,30 +15,6 @@ import { useToast } from '../components/Toast';
 import ReportTrigger from '../components/ReportTrigger';
 import { recordGameEnd } from '../utils/playerStats';
 import { useLocale } from '../i18n';
-
-/**
- * Métadonnées structurelles du tier (palier de score). Le titre + messages
- * vivent dans le dictionnaire i18n (t.endGame.tiers) - même index, même ordre.
- */
-export interface Tier {
-  max: number;
-  midPct: number;
-  color: string;
-  icon: string;
-  emoji: string;
-}
-
-export const TIERS: Tier[] = [
-  { max: 20, midPct: 10, color: '#ff4f4f', icon: 'fluent-emoji-flat:neutral-face', emoji: '😐' },
-  { max: 40, midPct: 30, color: '#ff8c3a', icon: 'fluent-emoji-flat:eyes', emoji: '👀' },
-  { max: 60, midPct: 50, color: '#ffc700', icon: 'fluent-emoji-flat:handshake', emoji: '🤝' },
-  { max: 80, midPct: 70, color: '#8bd94d', icon: 'fluent-emoji-flat:sparkles', emoji: '✨' },
-  { max: 99, midPct: 90, color: '#30c94d', icon: 'fluent-emoji-flat:people-hugging', emoji: '🫂' },
-  { max: 100, midPct: 100, color: '#b46cff', icon: 'fluent-emoji-flat:partying-face', emoji: '🥳' },
-];
-
-const ONSKONE_INDEX = TIERS.length - 1;
-const PUBLIC_TIERS = TIERS.slice(0, ONSKONE_INDEX);
 
 const getTierIndex = (pct: number) => {
   const idx = TIERS.findIndex(t => pct <= t.max);
@@ -48,6 +27,16 @@ const EndGame: React.FC = () => {
   const navigate = useNavigate();
   const confettiTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const rafRef = useRef<number | null>(null);
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  // Cleanup global : clear tous les setTimeout collectés (reveal staggers +
+  // achievement toasts) au unmount pour éviter les setState après démontage.
+  useEffect(() => {
+    return () => {
+      timeoutsRef.current.forEach(id => clearTimeout(id));
+      timeoutsRef.current = [];
+    };
+  }, []);
 
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [rounds, setRounds] = useState<IRound[]>([]);
@@ -229,10 +218,10 @@ const EndGame: React.FC = () => {
         rafRef.current = requestAnimationFrame(animate);
       } else {
         setRevealed(true);
-        setTimeout(() => setShowLeaderboard(true), 900);
+        timeoutsRef.current.push(setTimeout(() => setShowLeaderboard(true), 900));
         if (pct === 100) {
-          setTimeout(() => setOnskoneRevealed(true), 600);
-          setTimeout(() => setShowConfetti(true), 600);
+          timeoutsRef.current.push(setTimeout(() => setOnskoneRevealed(true), 600));
+          timeoutsRef.current.push(setTimeout(() => setShowConfetti(true), 600));
           confettiTimeoutRef.current = setTimeout(() => setShowConfetti(false), 7600);
         } else if (pct > 80) {
           setShowConfetti(true);
@@ -278,10 +267,10 @@ const EndGame: React.FC = () => {
     });
 
     unlocked.forEach((ach, idx) => {
-      setTimeout(() => {
+      timeoutsRef.current.push(setTimeout(() => {
         const meta = t.achievements[ach.id];
         showToast(t.endGame.toasts.achievementUnlocked(meta?.title ?? ach.id), 'achievement', 4500);
-      }, 2000 + idx * 1200);
+      }, 2000 + idx * 1200));
     });
   }, [lobbyCode, currentPlayer, leaderboard, rounds, pct, showToast, t]);
 
@@ -365,6 +354,10 @@ const EndGame: React.FC = () => {
 
   return (
     <div className="h-full p-3 md:p-6 relative overflow-hidden flex flex-col items-center justify-center safe-pt">
+      {/* Logo desktop uniquement - positionné absolu pour ne pas perturber le centrage vertical */}
+      <div className="hidden md:flex absolute top-0 left-0 right-0 justify-center pointer-events-none z-20">
+        <Logo size="small" />
+      </div>
       <div
         className="pointer-events-none fixed inset-0 z-10 transition-opacity duration-1000"
         style={{
@@ -481,7 +474,7 @@ const EndGame: React.FC = () => {
                       boxShadow: '0 0 32px rgba(180,108,255,0.7), 0 0 64px rgba(180,108,255,0.35), 0 8px 24px rgba(0,0,0,0.35)',
                     }}
                   >
-                    <Icon icon="fluent-emoji-flat:partying-face" className="text-4xl md:text-5xl" width="1em" height="1em" aria-hidden />
+                    <Icon icon="fluent-emoji-flat:partying-face" className="text-4xl md:text-5xl" width="1em" height="1em" aria-hidden style={{ filter: STICKER_FILTER }} />
                     <span
                       className="font-display font-bold text-white text-xl md:text-2xl mt-1 tracking-wide"
                       style={{ textShadow: '0 2px 8px rgba(0,0,0,0.35)' }}

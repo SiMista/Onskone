@@ -9,8 +9,10 @@ import RevealPhase from '../components/RevealPhase';
 import SubstituteSelection from '../components/SubstituteSelection';
 import SubstituteAnsweringPhase from '../components/SubstituteAnsweringPhase';
 import HourglassTimer from '../components/HourglassTimer';
+import Logo from '../components/Logo';
+import { STICKER_FILTER } from '../constants/icons';
 import { useToast } from '../components/Toast';
-import { GAME_CONFIG } from '../constants/game';
+import { getPhaseDuration } from '../constants/game';
 import { useLeavePrompt, useReconnectOnVisible, useSocketEvent } from '../hooks';
 import { getCurrentPlayerFromStorage } from '../utils/playerHelpers';
 import { IPlayer, IRound, IGame, RoundPhase, GameStatus, RevealResult, GameCard, ReconnectionData } from '@onskone/shared';
@@ -46,7 +48,7 @@ const GamePage: React.FC = () => {
   const isLeader = !!(game?.currentRound && currentPlayer && game.currentRound.leader.id === currentPlayer.id);
 
   // Confirmation avant de quitter pendant une partie en cours
-  useLeavePrompt(undefined, game?.status === GameStatus.IN_PROGRESS);
+  useLeavePrompt(game?.status === GameStatus.IN_PROGRESS);
 
   // Studio: bot automation + state postMessage for pilier highlight in the parent.
   useStudioBot({ game, currentPlayer, players, lobbyCode: lobbyCode ?? null });
@@ -178,6 +180,7 @@ const GamePage: React.FC = () => {
         selectedDecks: {},
         gameMode: 'local',
         guessMyAnswerMode: false,
+        timeMultiplier: 1,
         locale
       };
       return {
@@ -201,6 +204,21 @@ const GamePage: React.FC = () => {
     showToast(data.message, 'error', 5000);
   }, [showToast]);
 
+  // Si le joueur est kické pendant la partie ou si le lobby ferme : toast + retour home.
+  // Sinon il reste bloqué sur l'écran de jeu sans aucun retour visuel.
+  const handleKickedFromLobby = useCallback((data?: { hostName?: string }) => {
+    const message = data?.hostName
+      ? t.lobby.toasts.kicked(data.hostName)
+      : t.lobby.toasts.kickedAnon;
+    showToast(message, 'error', 4500);
+    navigate('/');
+  }, [navigate, showToast, t]);
+
+  const handleLobbyClosed = useCallback(() => {
+    showToast(t.lobby.toasts.closedInactive, 'error', 4500);
+    navigate('/');
+  }, [navigate, showToast, t]);
+
   useSocketEvent('gameState', handleGameState, [handleGameState]);
   useSocketEvent('gameStarted', handleGameStarted, [handleGameStarted]);
   useSocketEvent('questionSelected', handleQuestionSelected, [handleQuestionSelected]);
@@ -213,6 +231,8 @@ const GamePage: React.FC = () => {
   useSocketEvent('gameEnded', handleGameEnded, [handleGameEnded]);
   useSocketEvent('updatePlayersList', handleUpdatePlayersList, [handleUpdatePlayersList]);
   useSocketEvent('error', handleSocketError, [handleSocketError]);
+  useSocketEvent('kickedFromLobby', handleKickedFromLobby, [handleKickedFromLobby]);
+  useSocketEvent('lobbyClosed', handleLobbyClosed, [handleLobbyClosed]);
 
   const renderPhase = () => {
     if (!game || !game.currentRound || !currentPlayer) {
@@ -225,6 +245,7 @@ const GamePage: React.FC = () => {
 
     const phase = game.currentRound.phase;
     const gameMode = game.lobby.gameMode ?? 'local';
+    const timeMultiplier = game.lobby.timeMultiplier ?? 1;
     // Vérifier si c'est le dernier round (tous les joueurs ACTIFS ont été pilier une fois)
     const activePlayers = players.filter(p => p.isActive);
     const isGameOver = game.currentRound.roundNumber >= activePlayers.length;
@@ -237,6 +258,7 @@ const GamePage: React.FC = () => {
             lobbyCode={lobbyCode!}
             isLeader={isLeader}
             leader={game.currentRound.leader}
+            timeMultiplier={timeMultiplier}
           />
         );
 
@@ -250,6 +272,7 @@ const GamePage: React.FC = () => {
             players={players}
             question={game.currentRound.selectedQuestion || ''}
             card={game.currentRound.gameCard}
+            timeMultiplier={timeMultiplier}
           />
         );
 
@@ -265,6 +288,7 @@ const GamePage: React.FC = () => {
             leaderId={game.currentRound.leader.id}
             substitutePlayerId={game.currentRound.substitutePlayerId}
             gameMode={gameMode}
+            timeMultiplier={timeMultiplier}
           />
         );
 
@@ -281,6 +305,7 @@ const GamePage: React.FC = () => {
             leaderId={game.currentRound.leader.id}
             initialAnsweredPlayerIds={reconnectionData?.answeredPlayerIds}
             initialMyAnswer={reconnectionData?.myAnswer}
+            timeMultiplier={timeMultiplier}
           />
         );
 
@@ -298,6 +323,7 @@ const GamePage: React.FC = () => {
             playerCount={players.length}
             roundNumber={game.currentRound.roundNumber}
             gameMode={gameMode}
+            timeMultiplier={timeMultiplier}
           />
         );
 
@@ -324,7 +350,11 @@ const GamePage: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col items-center justify-center overflow-hidden px-2 tablet:px-0 safe-pt">
+    <div className="h-full flex flex-col items-center justify-center overflow-hidden px-2 tablet:px-0 safe-pt relative">
+      {/* Logo desktop uniquement - positionné absolu pour ne pas perturber le centrage vertical */}
+      <div className="hidden md:flex absolute top-0 left-0 right-0 justify-center pointer-events-none z-0">
+        <Logo size="small" />
+      </div>
       {/* Main game area - sized to content, centré dans la fenêtre. La carte
           interne a son propre cap dvh pour scroller si la phase dépasse.
           Erreurs et notifs sont remontées via le Toast global (haut centré). */}
@@ -339,7 +369,7 @@ const GamePage: React.FC = () => {
                 Round {game?.currentRound?.roundNumber || 0}<span className="text-gray-400">/{players.length}</span>
               </span>
               <span className="text-gray-300">•</span>
-              <Icon icon="fluent-emoji-flat:crown" width="1.1em" height="1.1em" aria-hidden />
+              <Icon icon="fluent-emoji-flat:crown" width="1.1em" height="1.1em" aria-hidden style={{ filter: STICKER_FILTER }} />
               <span className="text-xs tablet:text-sm font-display font-semibold tracking-wide truncate max-w-[140px] tablet:max-w-[220px]">
                 {game?.currentRound?.leader.name || '...'}
               </span>
@@ -347,12 +377,9 @@ const GamePage: React.FC = () => {
             {(() => {
               const phase = game?.currentRound?.phase;
               const phaseDuration =
-                phase === RoundPhase.QUESTION_SELECTION ? GAME_CONFIG.TIMERS.QUESTION_SELECTION :
-                  phase === RoundPhase.SUBSTITUTE_SELECTION ? GAME_CONFIG.TIMERS.SUBSTITUTE_SELECTION :
-                    phase === RoundPhase.ANSWERING ? GAME_CONFIG.TIMERS.ANSWERING :
-                      phase === RoundPhase.SUBSTITUTE_ANSWERING ? GAME_CONFIG.TIMERS.SUBSTITUTE_ANSWERING :
-                        phase === RoundPhase.GUESSING ? GAME_CONFIG.TIMERS.GUESSING :
-                          null;
+                phase && phase !== RoundPhase.REVEAL
+                  ? getPhaseDuration(phase, game?.lobby?.timeMultiplier ?? 1, players.length)
+                  : null;
               // Placeholder de la largeur réelle du sablier (size="sm") pour éviter
               // qu'il y ait un grand vide à droite du header en phase REVEAL (sans
               // timer). Sinon en paysage phone la zone faisait 56px alors que le

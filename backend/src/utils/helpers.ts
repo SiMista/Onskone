@@ -1,6 +1,25 @@
 import { randomInt } from 'crypto';
 
 /**
+ * Extrait un message d'erreur lisible depuis n'importe quel `catch (e)` (où `e: unknown`).
+ * Évite de répéter `(error as Error).message` partout (qui crash si l'erreur est un string
+ * ou un objet quelconque). À utiliser dans tous les `logger.error` et `socket.emit('error')`.
+ *
+ * NOTE: ce qu'on extrait ici est destiné aux **logs serveur**, pas au client. Pour les
+ * messages envoyés au client via socket.emit('error'), préférer un libellé fixe générique
+ * pour ne pas leak du détail d'implémentation.
+ */
+export function errMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'string') return error;
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
+}
+
+/**
  * Generate a cryptographically secure lobby code.
  * 6 characters long, uppercase, alphanumeric.
  * Uses randomInt to avoid modulo bias (256 % 36 != 0)

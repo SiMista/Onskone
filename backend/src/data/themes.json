@@ -83,6 +83,7 @@
   "SPICY": {
     "category": "FUN",
     "emoji": "fluent-emoji-flat:no-one-under-eighteen",
+    "mature": true,
     "labels": { "fr": "HOT", "en": "SPICYYY" },
     "descriptions": {
       "fr": "En dehors des regards ! Pour les adultes uniquement.",
@@ -92,6 +93,7 @@
   "HOT_TAKES": {
     "category": "FUN",
     "emoji": "fluent-emoji-flat:speaking-head",
+    "mature": true,
     "labels": { "fr": "TES OPINIONS", "en": "HOT TAKES" },
     "descriptions": {
       "fr": "Ce que tu penses à voix haute, sur plusieurs sujets... particuliers !",

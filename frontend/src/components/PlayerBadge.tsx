@@ -10,12 +10,12 @@ interface PlayerBadgeProps {
 
 const MAX_NAME_CHARS = 14;
 
-const PlayerBadge: React.FC<PlayerBadgeProps> = ({
+const PlayerBadge = ({
   player,
   size = 'md',
   className = '',
   fallbackName,
-}) => {
+}: PlayerBadgeProps) => {
   const name = player?.name ?? fallbackName ?? '';
   const display =
     name.length > MAX_NAME_CHARS ? name.slice(0, MAX_NAME_CHARS - 1) + '…' : name;

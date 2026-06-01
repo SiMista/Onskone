@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { GameMode } from '@onskone/shared';
+import { GameMode, GAME_CONSTANTS } from '@onskone/shared';
 import { AVATARS } from '../constants/game';
 import { purgeStudioSlot } from '../utils/studioStorage';
 import {
@@ -32,6 +32,7 @@ const Studio = () => {
   const [zoom, setZoom] = useState<number>(saved?.zoom ?? 0.8);
   const [debugTimers, setDebugTimers] = useState<boolean>(saved?.debugTimers ?? true);
   const [gameMode, setGameMode] = useState<GameMode>(saved?.gameMode ?? 'local');
+  const [timeMultiplier, setTimeMultiplier] = useState<number>(saved?.timeMultiplier ?? GAME_CONSTANTS.TIME_MULTIPLIER_DEFAULT);
 
   const [view, setView] = useState<'rigging' | 'gallery'>('rigging');
   const [running, setRunning] = useState(false);
@@ -47,9 +48,9 @@ const Studio = () => {
 
   useEffect(() => {
     try {
-      localStorage.setItem('onskone:studio:config:v3', JSON.stringify({ slots, layout, zoom, debugTimers, gameMode }));
+      localStorage.setItem('onskone:studio:config:v3', JSON.stringify({ slots, layout, zoom, debugTimers, gameMode, timeMultiplier }));
     } catch { /* silent */ }
-  }, [slots, layout, zoom, debugTimers, gameMode]);
+  }, [slots, layout, zoom, debugTimers, gameMode, timeMultiplier]);
 
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
@@ -221,6 +222,7 @@ const Studio = () => {
       if (index === 0) {
         params.set('autoCreate', '1');
         params.set('studioGameMode', gameMode);
+        params.set('studioTimeMultiplier', String(timeMultiplier));
         return `${base}/?${params.toString()}`;
       }
       if (!code) return null;
@@ -228,7 +230,7 @@ const Studio = () => {
       params.set('autoJoin', '1');
       return `${base}/?${params.toString()}`;
     },
-    [debugTimers, gameMode]
+    [debugTimers, gameMode, timeMultiplier]
   );
 
   const cols = useMemo(() => {
@@ -275,6 +277,8 @@ const Studio = () => {
         setDebugTimers={setDebugTimers}
         gameMode={gameMode}
         setGameMode={setGameMode}
+        timeMultiplier={timeMultiplier}
+        setTimeMultiplier={setTimeMultiplier}
         running={running}
         allBots={allBots}
         burstCount={burstCount}

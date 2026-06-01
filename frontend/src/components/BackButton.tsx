@@ -9,13 +9,13 @@ type BackButtonProps = {
   ariaLabel?: string;
 };
 
-const BackButton: React.FC<BackButtonProps> = ({
+const BackButton = ({
   onClick,
   label,
   tone = "neutral",
   className = "",
   ariaLabel,
-}) => {
+}: BackButtonProps) => {
   const { t } = useLocale();
   const displayLabel = label ?? t.common.back;
   const isDanger = tone === "danger";

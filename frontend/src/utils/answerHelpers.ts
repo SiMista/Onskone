@@ -1,16 +1,12 @@
 /**
- * Utilitaires pour la gestion des réponses automatiques
+ * Utilitaires pour la gestion des réponses automatiques (timeout, déconnexion).
+ * Le préfixe et la détection vivent désormais dans `@onskone/shared` pour rester
+ * en phase entre front et back. On les re-exporte ici pour minimiser les changements
+ * d'imports dans les composants existants.
  */
+import { NO_RESPONSE_PREFIX, isNoResponse } from '@onskone/shared';
 
-export const NO_RESPONSE_PREFIX = '__NO_RESPONSE__';
-
-/**
- * Vérifie si une réponse est une "non-réponse" automatique
- * (générée quand le timer expire sans que le joueur ait répondu)
- */
-export const isNoResponse = (text: string): boolean => {
-  return text.startsWith(NO_RESPONSE_PREFIX);
-};
+export { NO_RESPONSE_PREFIX, isNoResponse };
 
 /**
  * Retourne le texte à afficher (sans le préfixe de non-réponse)

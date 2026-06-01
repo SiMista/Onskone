@@ -11,9 +11,7 @@ type ButtonProps = {
   size?: ButtonSize;
   disabled?: boolean;
   isLoading?: boolean;
-  isFullWidth?: boolean;
   icon?: ReactNode;
-  iconOnly?: boolean;
   rotateEffect?: boolean;
   hero?: boolean;
   onClick?: () => void;
@@ -40,22 +38,20 @@ const sizeStyles: Record<ButtonSize, string> = {
   xl: "px-9 py-3 text-xl",
 };
 
-const Button: React.FC<ButtonProps> = ({
+const Button = ({
   children,
   text,
   variant = "primary",
   size = "md",
   disabled = false,
   isLoading = false,
-  isFullWidth = false,
   icon,
-  iconOnly = false,
   rotateEffect = false,
   hero = false,
   onClick,
   className = "",
   type = "button",
-}) => {
+}: ButtonProps) => {
   const { t } = useLocale();
   const isDisabled = disabled || isLoading;
   const isGhost = variant === "ghost";
@@ -76,9 +72,8 @@ const Button: React.FC<ButtonProps> = ({
     "rounded-xl",
     isGhost ? "" : "border-[2.5px] border-black",
     isGhost ? "" : "texture-paper",
-    isFullWidth ? "w-full" : "",
     isGhost ? "" : (hero ? "stack-shadow" : "stack-shadow-sm"),
-    iconOnly ? "p-2" : sizeStyles[size],
+    sizeStyles[size],
     variantStyles[variant].base,
     !isDisabled ? variantStyles[variant].hover : "",
     isDisabled ? "cursor-not-allowed opacity-55 grayscale-[40%]" : "cursor-pointer",
@@ -103,8 +98,8 @@ const Button: React.FC<ButtonProps> = ({
     </span>
   ) : (
     <>
-      {icon && <span className={iconOnly ? "" : "mr-2"}>{icon}</span>}
-      {!iconOnly && (children || text)}
+      {icon && <span className="mr-2">{icon}</span>}
+      {children || text}
     </>
   );
 

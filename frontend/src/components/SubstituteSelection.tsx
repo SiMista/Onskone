@@ -6,28 +6,28 @@ import Button from './Button';
 import QuestionCard from './QuestionCard';
 import QuestionByline from './QuestionByline';
 import Dropdown from './Dropdown';
-import { GAME_CONFIG } from '../constants/game';
+import { getPhaseDuration } from '../constants/game';
 import { IPlayer, RoundPhase, GameCard } from '@onskone/shared';
 import { useStartTimerDelayed } from '../hooks';
 import { getQuestionSubtitle } from '../utils/questionHelpers';
 import { useLocale } from '../i18n';
 
-interface SubstituteSelectionProps {
-  lobbyCode: string;
-  isLeader: boolean;
-  leaderId: string;
-  players: IPlayer[];
-  question: string;
-  card?: GameCard;
-}
-
-const SubstituteSelection: React.FC<SubstituteSelectionProps> = ({
+const SubstituteSelection = ({
   lobbyCode,
   isLeader,
   leaderId,
   players,
   question,
   card,
+  timeMultiplier,
+}: {
+  lobbyCode: string;
+  isLeader: boolean;
+  leaderId: string;
+  players: IPlayer[];
+  question: string;
+  card?: GameCard;
+  timeMultiplier: number;
 }) => {
   const { t } = useLocale();
   const leader = players.find(p => p.id === leaderId);
@@ -51,7 +51,8 @@ const SubstituteSelection: React.FC<SubstituteSelectionProps> = ({
   useEffect(() => { selectedIdRef.current = effectiveSelectedId; }, [effectiveSelectedId]);
   useEffect(() => { submittedRef.current = submitted; }, [submitted]);
 
-  useStartTimerDelayed(isLeader, lobbyCode, GAME_CONFIG.TIMERS.SUBSTITUTE_SELECTION);
+  const phaseDuration = getPhaseDuration(RoundPhase.SUBSTITUTE_SELECTION, timeMultiplier);
+  useStartTimerDelayed(isLeader, lobbyCode, phaseDuration);
 
   useEffect(() => {
     return () => {
@@ -93,7 +94,7 @@ const SubstituteSelection: React.FC<SubstituteSelectionProps> = ({
   return (
     <div className="flex flex-col items-center h-full p-3 md:p-6 gap-4 max-w-md mx-auto w-full overflow-hidden">
       <HourglassTimer
-        duration={GAME_CONFIG.TIMERS.SUBSTITUTE_SELECTION}
+        duration={phaseDuration}
         onExpire={handleTimerExpire}
         phase={RoundPhase.SUBSTITUTE_SELECTION}
         lobbyCode={lobbyCode}

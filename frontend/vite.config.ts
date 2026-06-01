@@ -2,13 +2,20 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { execSync } from 'node:child_process'
+import { fileURLToPath, URL } from 'node:url'
 
 const getAppVersion = () => {
     try {
+        // dernier tag SemVer (ex: v1.1.0), on en garde MAJOR.MINOR
+        const tag = execSync('git describe --tags --abbrev=0').toString().trim()
+        const [major, minor] = tag.replace(/^v/, '').split('.')
+        // le PATCH = nb de commits depuis le tag (reset à chaque nouveau tag)
+        const count = execSync(`git rev-list ${tag}..HEAD --count`).toString().trim()
+        return `${major}.${minor}.${count}`
+    } catch {
+        // pas encore de tag : on retombe sur le compteur global
         const count = execSync('git rev-list --count HEAD').toString().trim()
         return `1.0.${count}`
-    } catch {
-        return '1.0.0'
     }
 }
 
@@ -20,6 +27,11 @@ export default defineConfig({
         react(),
         tailwindcss(),
     ],
+    resolve: {
+        alias: {
+            '@': fileURLToPath(new URL('./src', import.meta.url)),
+        },
+    },
     server: {
         port: 3000,
         open: true,

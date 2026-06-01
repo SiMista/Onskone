@@ -16,7 +16,7 @@ interface OptionsMenuProps {
   innerRef: React.MutableRefObject<HTMLDivElement | null>;
 }
 
-const OptionsMenu: React.FC<OptionsMenuProps> = ({ anchorRef, preferBottom, onPromote, onKick, innerRef }) => {
+const OptionsMenu = ({ anchorRef, preferBottom, onPromote, onKick, innerRef }: OptionsMenuProps) => {
   const [pos, setPos] = useState<{ top: number; left: number; origin: 'top' | 'bottom' } | null>(null);
 
   useLayoutEffect(() => {
@@ -107,7 +107,7 @@ interface PlayerCardProps {
   onPromote?: (id: string) => void;
 }
 
-const PlayerCard: React.FC<PlayerCardProps> = ({
+const PlayerCard = ({
   id,
   name,
   avatarId,
@@ -119,7 +119,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   variant = 'row',
   onKick,
   onPromote,
-}) => {
+}: PlayerCardProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const buttonRef = useRef<HTMLSpanElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);

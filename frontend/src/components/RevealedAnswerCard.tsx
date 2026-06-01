@@ -41,7 +41,7 @@ interface RevealedAnswerCardProps {
  *
  * Évite ~120 lignes de duplication JSX dans RevealPhase.tsx.
  */
-const RevealedAnswerCard: React.FC<RevealedAnswerCardProps> = ({
+const RevealedAnswerCard = ({
   result,
   revealed,
   correct,
@@ -53,7 +53,7 @@ const RevealedAnswerCard: React.FC<RevealedAnswerCardProps> = ({
   showStickman = true,
   showBubble = true,
   waitingFor,
-}) => {
+}: RevealedAnswerCardProps) => {
   const { t } = useLocale();
   const resolvedHeader =
     header === undefined ? (

@@ -8,8 +8,6 @@ interface InfoModalProps {
   onClose: () => void;
   title: string;
   children: ReactNode;
-  /** Conservé pour compat - l'animation est désormais unifiée. */
-  variant?: 'classic' | 'comic';
   /**
    * Désactive le fade blanc en bas du contenu (utile quand le contenu est un
    * carousel ou autre composant qui gère lui-même son débord).

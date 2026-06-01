@@ -59,7 +59,7 @@ const CHANNELS: Channel[] = [
   },
 ];
 
-const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) => {
+const ContactModal = ({ isOpen, onClose }: ContactModalProps) => {
   const { t } = useLocale();
   return (
     <Modal

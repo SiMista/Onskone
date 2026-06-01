@@ -13,6 +13,8 @@ export interface ThemeInfo {
   name: string;
   description: string;
   emoji: string;
+  /** Contenu réservé aux adultes - désactivé par défaut, requiert confirmation à l'activation. */
+  mature?: boolean;
 }
 
 /**

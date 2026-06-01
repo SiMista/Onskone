@@ -135,9 +135,6 @@ export const rateLimiters = {
   // General events: 60 per minute
   general: new RateLimiter({ windowMs: 60000, maxRequests: 60 }),
 
-  // Lobby reactions (emojis): 40 per minute (~1 toutes les 1.5s)
-  lobbyReaction: new RateLimiter({ windowMs: 60000, maxRequests: 40 }),
-
   // Lobby settings toggles (mode, decks, guessMyAnswer): 240 per minute
   // L'hôte peut spammer les sliders sans déclencher le rate limit
   lobbySettings: new RateLimiter({ windowMs: 60000, maxRequests: 240 }),

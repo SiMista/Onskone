@@ -2,7 +2,7 @@
  * Input validation utilities for server-side security
  */
 
-import { GAME_CONSTANTS } from '@onskone/shared';
+import { GAME_CONSTANTS, NO_RESPONSE_PREFIX } from '@onskone/shared';
 
 const { MIN_NAME_LENGTH, MAX_NAME_LENGTH, MAX_ANSWER_LENGTH } = GAME_CONSTANTS;
 
@@ -57,7 +57,7 @@ export function validateAnswer(answer: string): ValidationResult {
   }
 
   // Block reserved prefix used for system-generated "no response" messages
-  if (trimmedAnswer.startsWith('__NO_RESPONSE__')) {
+  if (trimmedAnswer.startsWith(NO_RESPONSE_PREFIX)) {
     return { isValid: false, error: 'La réponse contient un préfixe réservé' };
   }
 

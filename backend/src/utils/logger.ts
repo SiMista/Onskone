@@ -38,7 +38,7 @@ const createLogEntry = (level: LogLevel, message: string, context?: Record<strin
   context,
 });
 
-export const logger = {
+const logger = {
   debug: (message: string, context?: Record<string, unknown>) => {
     if (shouldLog('debug')) {
       console.log(formatLog(createLogEntry('debug', message, context)));

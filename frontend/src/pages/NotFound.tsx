@@ -5,6 +5,7 @@ import Frame from '../components/Frame';
 import Button from '../components/Button';
 import Footer from '../components/Footer';
 import { useLocale } from '../i18n';
+import { STICKER_FILTER } from '../constants/icons';
 
 const NotFound = () => {
   const navigate = useNavigate();
@@ -31,7 +32,7 @@ const NotFound = () => {
             className="flex items-center justify-center gap-2 animate-step-drop"
             style={{ animationDelay: '320ms' }}
           >
-            <Icon icon="fluent-emoji-flat:thinking-face" width={32} height={32} aria-hidden />
+            <Icon icon="fluent-emoji-flat:thinking-face" width={32} height={32} aria-hidden style={{ filter: STICKER_FILTER }} />
             <h2 className="text-xl md:text-2xl font-display m-0">{t.notFound.title}</h2>
           </div>
 

@@ -24,6 +24,9 @@ export interface ILobby {
   /** Mode "Devine ma réponse" : le pilier ne répond pas, un substitut écrit pour lui */
   guessMyAnswerMode: boolean;
 
+  /** Multiplicateur de durée des phases (0.7 → 1.5, défaut 1) - réglé par l'hôte */
+  timeMultiplier: number;
+
   /** Langue du contenu (questions, thèmes) - choisie par l'hôte à la création */
   locale: Locale;
 }

@@ -1,20 +1,18 @@
 import Button from './Button';
 import { useLocale } from '../i18n';
 
-interface SimilarityPopoverProps {
-  guessedPlayerName: string;
-  playerName: string;
-  isLeader: boolean;
-  onConfirm: () => void;
-  onDismiss: () => void;
-}
-
-const SimilarityPopover: React.FC<SimilarityPopoverProps> = ({
+const SimilarityPopover = ({
   guessedPlayerName,
   playerName,
   isLeader,
   onConfirm,
   onDismiss,
+}: {
+  guessedPlayerName: string;
+  playerName: string;
+  isLeader: boolean;
+  onConfirm: () => void;
+  onDismiss: () => void;
 }) => {
   const { t } = useLocale();
   return (

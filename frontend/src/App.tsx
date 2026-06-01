@@ -1,15 +1,15 @@
 import { useEffect, useRef, lazy, Suspense, ReactNode } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import Home from './pages/Home';
-import Lobby from './pages/Lobby';
-import Game from './pages/Game';
-import EndGame from './pages/EndGame';
 import NotFound from './pages/NotFound';
 import Studio from './pages/Studio';
 import { initSounds } from './utils/sounds';
 import { ToastProvider } from './components/Toast';
 import { LocaleProvider } from './i18n';
 
+const Lobby = lazy(() => import('./pages/Lobby'));
+const Game = lazy(() => import('./pages/Game'));
+const EndGame = lazy(() => import('./pages/EndGame'));
 const Admin = lazy(() => import('./pages/Admin'));
 
 /* Le body est figé en h:100dvh + overflow:hidden côté CSS. Studio (multi-iframes
@@ -80,22 +80,24 @@ const App = () => {
       <LocaleProvider>
       <Router>
         <AppShell>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/lobby/:lobbyCode" element={<Lobby />} />
-            <Route path="/game/:lobbyCode" element={<Game />} />
-            <Route path="/endgame/:lobbyCode" element={<EndGame />} />
-            {import.meta.env.DEV && <Route path="/studio" element={<Studio />} />}
-            <Route
-              path="/admin"
-              element={
-                <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-gray-500">Chargement…</div>}>
-                  <Admin />
-                </Suspense>
-              }
-            />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <Suspense fallback={<div />}>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/lobby/:lobbyCode" element={<Lobby />} />
+              <Route path="/game/:lobbyCode" element={<Game />} />
+              <Route path="/endgame/:lobbyCode" element={<EndGame />} />
+              {import.meta.env.DEV && <Route path="/studio" element={<Studio />} />}
+              <Route
+                path="/admin"
+                element={
+                  <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-gray-500">Chargement…</div>}>
+                    <Admin />
+                  </Suspense>
+                }
+              />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
         </AppShell>
       </Router>
       </LocaleProvider>

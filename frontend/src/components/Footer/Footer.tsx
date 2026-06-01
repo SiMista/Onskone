@@ -9,7 +9,7 @@ type ModalType = 'about' | 'mentions' | 'contact' | null;
 
 const footerLinkClass = 'hover:text-white transition-colors underline cursor-pointer';
 
-const Footer: React.FC = () => {
+const Footer = () => {
   const [activeModal, setActiveModal] = useState<ModalType>(null);
   const { t } = useLocale();
 
