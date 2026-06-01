@@ -4,6 +4,8 @@ import tailwindcss from '@tailwindcss/vite'
 import { execSync } from 'node:child_process'
 import { fileURLToPath, URL } from 'node:url'
 
+// Version dérivée des git tags : MAJOR.MINOR depuis le dernier tag (ex `v1.2`),
+// PATCH = nombre de commits depuis ce tag.
 const getAppVersion = () => {
     try {
         // dernier tag SemVer (ex: v1.1.0), on en garde MAJOR.MINOR
