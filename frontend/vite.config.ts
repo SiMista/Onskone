@@ -15,9 +15,9 @@ const getAppVersion = () => {
         const count = execSync(`git rev-list ${tag}..HEAD --count`).toString().trim()
         return `${major}.${minor}.${count}`
     } catch {
-        // pas encore de tag : on retombe sur le compteur global
+        // pas de tag trouvé (ex: clone shallow) : 0.0.x signale une version non taggée
         const count = execSync('git rev-list --count HEAD').toString().trim()
-        return `1.0.${count}`
+        return `0.0.${count}`
     }
 }
 
