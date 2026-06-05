@@ -31,7 +31,7 @@ export const GAME_CONSTANTS = {
 
   // Multiplicateur de temps réglable par l'hôte dans le lobby : scale toutes les
   // durées de phase d'un coup. 3 niveaux discrets (rapide / normal / tranquille).
-  TIME_MULTIPLIER_LEVELS: [0.7, 1, 1.5] as readonly number[],
+  TIME_MULTIPLIER_LEVELS: [0.7, 1, 1.3] as readonly number[],
   TIME_MULTIPLIER_DEFAULT: 1,
 
   // Lobby code format

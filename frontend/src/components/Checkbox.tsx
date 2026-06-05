@@ -24,7 +24,7 @@ const Checkbox = ({ checked, onChange, label, description, disabled = false }: C
       <span
         aria-hidden
         className={`relative shrink-0 mt-0.5 w-7 h-7 md:w-8 md:h-8 rounded-md border-[2.5px] border-black stack-shadow-sm texture-paper transition-colors duration-200 ${
-          checked ? 'bg-warning-500' : 'bg-cream-player'
+          checked ? 'bg-warning-500' : 'bg-cream-settings'
         }`}
       >
         <LuCheck

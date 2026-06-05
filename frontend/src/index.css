@@ -53,6 +53,7 @@
   --color-cream-paper: #fdfaf0; /* Feuille notebook (AnswerPhase) */
   --color-cream-warm: #fff8ec; /* Variante PseudoPlate */
   --color-cream-kraft: #FFF6D6; /* Étiquettes kraft "settings hôte" */
+  --color-cream-settings: #f9f7f3; /* Cartes de réglages du lobby (ton crème abaissé, recède sur le panneau blanc) */
 
   /* Jaune pastel (tooltips, current player highlight) - 4 hex pâles consolidés ici */
   --color-warning-100: #FFF3C4;
@@ -294,6 +295,17 @@ html, body {
 
 html {
   touch-action: manipulation;
+}
+
+/* --- Boutons : pas de sélection de texte au tap --- */
+/* Évite que le label d'un bouton se sélectionne quand on tape rapidement
+   (geste typique sur mobile). Couvre les <button> natifs et les éléments
+   ARIA équivalents. */
+button,
+[role="button"] {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {

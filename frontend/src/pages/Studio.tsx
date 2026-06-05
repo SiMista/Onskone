@@ -32,7 +32,13 @@ const Studio = () => {
   const [zoom, setZoom] = useState<number>(saved?.zoom ?? 0.8);
   const [debugTimers, setDebugTimers] = useState<boolean>(saved?.debugTimers ?? true);
   const [gameMode, setGameMode] = useState<GameMode>(saved?.gameMode ?? 'local');
-  const [timeMultiplier, setTimeMultiplier] = useState<number>(saved?.timeMultiplier ?? GAME_CONSTANTS.TIME_MULTIPLIER_DEFAULT);
+  // On ignore une valeur sauvegardée qui n'est plus un niveau valide (ex. ancien 1.5
+  // resté en localStorage après un changement des niveaux) -> fallback sur le défaut.
+  const [timeMultiplier, setTimeMultiplier] = useState<number>(
+    GAME_CONSTANTS.TIME_MULTIPLIER_LEVELS.includes(saved?.timeMultiplier as number)
+      ? (saved!.timeMultiplier as number)
+      : GAME_CONSTANTS.TIME_MULTIPLIER_DEFAULT,
+  );
 
   const [view, setView] = useState<'rigging' | 'gallery'>('rigging');
   const [running, setRunning] = useState(false);

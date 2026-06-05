@@ -4,7 +4,6 @@ import socket from '../utils/socket';
 import Timer from './Timer';
 import { GameCard, IPlayer, RoundPhase } from '@onskone/shared';
 import { getPhaseDuration, getCategoryColor } from '../constants/game';
-import { STICKER_FILTER } from '../constants/icons';
 import { getRandomFunFact, getNextFunFact } from '../constants/funFacts';
 import { playSound } from '../utils/sounds';
 import PlayerBadge from './PlayerBadge';
@@ -225,8 +224,6 @@ const QuestionSelection = ({ lobbyCode, isLeader, leader, timeMultiplier }: {
             {funFact}
           </p>
         </div>
-
-        <Icon icon="fluent-emoji-flat:thinking-face" className="text-3xl md:text-5xl animate-bounce" width="1em" height="1em" aria-hidden style={{ filter: STICKER_FILTER }} />
       </div>
     );
   }

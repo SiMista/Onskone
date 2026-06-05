@@ -10,7 +10,6 @@ import SubstituteSelection from '../components/SubstituteSelection';
 import SubstituteAnsweringPhase from '../components/SubstituteAnsweringPhase';
 import HourglassTimer from '../components/HourglassTimer';
 import Logo from '../components/Logo';
-import { STICKER_FILTER } from '../constants/icons';
 import { useToast } from '../components/Toast';
 import { getPhaseDuration } from '../constants/game';
 import { useLeavePrompt, useReconnectOnVisible, useSocketEvent } from '../hooks';
@@ -369,7 +368,7 @@ const GamePage: React.FC = () => {
                 Round {game?.currentRound?.roundNumber || 0}<span className="text-gray-400">/{players.length}</span>
               </span>
               <span className="text-gray-300">•</span>
-              <Icon icon="fluent-emoji-flat:crown" width="1.1em" height="1.1em" aria-hidden style={{ filter: STICKER_FILTER }} />
+              <Icon icon="fluent-emoji-flat:crown" width="1.1em" height="1.1em" aria-hidden />
               <span className="text-xs tablet:text-sm font-display font-semibold tracking-wide truncate max-w-[140px] tablet:max-w-[220px]">
                 {game?.currentRound?.leader.name || '...'}
               </span>

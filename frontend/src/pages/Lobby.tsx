@@ -14,6 +14,7 @@ import PlayerCard from '../components/PlayerCard';
 import ThemePickerModal from '../components/ThemePickerModal';
 import BackButton from '../components/BackButton';
 import ScrollFade from '../components/ScrollFade';
+import GameSpeedSlider from '../components/GameSpeedSlider';
 import { IPlayer, DecksCatalog, DecksCatalogWithMeta, SelectedDecks, GAME_CONSTANTS } from '@onskone/shared';
 import { useSocketEvent, useLeavePrompt, useReconnectOnVisible } from '../hooks';
 import { useToast } from '../components/Toast';
@@ -434,127 +435,78 @@ const Lobby = () => {
                 description={t.lobby.guessMyAnswer.description}
             />
 
-            {/* Rythme de jeu : 3 niveaux discrets, chacun incarné par un emoji animé. */}
-            {(() => {
-                const estMinutes = estimateGameMinutes(
+            <span aria-hidden className="w-full border-t-[1.5px] border-dashed border-black/15" />
+
+            {/* Rythme de jeu : slider 3 niveaux, emoji carousel, section inline. */}
+            <GameSpeedSlider
+                value={timeMultiplier}
+                onChange={handleTimeMultiplierChange}
+                disabled={!isHost}
+                estimateFor={(m) => estimateGameMinutes(
                     Math.max(GAME_CONFIG.MIN_PLAYERS, activePlayers.length),
-                    timeMultiplier,
+                    m,
                     guessMyAnswerMode,
-                );
-                const LEVELS = [
-                    { value: 0.7, emoji: 'fluent-emoji-flat:rabbit-face', label: t.lobby.gameSpeed.fast, anim: 'group-data-[on=true]:animate-hourglass-nudge' },
-                    { value: 1, emoji: 'fluent-emoji-flat:hourglass-not-done', label: t.lobby.gameSpeed.normal, anim: 'group-data-[on=true]:animate-float' },
-                    { value: 1.5, emoji: 'fluent-emoji-flat:turtle', label: t.lobby.gameSpeed.slow, anim: 'group-data-[on=true]:animate-float' },
-                ];
-                // Niveau actif = le plus proche (le state peut venir d'un vieux lobby continu).
-                const activeValue = LEVELS.reduce((best, l) =>
-                    Math.abs(l.value - timeMultiplier) < Math.abs(best - timeMultiplier) ? l.value : best, LEVELS[0].value);
-                return (
-                    <div className={`flex flex-col gap-2.5 p-3 rounded-2xl border-[2.5px] border-black bg-cream-player texture-paper stack-shadow-sm transition-opacity ${!isHost ? 'opacity-70' : ''}`}>
-                        <div className="flex items-center gap-2.5">
-                            <span className="font-display text-base font-bold uppercase tracking-tight text-black">{t.lobby.gameSpeed.label}</span>
-                            <span className="flex-1" />
-                            <span className="font-display text-xs font-bold tabular-nums text-black/55">
-                                {t.lobby.gameSpeed.estimate(estMinutes)}
-                            </span>
-                        </div>
-                        <div className="grid grid-cols-3 gap-2">
-                            {LEVELS.map((lvl) => {
-                                const on = lvl.value === activeValue;
-                                return (
-                                    <button
-                                        key={lvl.value}
-                                        type="button"
-                                        data-on={on}
-                                        disabled={!isHost}
-                                        aria-pressed={on}
-                                        onClick={() => handleTimeMultiplierChange(lvl.value)}
-                                        className={`group relative flex flex-col items-center gap-1 pt-3 pb-2 px-1 rounded-xl border-[2.5px] transition-all duration-200 disabled:cursor-not-allowed
-                                            ${on
-                                                ? 'border-black bg-warning-100 -translate-y-0.5 [box-shadow:0_4px_0_0_#000]'
-                                                : 'border-black/15 bg-cream-paper/60 hover:border-black/40 hover:-translate-y-px enabled:hover:bg-cream-paper'}`}
-                                    >
-                                        {/* Ruban adhésif sur la carte active */}
-                                        {on && (
-                                            <span
+                )}
+                t={t}
+            />
+
+            <span aria-hidden className="w-full border-t-[1.5px] border-dashed border-black/15" />
+
+            {/* Section Thèmes - titre + bloc blanc (compteur top-left, Modifier top-right, chips). */}
+            <div className="flex flex-col gap-1.5">
+                <span className="font-display text-base font-bold uppercase tracking-tight text-black px-1">
+                    {t.lobby.themes}
+                </span>
+                <button
+                    type="button"
+                    onClick={() => setIsThemePickerOpen(true)}
+                    aria-label={isHost ? t.themePicker.modify : t.themePicker.view}
+                    className="group w-full flex flex-col gap-2 p-3 rounded-2xl border-[2.5px] border-black bg-white stack-shadow-sm text-left cursor-pointer transition-all duration-200 hover:-translate-y-0.5 active:translate-y-[1px] active:[box-shadow:none!important]"
+                >
+                    {/* En-tête du bloc : compteur top-left, Modifier/Voir top-right */}
+                    <span className="flex items-center gap-2 w-full">
+                        <span className="font-display text-xs font-bold tabular-nums text-black/60 whitespace-nowrap">
+                            {t.themePicker.counter(totalThemesSelected)}
+                        </span>
+                        <span className="flex-1" />
+                        <span className="shrink-0 inline-flex items-center gap-0.5 font-display text-xs font-bold uppercase tracking-tight text-black/75 group-hover:text-black transition-colors">
+                            {isHost ? t.themePicker.modify : t.themePicker.view}
+                            <Icon icon="lucide:chevron-right" width={16} height={16} aria-hidden className="transition-transform duration-200 group-hover:translate-x-0.5" />
+                        </span>
+                    </span>
+
+                    {/* Séparateur pointillé */}
+                    <span aria-hidden className="w-full border-t-[1.5px] border-dashed border-black/15" />
+
+                    {/* Chips des thèmes sélectionnés */}
+                    <span className="flex flex-wrap items-center gap-1.5 min-h-[1.75rem]">
+                        {totalThemesSelected === 0 ? (
+                            <span className="font-display text-sm italic text-gray-500 px-1">{t.themePicker.emptyState}</span>
+                        ) : (
+                            Object.entries(decksCatalogMeta).flatMap(([cat, infos]) =>
+                                infos
+                                    .filter(info => selectedDecks[cat]?.includes(info.code))
+                                    .map(info => (
+                                        <span
+                                            key={info.code}
+                                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border-[2px] border-black font-display text-xs font-bold tracking-tight text-black"
+                                            style={{ backgroundColor: getSoftCategoryColor(cat) }}
+                                        >
+                                            <Icon
+                                                icon={info.emoji}
+                                                width={14}
+                                                height={14}
                                                 aria-hidden
-                                                className="absolute -top-[7px] left-1/2 -translate-x-1/2 z-10 w-9 h-3 bg-warning-500/85 border-[1.5px] border-black/60 rounded-[2px] rotate-[-4deg] [box-shadow:1px_1px_0_0_rgba(0,0,0,0.3)]"
+                                                style={{ filter: STICKER_FILTER }}
                                             />
-                                        )}
-                                        <Icon
-                                            icon={lvl.emoji}
-                                            width={32}
-                                            height={32}
-                                            aria-hidden
-                                            className={`transition-transform duration-200 ${on ? `scale-110 ${lvl.anim}` : 'scale-90 grayscale-[0.4] opacity-70 group-hover:grayscale-0 group-hover:opacity-100'}`}
-                                            style={{ filter: STICKER_FILTER }}
-                                        />
-                                        <span className={`font-display text-[12px] font-bold uppercase tracking-tight leading-none transition-colors ${on ? 'text-black' : 'text-black/45'}`}>
-                                            {lvl.label}
+                                            <span>{info.name}</span>
                                         </span>
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
-                );
-            })()}
-
-            {/* Section Thèmes — variante 2 finale : UNE seule carte cliquable, fond crème
-                (même teinte que la Checkbox). En-tête (label + compteur + action texte "Modifier/Voir"
-                + chevron, sans emoji) puis les chips des thèmes DANS la carte. Tap n'importe où ouvre. */}
-            <button
-                type="button"
-                onClick={() => setIsThemePickerOpen(true)}
-                aria-label={isHost ? t.themePicker.modify : t.themePicker.view}
-                className="group w-full flex flex-col gap-2.5 p-3 rounded-2xl border-[2.5px] border-black bg-cream-player texture-paper stack-shadow-sm text-left cursor-pointer transition-all duration-200 hover:-translate-y-0.5 active:translate-y-[1px] active:[box-shadow:none!important]"
-            >
-                {/* En-tête de la carte */}
-                <span className="flex items-center gap-2.5 w-full">
-                    <span className="font-display text-base font-bold uppercase tracking-tight text-black">{t.lobby.themes}</span>
-                    <span aria-hidden className="w-px h-4 bg-black/15" />
-                    <span className="font-display text-xs font-bold text-gray-500 tabular-nums whitespace-nowrap">
-                        {totalThemesSelected}/{Object.values(decksCatalog).reduce((acc, arr) => acc + arr.length, 0)}
+                                    ))
+                            )
+                        )}
                     </span>
-                    <span className="flex-1" />
-                    {/* Action en texte (sans emoji) + chevron pour signaler l'ouverture. */}
-                    <span className="shrink-0 inline-flex items-center gap-0.5 font-display text-xs font-bold uppercase tracking-tight text-black/70 group-hover:text-black transition-colors">
-                        {isHost ? t.themePicker.modify : t.themePicker.view}
-                        <Icon icon="lucide:chevron-right" width={18} height={18} aria-hidden className="transition-transform duration-200 group-hover:translate-x-0.5" />
-                    </span>
-                </span>
-
-                {/* Séparateur en pointillé pour démarquer l'en-tête du contenu */}
-                <span aria-hidden className="w-full border-t-[1.5px] border-dashed border-black/15" />
-
-                {/* Chips des thèmes sélectionnés (dans la carte) */}
-                <span className="flex flex-wrap items-center gap-1.5 min-h-[1.75rem]">
-                    {totalThemesSelected === 0 ? (
-                        <span className="font-display text-sm italic text-gray-500 px-1">{t.themePicker.emptyState}</span>
-                    ) : (
-                        Object.entries(decksCatalogMeta).flatMap(([cat, infos]) =>
-                            infos
-                                .filter(info => selectedDecks[cat]?.includes(info.code))
-                                .map(info => (
-                                    <span
-                                        key={info.code}
-                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border-[2px] border-black font-display text-xs font-bold tracking-tight text-black"
-                                        style={{ backgroundColor: getSoftCategoryColor(cat) }}
-                                    >
-                                        <Icon
-                                            icon={info.emoji}
-                                            width={14}
-                                            height={14}
-                                            aria-hidden
-                                            style={{ filter: STICKER_FILTER }}
-                                        />
-                                        <span>{info.name}</span>
-                                    </span>
-                                ))
-                        )
-                    )}
-                </span>
-            </button>
+                </button>
+            </div>
         </div>
     );
 
@@ -567,155 +519,155 @@ const Lobby = () => {
             {/* Zone centrale qui prend toute la place dispo et centre le contenu.
                 Le Footer (en dessous) reste collé au bas de l'écran sur desktop. */}
             <div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center overflow-hidden">
-            {/* Contenu principal - sized to content, centré dans la fenêtre.
+                {/* Contenu principal - sized to content, centré dans la fenêtre.
                 Le panel a son propre cap dvh pour scroller si le contenu dépasse. */}
-            <div className="w-full max-w-2xl md:max-w-3xl max-h-full min-h-0 mx-auto px-3 md:px-4 py-2 md:py-4 flex flex-col safe-pt">
-                {/* ===================== LAYOUT UNIFIÉ ===================== */}
-                <div className="min-h-0 flex flex-col gap-2 md:gap-4">
-                    {/* Bouton retour + raccourci "Comment jouer ?" sur la même ligne. */}
-                    <div className="shrink-0 flex items-center justify-between gap-2">
-                        <BackButton onClick={leaveLobby} label={t.common.back} tone="danger" />
-                        <HowToPlayButton onClick={() => setIsHowToPlayOpen(true)} />
-                    </div>
+                <div className="w-full max-w-2xl md:max-w-3xl max-h-full min-h-0 mx-auto px-3 md:px-4 py-2 md:py-4 flex flex-col safe-pt">
+                    {/* ===================== LAYOUT UNIFIÉ ===================== */}
+                    <div className="min-h-0 flex flex-col gap-2 md:gap-4">
+                        {/* Bouton retour + raccourci "Comment jouer ?" sur la même ligne. */}
+                        <div className="shrink-0 flex items-center justify-between gap-2">
+                            <BackButton onClick={leaveLobby} label={t.common.back} tone="danger" />
+                            <HowToPlayButton onClick={() => setIsHowToPlayOpen(true)} />
+                        </div>
 
-                    {/* Tabs : intercalaires cartonnés en éventail, coins asymétriques */}
-                    <div className="shrink-0 flex gap-1 md:gap-1.5 -mb-[2.5px] relative z-10 px-1">
-                        {([
-                            {
-                                id: 'settings' as const,
-                                color: 'var(--color-warning-500)',
-                                label: t.lobby.tabs.settings,
-                                badge: null,
-                                outer: 'left' as const,
-                            },
-                            {
-                                id: 'players' as const,
-                                color: 'var(--color-brand-500)',
-                                label: t.lobby.tabs.players,
-                                badge: `${activePlayers.length}/${GAME_CONFIG.MAX_PLAYERS}`,
-                                outer: 'right' as const,
-                            },
-                        ]).map(tab => {
-                            const active = lobbyTab === tab.id;
-                            // Coin "extérieur" généreusement arrondi (bord du panel),
-                            // coin "intérieur" (entre les deux tabs) légèrement biseauté.
-                            const radiusClasses = tab.outer === 'left'
-                                ? 'rounded-tl-[22px] rounded-tr-md'
-                                : 'rounded-tr-[22px] rounded-tl-md';
-                            return (
-                                <button
-                                    key={tab.id}
-                                    type="button"
-                                    role="tab"
-                                    aria-selected={active}
-                                    onClick={() => setLobbyTab(tab.id)}
-                                    className={`flex-1 relative inline-flex items-center justify-center gap-2 px-3 md:px-4 pt-2 md:pt-2.5 pb-3 md:pb-3.5 bg-white ${radiusClasses} border-[2.5px] border-b-0 border-black cursor-pointer transition-all duration-200 origin-bottom overflow-hidden
+                        {/* Tabs : intercalaires cartonnés en éventail, coins asymétriques */}
+                        <div className="shrink-0 flex gap-1 md:gap-1.5 -mb-[2.5px] relative z-10 px-1">
+                            {([
+                                {
+                                    id: 'settings' as const,
+                                    color: 'var(--color-warning-500)',
+                                    label: t.lobby.tabs.settings,
+                                    badge: null,
+                                    outer: 'left' as const,
+                                },
+                                {
+                                    id: 'players' as const,
+                                    color: 'var(--color-brand-500)',
+                                    label: t.lobby.tabs.players,
+                                    badge: `${activePlayers.length}/${GAME_CONFIG.MAX_PLAYERS}`,
+                                    outer: 'right' as const,
+                                },
+                            ]).map(tab => {
+                                const active = lobbyTab === tab.id;
+                                // Coin "extérieur" généreusement arrondi (bord du panel),
+                                // coin "intérieur" (entre les deux tabs) légèrement biseauté.
+                                const radiusClasses = tab.outer === 'left'
+                                    ? 'rounded-tl-[22px] rounded-tr-md'
+                                    : 'rounded-tr-[22px] rounded-tl-md';
+                                return (
+                                    <button
+                                        key={tab.id}
+                                        type="button"
+                                        role="tab"
+                                        aria-selected={active}
+                                        onClick={() => setLobbyTab(tab.id)}
+                                        className={`flex-1 relative inline-flex items-center justify-center gap-2 px-3 md:px-4 pt-2 md:pt-2.5 pb-3 md:pb-3.5 bg-white ${radiusClasses} border-[2.5px] border-b-0 border-black cursor-pointer transition-all duration-200 origin-bottom overflow-hidden
                                         ${active
-                                            ? 'shadow-[3px_-3px_0_0_rgba(0,0,0,0.18)] z-20'
-                                            : 'translate-y-1 hover:translate-y-0 z-10 opacity-90 hover:opacity-100'}
+                                                ? 'shadow-[3px_-3px_0_0_rgba(0,0,0,0.18)] z-20'
+                                                : 'translate-y-1 hover:translate-y-0 z-10 opacity-90 hover:opacity-100'}
                                     `}
-                                >
-                                    {/* Bande accent inférieure colorée - plus haute si actif */}
-                                    <span
-                                        className={`absolute left-0 right-0 bottom-0 pointer-events-none transition-[height] duration-200 ${active ? 'h-2 md:h-2.5' : 'h-1.5'}`}
-                                        style={{ backgroundColor: tab.color }}
-                                        aria-hidden
-                                    />
-
-                                    <span
-                                        className={`relative font-display font-bold tracking-[0.08em] uppercase text-sm md:text-base ${active ? 'text-black' : 'text-gray-600'
-                                            }`}
                                     >
-                                        {tab.label}
-                                    </span>
-
-                                    {tab.badge && (
+                                        {/* Bande accent inférieure colorée - plus haute si actif */}
                                         <span
-                                            className={`relative shrink-0 font-display text-[11px] md:text-xs font-bold tabular-nums whitespace-nowrap bg-white/80 rounded-full px-2 py-0.5 border border-black/15 ${active ? 'text-black/85' : 'text-black/60'
+                                            className={`absolute left-0 right-0 bottom-0 pointer-events-none transition-[height] duration-200 ${active ? 'h-2 md:h-2.5' : 'h-1.5'}`}
+                                            style={{ backgroundColor: tab.color }}
+                                            aria-hidden
+                                        />
+
+                                        <span
+                                            className={`relative font-display font-bold tracking-[0.08em] uppercase text-sm md:text-base ${active ? 'text-black' : 'text-gray-600'
                                                 }`}
                                         >
-                                            {tab.badge}
+                                            {tab.label}
                                         </span>
-                                    )}
-                                </button>
-                            );
-                        })}
-                    </div>
 
-                    {/* Panel de la tab active - sized to content, capé en dvh pour scroller
+                                        {tab.badge && (
+                                            <span
+                                                className={`relative shrink-0 font-display text-[11px] md:text-xs font-bold tabular-nums whitespace-nowrap bg-white/80 rounded-full px-2 py-0.5 border border-black/15 ${active ? 'text-black/85' : 'text-black/60'
+                                                    }`}
+                                            >
+                                                {tab.badge}
+                                            </span>
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {/* Panel de la tab active - sized to content, capé en dvh pour scroller
                         si le contenu dépasse (settings dense ou liste de joueurs >9). */}
-                    <div
-                        key={lobbyTab}
-                        className="relative min-h-0 bg-white border-[2.5px] border-black rounded-2xl stack-shadow texture-paper overflow-hidden animate-phase-enter"
-                    >
                         <div
-                            ref={lobbyTabScrollRef}
-                            role="tabpanel"
-                            className="max-h-[67dvh] overflow-y-auto overscroll-contain no-scrollbar px-3 pb-3 pt-5 md:px-4 md:pb-4 md:pt-6"
+                            key={lobbyTab}
+                            className="relative min-h-0 bg-white border-[2.5px] border-black rounded-2xl stack-shadow texture-paper overflow-hidden animate-phase-enter"
                         >
-                            {/* Grid stacking : settings est toujours rendu (visible
+                            <div
+                                ref={lobbyTabScrollRef}
+                                role="tabpanel"
+                                className="max-h-[67dvh] overflow-y-auto overscroll-contain no-scrollbar px-4 pb-4 pt-6 md:px-5 md:pb-5 md:pt-7"
+                            >
+                                {/* Grid stacking : settings est toujours rendu (visible
                                 ou non) pour dicter la hauteur ; players se cale
                                 dans la même cellule de grille. */}
-                            <div className="grid grid-cols-1 grid-rows-1">
-                                <div
-                                    className={`col-start-1 row-start-1 ${lobbyTab === 'settings' ? '' : 'invisible pointer-events-none'}`}
-                                    aria-hidden={lobbyTab !== 'settings'}
-                                >
-                                    {settingsPanelEl}
-                                </div>
-                                <div
-                                    className={`col-start-1 row-start-1 ${lobbyTab === 'players' ? '' : 'invisible pointer-events-none'}`}
-                                    aria-hidden={lobbyTab !== 'players'}
-                                >
-                                    {playersListMobile}
+                                <div className="grid grid-cols-1 grid-rows-1">
+                                    <div
+                                        className={`col-start-1 row-start-1 ${lobbyTab === 'settings' ? '' : 'invisible pointer-events-none'}`}
+                                        aria-hidden={lobbyTab !== 'settings'}
+                                    >
+                                        {settingsPanelEl}
+                                    </div>
+                                    <div
+                                        className={`col-start-1 row-start-1 ${lobbyTab === 'players' ? '' : 'invisible pointer-events-none'}`}
+                                        aria-hidden={lobbyTab !== 'players'}
+                                    >
+                                        {playersListMobile}
+                                    </div>
                                 </div>
                             </div>
+                            <ScrollFade scrollRef={lobbyTabScrollRef} className="rounded-b-2xl" />
                         </div>
-                        <ScrollFade scrollRef={lobbyTabScrollRef} className="rounded-b-2xl" />
-                    </div>
 
-                    {/* ===================== ACTION ROW : Démarrer + Copier le lien ===================== */}
-                    <div className="shrink-0 flex flex-col items-center gap-1.5 mt-1 md:mt-2 safe-pb">
-                        <div className="flex flex-row items-center justify-center gap-3 md:gap-4 w-full flex-wrap">
-                            {currentPlayer?.isHost ? (
+                        {/* ===================== ACTION ROW : Démarrer + Copier le lien ===================== */}
+                        <div className="shrink-0 flex flex-col items-center gap-1.5 mt-1 md:mt-2 safe-pb">
+                            <div className="flex flex-row items-center justify-center gap-3 md:gap-4 w-full flex-wrap">
+                                {currentPlayer?.isHost ? (
+                                    <Button
+                                        text={t.lobby.start}
+                                        variant="success"
+                                        size="md"
+                                        hero
+                                        disabled={!canStartGame}
+                                        onClick={startGame}
+                                        className="!rotate-0"
+                                    />
+                                ) : (
+                                    <div className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white/85 border-[2.5px] border-black stack-shadow-sm text-gray-700">
+                                        <Icon icon="fluent-emoji-flat:hourglass-not-done" className="animate-spin-slow [filter:drop-shadow(1px_1.5px_0_rgba(0,0,0,0.5))]" width="1.1em" height="1.1em" aria-hidden />
+                                        <span className="text-sm font-display italic truncate">{t.lobby.startHostOnly(hostName && hostName.length > 10 ? `${hostName.slice(0, 10)}…` : hostName)}</span>
+                                    </div>
+                                )}
                                 <Button
-                                    text={t.lobby.start}
-                                    variant="success"
-                                    size="md"
-                                    hero
-                                    disabled={!canStartGame}
-                                    onClick={startGame}
-                                    className="!rotate-0"
+                                    text={t.lobby.copyInviteLink}
+                                    variant="warning"
+                                    size="sm"
+                                    className="!text-xs md:!text-sm whitespace-nowrap"
+                                    onClick={generateLink}
                                 />
-                            ) : (
-                                <div className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white/85 border-[2.5px] border-black stack-shadow-sm text-gray-700">
-                                    <Icon icon="fluent-emoji-flat:hourglass-not-done" className="animate-spin-slow [filter:drop-shadow(1px_1.5px_0_rgba(0,0,0,0.5))]" width="1.1em" height="1.1em" aria-hidden />
-                                    <span className="text-sm font-display italic truncate">{t.lobby.startHostOnly(hostName && hostName.length > 10 ? `${hostName.slice(0, 10)}…` : hostName)}</span>
-                                </div>
-                            )}
-                            <Button
-                                text={t.lobby.copyInviteLink}
-                                variant="warning"
-                                size="sm"
-                                className="!text-xs md:!text-sm whitespace-nowrap"
-                                onClick={generateLink}
-                            />
-                        </div>
+                            </div>
 
-                        {/* Helper text sous l'action row */}
-                        {currentPlayer?.isHost && !enoughPlayers && (
-                            <small className="text-[11px] md:text-xs text-white/85 italic drop-shadow text-center">
-                                {t.lobby.minPlayers(GAME_CONFIG.MIN_PLAYERS)}
-                            </small>
-                        )}
-                        {currentPlayer?.isHost && enoughPlayers && !hasThemeSelected && (
-                            <small className="text-[11px] md:text-xs text-white/85 italic drop-shadow text-center">
-                                {decksLoading ? t.lobby.loadingThemes : t.lobby.selectAtLeastOneTheme}
-                            </small>
-                        )}
+                            {/* Helper text sous l'action row */}
+                            {currentPlayer?.isHost && !enoughPlayers && (
+                                <small className="text-[11px] md:text-xs text-white/85 italic drop-shadow text-center">
+                                    {t.lobby.minPlayers(GAME_CONFIG.MIN_PLAYERS)}
+                                </small>
+                            )}
+                            {currentPlayer?.isHost && enoughPlayers && !hasThemeSelected && (
+                                <small className="text-[11px] md:text-xs text-white/85 italic drop-shadow text-center">
+                                    {decksLoading ? t.lobby.loadingThemes : t.lobby.selectAtLeastOneTheme}
+                                </small>
+                            )}
+                        </div>
                     </div>
                 </div>
-            </div>
 
             </div>
 

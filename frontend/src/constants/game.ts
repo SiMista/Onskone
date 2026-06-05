@@ -129,6 +129,9 @@ export const getPhaseDuration = (
 // Marge approximative pour la phase REVEAL (pas de timer serveur) dans l'estimation.
 const REVEAL_ESTIMATE_SECONDS = 20;
 
+// Les joueurs n'utilisent jamais tout le timer : on n'estime qu'une fraction du temps imparti.
+const ESTIMATE_TIMER_USAGE = 0.3;
+
 /**
  * Estimation de la durée totale d'une partie en MINUTES, pour l'affichage "~X min"
  * dans le lobby. Total ≈ durée d'un round × nombre de joueurs (1 round par joueur).
@@ -141,12 +144,14 @@ export const estimateGameMinutes = (
   guessMyAnswerMode: boolean,
 ): number => {
   const m = clampMultiplier(timeMultiplier);
-  const dur = (phase: RoundPhase) => Math.round(basePhaseDuration(phase, playerCount) * m);
+  // Fraction du timer réellement consommée (les joueurs répondent avant la fin).
+  const dur = (phase: RoundPhase) =>
+    Math.round(basePhaseDuration(phase, playerCount) * m * ESTIMATE_TIMER_USAGE);
   let roundSeconds =
     dur(RoundPhase.QUESTION_SELECTION) +
     dur(RoundPhase.ANSWERING) +
     dur(RoundPhase.GUESSING) +
-    REVEAL_ESTIMATE_SECONDS;
+    Math.round(REVEAL_ESTIMATE_SECONDS * m); // pas de timer : on scale juste sur la vitesse
   if (guessMyAnswerMode) {
     roundSeconds += dur(RoundPhase.SUBSTITUTE_SELECTION) + dur(RoundPhase.SUBSTITUTE_ANSWERING);
   }
