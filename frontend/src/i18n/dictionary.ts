@@ -212,7 +212,7 @@ export interface Dictionary {
     modify: string;
     view: string;
     emptyState: string;
-    counter: (n: number, total: number) => string;
+    counter: (n: number) => string;
     hostHint: string;
     readOnlyHint: (hostName: string) => string;
     matureBadge: string;

@@ -3,7 +3,8 @@ import { Icon } from '@iconify/react';
 import { GAME_CONSTANTS } from '@onskone/shared';
 import { TIERS } from '../../constants/tiers';
 import { ACHIEVEMENTS } from '../../utils/playerStats';
-import { AVATARS, getAvatarUrl } from '../../constants/game';
+import { RoundPhase } from '@onskone/shared';
+import { AVATARS, getAvatarUrl, getPhaseDuration, estimateGameMinutes } from '../../constants/game';
 import { buildShareCard } from '../../utils/shareCard';
 import { fr } from '../../i18n/fr';
 
@@ -494,10 +495,20 @@ const LegalSection = () => {
   );
 };
 
+// Niveaux de vitesse partagés (multiplicateur de temps) + libellés admin.
+const SPEED_LABELS = ['Rapide', 'Normal', 'Tranquille'];
+
 const ConstantsSection = () => {
   const timers = GAME_CONSTANTS.TIMERS;
+  // Simulation : vitesse (index du niveau de multiplicateur) + nombre de joueurs.
+  const [speedIdx, setSpeedIdx] = useState(
+    GAME_CONSTANTS.TIME_MULTIPLIER_LEVELS.indexOf(GAME_CONSTANTS.TIME_MULTIPLIER_DEFAULT),
+  );
   const [guessPlayers, setGuessPlayers] = useState(3);
-  const guessSeconds = 120 + Math.max(0, guessPlayers - 3) * 20;
+  const [guessMyAnswerMode, setGuessMyAnswerMode] = useState(false);
+  const multiplier = GAME_CONSTANTS.TIME_MULTIPLIER_LEVELS[speedIdx];
+  // Même calcul que le lobby (constants/game.ts) : durée totale estimée.
+  const totalMinutes = estimateGameMinutes(guessPlayers, multiplier, guessMyAnswerMode);
   const toMinSec = (s: number): string | null => {
     if (s < 60) return null;
     const m = Math.floor(s / 60);
@@ -516,9 +527,84 @@ const ConstantsSection = () => {
           <p className="text-[12px] uppercase tracking-[0.18em] text-white/40 mb-2 font-semibold">
             Durée de chaque phase
           </p>
+
+          {/* Simulateur : la vitesse et le nombre de joueurs recalculent toutes les
+              durées affichées en direct (mêmes constantes que le lobby). */}
+          <div className="rounded-lg surface-glass p-3 mb-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <span className="text-[12px] uppercase tracking-[0.18em] text-white/40 font-semibold">
+                Estimation d'une partie
+              </span>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setGuessMyAnswerMode((v) => !v)}
+                  aria-pressed={guessMyAnswerMode}
+                  className={`px-2.5 py-1 rounded-md border font-mono text-[11px] tracking-wider transition-colors ${guessMyAnswerMode
+                    ? 'bg-white/[0.08] border-white/15 text-white'
+                    : 'bg-transparent border-white/[0.06] text-white/45 hover:text-white/85 hover:border-white/15'
+                    }`}
+                  title="Mode Devine ma réponse (ajoute les phases pilier)"
+                >
+                  Devine ma réponse
+                </button>
+                <span className="text-[20px] font-semibold tabular-nums text-white">~{totalMinutes} min</span>
+              </div>
+            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[11px] uppercase tracking-[0.14em] text-white/40 font-semibold">
+                  Vitesse
+                </span>
+                <span className="text-[11px] tabular-nums text-white/60">
+                  {SPEED_LABELS[speedIdx]} (×{multiplier})
+                </span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={GAME_CONSTANTS.TIME_MULTIPLIER_LEVELS.length - 1}
+                step={1}
+                value={speedIdx}
+                onChange={(e) => setSpeedIdx(Number(e.target.value))}
+                aria-label="Simuler la vitesse"
+                className="admin-mini-slider w-full cursor-pointer"
+              />
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[11px] uppercase tracking-[0.14em] text-white/40 font-semibold">
+                  Joueurs
+                </span>
+                <span className="text-[11px] tabular-nums text-white/60">
+                  {guessPlayers} joueur{guessPlayers > 1 ? 's' : ''}
+                </span>
+              </div>
+              <input
+                type="range"
+                min={GAME_CONSTANTS.MIN_PLAYERS}
+                max={GAME_CONSTANTS.MAX_PLAYERS}
+                step={1}
+                value={guessPlayers}
+                onChange={(e) => setGuessPlayers(Number(e.target.value))}
+                aria-label="Simuler le nombre de joueurs"
+                className="admin-mini-slider w-full cursor-pointer"
+              />
+            </div>
+          </div>
+          </div>
+
+          {/* Durée max (timer) de chaque phase. Les phases substitut ne sont
+              affichées qu'en mode "Devine ma réponse", comme dans le total. */}
+          <p className="text-[11px] text-white/35 mb-2">
+            Durée max par phase (timer). Le total ci-dessus est l'estimation ressentie côté lobby, plus courte (les joueurs répondent avant la fin).
+          </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-            {Object.entries(timers).map(([phase, seconds]) => {
-              const isGuessing = phase === 'GUESSING';
+            {Object.keys(timers)
+              .filter((phase) => guessMyAnswerMode || !phase.startsWith('SUBSTITUTE_'))
+              .map((phase) => {
+              const seconds = getPhaseDuration(phase as RoundPhase, multiplier, guessPlayers);
               return (
                 <div
                   key={phase}
@@ -527,46 +613,14 @@ const ConstantsSection = () => {
                   <p className="text-[12px] text-white/55">
                     {PHASE_LABELS_FR[phase] ?? phase}
                   </p>
-                  {isGuessing ? (
-                    <>
-                      <p className="mt-1 text-[20px] font-semibold tabular-nums text-white">
-                        {guessSeconds} secondes
-                        {toMinSec(guessSeconds) && (
-                          <span className="ml-2 text-[13px] font-normal text-white/40">
-                            ({toMinSec(guessSeconds)})
-                          </span>
-                        )}
-                      </p>
-                      <p className="text-[12px] text-white/55 mt-0.5">
-                        120 s + 20 s par joueur au-delà de 3
-                      </p>
-                      <div className="mt-2 flex items-center gap-2">
-                        <input
-                          id="guess-slider"
-                          type="range"
-                          min={GAME_CONSTANTS.MIN_PLAYERS}
-                          max={GAME_CONSTANTS.MAX_PLAYERS}
-                          step={1}
-                          value={guessPlayers}
-                          onChange={(e) => setGuessPlayers(Number(e.target.value))}
-                          aria-label="Simuler le nombre de joueurs"
-                          className="admin-mini-slider flex-1 cursor-pointer"
-                        />
-                        <span className="text-[10px] tabular-nums text-white/45 w-14 text-right">
-                          {guessPlayers} joueur{guessPlayers > 1 ? 's' : ''}
-                        </span>
-                      </div>
-                    </>
-                  ) : (
-                    <p className="mt-1 text-[20px] font-semibold tabular-nums text-white">
-                      {seconds} secondes
-                      {toMinSec(seconds) && (
-                        <span className="ml-2 text-[13px] font-normal text-white/40">
-                          ({toMinSec(seconds)})
-                        </span>
-                      )}
-                    </p>
-                  )}
+                  <p className="mt-1 text-[20px] font-semibold tabular-nums text-white">
+                    {seconds} secondes
+                    {toMinSec(seconds) && (
+                      <span className="ml-2 text-[13px] font-normal text-white/40">
+                        ({toMinSec(seconds)})
+                      </span>
+                    )}
+                  </p>
                 </div>
               );
             })}

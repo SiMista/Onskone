@@ -338,7 +338,7 @@ const GuessingPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, question,
   }
 
   return (
-    <div className="flex flex-col h-full min-h-[70dvh] p-2 md:p-4 overflow-hidden">
+    <div className="flex flex-col h-full min-h-0 p-2 md:p-4 overflow-hidden">
       <div className="shrink-0 mb-2 md:mb-3">
         <QuestionCard question={question} card={card} variant="compact" />
         {isLeader ? (
@@ -361,16 +361,19 @@ const GuessingPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, question,
         />
       </div>
 
-      {/* Layout responsive: colonnes sur desktop, empilé sur mobile. flex-1 min-h-0
-          pour permettre aux listes internes de scroller au lieu de pousser le parent. */}
-      <div className="flex-1 min-h-0 flex flex-col tablet:grid tablet:grid-cols-2 gap-2 tablet:gap-4 overflow-hidden">
-        {/* Réponses non attribuées : zone bornée scrollable. En mobile portrait,
-            on garde le design original (35dvh max) pour laisser la place aux
-            cartes joueurs. En landscape mobile, la liste passe en 2 colonnes
-            pour rester lisible quand le tel est tourné. */}
-        <div className="relative bg-gray-100 rounded-lg p-2 md:p-3 border-2 border-gray-300 flex flex-col min-h-0 max-h-[35dvh] tablet:max-h-none tablet:flex-1 overflow-hidden">
+      {/* Layout responsive :
+          - Mobile : UN SEUL scroll vertical (ce wrapper). Les deux blocs coulent
+            l'un sous l'autre, on scrolle la phase entière d'un coup.
+          - Tablet+ : grid 2 colonnes bornées (grid-rows minmax pour cap la hauteur),
+            chaque colonne scrolle de son côté. */}
+      <div className="flex-1 min-h-0 flex flex-col overflow-y-auto overscroll-contain no-scrollbar tablet:grid tablet:grid-cols-2 tablet:grid-rows-[minmax(0,1fr)] tablet:overflow-hidden gap-2 tablet:gap-4">
+        {/* Réponses non attribuées.
+            - Mobile : coule dans le scroll du wrapper (pas de cap ni de scroll interne).
+            - Tablet+ : colonne bornée qui scrolle de son côté.
+            En landscape mobile, la liste passe en 2 colonnes (landscape-2col). */}
+        <div className="relative bg-gray-100 rounded-lg p-2 md:p-3 border-2 border-gray-300 flex flex-col shrink-0 tablet:min-h-0 tablet:flex-1 tablet:overflow-hidden">
           <h3 className="shrink-0 text-sm md:text-base font-bold text-gray-800 mb-1.5 md:mb-2 m-0 uppercase tracking-wider">{t.phases.guessing.answers}</h3>
-          <div ref={answersScrollRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain no-scrollbar space-y-1.5 md:space-y-2 landscape-2col pr-1 md:pr-2">
+          <div ref={answersScrollRef} className="tablet:flex-1 tablet:min-h-0 tablet:overflow-y-auto overscroll-contain no-scrollbar space-y-1.5 md:space-y-2 landscape-2col pr-1 md:pr-2">
             {unassignedAnswers.map((answer, i) => {
               const noResponse = isNoResponse(answer.text);
               const isSelected = selectedAnswerId === answer.id;
@@ -407,16 +410,16 @@ const GuessingPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, question,
               </p>
             )}
           </div>
-          <ScrollFade scrollRef={answersScrollRef} className="rounded-b-lg" />
+          <ScrollFade scrollRef={answersScrollRef} className="rounded-b-lg hidden tablet:block" />
         </div>
 
-        {/* Joueurs avec leurs réponses attribuées - alignés en haut, scroll
-            interne si la liste déborde. Fade blanc en bas comme indice "il
-            reste du contenu à scroller". */}
-        <div className="relative flex-1 min-h-0">
+        {/* Joueurs avec leurs réponses attribuées.
+            - Mobile : coule dans le scroll du wrapper (flux normal).
+            - Tablet+ : colonne bornée, scroll interne absolu + fade en bas. */}
+        <div className="relative shrink-0 tablet:flex-1 tablet:min-h-0">
         <div
           ref={playersScrollRef}
-          className="absolute inset-0 overflow-y-auto overscroll-contain no-scrollbar px-2 py-1"
+          className="tablet:absolute tablet:inset-0 tablet:overflow-y-auto overscroll-contain no-scrollbar px-2 py-1"
         >
         <div className="flex flex-col space-y-2 md:space-y-3">
           {players.map((player) => {
@@ -442,7 +445,7 @@ const GuessingPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, question,
               >
                 {/* Avatar et nom */}
                 <div className="flex items-center justify-center min-w-[50px] md:min-w-[70px]">
-                  <PlayerBadge player={player} size="sm" className="md:hidden !min-w-[50px]" />
+                  <PlayerBadge player={player} size="sm" className="!min-w-[50px]" />
                 </div>
 
                 {/* Zone de réponse */}
@@ -516,7 +519,7 @@ const GuessingPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, question,
           })}
         </div>
         </div>
-        <ScrollFade scrollRef={playersScrollRef} />
+        <ScrollFade scrollRef={playersScrollRef} className="hidden tablet:block" />
         </div>
       </div>
 

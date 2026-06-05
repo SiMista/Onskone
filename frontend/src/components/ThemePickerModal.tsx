@@ -147,151 +147,151 @@ const ThemePickerModal = ({ isOpen, onClose, catalog, selected, mode, hostName, 
       {/* Wrapper : sur PC on cap la largeur pour ne pas que la modale s'étale ;
           sur mobile on prend toute la largeur. */}
       <div className="w-full max-w-2xl flex flex-col flex-1 min-h-0">
-      {/* Header flottant : titre + compteur (à droite du titre) + sous-texte contextuel + close */}
-      <div
+        {/* Header flottant : titre + compteur (à droite du titre) + sous-texte contextuel + close */}
+        <div
           className="relative shrink-0 flex items-center justify-between gap-3 px-5 pt-2 pb-3"
-        onClick={e => e.stopPropagation()}
-      >
+          onClick={e => e.stopPropagation()}
+        >
           <div className="flex-1 min-w-0 flex flex-col gap-2.5">
-          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-lg md:text-xl font-display font-bold text-white !my-0 leading-none tracking-tight drop-shadow-[0_2px_3px_rgba(0,0,0,0.6)]">
-              {t.themePicker.title}
-            </h2>
-              <span className="inline-flex items-center leading-none text-xs font-display font-bold text-white/90 bg-black/30 border border-white/25 rounded-full px-2 py-0.5 self-center">
-              {t.themePicker.counter(totals.sel, totals.total)}
-            </span>
-          </div>
+                {t.themePicker.title}
+              </h2>
+              <span className="inline-flex items-center leading-none text-xs font-display font-bold text-white/90 bg-black/30 border border-white/25 rounded-full px-2 py-0.5 self-center select-none">
+                {t.themePicker.counter(totals.sel)}
+              </span>
+            </div>
             <p
               key={hintShake}
               className={`!my-0 inline-flex items-center gap-1.5 text-xs font-sans italic text-white/75 leading-tight origin-left ${hintShake ? 'animate-paper-shake-slow' : ''}`}
             >
-            {!isEditable && <LuLock size={12} strokeWidth={2.5} aria-hidden />}
-            <span>{isEditable ? t.themePicker.hostHint : t.themePicker.readOnlyHint(hostName)}</span>
-          </p>
+              {!isEditable && <LuLock size={12} strokeWidth={2.5} aria-hidden />}
+              <span>{isEditable ? t.themePicker.hostHint : t.themePicker.readOnlyHint(hostName)}</span>
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label={t.common.close}
+            className="shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-white/15 hover:bg-white/25 text-white active:scale-90 transition-all duration-200 cursor-pointer border-2 border-white/30"
+          >
+            <LuX size={22} strokeWidth={2.5} />
+          </button>
         </div>
-        <button
-          onClick={onClose}
-          aria-label={t.common.close}
-          className="shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-white/15 hover:bg-white/25 text-white active:scale-90 transition-all duration-200 cursor-pointer border-2 border-white/30"
+
+        {/* Tabs catégorie - chips colorés flottants sur backdrop */}
+        <div
+          className="relative shrink-0 px-4 pb-2 flex items-center gap-1.5 overflow-x-auto"
+          style={{ scrollbarWidth: 'none' }}
+          onClick={e => e.stopPropagation()}
         >
-          <LuX size={22} strokeWidth={2.5} />
-        </button>
-      </div>
+          {categories.map(cat => {
+            const active = cat === activeCategory;
+            const color = getCategoryColor(cat);
+            return (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setActiveCategory(cat)}
+                aria-pressed={active}
+                className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full border-[2.5px] border-black font-display font-bold text-xs uppercase tracking-tight transition-all duration-200 ${active ? 'scale-[1.04] stack-shadow-sm' : 'opacity-70 hover:opacity-90'
+                  }`}
+                style={{ backgroundColor: active ? color : 'white', color: '#000' }}
+              >
+                <Icon
+                  icon={CATEGORY_ICONS[cat] ?? DEFAULT_CATEGORY_ICON}
+                  width={16}
+                  height={16}
+                  aria-hidden
+                  style={{ filter: STICKER_FILTER }}
+                />
+                <span>{cat}</span>
+              </button>
+            );
+          })}
+        </div>
 
-      {/* Tabs catégorie - chips colorés flottants sur backdrop */}
-      <div
-        className="relative shrink-0 px-4 pb-2 flex items-center gap-1.5 overflow-x-auto"
-        style={{ scrollbarWidth: 'none' }}
-        onClick={e => e.stopPropagation()}
-      >
-        {categories.map(cat => {
-          const active = cat === activeCategory;
-          const color = getCategoryColor(cat);
-          return (
-            <button
-              key={cat}
-              type="button"
-              onClick={() => setActiveCategory(cat)}
-              aria-pressed={active}
-              className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full border-[2.5px] border-black font-display font-bold text-xs uppercase tracking-tight transition-all duration-200 ${active ? 'scale-[1.04] stack-shadow-sm' : 'opacity-70 hover:opacity-90'
-                }`}
-              style={{ backgroundColor: active ? color : 'white', color: '#000' }}
-            >
-              <Icon
-                icon={CATEGORY_ICONS[cat] ?? DEFAULT_CATEGORY_ICON}
-                width={16}
-                height={16}
-                aria-hidden
-                style={{ filter: STICKER_FILTER }}
-              />
-              <span>{cat}</span>
-            </button>
-          );
-        })}
-      </div>
+        {/* Zone de contenu : grande carte cartonnée pleine largeur, scroll vertical interne */}
+        <div
+          className="relative flex-1 min-h-0 mx-3 md:mx-6 mb-2 animate-modal-content"
+          onClick={e => e.stopPropagation()}
+        >
+          <div className="relative h-full border-[2.5px] border-black rounded-2xl bg-white overflow-hidden stack-shadow-lg flex flex-col">
+            {/* Description de la catégorie (subtile) */}
+            {activeDescription && (
+              <div
+                className="relative shrink-0 px-3.5 py-2 border-b-[2px] border-dashed border-black/25"
+                style={{ backgroundColor: `${activeColor}25` }}
+              >
+                {activePattern && (
+                  <span aria-hidden className={`pointer-events-none absolute inset-0 ${activePattern} opacity-20`} />
+                )}
+                <span className="relative font-sans text-sm text-gray-800 leading-snug">
+                  {activeDescription}
+                </span>
+              </div>
+            )}
 
-      {/* Zone de contenu : grande carte cartonnée pleine largeur, scroll vertical interne */}
-      <div
-        className="relative flex-1 min-h-0 mx-3 md:mx-6 mb-2 animate-modal-content"
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="relative h-full border-[2.5px] border-black rounded-2xl bg-white overflow-hidden stack-shadow-lg flex flex-col">
-          {/* Description de la catégorie (subtile) */}
-          {activeDescription && (
+            {/* Liste verticale scrollable des cartes-thèmes */}
             <div
-              className="relative shrink-0 px-3.5 py-2 border-b-[2px] border-dashed border-black/25"
-              style={{ backgroundColor: `${activeColor}1a` }}
+              ref={listRef}
+              className="relative flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 flex flex-col gap-2.5"
+              style={{ backgroundColor: `${activeColor}25`, scrollbarWidth: 'none' }}
             >
               {activePattern && (
-                <span aria-hidden className={`pointer-events-none absolute inset-0 ${activePattern} opacity-20`} />
+                <span aria-hidden className={`pointer-events-none absolute inset-0 ${activePattern} opacity-15`} />
               )}
-                <span className="relative font-sans text-sm text-gray-800 leading-snug">
-                {activeDescription}
-              </span>
-            </div>
-          )}
-
-          {/* Liste verticale scrollable des cartes-thèmes */}
-          <div
-            ref={listRef}
-            className="relative flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 flex flex-col gap-2.5"
-            style={{ backgroundColor: `${activeColor}10`, scrollbarWidth: 'none' }}
-          >
-            {activePattern && (
-              <span aria-hidden className={`pointer-events-none absolute inset-0 ${activePattern} opacity-15`} />
-            )}
-            {activeThemes.map((info: ThemeInfo) => {
-              const active = isThemeSelected(localSelected, activeCategory, info.code);
-              return (
-                <button
-                  key={info.code}
-                  type="button"
-                  onClick={() => handleToggle(activeCategory, info.code, info)}
-                  className={`group relative flex items-stretch w-full text-left border-[2.5px] border-black rounded-2xl overflow-hidden bg-white min-h-[96px] md:min-h-[112px] transition-all duration-200 ${isEditable ? 'cursor-pointer active:scale-[0.98]' : 'cursor-default'
-                    } ${active
-                      ? 'stack-shadow-sm opacity-100'
-                      : 'opacity-55 grayscale-[60%]'
-                    }`}
-                >
-                  {/* Bloc illustration emoji - dégradé diagonal pour le relief */}
-                  <div
-                    className="relative flex items-center justify-center shrink-0 w-20 md:w-24 texture-paper border-r-[2.5px] border-black"
-                    style={{ backgroundImage: buildEmojiGradient(activeColor) }}
+              {activeThemes.map((info: ThemeInfo) => {
+                const active = isThemeSelected(localSelected, activeCategory, info.code);
+                return (
+                  <button
+                    key={info.code}
+                    type="button"
+                    onClick={() => handleToggle(activeCategory, info.code, info)}
+                    className={`group relative flex items-stretch w-full text-left border-[2.5px] border-black rounded-2xl overflow-hidden bg-white min-h-[96px] md:min-h-[112px] transition-all duration-200 ${isEditable ? 'cursor-pointer active:scale-[0.98]' : 'cursor-default'
+                      } ${active
+                        ? 'stack-shadow-sm opacity-100'
+                        : 'opacity-55 grayscale-[60%]'
+                      }`}
                   >
-                    {activePattern && (
-                      <span aria-hidden className={`absolute inset-0 ${activePattern} opacity-30`} />
-                    )}
-                    <Icon
-                      icon={info.emoji}
-                      width={44}
-                      height={44}
-                      aria-hidden
-                      className="relative transition-transform duration-300 ease-out group-hover:rotate-[-6deg] group-hover:scale-110"
-                      style={{ filter: STICKER_FILTER_STRONG }}
-                    />
-                  </div>
-                  {/* Texte */}
-                  <div className="flex-1 min-w-0 px-3.5 py-3 md:px-4 md:py-3.5 flex flex-col justify-center gap-1">
-                    <div className="font-display font-bold text-display-md text-gray-900 leading-tight line-clamp-1 flex items-center gap-1.5">
-                      <span className="truncate">{info.name}</span>
-                      {info.mature && (
-                        <span className="shrink-0 inline-flex items-center justify-center h-5 px-2 rounded-full bg-red-600 text-white text-[12px] font-display font-bold leading-none border-[2.5px] border-black stack-shadow-sm">
-                          {t.themePicker.matureBadge}
-                        </span>
+                    {/* Bloc illustration emoji - dégradé diagonal pour le relief */}
+                    <div
+                      className="relative flex items-center justify-center shrink-0 w-20 md:w-24 texture-paper border-r-[2.5px] border-black"
+                      style={{ backgroundImage: buildEmojiGradient(activeColor) }}
+                    >
+                      {activePattern && (
+                        <span aria-hidden className={`absolute inset-0 ${activePattern} opacity-30`} />
+                      )}
+                      <Icon
+                        icon={info.emoji}
+                        width={44}
+                        height={44}
+                        aria-hidden
+                        className="relative transition-transform duration-300 ease-out group-hover:rotate-[-6deg] group-hover:scale-110"
+                        style={{ filter: STICKER_FILTER_STRONG }}
+                      />
+                    </div>
+                    {/* Texte */}
+                    <div className="flex-1 min-w-0 px-3.5 py-3 md:px-4 md:py-3.5 flex flex-col justify-center gap-1">
+                      <div className="font-display font-bold text-display-md text-gray-900 leading-tight line-clamp-1 flex items-center gap-1.5">
+                        <span className="truncate">{info.name}</span>
+                        {info.mature && (
+                          <span className="shrink-0 inline-flex items-center justify-center h-5 px-2 rounded-full bg-red-600 text-white text-[12px] font-display font-bold leading-none border-[2.5px] border-black stack-shadow-sm">
+                            {t.themePicker.matureBadge}
+                          </span>
+                        )}
+                      </div>
+                      {info.description && (
+                        <div className="font-sans text-xs md:text-sm leading-snug text-gray-600 line-clamp-2">
+                          {info.description}
+                        </div>
                       )}
                     </div>
-                    {info.description && (
-                      <div className="font-sans text-xs md:text-sm leading-snug text-gray-600 line-clamp-2">
-                        {info.description}
-                      </div>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
-      </div>
       </div>
 
       {/* Popup d'avertissement pour les thèmes mature - apparaît à chaque tentative d'activation */}
