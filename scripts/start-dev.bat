@@ -1,4 +1,7 @@
 @echo off
+:: Le script vit dans scripts/ : on se replace à la racine du repo.
+cd /d "%~dp0.."
+
 :: Build initial du package shared (types/constantes partagés)
 :: La fenêtre de lancement se ferme ensuite, seuls back + front restent ouverts.
 echo Building shared package...

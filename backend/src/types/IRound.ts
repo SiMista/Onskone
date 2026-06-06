@@ -6,6 +6,7 @@ import { RoundPhase } from '@onskone/shared';
 export interface IRound extends IRoundData {
   calculateScores(): void;
   addAnswer(playerId: string, answer: string): void;
+  removeAnswer(playerId: string): void;
   setSelectedQuestion(question: string): void;
   updateCurrentGuess(answerId: string, playerId: string | null): void;
   submitGuesses(guesses: Record<string, string>): void;

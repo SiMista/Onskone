@@ -159,6 +159,13 @@ export interface ServerToClientEvents {
     expectedAnswers: number;
   }) => void;
 
+  /** Un joueur a retiré sa réponse pour la modifier */
+  playerUnanswered: (data: {
+    playerId: string;
+    totalAnswers: number;
+    expectedAnswers: number;
+  }) => void;
+
   /** Toutes les réponses ont été soumises */
   allAnswersSubmitted: (data: {
     phase: RoundPhase;
@@ -356,6 +363,12 @@ export interface ClientToServerEvents {
     lobbyCode: string;
     playerId: string;
     answer: string;
+  }) => void;
+
+  /** Retirer sa réponse pour la modifier (phase ANSWERING) */
+  withdrawAnswer: (data: {
+    lobbyCode: string;
+    playerId: string;
   }) => void;
 
   /** Demander les réponses mélangées (réservé au pilier) */

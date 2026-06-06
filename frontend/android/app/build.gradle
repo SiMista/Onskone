@@ -1,0 +1,95 @@
+apply plugin: 'com.android.application'
+
+// Version derivee des git tags, alignee sur la version web (vite.config.ts) :
+// versionName = MAJOR.MINOR (dernier tag) + PATCH (commits depuis le tag).
+// versionCode = nb total de commits (entier toujours croissant, exige par le Play Store).
+def gitVersionName = { ->
+    try {
+        def tag = 'git describe --tags --abbrev=0'.execute(null, rootDir).text.trim()
+        def parts = tag.replaceFirst('^v', '').split('\\.')
+        def count = "git rev-list ${tag}..HEAD --count".execute(null, rootDir).text.trim()
+        return "${parts[0]}.${parts[1]}.${count}"
+    } catch (ignored) {
+        def count = 'git rev-list --count HEAD'.execute(null, rootDir).text.trim()
+        return "0.0.${count}"
+    }
+}
+def gitVersionCode = { ->
+    try {
+        return 'git rev-list --count HEAD'.execute(null, rootDir).text.trim().toInteger()
+    } catch (ignored) {
+        return 1
+    }
+}
+
+// Signature de release : lue depuis android/keystore.properties (gitignore, jamais commite).
+// Absent -> on retombe sur la signature debug (les builds non-release ne cassent pas).
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
+android {
+    namespace = "com.onskone.app"
+    compileSdk = rootProject.ext.compileSdkVersion
+    signingConfigs {
+        release {
+            if (keystorePropertiesFile.exists()) {
+                storeFile rootProject.file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
+    defaultConfig {
+        applicationId "com.onskone.app"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode gitVersionCode()
+        versionName gitVersionName()
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig keystorePropertiesFile.exists() ? signingConfigs.release : signingConfigs.debug
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}

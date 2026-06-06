@@ -3,6 +3,9 @@ import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-route
 import Home from './pages/Home';
 import NotFound from './pages/NotFound';
 import Studio from './pages/Studio';
+import Legal from './pages/Legal';
+import { Capacitor } from '@capacitor/core';
+import { SplashScreen } from '@capacitor/splash-screen';
 import { initSounds } from './utils/sounds';
 import { ToastProvider } from './components/Toast';
 import { LocaleProvider } from './i18n';
@@ -55,6 +58,13 @@ const AppShell = ({ children }: { children: ReactNode }) => {
 const App = () => {
   const soundsInitialized = useRef(false);
 
+  // Retire le splash AndroidX des que l'app React est montee (no-op sur web).
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      SplashScreen.hide();
+    }
+  }, []);
+
   useEffect(() => {
     // Initialiser les sons au premier clic/touch utilisateur
     const handleFirstInteraction = () => {
@@ -86,6 +96,8 @@ const App = () => {
               <Route path="/lobby/:lobbyCode" element={<Lobby />} />
               <Route path="/game/:lobbyCode" element={<Game />} />
               <Route path="/endgame/:lobbyCode" element={<EndGame />} />
+              <Route path="/privacy" element={<Legal kind="privacy" />} />
+              <Route path="/mentions" element={<Legal kind="mentions" />} />
               {import.meta.env.DEV && <Route path="/studio" element={<Studio />} />}
               <Route
                 path="/admin"

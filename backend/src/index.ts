@@ -25,6 +25,10 @@ const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim()).filter(o => o.length > 0)
   : [];
 
+// Origines des apps natives Capacitor : toujours autorisées (web ET prod).
+// Android sert la page depuis https://localhost, iOS depuis capacitor://localhost.
+const CAPACITOR_ORIGINS = ['capacitor://localhost', 'https://localhost'];
+
 // Validation de la configuration en production
 if (process.env.NODE_ENV === 'production' && ALLOWED_ORIGINS.length === 0) {
   logger.warn('SECURITY WARNING: ALLOWED_ORIGINS is not set in production. CORS will reject all browser requests!');
@@ -38,6 +42,11 @@ const io = new Server(server, {
       if (process.env.NODE_ENV === 'production') {
         // Autoriser les requêtes sans origin (mobile apps, server-to-server)
         if (!origin) {
+          callback(null, true);
+          return;
+        }
+        // Apps natives Capacitor (toujours autorisées)
+        if (CAPACITOR_ORIGINS.includes(origin)) {
           callback(null, true);
           return;
         }
@@ -79,7 +88,7 @@ app.use((req, res, next) => {
   if (origin) {
     let allowed = false;
     if (process.env.NODE_ENV === 'production') {
-      allowed = ALLOWED_ORIGINS.includes(origin);
+      allowed = ALLOWED_ORIGINS.includes(origin) || CAPACITOR_ORIGINS.includes(origin);
     } else {
       allowed = origin.includes('localhost') || origin.includes('127.0.0.1') || /^http:\/\/192\.168\.\d+\.\d+:\d+$/.test(origin);
     }

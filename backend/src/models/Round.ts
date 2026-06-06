@@ -56,6 +56,10 @@ export class Round implements IRound {
         this.answers[playerId] = answer;
     }
 
+    removeAnswer(playerId: string): void {
+        delete this.answers[playerId];
+    }
+
     setSelectedQuestion(question: string): void {
         this.selectedQuestion = question;
     }
