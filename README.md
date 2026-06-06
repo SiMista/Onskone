@@ -105,7 +105,7 @@ pnpm dev:backend    # http://localhost:8080
 pnpm dev:shared     # rebuild auto des types partagés
 ```
 
-Sous Windows, vous pouvez utiliser `start-dev.bat`. Sous Linux/macOS, `start-dev.sh`.
+Sous Windows, vous pouvez utiliser `scripts\start-dev.bat`. Sous Linux/macOS, `scripts/start-dev.sh`.
 
 ### Build
 

@@ -10,12 +10,15 @@ import Checkbox from '../components/Checkbox';
 import HowToPlayCarousel from '../components/HowToPlayCarousel';
 import HowToPlayButton from '../components/HowToPlayButton';
 import { Icon } from '@iconify/react';
+import { Capacitor } from '@capacitor/core';
+import { Share } from '@capacitor/share';
 import PlayerCard from '../components/PlayerCard';
 import ThemePickerModal from '../components/ThemePickerModal';
 import BackButton from '../components/BackButton';
 import ScrollFade from '../components/ScrollFade';
 import GameSpeedSlider from '../components/GameSpeedSlider';
 import { IPlayer, DecksCatalog, DecksCatalogWithMeta, SelectedDecks, GAME_CONSTANTS } from '@onskone/shared';
+import type { ServerToClientEvents } from '@onskone/shared';
 import { useSocketEvent, useLeavePrompt, useReconnectOnVisible } from '../hooks';
 import { useToast } from '../components/Toast';
 import { useLocale } from '../i18n';
@@ -97,14 +100,17 @@ const Lobby = () => {
     // Avertissement avant de quitter la page (le serveur gère la déconnexion automatiquement via socket.disconnect)
     useLeavePrompt(!!currentPlayer);
 
-    const generateLink = useCallback(() => {
+    const shareInvite = useCallback(async () => {
         const link = `${window.location.origin}/?lobbyCode=${lobbyCode!}`;
+        const message = t.lobby.shareInvite.message;
+        // Texte copié dans le presse-papier : message + lien (l'API share gère le lien à part)
+        const copyText = `${message} ${link}`;
 
         const showCopied = () => {
             showToast(t.lobby.toasts.linkCopied, 'success');
         };
 
-        // Fonction de fallback pour copier sans l'API Clipboard (HTTP non-localhost)
+        // Fallback pour copier sans l'API Clipboard (HTTP non-localhost)
         const fallbackCopy = (text: string) => {
             const textarea = document.createElement('textarea');
             textarea.value = text;
@@ -122,14 +128,42 @@ const Lobby = () => {
             document.body.removeChild(textarea);
         };
 
-        // Utiliser l'API Clipboard si disponible, sinon fallback
-        if (navigator.clipboard?.writeText) {
-            navigator.clipboard.writeText(link)
-                .then(() => showCopied())
-                .catch(() => fallbackCopy(link));
-        } else {
-            fallbackCopy(link);
+        const copyToClipboard = (text: string) => {
+            if (navigator.clipboard?.writeText) {
+                navigator.clipboard.writeText(text)
+                    .then(() => showCopied())
+                    .catch(() => fallbackCopy(text));
+            } else {
+                fallbackCopy(text);
+            }
+        };
+
+        // 1. App native (Capacitor) : plugin Share = intent de partage Android/iOS fiable,
+        // indépendant du secure context (marche même en live-reload http).
+        if (Capacitor.isNativePlatform()) {
+            try {
+                await Share.share({ title: t.lobby.shareInvite.title, text: message, url: link });
+            } catch {
+                // Annulation ou indispo -> copie
+                copyToClipboard(copyText);
+            }
+            return;
         }
+
+        // 2. Web/PWA : Web Share API (mobile + Chrome/Edge desktop), exige un secure context (HTTPS)
+        if (navigator.share) {
+            try {
+                await navigator.share({ title: t.lobby.shareInvite.title, text: message, url: link });
+                return; // succès : la feuille native sert de feedback
+            } catch (err) {
+                // L'utilisateur a fermé/annulé la feuille -> ne rien faire
+                if ((err as Error)?.name === 'AbortError') return;
+                // Autre erreur (non supporté à l'exécution) -> on retombe sur la copie
+            }
+        }
+
+        // 3. Fallback : copie du message + lien dans le presse-papier
+        copyToClipboard(copyText);
     }, [lobbyCode, showToast, t]);
 
     const leaveLobby = useCallback(() => {
@@ -279,19 +313,21 @@ const Lobby = () => {
         navigate('/');
     }, [navigate, showToast, t]);
 
-    const handleLobbyDecksState = useCallback((data: { catalog: DecksCatalog; catalogWithMeta?: DecksCatalogWithMeta; selected: SelectedDecks; guessMyAnswerMode?: boolean; timeMultiplier?: number }) => {
+    // Payloads typés via le contrat serveur (ServerToClientEvents) plutôt qu'inline :
+    // ajouter/retirer un champ côté serveur force la mise à jour ici (sinon erreur de typecheck).
+    const handleLobbyDecksState = useCallback((data: Parameters<ServerToClientEvents['lobbyDecksState']>[0]) => {
         setDecksCatalog(data.catalog);
-        if (data.catalogWithMeta) setDecksCatalogMeta(data.catalogWithMeta);
+        setDecksCatalogMeta(data.catalogWithMeta);
         setSelectedDecks(data.selected);
-        setGuessMyAnswerMode(!!data.guessMyAnswerMode);
-        if (typeof data.timeMultiplier === 'number') setTimeMultiplier(data.timeMultiplier);
+        setGuessMyAnswerMode(data.guessMyAnswerMode);
+        setTimeMultiplier(data.timeMultiplier);
     }, []);
 
-    const handleGuessMyAnswerModeUpdated = useCallback((data: { guessMyAnswerMode: boolean }) => {
-        setGuessMyAnswerMode(!!data.guessMyAnswerMode);
+    const handleGuessMyAnswerModeUpdated = useCallback((data: Parameters<ServerToClientEvents['guessMyAnswerModeUpdated']>[0]) => {
+        setGuessMyAnswerMode(data.guessMyAnswerMode);
     }, []);
 
-    const handleTimeMultiplierUpdated = useCallback((data: { timeMultiplier: number }) => {
+    const handleTimeMultiplierUpdated = useCallback((data: Parameters<ServerToClientEvents['timeMultiplierUpdated']>[0]) => {
         setTimeMultiplier(data.timeMultiplier);
     }, []);
 
@@ -512,8 +548,9 @@ const Lobby = () => {
 
     return (
         <div className="relative h-full flex flex-col overflow-hidden animate-phase-enter">
-            {/* Logo desktop uniquement - positionné absolu pour ne pas perturber le centrage vertical */}
-            <div className="hidden md:flex absolute top-0 left-0 right-0 justify-center pointer-events-none z-0">
+            {/* Logo desktop uniquement - positionné absolu pour ne pas perturber le centrage vertical.
+                tablet: (pas md:) pour l'exclure des téléphones en paysage (largeur >768px mais hauteur basse). */}
+            <div className="hidden tablet:flex absolute top-0 left-0 right-0 justify-center pointer-events-none z-0">
                 <Logo size="small" />
             </div>
             {/* Zone centrale qui prend toute la place dispo et centre le contenu.
@@ -626,7 +663,7 @@ const Lobby = () => {
                             <ScrollFade scrollRef={lobbyTabScrollRef} className="rounded-b-2xl" />
                         </div>
 
-                        {/* ===================== ACTION ROW : Démarrer + Copier le lien ===================== */}
+                        {/* ===================== ACTION ROW : Démarrer + Partager l'invitation ===================== */}
                         <div className="shrink-0 flex flex-col items-center gap-1.5 mt-1 md:mt-2 safe-pb">
                             <div className="flex flex-row items-center justify-center gap-3 md:gap-4 w-full flex-wrap">
                                 {currentPlayer?.isHost ? (
@@ -646,11 +683,11 @@ const Lobby = () => {
                                     </div>
                                 )}
                                 <Button
-                                    text={t.lobby.copyInviteLink}
+                                    text={t.lobby.shareInvite.button}
                                     variant="warning"
                                     size="sm"
                                     className="!text-xs md:!text-sm whitespace-nowrap"
-                                    onClick={generateLink}
+                                    onClick={shareInvite}
                                 />
                             </div>
 

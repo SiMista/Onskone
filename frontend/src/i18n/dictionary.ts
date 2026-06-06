@@ -30,6 +30,18 @@ export type HowToPlayMarkers = {
   Joueurs: (children: ReactNode) => ReactNode;
 };
 
+export interface TierTexts {
+  title: string;
+  messages: string[];
+}
+
+/**
+ * 6 paliers de score - longueur FIGÉE en tuple. Force fr.tsx et en.tsx à fournir
+ * exactement 6 entrées (sinon erreur de typecheck), et le garde-fou dans
+ * constants/tiers.ts lie cette longueur au nombre de TIERS. Index aligné sur TIERS.
+ */
+export type TierTextsTuple = readonly [TierTexts, TierTexts, TierTexts, TierTexts, TierTexts, TierTexts];
+
 export interface Dictionary {
   /** Textes réutilisés un peu partout */
   common: {
@@ -85,6 +97,7 @@ export interface Dictionary {
     themes: string;
     start: string;
     copyInviteLink: string;
+    shareInvite: { button: string; title: string; message: string };
     minPlayers: (n: number) => string;
     selectAtLeastOneTheme: string;
     loadingThemes: string;
@@ -134,7 +147,7 @@ export interface Dictionary {
       achievementUnlocked: (title: string) => string;
     };
     reportLabel: string;
-    tiers: Array<{ title: string; messages: string[] }>;
+    tiers: TierTextsTuple;
   };
 
   notFound: {
@@ -248,6 +261,7 @@ export interface Dictionary {
       placeholder: string;
       send: string;
       yourAnswer: string;
+      editAnswer: string;
       waitingForOthers: string;
       answersReceived: string;
     };
@@ -274,13 +288,12 @@ export interface Dictionary {
     };
     guessing: {
       loading: string;
-      instructionMobile: string;
-      instructionDesktop: string;
+      instruction: string;
+      choosePlayer: string;
+      removeOption: string;
       assignWaiting: string;
       answers: string;
       allAssigned: string;
-      tapToAssign: string;
-      dropHere: string;
       remainingCount: (n: number) => string;
       validate: string;
       removeAria: string;

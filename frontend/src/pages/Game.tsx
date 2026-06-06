@@ -350,8 +350,9 @@ const GamePage: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col items-center justify-center overflow-hidden px-2 tablet:px-0 safe-pt relative">
-      {/* Logo desktop uniquement - positionné absolu pour ne pas perturber le centrage vertical */}
-      <div className="hidden md:flex absolute top-0 left-0 right-0 justify-center pointer-events-none z-0">
+      {/* Logo desktop uniquement - positionné absolu pour ne pas perturber le centrage vertical.
+          tablet: (pas md:) pour l'exclure des téléphones en paysage (largeur >768px mais hauteur basse). */}
+      <div className="hidden tablet:flex absolute top-0 left-0 right-0 justify-center pointer-events-none z-0">
         <Logo size="small" />
       </div>
       {/* Main game area - sized to content, centré dans la fenêtre. La carte

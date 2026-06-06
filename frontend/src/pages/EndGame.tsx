@@ -354,8 +354,9 @@ const EndGame: React.FC = () => {
 
   return (
     <div className="h-full p-3 md:p-6 relative overflow-hidden flex flex-col items-center justify-center safe-pt">
-      {/* Logo desktop uniquement - positionné absolu pour ne pas perturber le centrage vertical */}
-      <div className="hidden md:flex absolute top-0 left-0 right-0 justify-center pointer-events-none z-20">
+      {/* Logo desktop uniquement - positionné absolu pour ne pas perturber le centrage vertical.
+          tablet: (pas md:) pour l'exclure des téléphones en paysage (largeur >768px mais hauteur basse). */}
+      <div className="hidden tablet:flex absolute top-0 left-0 right-0 justify-center pointer-events-none z-20">
         <Logo size="small" />
       </div>
       <div

@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { LuCheck } from 'react-icons/lu';
+import { LuCheck, LuPencil } from 'react-icons/lu';
 import socket from '../utils/socket';
 import HourglassTimer from './HourglassTimer';
 import Avatar from './Avatar';
@@ -88,9 +88,18 @@ const AnswerPhase = ({
     const onPlayerAnswered = (data: { playerId: string; totalAnswers: number; expectedAnswers: number }) => {
       setAnsweredPlayerIds(prev => new Set([...prev, data.playerId]));
     };
+    const onPlayerUnanswered = (data: { playerId: string }) => {
+      setAnsweredPlayerIds(prev => {
+        const next = new Set(prev);
+        next.delete(data.playerId);
+        return next;
+      });
+    };
     socket.on('playerAnswered', onPlayerAnswered);
+    socket.on('playerUnanswered', onPlayerUnanswered);
     return () => {
       socket.off('playerAnswered', onPlayerAnswered);
+      socket.off('playerUnanswered', onPlayerUnanswered);
     };
   }, []);
 
@@ -305,6 +314,18 @@ const AnswerPhase = ({
               {answer.length > 250 ? `${answer.slice(0, 250)}…` : answer}
             </p>
           </div>
+          <button
+            type="button"
+            onClick={() => {
+              socket.emit('withdrawAnswer', { lobbyCode, playerId: currentPlayerId });
+              setSubmitted(false);
+              setStage('idle');
+            }}
+            className="flex items-center gap-1.5 text-sm md:text-base font-semibold text-brand-700 hover:text-brand-500 underline-offset-2 hover:underline transition-colors"
+          >
+            <LuPencil aria-hidden />
+            {t.phases.answering.editAnswer}
+          </button>
           <p className="text-gray-700 text-center text-sm md:text-base italic">
             {t.phases.answering.waitingForOthers}
           </p>

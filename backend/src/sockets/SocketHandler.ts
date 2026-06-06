@@ -1507,11 +1507,8 @@ export class SocketHandler {
                         return;
                     }
 
-                    // Vérifier que le joueur n'a pas déjà répondu
-                    if (game.currentRound.answers[data.playerId]) {
-                        socket.emit('error', { message: 'Vous avez déjà soumis une réponse' });
-                        return;
-                    }
+                    // Réponse déjà présente = édition (overwrite). Autorisé tant que la phase
+                    // est ANSWERING ; au-delà le guard de phase ci-dessus a déjà rejeté la requête.
 
                     // Vérifier que le joueur n'est pas le pilier (le pilier ne répond pas)
                     if (player.id === game.currentRound.leader.id) {
@@ -1564,6 +1561,47 @@ export class SocketHandler {
                 } catch (error) {
                     logger.error('Error submitting answer', { error: errMessage(error) });
                     socket.emit('error', { message: 'Une erreur inattendue est survenue' });
+                }
+            });
+
+            // Retirer sa réponse pour la modifier (phase ANSWERING)
+            socket.on('withdrawAnswer', (data) => {
+                try {
+                    if (!rateLimiters.gameAction.isAllowed(socket.id)) {
+                        socket.emit('error', { message: 'Trop de requêtes. Veuillez patienter.' });
+                        return;
+                    }
+
+                    const lobby = LobbyManager.getLobby(data.lobbyCode);
+                    const game = lobby?.game;
+                    if (!game?.currentRound) return;
+                    lobby?.updateActivity();
+
+                    const player = lobby?.getPlayer(data.playerId);
+                    if (!player) return;
+
+                    // Anti-usurpation : le socket doit correspondre au joueur
+                    if (player.socketId !== socket.id) {
+                        logger.warn(`Tentative d'usurpation withdrawAnswer: socket ${socket.id} pour ${player.name}`);
+                        return;
+                    }
+
+                    // Uniquement pendant ANSWERING (au-delà la réponse est verrouillée)
+                    if (game.currentRound.phase !== RoundPhase.ANSWERING) return;
+                    if (!game.currentRound.answers[data.playerId]) return;
+
+                    game.currentRound.removeAnswer(data.playerId);
+
+                    const respondingPlayers = lobby!.players.filter(p => p.isActive && p.id !== game.currentRound!.leader.id);
+                    this.io.to(data.lobbyCode).emit('playerUnanswered', {
+                        playerId: data.playerId,
+                        totalAnswers: Object.keys(game.currentRound.answers).length,
+                        expectedAnswers: respondingPlayers.length
+                    });
+
+                    logger.debug(`Réponse retirée par ${player.name} (édition)`, { lobbyCode: data.lobbyCode, answers: Object.keys(game.currentRound.answers).length });
+                } catch (error) {
+                    logger.error('Error withdrawing answer', { error: errMessage(error) });
                 }
             });
 

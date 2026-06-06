@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -e
 
-ROOT="$(cd "$(dirname "$0")" && pwd)"
+# Le script vit dans scripts/ : la racine du repo est le dossier parent.
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 cleanup() {
   echo ""

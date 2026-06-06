@@ -22,6 +22,9 @@ const getAppVersion = () => {
 }
 
 export default defineConfig({
+    // Chemins relatifs : requis pour Capacitor (la page est servie depuis
+    // le système de fichiers de l'app, pas depuis la racine d'un domaine).
+    base: './',
     define: {
         __APP_VERSION__: JSON.stringify(getAppVersion()),
     },

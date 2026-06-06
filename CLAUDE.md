@@ -21,15 +21,20 @@ pnpm dev:frontend       # http://localhost:3000
 pnpm dev:backend        # http://localhost:8080
 pnpm dev:shared         # rebuild shared types on change
 
-# Or via the launcher scripts (build shared once, then spawn back+front)
-./start-dev.sh          # Linux/macOS
-start-dev.bat           # Windows (opens two cmd windows)
+# Or via the launcher scripts in scripts/ (build shared once, then spawn back+front)
+./scripts/start-dev.sh          # Linux/macOS
+scripts\start-dev.bat           # Windows (opens two cmd windows)
 
 # Build (must be ordered: shared first)
 pnpm build:shared
 pnpm build:frontend
 pnpm build:backend
 pnpm build               # recursive, runs in dependency order
+
+# Mobile (Capacitor — Android présent, iOS à générer sur Mac)
+./scripts/start-mobile.sh       # live reload sur device/émulateur (le tel charge le Vite du PC)
+./scripts/build-mobile.sh       # build statique final + cap sync + ouvre Android Studio
+# (équivalents .bat pour Windows). build-mobile attend VITE_SERVER_URL (URL du backend).
 
 # Checks
 pnpm typecheck           # recursive
@@ -132,6 +137,15 @@ All design tokens live in `@theme` inside [frontend/src/index.css](frontend/src/
 **Conventions animations** :
 - Animations one-shot pour entrées/transitions (`animate-modal-pop`, `animate-card-deal-in`, etc.)
 - Animations idle infinies : **max 1 par écran**, sur l'élément qui porte l'action en cours. Si une carte clignote pour guider l'œil, suspendre les `animate-float` décoratifs alentour.
+
+### Mobile (Capacitor)
+
+Le même build web `frontend/build` est embarqué dans une coquille native via Capacitor. Config dans [frontend/capacitor.config.ts](frontend/capacitor.config.ts) (`appId: com.onskone.app`, `webDir: build`). La plateforme **Android** est générée (`frontend/android/`) ; **iOS** n'est pas encore généré (nécessite un Mac : `pnpm exec cap add ios` le jour venu, la config est déjà prête).
+
+- `vite.config.ts` a `base: './'` (chemins relatifs obligatoires : la page est servie depuis le filesystem de l'app, pas la racine d'un domaine).
+- **URL backend** : en natif, `window.location.origin` vaut `https://localhost` (Android) / `capacitor://localhost` (iOS), donc inexploitable. Le build mobile doit fournir `VITE_SERVER_URL` (URL absolue du backend) — c'est la première branche de `getServerUrl()` dans `frontend/src/constants/game.ts`. En live reload, l'origine devient l'IP du PC (`http://192.168.x.x:3000`) et retombe sur la branche réseau local.
+- **CORS** : `CAPACITOR_ORIGINS` (`capacitor://localhost`, `https://localhost`) est toujours autorisé dans `backend/src/index.ts`, indépendamment de `ALLOWED_ORIGINS`.
+- Scripts : `scripts/start-mobile.*` (live reload) et `scripts/build-mobile.*` (build final + Android Studio).
 
 ## Gotchas
 
