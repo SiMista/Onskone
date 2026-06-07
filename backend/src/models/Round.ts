@@ -1,6 +1,20 @@
+import { randomUUID } from 'crypto';
 import {IRound, RoundPhase} from '../types/IRound';
-import { IPlayer, GameCard, formatNoResponse } from '@onskone/shared';
+import { IPlayer, GameCard, formatNoResponse, NO_RESPONSE_PREFIX } from '@onskone/shared';
 import { shuffleArray } from '../utils/helpers.js';
+
+/** Une entrée du pool de devinette telle que diffusée aux clients (auteur anonymisé). */
+export interface PublicGuessAnswer {
+    /** Slot opaque (NON corrélé à l'auteur). Sert d'identifiant côté client. */
+    id: string;
+    text: string;
+    /**
+     * Auteur — fourni UNIQUEMENT pour les réponses NO_RESPONSE (dont le texte révèle
+     * déjà le joueur, ex « X n'a pas répondu »), pour permettre l'auto-attribution.
+     * `undefined` pour les vraies réponses : l'auteur reste secret jusqu'au REVEAL.
+     */
+    ownerId?: string;
+}
 
 export class Round implements IRound {
     roundNumber: number;
@@ -22,7 +36,10 @@ export class Round implements IRound {
     similarityCorrections: number[]; // Indices corrigés par similarité
     proposedCards: GameCard[]; // Les 3 cartes proposées au pilier pour la sélection
     shownGameCards: GameCard[]; // Cartes déjà montrées au pilier (pour éviter les doublons)
-    shuffledAnswerIds: string[]; // Ordre des réponses mélangées pour la reconnexion
+    shuffledAnswerIds: string[]; // (legacy) ordre par auteur — conservé pour compat type
+    // Pool GUESSING anonymisé : chaque réponse a un slot opaque + son auteur réel.
+    // Ordre = ordre mélangé diffusé aux clients. Source de vérité du mapping slot↔auteur.
+    answerSlots: { slotId: string; authorId: string; text: string }[];
     guessMyAnswerMode: boolean; // Mode "Devine ma réponse" actif pour ce round
     substitutePlayerId: string | null; // Joueur substitut désigné par le pilier
     substituteAnswer: string | null; // Réponse écrite par le substitut au nom du pilier
@@ -49,6 +66,7 @@ export class Round implements IRound {
         this.proposedCards = [];
         this.shownGameCards = [];
         this.shuffledAnswerIds = [];
+        this.answerSlots = [];
         this.guessMyAnswerMode = guessMyAnswerMode;
         this.substitutePlayerId = null;
         this.substituteAnswer = null;
@@ -177,41 +195,70 @@ export class Round implements IRound {
         return filled;
     }
 
-    /** Pool de réponses (incl. substitut) sous forme de tableau { id, text }. */
-    private guessingAnswersArray(): { id: string; text: string }[] {
-        return Object.entries(this.getGuessingAnswers()).map(([playerId, answer]) => ({
-            id: playerId,
-            text: answer,
+    /** Construit le pool { slotId, authorId, text } : un slot OPAQUE par réponse. */
+    private buildAnswerSlots(): { slotId: string; authorId: string; text: string }[] {
+        return Object.entries(this.getGuessingAnswers()).map(([authorId, text]) => ({
+            slotId: randomUUID(),
+            authorId,
+            text,
+        }));
+    }
+
+    /** Projette answerSlots vers la vue publique (auteur masqué, sauf NO_RESPONSE). */
+    private toPublicPool(): PublicGuessAnswer[] {
+        return this.answerSlots.map(s => ({
+            id: s.slotId,
+            text: s.text,
+            // NO_RESPONSE : le texte révèle déjà l'auteur -> on le fournit pour l'auto-attribution.
+            ownerId: s.text.startsWith(NO_RESPONSE_PREFIX) ? s.authorId : undefined,
         }));
     }
 
     /**
-     * Prépare la phase GUESSING : construit le pool de réponses (incl. la réponse du
-     * substitut en mode "Devine ma réponse"), le mélange et mémorise l'ordre dans
-     * `shuffledAnswerIds` (pour reconstruire le même ordre à la reconnexion).
-     * @returns les réponses mélangées { id, text } à diffuser aux clients.
+     * Prépare la phase GUESSING : construit le pool (incl. réponse du substitut en mode
+     * "Devine ma réponse"), assigne un SLOT OPAQUE à chaque réponse (anti-fuite de
+     * l'auteur), mélange l'ordre et mémorise le tout dans `answerSlots`.
+     * @returns la vue publique { id: slot, text, ownerId? } à diffuser aux clients.
      */
-    prepareGuessing(): { id: string; text: string }[] {
-        const shuffled = shuffleArray(this.guessingAnswersArray());
-        this.shuffledAnswerIds = shuffled.map(a => a.id);
-        return shuffled;
+    prepareGuessing(): PublicGuessAnswer[] {
+        this.answerSlots = shuffleArray(this.buildAnswerSlots());
+        this.shuffledAnswerIds = this.answerSlots.map(s => s.authorId);
+        return this.toPublicPool();
     }
 
     /**
-     * Réponses de la phase GUESSING dans l'ordre stable du round : réutilise l'ordre
-     * mémorisé dans `shuffledAnswerIds` si présent (reconnexion → même ordre pour tous),
-     * sinon mélange une première fois et le mémorise. Source unique pour `prepareGuessing`
-     * (1re entrée en GUESSING) et `requestShuffledAnswers`.
+     * Vue publique du pool dans l'ordre stable du round : réutilise `answerSlots` s'il est
+     * déjà construit (reconnexion → mêmes slots/même ordre pour tous), sinon prépare une
+     * 1re fois. Source unique pour `prepareGuessing` (entrée GUESSING) et requestShuffledAnswers.
      */
-    getOrderedGuessingAnswers(): { id: string; text: string }[] {
-        const answersArray = this.guessingAnswersArray();
-        if (this.shuffledAnswerIds && this.shuffledAnswerIds.length > 0) {
-            const answersMap = new Map(answersArray.map(a => [a.id, a]));
-            return this.shuffledAnswerIds
-                .map(id => answersMap.get(id))
-                .filter((a): a is { id: string; text: string } => a !== undefined);
-        }
+    getOrderedGuessingAnswers(): PublicGuessAnswer[] {
+        if (this.answerSlots.length > 0) return this.toPublicPool();
         return this.prepareGuessing();
+    }
+
+    /** Auteur réel associé à un slot opaque (undefined si slot inconnu). */
+    authorForSlot(slotId: string): string | undefined {
+        return this.answerSlots.find(s => s.slotId === slotId)?.authorId;
+    }
+
+    /** Slot opaque associé à un auteur (pour traduire l'état serveur -> client). */
+    slotForAuthor(authorId: string): string | undefined {
+        return this.answerSlots.find(s => s.authorId === authorId)?.slotId;
+    }
+
+    /** Ensemble des slots valides (pour valider les answerId reçus des clients). */
+    getSlotIds(): Set<string> {
+        return new Set(this.answerSlots.map(s => s.slotId));
+    }
+
+    /** Traduit l'état interne currentGuesses (par auteur) vers la vue client (par slot). */
+    currentGuessesBySlot(): Record<string, string> {
+        const bySlot: Record<string, string> = {};
+        for (const [authorId, guessedPlayerId] of Object.entries(this.currentGuesses)) {
+            const slotId = this.slotForAuthor(authorId);
+            if (slotId) bySlot[slotId] = guessedPlayerId;
+        }
+        return bySlot;
     }
 
     setSubstitutePlayer(playerId: string): void {

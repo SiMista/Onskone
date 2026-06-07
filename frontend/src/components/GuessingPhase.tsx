@@ -17,8 +17,9 @@ import { useLocale } from '../i18n';
 import { hapticLight, hapticAssigned } from '../utils/haptics';
 
 interface Answer {
-  id: string;
+  id: string; // slot opaque (non corrélé à l'auteur)
   text: string;
+  ownerId?: string; // fourni uniquement pour les NO_RESPONSE (auto-attribution)
 }
 
 // Valeur sentinelle du dropdown pour retirer l'attribution (Dropdown ne renvoie qu'une string).
@@ -103,8 +104,8 @@ const GuessingPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, question,
     const autoGuesses: Record<string, string> = {};
     data.answers.forEach(answer => {
       if (isNoResponse(answer.text)) {
-        // answer.id est le playerId, on l'auto-assigne
-        autoGuesses[answer.id] = answer.id;
+        // answer.id = slot opaque ; ownerId (fourni pour les NO_RESPONSE) = l'auteur réel
+        autoGuesses[answer.id] = answer.ownerId ?? answer.id;
       }
     });
     if (Object.keys(autoGuesses).length > 0) {

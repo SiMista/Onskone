@@ -58,8 +58,12 @@ export interface IRound extends IRoundData {
   getRespondingPlayers(players: IPlayer[]): IPlayer[];
   getGuessTargets(players: IPlayer[]): IPlayer[];
   fillMissingAnswers(players: IPlayer[], reason: string): IPlayer[];
-  prepareGuessing(): { id: string; text: string }[];
-  getOrderedGuessingAnswers(): { id: string; text: string }[];
+  prepareGuessing(): { id: string; text: string; ownerId?: string }[];
+  getOrderedGuessingAnswers(): { id: string; text: string; ownerId?: string }[];
+  authorForSlot(slotId: string): string | undefined;
+  slotForAuthor(authorId: string): string | undefined;
+  getSlotIds(): Set<string>;
+  currentGuessesBySlot(): Record<string, string>;
   setSubstitutePlayer(playerId: string): void;
   setSubstituteAnswer(answer: string): void;
 }
