@@ -70,7 +70,8 @@ const io = new Server(server, {
         callback(null, true);
         return;
       }
-      if (origin.includes('localhost') || origin.includes('127.0.0.1') || origin.match(/^http:\/\/192\.168\.\d+\.\d+:\d+$/)) {
+      // Match EXACT d'origine (pas de sous-chaîne : 'evil-localhost.com' ne doit pas passer).
+      if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) || /^http:\/\/192\.168\.\d{1,3}\.\d{1,3}:\d+$/.test(origin)) {
         callback(null, true);
         return;
       }
@@ -95,7 +96,7 @@ app.use((req, res, next) => {
     if (process.env.NODE_ENV === 'production') {
       allowed = ALLOWED_ORIGINS.includes(origin) || CAPACITOR_ORIGINS.includes(origin);
     } else {
-      allowed = origin.includes('localhost') || origin.includes('127.0.0.1') || /^http:\/\/192\.168\.\d+\.\d+:\d+$/.test(origin);
+      allowed = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) || /^http:\/\/192\.168\.\d{1,3}\.\d{1,3}:\d+$/.test(origin);
     }
     if (allowed) {
       res.setHeader('Access-Control-Allow-Origin', origin);

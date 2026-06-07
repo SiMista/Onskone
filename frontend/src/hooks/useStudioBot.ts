@@ -68,6 +68,9 @@ export function useStudioBot({ game, currentPlayer, players, lobbyCode }: UseStu
   useEffect(() => {
     if (!isStudioFrame) return;
     const onMessage = (e: MessageEvent) => {
+      // Les commandes Studio viennent de la fenêtre parente, MÊME ORIGINE que l'iframe.
+      // Rejeter tout message cross-origin (injection postMessage depuis un autre site).
+      if (e.origin !== window.location.origin) return;
       const data = e?.data;
       if (!data || typeof data !== 'object') return;
 
