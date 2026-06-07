@@ -1,4 +1,5 @@
-import { isNoResponse, getDisplayText } from '../utils/answerHelpers';
+import { isNoResponse } from '@onskone/shared';
+import { getDisplayText } from '../utils/answerHelpers';
 
 /**
  * Affiche un texte de réponse en gérant automatiquement le préfixe __NO_RESPONSE__

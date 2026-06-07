@@ -95,14 +95,3 @@ export function getReconnectToken(lobbyCode: string | undefined): string | undef
     return undefined;
   }
 }
-
-/**
- * Purge le secret de reconnexion d'un lobby (ex : quitter définitivement la partie).
- */
-export function clearReconnectToken(lobbyCode: string | undefined): void {
-  try {
-    if (lobbyCode) studioStorage.removeItem(reconnectTokenKey(lobbyCode));
-  } catch {
-    /* silent */
-  }
-}

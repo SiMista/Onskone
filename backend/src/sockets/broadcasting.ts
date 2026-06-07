@@ -97,7 +97,7 @@ export function buildRevealResults(
  *
  * On construit explicitement un nouvel objet ne contenant QUE les champs publics :
  * renvoyer l'instance brute laisserait fuiter `answers` du round en cours (qui-a-écrit-quoi),
- * `guesses`, `currentGuesses`, `shuffledAnswerIds`, le pool de cartes, etc., même si le
+ * `guesses`, `currentGuesses`, `answerSlots`, le pool de cartes, etc., même si le
  * type compile. La projection garantit l'absence de fuite au runtime.
  */
 export function serializeRound(round: IGame['currentRound'] | null): IRound | null {
@@ -205,7 +205,7 @@ export function endGame(io: IoServer, lobbyCode: string, lobby: Lobby, game: Gam
 export function transitionToGuessing(io: IoServer, lobbyCode: string, lobby: Lobby, currentRound: Round, forced: boolean): void {
     currentRound.nextPhase();
     // prepareGuessing() construit le pool (incl. réponse du substitut), le mélange et
-    // mémorise l'ordre dans shuffledAnswerIds (pour la reconnexion).
+    // mémorise l'ordre dans answerSlots (pour la reconnexion).
     const shuffledAnswers = currentRound.prepareGuessing();
     io.to(lobbyCode).emit('allAnswersSubmitted', {
         phase: currentRound.phase,

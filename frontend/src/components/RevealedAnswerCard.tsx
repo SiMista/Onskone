@@ -2,8 +2,8 @@ import { ReactNode } from 'react';
 import PlayerAnswerCard from './PlayerAnswerCard';
 import RevealAvatar from './RevealAvatar';
 import stickmanShowPhone from '../assets/images/game/stickman-show-phone-cropped.png';
-import { RevealResult } from '@onskone/shared';
-import { isNoResponse, getDisplayText, answerCardBg } from '../utils/answerHelpers';
+import { RevealResult, isNoResponse } from '@onskone/shared';
+import { getDisplayText, answerCardBg } from '../utils/answerHelpers';
 import { useLocale } from '../i18n';
 
 interface RevealedAnswerCardProps {

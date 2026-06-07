@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
-import {IRound, RoundPhase} from '../types/IRound';
-import { IPlayer, GameCard, formatNoResponse, NO_RESPONSE_PREFIX } from '@onskone/shared';
+import { IRound } from '../types/IRound';
+import { IPlayer, GameCard, RoundPhase, formatNoResponse, NO_RESPONSE_PREFIX } from '@onskone/shared';
 import { shuffleArray } from '../utils/helpers.js';
 
 /** Une entrée du pool de devinette telle que diffusée aux clients (auteur anonymisé). */
@@ -36,7 +36,6 @@ export class Round implements IRound {
     similarityCorrections: number[]; // Indices corrigés par similarité
     proposedCards: GameCard[]; // Les 3 cartes proposées au pilier pour la sélection
     shownGameCards: GameCard[]; // Cartes déjà montrées au pilier (pour éviter les doublons)
-    shuffledAnswerIds: string[]; // (legacy) ordre par auteur — conservé pour compat type
     // Pool GUESSING anonymisé : chaque réponse a un slot opaque + son auteur réel.
     // Ordre = ordre mélangé diffusé aux clients. Source de vérité du mapping slot↔auteur.
     answerSlots: { slotId: string; authorId: string; text: string }[];
@@ -65,7 +64,6 @@ export class Round implements IRound {
         this.similarityCorrections = [];
         this.proposedCards = [];
         this.shownGameCards = [];
-        this.shuffledAnswerIds = [];
         this.answerSlots = [];
         this.guessMyAnswerMode = guessMyAnswerMode;
         this.substitutePlayerId = null;
@@ -222,7 +220,6 @@ export class Round implements IRound {
      */
     prepareGuessing(): PublicGuessAnswer[] {
         this.answerSlots = shuffleArray(this.buildAnswerSlots());
-        this.shuffledAnswerIds = this.answerSlots.map(s => s.authorId);
         return this.toPublicPool();
     }
 
