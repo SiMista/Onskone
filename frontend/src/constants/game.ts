@@ -19,7 +19,7 @@ const resolveDebugMode = (): boolean => {
     return false;
   }
 };
-export const DEBUG_MODE = resolveDebugMode();
+const DEBUG_MODE = resolveDebugMode();
 
 const DEBUG_TIMER = 3600; // 1 heure
 
@@ -167,7 +167,7 @@ export const CATEGORY_COLORS: Record<string, string> = {
   FUN: '#f6b31f',         // jaune
   DEEP: '#ea4747',        // violet
 };
-export const DEFAULT_CATEGORY_COLOR = '#9ca3af'; // gris par défaut
+const DEFAULT_CATEGORY_COLOR = '#9ca3af'; // gris par défaut
 
 export const getCategoryColor = (category: string): string =>
   CATEGORY_COLORS[category] ?? DEFAULT_CATEGORY_COLOR;

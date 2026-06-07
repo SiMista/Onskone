@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
-import socket from '../utils/socket';
 import HourglassTimer from './HourglassTimer';
 import Avatar from './Avatar';
-import Button from './Button';
 import QuestionCard from './QuestionCard';
 import QuestionByline from './QuestionByline';
 import PlayerBadge from './PlayerBadge';
+import NotebookInput from './NotebookInput';
 import { GAME_CONFIG, getPhaseDuration } from '../constants/game';
 import { IPlayer, RoundPhase, GameCard, GameMode } from '@onskone/shared';
 import { useStartTimerDelayed } from '../hooks';
+import socket from '../utils/socket';
 import { useLocale } from '../i18n';
 
 const SubstituteAnsweringPhase = ({
@@ -68,8 +68,6 @@ const SubstituteAnsweringPhase = ({
     }
   };
 
-  const subtitle = '';
-  const subtitleBadge = undefined;
   const maxLen = GAME_CONFIG.MAX_ANSWER_LENGTH;
 
   return (
@@ -84,7 +82,7 @@ const SubstituteAnsweringPhase = ({
 
       <QuestionByline player={leader} />
 
-      <QuestionCard question={question} card={card} subtitle={subtitle} subtitleBadge={subtitleBadge} variant="compact" />
+      <QuestionCard question={question} card={card} variant="compact" />
 
       {isSubstitute ? (
         <div className="flex-1 flex flex-col min-h-0">
@@ -100,35 +98,14 @@ const SubstituteAnsweringPhase = ({
               <p className="text-gray-700 italic">{t.phases.substituteAnswering.sentWaiting}</p>
             </div>
           ) : (
-            <>
-              <div className="relative flex-1 flex flex-col min-h-0 rounded-2xl border-[2.5px] border-black stack-shadow bg-cream-player texture-paper overflow-hidden">
-                <textarea
-                  value={answer}
-                  onChange={(e) => setAnswer(e.target.value)}
-                  placeholder={t.phases.substituteAnswering.placeholder(leader?.name ?? t.phases.substituteAnswering.leaderFallback)}
-                  maxLength={maxLen}
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      if (answer.trim()) handleSubmit();
-                    }
-                  }}
-                  enterKeyHint="send"
-                  className="flex-1 w-full bg-transparent resize-none outline-none text-gray-900 text-base md:text-lg leading-relaxed px-4 md:px-5 py-3 md:py-4 pb-10 placeholder:text-gray-400"
-                />
-              </div>
-              <div className="mt-3 md:mt-4 flex items-center justify-center">
-                <Button
-                  variant="success"
-                  size="lg"
-                  onClick={handleSubmit}
-                  disabled={!answer.trim()}
-                >
-                  {t.phases.substituteAnswering.send}
-                </Button>
-              </div>
-            </>
+            <NotebookInput
+              value={answer}
+              onChange={setAnswer}
+              onSubmit={handleSubmit}
+              placeholder={t.phases.substituteAnswering.placeholder(leader?.name ?? t.phases.substituteAnswering.leaderFallback)}
+              maxLength={maxLen}
+              submitLabel={t.phases.substituteAnswering.send}
+            />
           )}
         </div>
       ) : isPilier ? (

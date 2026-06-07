@@ -1,7 +1,5 @@
 import { IRound } from './IRound';
 import {
-  GameStatus,
-  ILobby,
   IPlayer,
   LeaderboardEntry,
   IGame as IGameData,
@@ -19,9 +17,10 @@ export interface IGame extends Omit<IGameData, 'rounds' | 'currentRound'> {
   start(): void;
   end(): void;
   isGameOver(): boolean;
+  getEligibleLeaders(): IPlayer[];
   getLeaderboard(): LeaderboardEntry[];
   getMaxRounds(): number;
 }
 
-// Re-export pour compatibilité
-export { LeaderboardEntry, ILobby, IPlayer, GameStatus, IRound };
+// Re-export pour compatibilité (LeaderboardEntry consommé via ce module par Game.ts)
+export { LeaderboardEntry };

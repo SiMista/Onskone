@@ -13,8 +13,10 @@ import Logo from '../components/Logo';
 import { useToast } from '../components/Toast';
 import { getPhaseDuration } from '../constants/game';
 import { useLeavePrompt, useReconnectOnVisible, useSocketEvent } from '../hooks';
+import { useLobbyExitEvents } from '../hooks/useLobbyExitEvents';
 import { getCurrentPlayerFromStorage } from '../utils/playerHelpers';
 import { IPlayer, IRound, IGame, RoundPhase, GameStatus, RevealResult, GameCard, ReconnectionData } from '@onskone/shared';
+import type { ErrorCode } from '@onskone/shared';
 import { isStudioFrame, studioSlotIndex } from '../utils/studioStorage';
 import { useStudioBot } from '../hooks/useStudioBot';
 import { useLocale } from '../i18n';
@@ -25,7 +27,7 @@ const GamePage: React.FC = () => {
   const showToast = useToast();
   const { t, locale } = useLocale();
 
-  // Redirect if no lobby code
+  // Redirige vers l'accueil si aucun code de lobby
   useEffect(() => {
     if (!lobbyCode) {
       navigate('/');
@@ -49,7 +51,7 @@ const GamePage: React.FC = () => {
   // Confirmation avant de quitter pendant une partie en cours
   useLeavePrompt(game?.status === GameStatus.IN_PROGRESS);
 
-  // Studio: bot automation + state postMessage for pilier highlight in the parent.
+  // Studio : automatisation des bots + postMessage d'état pour surligner le pilier dans le parent.
   useStudioBot({ game, currentPlayer, players, lobbyCode: lobbyCode ?? null });
   useEffect(() => {
     if (!isStudioFrame) return;
@@ -62,7 +64,6 @@ const GamePage: React.FC = () => {
         currentPlayerId: currentPlayer?.id ?? null,
         phase: game?.currentRound?.phase ?? null,
         substitutePlayerId: game?.currentRound?.substitutePlayerId ?? null,
-        playerName: currentPlayer?.name ?? null,
       }, '*');
     } catch { /* silent */ }
   }, [
@@ -70,7 +71,6 @@ const GamePage: React.FC = () => {
     game?.currentRound?.phase,
     game?.currentRound?.substitutePlayerId,
     currentPlayer?.id,
-    currentPlayer?.name,
   ]);
 
   // Fonction stable pour récupérer l'état du jeu : utilisée à la connexion initiale,
@@ -121,12 +121,17 @@ const GamePage: React.FC = () => {
     } : null);
   }, []);
 
-  const handleAllAnswersSubmitted = useCallback((data: { phase: RoundPhase; answersCount: number; forced?: boolean }) => {
+  // Met à jour uniquement la phase du round courant (transitions sans autre payload).
+  const setPhase = useCallback((phase: RoundPhase) => {
     setGame(prev => prev ? {
       ...prev,
-      currentRound: prev.currentRound ? { ...prev.currentRound, phase: data.phase } : null
+      currentRound: prev.currentRound ? { ...prev.currentRound, phase } : null
     } : null);
   }, []);
+
+  const handleAllAnswersSubmitted = useCallback((data: { phase: RoundPhase; answersCount: number; forced?: boolean }) => {
+    setPhase(data.phase);
+  }, [setPhase]);
 
   const handleSubstituteSelected = useCallback((data: { substitutePlayerId: string; phase: RoundPhase; auto?: boolean }) => {
     setGame(prev => prev ? {
@@ -140,19 +145,13 @@ const GamePage: React.FC = () => {
   }, []);
 
   const handleSubstituteAnswerSubmitted = useCallback((data: { phase: RoundPhase; forced?: boolean }) => {
-    setGame(prev => prev ? {
-      ...prev,
-      currentRound: prev.currentRound ? { ...prev.currentRound, phase: data.phase } : null
-    } : null);
-  }, []);
+    setPhase(data.phase);
+  }, [setPhase]);
 
   const handleRevealResults = useCallback((data: { phase: RoundPhase; results: RevealResult[]; scores: Record<string, number> }) => {
-    setGame(prev => prev ? {
-      ...prev,
-      currentRound: prev.currentRound ? { ...prev.currentRound, phase: data.phase } : null
-    } : null);
+    setPhase(data.phase);
     setRevealResults(data.results);
-  }, []);
+  }, [setPhase]);
 
   const handleRoundSkipped = useCallback((data: { skippedLeaderName: string; reason: 'leader_disconnected' }) => {
     showToast(t.game.leaderDisconnected(data.skippedLeaderName), 'warning', 5000);
@@ -199,39 +198,30 @@ const GamePage: React.FC = () => {
     setPlayers(data.players);
   }, []);
 
-  const handleSocketError = useCallback((data: { message: string }) => {
+  // `code` reste informatif ici : toutes les erreurs en jeu sont remontées
+  // via le même toast ; le routing par code spécifique (kick/fermeture) passe par
+  // des events dédiés gérés dans useLobbyExitEvents.
+  const handleSocketError = useCallback((data: { message: string; code?: ErrorCode }) => {
     showToast(data.message, 'error', 5000);
   }, [showToast]);
 
-  // Si le joueur est kické pendant la partie ou si le lobby ferme : toast + retour home.
-  // Sinon il reste bloqué sur l'écran de jeu sans aucun retour visuel.
-  const handleKickedFromLobby = useCallback((data?: { hostName?: string }) => {
-    const message = data?.hostName
-      ? t.lobby.toasts.kicked(data.hostName)
-      : t.lobby.toasts.kickedAnon;
-    showToast(message, 'error', 4500);
-    navigate('/');
-  }, [navigate, showToast, t]);
+  useSocketEvent('gameState', handleGameState);
+  useSocketEvent('gameStarted', handleGameStarted);
+  useSocketEvent('questionSelected', handleQuestionSelected);
+  useSocketEvent('allAnswersSubmitted', handleAllAnswersSubmitted);
+  useSocketEvent('substituteSelected', handleSubstituteSelected);
+  useSocketEvent('substituteAnswerSubmitted', handleSubstituteAnswerSubmitted);
+  useSocketEvent('revealResults', handleRevealResults);
+  useSocketEvent('roundSkipped', handleRoundSkipped);
+  useSocketEvent('roundStarted', handleRoundStarted);
+  useSocketEvent('gameEnded', handleGameEnded);
+  useSocketEvent('updatePlayersList', handleUpdatePlayersList);
+  useSocketEvent('error', handleSocketError);
 
-  const handleLobbyClosed = useCallback(() => {
-    showToast(t.lobby.toasts.closedInactive, 'error', 4500);
-    navigate('/');
-  }, [navigate, showToast, t]);
-
-  useSocketEvent('gameState', handleGameState, [handleGameState]);
-  useSocketEvent('gameStarted', handleGameStarted, [handleGameStarted]);
-  useSocketEvent('questionSelected', handleQuestionSelected, [handleQuestionSelected]);
-  useSocketEvent('allAnswersSubmitted', handleAllAnswersSubmitted, [handleAllAnswersSubmitted]);
-  useSocketEvent('substituteSelected', handleSubstituteSelected, [handleSubstituteSelected]);
-  useSocketEvent('substituteAnswerSubmitted', handleSubstituteAnswerSubmitted, [handleSubstituteAnswerSubmitted]);
-  useSocketEvent('revealResults', handleRevealResults, [handleRevealResults]);
-  useSocketEvent('roundSkipped', handleRoundSkipped, [handleRoundSkipped]);
-  useSocketEvent('roundStarted', handleRoundStarted, [handleRoundStarted]);
-  useSocketEvent('gameEnded', handleGameEnded, [handleGameEnded]);
-  useSocketEvent('updatePlayersList', handleUpdatePlayersList, [handleUpdatePlayersList]);
-  useSocketEvent('error', handleSocketError, [handleSocketError]);
-  useSocketEvent('kickedFromLobby', handleKickedFromLobby, [handleKickedFromLobby]);
-  useSocketEvent('lobbyClosed', handleLobbyClosed, [handleLobbyClosed]);
+  // Si le joueur est kické pendant la partie ou si le lobby ferme : toast + retour
+  // home (sinon il resterait bloqué sur l'écran de jeu). Logique partagée avec
+  // Lobby.
+  useLobbyExitEvents(navigate, t);
 
   const renderPhase = () => {
     if (!game || !game.currentRound || !currentPlayer) {
@@ -336,8 +326,6 @@ const GamePage: React.FC = () => {
             currentPlayerId={currentPlayer.id}
             isGameOver={isGameOver}
             results={revealResults}
-            question={game.currentRound.selectedQuestion || ''}
-            card={game.currentRound.gameCard}
             initialRevealedIndices={reconnectionData?.revealedIndices}
             gameMode={gameMode}
           />

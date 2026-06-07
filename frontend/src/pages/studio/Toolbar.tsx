@@ -1,8 +1,8 @@
 import { GameMode, GAME_CONSTANTS } from '@onskone/shared';
 import { Layout, SlotConfig, SELECT_CLS } from './shared';
 
-// Variants compacts (locaux) pour la Toolbar, sans toucher au CLUSTER/PILL_*
-// utilisés ailleurs.
+// Variants compacts (locaux) pour la Toolbar, plus denses que le PILL_ICON
+// partagé de shared.ts.
 const COMPACT_PILL = 'bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 rounded-md transition-colors';
 const COMPACT_ICON = `${COMPACT_PILL} w-6 h-6 flex items-center justify-center text-white/70 hover:text-white text-[12px] leading-none`;
 const COMPACT_BTN = `${COMPACT_PILL} px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-white/70 hover:text-white`;

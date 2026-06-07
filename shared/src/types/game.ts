@@ -28,34 +28,6 @@ export interface LeaderboardEntry {
 }
 
 /**
- * Données d'un round pour les résultats finaux
- */
-export interface RoundData {
-  /** Numéro du round */
-  roundNumber: number;
-
-  /** Pilier du round */
-  leader: { name: string };
-
-  /** Scores des joueurs pour ce round */
-  scores: Record<string, number>;
-}
-
-/**
- * Statistiques d'un round
- */
-export interface RoundStat {
-  /** Numéro du round */
-  roundNumber: number;
-
-  /** Nom du pilier */
-  leader: string;
-
-  /** Score le plus élevé du round */
-  score: number;
-}
-
-/**
  * Jeu
  */
 export interface IGame {

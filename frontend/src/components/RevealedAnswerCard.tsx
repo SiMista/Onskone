@@ -38,8 +38,6 @@ interface RevealedAnswerCardProps {
  * et la vue pilier "deviné par lui-même" en mode "Devine ma réponse".
  *
  * Layout : header -> row (bulle avatar "Écrit par" + carte avec stickman) -> footer.
- *
- * Évite ~120 lignes de duplication JSX dans RevealPhase.tsx.
  */
 const RevealedAnswerCard = ({
   result,
@@ -116,7 +114,6 @@ const RevealedAnswerCard = ({
                 isNoResponse={isNoResponse(result.answer)}
                 bgClass={answerCardBg(revealed, correct)}
                 className={`transition-colors duration-500 ${cardClassName}`}
-                heading={null}
                 waitingFor={waitingFor}
               />
             </div>

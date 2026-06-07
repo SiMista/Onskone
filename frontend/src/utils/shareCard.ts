@@ -47,6 +47,33 @@ const wrapText = (
 const truncate = (s: string, max: number) =>
   s.length > max ? s.slice(0, max - 1) + '…' : s;
 
+/**
+ * Dessine un texte centré horizontalement avec un letter-spacing manuel
+ * (le canvas n'a pas de `letterSpacing` fiable cross-browser). Le caller a déjà
+ * configuré font / fillStyle / shadow sur le ctx ; on n'écrit que les glyphes.
+ */
+const drawSpacedText = (
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  centerX: number,
+  y: number,
+  spacing: number
+) => {
+  const prevAlign = ctx.textAlign;
+  ctx.textAlign = 'center';
+  const letters = text.split('');
+  const totalW =
+    letters.reduce((s, l) => s + ctx.measureText(l).width, 0) +
+    spacing * (letters.length - 1);
+  let lx = centerX - totalW / 2;
+  for (const l of letters) {
+    const lw = ctx.measureText(l).width;
+    ctx.fillText(l, lx + lw / 2, y);
+    lx += lw + spacing;
+  }
+  ctx.textAlign = prevAlign;
+};
+
 const roundRectPath = (
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -88,6 +115,29 @@ const drawStackShadow = (
     ctx.fill();
     ctx.restore();
   }
+};
+
+// Carte arrondie "façon site" : fond plein + bordure noire épaisse.
+const drawCard = (
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number,
+  fill: string,
+  stroke: string,
+  strokeWidth: number
+) => {
+  ctx.save();
+  ctx.fillStyle = fill;
+  roundRectPath(ctx, x, y, w, h, r);
+  ctx.fill();
+  ctx.strokeStyle = stroke;
+  ctx.lineWidth = strokeWidth;
+  roundRectPath(ctx, x, y, w, h, r);
+  ctx.stroke();
+  ctx.restore();
 };
 
 export async function buildShareCard(opts: ShareCardOptions): Promise<Blob> {
@@ -219,16 +269,7 @@ export async function buildShareCard(opts: ShareCardOptions): Promise<Blob> {
   ctx.shadowBlur = 10;
   ctx.shadowOffsetY = 2;
   const eyebrowY = glassY + 78;
-  const eyebrow = opts.texts.eyebrow;
-  // letter-spacing manuel
-  const letters = eyebrow.split('');
-  const spacing = 6;
-  const totalW = letters.reduce((s, l) => s + ctx.measureText(l).width, 0) + spacing * (letters.length - 1);
-  let lx = W / 2 - totalW / 2;
-  for (const l of letters) {
-    ctx.fillText(l, lx + ctx.measureText(l).width / 2, eyebrowY);
-    lx += ctx.measureText(l).width + spacing;
-  }
+  drawSpacedText(ctx, opts.texts.eyebrow, W / 2, eyebrowY, 6);
   ctx.restore();
 
   // === Anneau + % ===
@@ -380,15 +421,7 @@ export async function buildShareCard(opts: ShareCardOptions): Promise<Blob> {
     ctx.textAlign = 'center';
     ctx.shadowColor = 'rgba(0,0,0,0.4)';
     ctx.shadowBlur = 10;
-    const labelText = opts.texts.top3Label;
-    const lblLetters = labelText.split('');
-    const lblSpacing = 8;
-    const lblTotal = lblLetters.reduce((s, l) => s + ctx.measureText(l).width, 0) + lblSpacing * (lblLetters.length - 1);
-    let lx2 = W / 2 - lblTotal / 2;
-    for (const l of lblLetters) {
-      ctx.fillText(l, lx2 + ctx.measureText(l).width / 2, sectionY);
-      lx2 += ctx.measureText(l).width + lblSpacing;
-    }
+    drawSpacedText(ctx, opts.texts.top3Label, W / 2, sectionY, 8);
     ctx.restore();
 
     const cardX = 80;
@@ -407,17 +440,8 @@ export async function buildShareCard(opts: ShareCardOptions): Promise<Blob> {
       // stack shadow (3 ombres décalées)
       drawStackShadow(ctx, cardX, y, cardW, cardH, cardR);
 
-      // carte blanche
-      ctx.save();
-      ctx.fillStyle = '#ffffff';
-      roundRectPath(ctx, cardX, y, cardW, cardH, cardR);
-      ctx.fill();
-      // bordure noire 2.5px style site
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 4;
-      roundRectPath(ctx, cardX, y, cardW, cardH, cardR);
-      ctx.stroke();
-      ctx.restore();
+      // carte blanche, bordure noire 2.5px style site
+      drawCard(ctx, cardX, y, cardW, cardH, cardR, '#ffffff', '#000000', 4);
 
       // badge rank : avatar entouré d'un ring couleur médaille
       const badgeSize = 88;
@@ -526,13 +550,7 @@ export async function buildShareCard(opts: ShareCardOptions): Promise<Blob> {
   drawStackShadow(ctx, ctaX, ctaY, ctaW, ctaH, ctaR, [4, 8], [1, 0.25]);
 
   // fond crème façon papier
-  ctx.fillStyle = '#fdf6e3';
-  roundRectPath(ctx, ctaX, ctaY, ctaW, ctaH, ctaR);
-  ctx.fill();
-  ctx.strokeStyle = '#111827';
-  ctx.lineWidth = 3;
-  roundRectPath(ctx, ctaX, ctaY, ctaW, ctaH, ctaR);
-  ctx.stroke();
+  drawCard(ctx, ctaX, ctaY, ctaW, ctaH, ctaR, '#fdf6e3', '#111827', 3);
 
   // scotch en haut (petite bande translucide jaune, légèrement inclinée)
   ctx.save();

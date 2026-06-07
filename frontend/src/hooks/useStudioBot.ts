@@ -330,7 +330,12 @@ export function useStudioBot({ game, currentPlayer, players, lobbyCode }: UseStu
       if (firedRef.current.has(key)) return;
       firedRef.current.add(key);
 
-      const totalAnswers = Object.keys(round.answers ?? {}).length;
+      // En mode "Devine ma réponse", le pool de devinette inclut la réponse du substitut
+      // (clé = id du pilier), absente de round.answers : on l'ajoute pour ne pas s'arrêter
+      // une réponse trop tôt (même formule que playerStats.computeTeamPct).
+      const totalAnswers =
+        Object.keys(round.answers ?? {}).length +
+        (round.guessMyAnswerMode && round.substituteAnswer ? 1 : 0);
       const already = new Set(round.revealedIndices ?? []);
       let idx = 0;
 

@@ -1,0 +1,72 @@
+name: CI/CD
+
+# CI sur chaque push/PR ; CD (deploy SSH -> git pull + build sur le VPS) uniquement
+# sur push vers main, et seulement si la CI passe.
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  ci:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build shared
+        run: pnpm build:shared
+
+      - name: Typecheck (shared / backend / frontend)
+        run: |
+          npx tsc -p shared/tsconfig.json --noEmit
+          npx tsc -p backend/tsconfig.json --noEmit
+          npx tsc -p frontend/tsconfig.json --noEmit
+
+      - name: Tests backend
+        run: pnpm --filter backend test
+
+      - name: Tests frontend
+        run: pnpm --filter frontend test
+
+      - name: Build frontend
+        run: pnpm build:frontend
+
+  deploy:
+    name: Deploy to VPS
+    needs: ci
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    # Optionnel: créer un environment "production" dans GitHub pour exiger une
+    # approbation manuelle avant chaque déploiement.
+    # environment: production
+    steps:
+      - name: Deploy over SSH (git pull + build + reload sur le serveur)
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # Décommenter si la clé a une passphrase :
+          # passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd "${APP_DIR:-$HOME/Onskone}"
+            git fetch --depth 1 origin main
+            git reset --hard origin/main
+            bash scripts/deploy.sh

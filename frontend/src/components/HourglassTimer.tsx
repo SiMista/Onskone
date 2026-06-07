@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useSyncedTimer } from '../hooks/useSyncedTimer';
+import { useRafProgress } from '../hooks/useRafProgress';
 import { RoundPhase } from '@onskone/shared';
 
 interface HourglassTimerProps {
@@ -23,31 +24,9 @@ const SIZE_CLASSES: Record<'sm' | 'md' | 'lg', { svg: string; text: string }> = 
 const HourglassTimer = ({ duration, onExpire, phase, lobbyCode, size = 'md', hidden = false }: HourglassTimerProps) => {
   const { timeLeft, endTime, serverDuration } = useSyncedTimer(duration, { onExpire, phase, lobbyCode });
 
-  const [progress, setProgress] = useState(100);
-  const [remainingSec, setRemainingSec] = useState(duration);
-  const rafRef = useRef<number | null>(null);
-
   // Durée de référence pour le calcul de progress : priorité au serveur (vraie durée démarrée)
   const effectiveDuration = serverDuration ?? duration;
-
-  useEffect(() => {
-    const tick = () => {
-      let remainingMs: number;
-      if (endTime === null) {
-        remainingMs = timeLeft * 1000;
-      } else {
-        remainingMs = Math.max(0, endTime - Date.now());
-      }
-      const p = Math.max(0, Math.min(100, (remainingMs / (effectiveDuration * 1000)) * 100));
-      setProgress(p);
-      setRemainingSec(Math.ceil(remainingMs / 1000));
-      rafRef.current = requestAnimationFrame(tick);
-    };
-    rafRef.current = requestAnimationFrame(tick);
-    return () => {
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-    };
-  }, [endTime, effectiveDuration, timeLeft]);
+  const { progress, remainingSec } = useRafProgress({ duration: effectiveDuration, endTime, timeLeft });
 
   const sizeClass = SIZE_CLASSES[size];
   const isCritical = progress <= 15;

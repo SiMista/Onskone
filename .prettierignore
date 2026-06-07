@@ -1,0 +1,11 @@
+node_modules
+dist
+build
+**/dist
+**/build
+pnpm-lock.yaml
+frontend/android
+backend/data
+*.db
+backend/src/data/questions_fr.json
+backend/src/data/questions_en.json
