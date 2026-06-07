@@ -1,16 +1,16 @@
 import { useEffect, useState, useRef } from 'react';
 import { LuCheck, LuPencil } from 'react-icons/lu';
-import socket from '../utils/socket';
 import HourglassTimer from './HourglassTimer';
 import Avatar from './Avatar';
 import QuestionCard from './QuestionCard';
 import QuestionByline from './QuestionByline';
 import PlayerBadge from './PlayerBadge';
-import Button from './Button';
+import NotebookInput from './NotebookInput';
 import { GAME_CONFIG, getPhaseDuration } from '../constants/game';
 import { IPlayer, RoundPhase, GameCard } from '@onskone/shared';
 import { playSound } from '../utils/sounds';
-import { useStartTimerDelayed } from '../hooks';
+import { useStartTimerDelayed, useSocketEvent } from '../hooks';
+import socket from '../utils/socket';
 import { getQuestionSubtitle } from '../utils/questionHelpers';
 import { useLocale } from '../i18n';
 
@@ -84,24 +84,16 @@ const AnswerPhase = ({
   const expectedAnswers = respondingPlayers.filter(p => p.isActive).length;
   const answersCount = answeredPlayerIds.size;
 
-  useEffect(() => {
-    const onPlayerAnswered = (data: { playerId: string; totalAnswers: number; expectedAnswers: number }) => {
-      setAnsweredPlayerIds(prev => new Set([...prev, data.playerId]));
-    };
-    const onPlayerUnanswered = (data: { playerId: string }) => {
-      setAnsweredPlayerIds(prev => {
-        const next = new Set(prev);
-        next.delete(data.playerId);
-        return next;
-      });
-    };
-    socket.on('playerAnswered', onPlayerAnswered);
-    socket.on('playerUnanswered', onPlayerUnanswered);
-    return () => {
-      socket.off('playerAnswered', onPlayerAnswered);
-      socket.off('playerUnanswered', onPlayerUnanswered);
-    };
-  }, []);
+  useSocketEvent('playerAnswered', (data) => {
+    setAnsweredPlayerIds(prev => new Set([...prev, data.playerId]));
+  });
+  useSocketEvent('playerUnanswered', (data) => {
+    setAnsweredPlayerIds(prev => {
+      const next = new Set(prev);
+      next.delete(data.playerId);
+      return next;
+    });
+  });
 
   const handleSubmit = () => {
     if (!answer.trim() || submitted || isLeader || stage !== 'idle') return;
@@ -171,8 +163,15 @@ const AnswerPhase = ({
         />
 
         <div className="flex flex-col items-center">
-          <div className="relative w-24 h-24 md:w-28 md:h-28">
-            <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+          <div
+            className="relative w-24 h-24 md:w-28 md:h-28"
+            role="progressbar"
+            aria-valuenow={answersCount}
+            aria-valuemin={0}
+            aria-valuemax={expectedAnswers}
+            aria-label={t.phases.answering.answersReceived}
+          >
+            <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100" aria-hidden>
               <circle cx="50" cy="50" r="42" fill="none" stroke="#e5e7eb" strokeWidth="8" />
               <circle
                 cx="50" cy="50" r="42"
@@ -256,52 +255,17 @@ const AnswerPhase = ({
       </p>
 
       {showNotebook ? (
-        <div className="flex-1 flex flex-col min-h-0">
-          {/* Zone saisie : carte crème bordée façon lobby */}
-          <div
-            className={`
-              relative flex-1 flex flex-col min-h-0 rounded-2xl border-[2.5px] border-black stack-shadow
-              bg-cream-player texture-paper overflow-hidden
-              ${stage === 'shaking' ? 'animate-paper-shake animate-flash-warm' : ''}
-            `}
-            style={{ transformOrigin: 'center bottom' }}
-          >
-            <textarea
-              value={answer}
-              onChange={(e) => setAnswer(e.target.value)}
-              placeholder={t.phases.answering.placeholder}
-              maxLength={maxLen}
-              disabled={stage !== 'idle'}
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  if (answer.trim()) handleSubmit();
-                }
-              }}
-              enterKeyHint="send"
-              className="
-                flex-1 w-full bg-transparent resize-none outline-none
-                text-gray-900 text-base md:text-lg leading-relaxed
-                px-4 md:px-5 py-3 md:py-4 pb-10
-                placeholder:text-gray-400
-              "
-            />
-
-          </div>
-
-          {/* Bouton envoi */}
-          <div className="mt-3 md:mt-4 flex items-center justify-center">
-            <Button
-              variant="success"
-              size="lg"
-              onClick={handleSubmit}
-              disabled={!answer.trim() || stage !== 'idle'}
-            >
-              {t.phases.answering.send}
-            </Button>
-          </div>
-        </div>
+        <NotebookInput
+          value={answer}
+          onChange={setAnswer}
+          onSubmit={handleSubmit}
+          placeholder={t.phases.answering.placeholder}
+          maxLength={maxLen}
+          submitLabel={t.phases.answering.send}
+          disabled={stage !== 'idle'}
+          submitDisabled={!answer.trim() || stage !== 'idle'}
+          shaking={stage === 'shaking'}
+        />
       ) : (
         /* État « envoyé » - récap grisé + attente */
         <div className="flex-1 flex flex-col items-center justify-center gap-3 md:gap-4 animate-phase-enter">

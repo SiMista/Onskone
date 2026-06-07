@@ -6,23 +6,25 @@ import Logo from '../components/Logo';
 import Footer from '../components/Footer';
 import ConfirmModal from '../components/ConfirmModal';
 import InfoModal from '../components/InfoModal';
-import Checkbox from '../components/Checkbox';
 import HowToPlayCarousel from '../components/HowToPlayCarousel';
 import HowToPlayButton from '../components/HowToPlayButton';
 import { Icon } from '@iconify/react';
-import { Capacitor } from '@capacitor/core';
-import { Share } from '@capacitor/share';
-import PlayerCard from '../components/PlayerCard';
 import ThemePickerModal from '../components/ThemePickerModal';
 import BackButton from '../components/BackButton';
 import ScrollFade from '../components/ScrollFade';
-import GameSpeedSlider from '../components/GameSpeedSlider';
-import { IPlayer, DecksCatalog, DecksCatalogWithMeta, SelectedDecks, GAME_CONSTANTS } from '@onskone/shared';
-import type { ServerToClientEvents } from '@onskone/shared';
+import LobbyTabs, { type LobbyTabId } from '../components/lobby/LobbyTabs';
+import LobbyPlayersGrid from '../components/lobby/LobbyPlayersGrid';
+import LobbySettingsPanel from '../components/lobby/LobbySettingsPanel';
+import { IPlayer, ERROR_CODES } from '@onskone/shared';
+import type { ErrorCode } from '@onskone/shared';
 import { useSocketEvent, useLeavePrompt, useReconnectOnVisible } from '../hooks';
+import { useLobbyIdentity } from '../hooks/useLobbyIdentity';
+import { useShareInvite } from '../hooks/useShareInvite';
+import { useLobbyState } from '../hooks/useLobbyState';
+import { useLobbyExitEvents } from '../hooks/useLobbyExitEvents';
 import { useToast } from '../components/Toast';
 import { useLocale } from '../i18n';
-import { GAME_CONFIG, AVATARS, getSoftCategoryColor, estimateGameMinutes } from '../constants/game';
+import { GAME_CONFIG } from '../constants/game';
 import { STICKER_FILTER } from '../constants/icons';
 import { studioStorage, isStudioFrame } from '../utils/studioStorage';
 
@@ -35,7 +37,7 @@ const Lobby = () => {
     const showToast = useToast();
     const { t } = useLocale();
 
-    // Redirect if no lobby code
+    // Redirige vers l'accueil si aucun code de lobby
     useEffect(() => {
         if (!lobbyCode) {
             navigate('/');
@@ -47,12 +49,8 @@ const Lobby = () => {
     const [showFewPlayersModal, setShowFewPlayersModal] = useState(false);
     const [showGameAlreadyStarted, setShowGameAlreadyStarted] = useState(false);
     const [isHowToPlayOpen, setIsHowToPlayOpen] = useState(false);
-    const [fallbackLink, setFallbackLink] = useState<string | null>(null);
-    const [decksCatalog, setDecksCatalog] = useState<DecksCatalog>({});
-    const [decksCatalogMeta, setDecksCatalogMeta] = useState<DecksCatalogWithMeta>({});
-    const [selectedDecks, setSelectedDecks] = useState<SelectedDecks>({});
     const [isThemePickerOpen, setIsThemePickerOpen] = useState(false);
-    const [lobbyTab, setLobbyTab] = useState<'settings' | 'players'>('settings');
+    const [lobbyTab, setLobbyTab] = useState<LobbyTabId>('settings');
     const lobbyTabScrollRef = useRef<HTMLDivElement | null>(null);
     // Le scroll-container est partagé entre les 2 tabs (grid stacking).
     // Reset à 0 au switch pour éviter que la position scrollée des settings
@@ -61,110 +59,28 @@ const Lobby = () => {
         const el = lobbyTabScrollRef.current;
         if (el) el.scrollTop = 0;
     }, [lobbyTab]);
-    const [guessMyAnswerMode, setGuessMyAnswerMode] = useState<boolean>(false);
-    const [timeMultiplier, setTimeMultiplier] = useState<number>(GAME_CONSTANTS.TIME_MULTIPLIER_DEFAULT);
     const initialPlayerIdsRef = useRef<Set<string> | null>(null);
     const prevHostIdRef = useRef<string | null>(null);
-    const [playerName] = useState<string>(() => {
-        const urlPlayerName = searchParams.get('playerName');
-        if (urlPlayerName) {
-            studioStorage.setItem(`playerName_${lobbyCode}`, urlPlayerName);
-            return urlPlayerName;
-        }
-        const savedPlayerName = studioStorage.getItem(`playerName_${lobbyCode}`);
-        if (savedPlayerName) {
-            return savedPlayerName;
-        }
-        const randomName = `Joueur${Math.floor(Math.random() * 1000)}`;
-        studioStorage.setItem(`playerName_${lobbyCode}`, randomName);
-        return randomName;
-    });
 
-    const [avatarId] = useState<number>(() => {
-        const urlAvatarId = searchParams.get('avatarId');
-        if (urlAvatarId !== null) {
-            const id = parseInt(urlAvatarId, 10);
-            if (!isNaN(id)) {
-                studioStorage.setItem(`avatarId_${lobbyCode}`, String(id));
-                return id;
-            }
-        }
-        const savedAvatarId = studioStorage.getItem(`avatarId_${lobbyCode}`);
-        if (savedAvatarId !== null) {
-            const id = parseInt(savedAvatarId, 10);
-            if (!isNaN(id)) return id;
-        }
-        return Math.floor(Math.random() * AVATARS.length);
-    });
+    const { playerName, avatarId } = useLobbyIdentity(lobbyCode, searchParams);
+
+    // Réglages du lobby (thèmes, mode, rythme) + leur synchro socket.
+    const {
+        decksCatalog,
+        decksCatalogMeta,
+        selectedDecks,
+        guessMyAnswerMode,
+        timeMultiplier,
+        onGuessMyAnswerModeChange,
+        onTimeMultiplierChange,
+        onSelectedDecksChange,
+    } = useLobbyState(lobbyCode);
+
+    // Partage de l'invitation (cascade native/Web Share/copie + modale de repli).
+    const { shareInvite, fallbackLink, clearFallbackLink } = useShareInvite(lobbyCode, t);
 
     // Avertissement avant de quitter la page (le serveur gère la déconnexion automatiquement via socket.disconnect)
     useLeavePrompt(!!currentPlayer);
-
-    const shareInvite = useCallback(async () => {
-        const link = `${window.location.origin}/?lobbyCode=${lobbyCode!}`;
-        const message = t.lobby.shareInvite.message;
-        // Texte copié dans le presse-papier : message + lien (l'API share gère le lien à part)
-        const copyText = `${message} ${link}`;
-
-        const showCopied = () => {
-            showToast(t.lobby.toasts.linkCopied, 'success');
-        };
-
-        // Fallback pour copier sans l'API Clipboard (HTTP non-localhost)
-        const fallbackCopy = (text: string) => {
-            const textarea = document.createElement('textarea');
-            textarea.value = text;
-            textarea.style.position = 'fixed';
-            textarea.style.left = '-9999px';
-            document.body.appendChild(textarea);
-            textarea.select();
-            try {
-                document.execCommand('copy');
-                showCopied();
-            } catch (err) {
-                console.error('Fallback copy failed:', err);
-                setFallbackLink(text);
-            }
-            document.body.removeChild(textarea);
-        };
-
-        const copyToClipboard = (text: string) => {
-            if (navigator.clipboard?.writeText) {
-                navigator.clipboard.writeText(text)
-                    .then(() => showCopied())
-                    .catch(() => fallbackCopy(text));
-            } else {
-                fallbackCopy(text);
-            }
-        };
-
-        // 1. App native (Capacitor) : plugin Share = intent de partage Android/iOS fiable,
-        // indépendant du secure context (marche même en live-reload http).
-        if (Capacitor.isNativePlatform()) {
-            try {
-                await Share.share({ title: t.lobby.shareInvite.title, text: message, url: link });
-            } catch {
-                // Annulation ou indispo -> copie
-                copyToClipboard(copyText);
-            }
-            return;
-        }
-
-        // 2. Web/PWA : Web Share API (mobile + Chrome/Edge desktop), exige un secure context (HTTPS)
-        if (navigator.share) {
-            try {
-                await navigator.share({ title: t.lobby.shareInvite.title, text: message, url: link });
-                return; // succès : la feuille native sert de feedback
-            } catch (err) {
-                // L'utilisateur a fermé/annulé la feuille -> ne rien faire
-                if ((err as Error)?.name === 'AbortError') return;
-                // Autre erreur (non supporté à l'exécution) -> on retombe sur la copie
-            }
-        }
-
-        // 3. Fallback : copie du message + lien dans le presse-papier
-        copyToClipboard(copyText);
-    }, [lobbyCode, showToast, t]);
 
     const leaveLobby = useCallback(() => {
         const isAlone = players.filter(p => p.isActive).length <= 1;
@@ -217,8 +133,8 @@ const Lobby = () => {
 
     useReconnectOnVisible(joinLobbyFn);
 
-    // Studio: if this iframe is the host bot AND we've reached the recommended
-    // player count, auto-start the game. Re-armed once per lobby visit.
+    // Studio : si cette iframe est le bot hôte ET qu'on a atteint le nombre de
+    // joueurs recommandé, démarre la partie automatiquement. Réarmé une fois par visite du lobby.
     const studioAutoStartedRef = useRef(false);
     useEffect(() => {
         if (!isStudioFrame) return;
@@ -229,8 +145,8 @@ const Lobby = () => {
         if (!currentPlayer?.isHost) return;
         const activeCount = players.filter(p => p.isActive).length;
         if (activeCount < GAME_CONFIG.MIN_PLAYERS) return;
-        // Need a theme selected; let the server default kick in via decksCatalog
-        // - if nothing is preselected, pick the first available theme.
+        // Il faut un thème sélectionné : si rien n'est présélectionné, on prend
+        // le premier thème disponible du catalogue.
         if (Object.values(selectedDecks).reduce((acc, arr) => acc + arr.length, 0) === 0) {
             const firstCat = Object.keys(decksCatalog)[0];
             const firstCode = firstCat ? decksCatalog[firstCat]?.[0] : undefined;
@@ -239,15 +155,15 @@ const Lobby = () => {
                     lobbyCode: lobbyCode!,
                     selected: { [firstCat]: [firstCode] },
                 });
-                return; // wait for state update, will retry next effect run
+                return; // attend la maj d'état, réessaiera au prochain run de l'effet
             }
             return;
         }
         studioAutoStartedRef.current = true;
-        const t = setTimeout(() => {
+        const timer = setTimeout(() => {
             socket.emit('startGame', { lobbyCode: lobbyCode! });
         }, 1200);
-        return () => clearTimeout(t);
+        return () => clearTimeout(timer);
     }, [currentPlayer?.isHost, players, selectedDecks, decksCatalog, lobbyCode]);
 
     const handleUpdatePlayersList = useCallback((data: { players: IPlayer[] }) => {
@@ -278,23 +194,17 @@ const Lobby = () => {
         setCurrentPlayer(data.player);
     }, []);
 
-    const handleKickedFromLobby = useCallback((data?: { hostName?: string }) => {
-        const message = data?.hostName
-            ? t.lobby.toasts.kicked(data.hostName)
-            : t.lobby.toasts.kickedAnon;
-        showToast(message, 'error', 4500);
-        navigate('/');
-    }, [navigate, showToast, t]);
-
-    const handleError = useCallback((data: { message: string }) => {
-        switch (data.message) {
-            case 'Lobby not found':
-            case 'Player not found':
-                navigate('/');
-                break;
-            default:
-                console.error('Error:', data.message);
+    // Routing d'erreur sur le `code` stable du contrat ; fallback sur le
+    // texte localisé pour les serveurs qui n'émettent pas encore de code.
+    const handleError = useCallback((data: { message: string; code?: ErrorCode }) => {
+        const isNotFound = data.code
+            ? data.code === ERROR_CODES.NOT_FOUND
+            : data.message === 'Lobby not found' || data.message === 'Player not found';
+        if (isNotFound) {
+            navigate('/');
+            return;
         }
+        console.error('Error:', data.message);
     }, [navigate]);
 
     const handleGameStarted = useCallback(() => {
@@ -308,82 +218,15 @@ const Lobby = () => {
         setShowGameAlreadyStarted(true);
     }, []);
 
-    const handleLobbyClosed = useCallback(() => {
-        showToast(t.lobby.toasts.closedInactive, 'error', 4500);
-        navigate('/');
-    }, [navigate, showToast, t]);
+    useSocketEvent('updatePlayersList', handleUpdatePlayersList);
+    useSocketEvent('joinedLobby', handleJoinedLobby);
+    useSocketEvent('error', handleError);
+    useSocketEvent('gameStarted', handleGameStarted);
+    useSocketEvent('gameAlreadyStarted', handleGameAlreadyStarted);
 
-    // Payloads typés via le contrat serveur (ServerToClientEvents) plutôt qu'inline :
-    // ajouter/retirer un champ côté serveur force la mise à jour ici (sinon erreur de typecheck).
-    const handleLobbyDecksState = useCallback((data: Parameters<ServerToClientEvents['lobbyDecksState']>[0]) => {
-        setDecksCatalog(data.catalog);
-        setDecksCatalogMeta(data.catalogWithMeta);
-        setSelectedDecks(data.selected);
-        setGuessMyAnswerMode(data.guessMyAnswerMode);
-        setTimeMultiplier(data.timeMultiplier);
-    }, []);
-
-    const handleGuessMyAnswerModeUpdated = useCallback((data: Parameters<ServerToClientEvents['guessMyAnswerModeUpdated']>[0]) => {
-        setGuessMyAnswerMode(data.guessMyAnswerMode);
-    }, []);
-
-    const handleTimeMultiplierUpdated = useCallback((data: Parameters<ServerToClientEvents['timeMultiplierUpdated']>[0]) => {
-        setTimeMultiplier(data.timeMultiplier);
-    }, []);
-
-    const settingsEmitTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
-
-    const queueSettingEmit = useCallback((key: string, fn: () => void, delay = 150) => {
-        const timers = settingsEmitTimers.current;
-        if (timers[key]) clearTimeout(timers[key]);
-        timers[key] = setTimeout(() => {
-            delete timers[key];
-            fn();
-        }, delay);
-    }, []);
-
-    useEffect(() => {
-        return () => {
-            const timers = settingsEmitTimers.current;
-            Object.values(timers).forEach(clearTimeout);
-            settingsEmitTimers.current = {};
-        };
-    }, []);
-
-    const handleGuessMyAnswerModeChange = useCallback((next: boolean) => {
-        setGuessMyAnswerMode(next);
-        if (!lobbyCode) return;
-        queueSettingEmit('guessMyAnswerMode', () => {
-            socket.emit('updateGuessMyAnswerMode', { lobbyCode, guessMyAnswerMode: next });
-        });
-    }, [lobbyCode, queueSettingEmit]);
-
-    const handleTimeMultiplierChange = useCallback((next: number) => {
-        setTimeMultiplier(next);
-        if (!lobbyCode) return;
-        queueSettingEmit('timeMultiplier', () => {
-            socket.emit('updateTimeMultiplier', { lobbyCode, timeMultiplier: next });
-        });
-    }, [lobbyCode, queueSettingEmit]);
-
-    const handleSelectedDecksChange = useCallback((next: SelectedDecks) => {
-        setSelectedDecks(next);
-        if (!lobbyCode) return;
-        queueSettingEmit('selectedDecks', () => {
-            socket.emit('updateSelectedDecks', { lobbyCode, selected: next });
-        });
-    }, [lobbyCode, queueSettingEmit]);
-
-    useSocketEvent('updatePlayersList', handleUpdatePlayersList, [handleUpdatePlayersList]);
-    useSocketEvent('joinedLobby', handleJoinedLobby, [handleJoinedLobby]);
-    useSocketEvent('kickedFromLobby', handleKickedFromLobby, [handleKickedFromLobby]);
-    useSocketEvent('error', handleError, [handleError]);
-    useSocketEvent('gameStarted', handleGameStarted, [handleGameStarted]);
-    useSocketEvent('gameAlreadyStarted', handleGameAlreadyStarted, [handleGameAlreadyStarted]);
-    useSocketEvent('lobbyClosed', handleLobbyClosed, [handleLobbyClosed]);
-    useSocketEvent('lobbyDecksState', handleLobbyDecksState, [handleLobbyDecksState]);
-    useSocketEvent('guessMyAnswerModeUpdated', handleGuessMyAnswerModeUpdated, [handleGuessMyAnswerModeUpdated]);
-    useSocketEvent('timeMultiplierUpdated', handleTimeMultiplierUpdated, [handleTimeMultiplierUpdated]);
+    // Éjection vers l'accueil (kick par l'hôte / fermeture du salon) — logique
+    // partagée avec Game.
+    useLobbyExitEvents(navigate, t);
 
     const activePlayers = players.filter(p => p.isActive);
     const hostName = players.find(p => p.isHost)?.name ?? t.lobby.hostFallback;
@@ -392,159 +235,7 @@ const Lobby = () => {
     const hasThemeSelected = totalThemesSelected > 0;
     const decksLoading = Object.keys(decksCatalog).length === 0;
     const canStartGame = enoughPlayers && hasThemeSelected;
-
-    // Liste des joueurs - mobile : 3/ligne, desktop : 4/ligne (même format carré)
-    const playersListMobile = (
-        <div className="flex flex-col gap-2">
-            <div className="flex items-baseline gap-2">
-                <p className="m-0 font-display font-bold text-sm text-gray-800">{t.lobby.inTheRoom}</p>
-                <p className="m-0 text-xs text-gray-400">{t.lobby.connectedCount(activePlayers.length)}</p>
-            </div>
-            <ul className="list-none w-full m-0 p-0 grid grid-cols-3 md:grid-cols-4 gap-2">
-                {players.map((player, index) => (
-                    <li key={player.id} className={`min-w-0 ${initialPlayerIdsRef.current?.has(player.id) ? '' : 'animate-player-pop'}`} style={initialPlayerIdsRef.current?.has(player.id) ? undefined : { animationDelay: `${Math.min(index, 6) * 50}ms` }}>
-                        <PlayerCard
-                            id={player.id}
-                            name={player.name}
-                            avatarId={player.avatarId}
-                            isHost={player.isHost}
-                            isCurrentPlayer={currentPlayer?.id === player.id}
-                            currentPlayerIsHost={!!currentPlayer?.isHost}
-                            isActive={player.isActive}
-                            isFirstPlayer={index < 3}
-                            variant="square"
-                            onKick={kickPlayer}
-                            onPromote={promotePlayer}
-                        />
-                    </li>
-                ))}
-                {players.length < GAME_CONFIG.MAX_PLAYERS && (
-                    <li className="min-w-0">
-                        <div className="relative aspect-square flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-[10px] w-full border-2 border-dashed border-gray-300 bg-gray-50/50">
-                            <div className="w-16 h-16 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-300 text-xl">?</div>
-                            <span className="text-xs text-gray-400 italic text-center truncate w-full px-1">...</span>
-                        </div>
-                    </li>
-                )}
-            </ul>
-        </div>
-    );
-
     const isHost = !!currentPlayer?.isHost;
-
-    const settingsPanelEl = (
-        <div className="flex flex-col gap-4">
-            {!isHost && (
-                <div className="flex justify-center pt-4 pb-1">
-                    <div className="relative rotate-[-1.2deg] hover:rotate-0 transition-transform duration-300 ease-out">
-                        <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-cream-kraft border-[2.5px] border-black rounded-lg stack-shadow-sm texture-paper">
-                            <span className="font-display text-[13px] tracking-tight text-black leading-snug whitespace-nowrap">
-                                {t.lobby.settingsHostOnlyPrefix}{' '}
-                                <span className="relative inline-block font-bold uppercase bg-black text-warning-500 px-1.5 py-0.5 rounded-md">
-                                    <Icon
-                                        icon="fluent-emoji-flat:crown"
-                                        width={20}
-                                        height={20}
-                                        aria-hidden
-                                        className="absolute -top-3.5 left-1/2 -translate-x-1/2"
-                                        style={{ filter: STICKER_FILTER }}
-                                    />
-                                    {hostName && hostName.length > 10 ? `${hostName.slice(0, 10)}…` : hostName}
-                                </span>{' '}
-                                {t.lobby.settingsHostOnlySuffix}
-                            </span>
-                        </div>
-                        {/* ruban adhésif par dessus */}
-                        <span
-                            aria-hidden
-                            className="absolute -top-2 left-1/2 -translate-x-1/2 z-10 w-12 h-3.5 bg-warning-500/80 border-[1.5px] border-black/60 rounded-[2px] rotate-[-3deg] [box-shadow:1px_1px_0_0_rgba(0,0,0,0.3)]"
-                        />
-                    </div>
-                </div>
-            )}
-            {/* Mode "Devine ma réponse" - décoché = mode Classique */}
-            <Checkbox
-                checked={guessMyAnswerMode}
-                onChange={handleGuessMyAnswerModeChange}
-                disabled={!isHost}
-                label={t.lobby.guessMyAnswer.label}
-                description={t.lobby.guessMyAnswer.description}
-            />
-
-            <span aria-hidden className="w-full border-t-[1.5px] border-dashed border-black/15" />
-
-            {/* Rythme de jeu : slider 3 niveaux, emoji carousel, section inline. */}
-            <GameSpeedSlider
-                value={timeMultiplier}
-                onChange={handleTimeMultiplierChange}
-                disabled={!isHost}
-                estimateFor={(m) => estimateGameMinutes(
-                    Math.max(GAME_CONFIG.MIN_PLAYERS, activePlayers.length),
-                    m,
-                    guessMyAnswerMode,
-                )}
-                t={t}
-            />
-
-            <span aria-hidden className="w-full border-t-[1.5px] border-dashed border-black/15" />
-
-            {/* Section Thèmes - titre + bloc blanc (compteur top-left, Modifier top-right, chips). */}
-            <div className="flex flex-col gap-1.5">
-                <span className="font-display text-base font-bold uppercase tracking-tight text-black px-1">
-                    {t.lobby.themes}
-                </span>
-                <button
-                    type="button"
-                    onClick={() => setIsThemePickerOpen(true)}
-                    aria-label={isHost ? t.themePicker.modify : t.themePicker.view}
-                    className="group w-full flex flex-col gap-2 p-3 rounded-2xl border-[2.5px] border-black bg-white stack-shadow-sm text-left cursor-pointer transition-all duration-200 hover:-translate-y-0.5 active:translate-y-[1px] active:[box-shadow:none!important]"
-                >
-                    {/* En-tête du bloc : compteur top-left, Modifier/Voir top-right */}
-                    <span className="flex items-center gap-2 w-full">
-                        <span className="font-display text-xs font-bold tabular-nums text-black/60 whitespace-nowrap">
-                            {t.themePicker.counter(totalThemesSelected)}
-                        </span>
-                        <span className="flex-1" />
-                        <span className="shrink-0 inline-flex items-center gap-0.5 font-display text-xs font-bold uppercase tracking-tight text-black/75 group-hover:text-black transition-colors">
-                            {isHost ? t.themePicker.modify : t.themePicker.view}
-                            <Icon icon="lucide:chevron-right" width={16} height={16} aria-hidden className="transition-transform duration-200 group-hover:translate-x-0.5" />
-                        </span>
-                    </span>
-
-                    {/* Séparateur pointillé */}
-                    <span aria-hidden className="w-full border-t-[1.5px] border-dashed border-black/15" />
-
-                    {/* Chips des thèmes sélectionnés */}
-                    <span className="flex flex-wrap items-center gap-1.5 min-h-[1.75rem]">
-                        {totalThemesSelected === 0 ? (
-                            <span className="font-display text-sm italic text-gray-500 px-1">{t.themePicker.emptyState}</span>
-                        ) : (
-                            Object.entries(decksCatalogMeta).flatMap(([cat, infos]) =>
-                                infos
-                                    .filter(info => selectedDecks[cat]?.includes(info.code))
-                                    .map(info => (
-                                        <span
-                                            key={info.code}
-                                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border-[2px] border-black font-display text-xs font-bold tracking-tight text-black"
-                                            style={{ backgroundColor: getSoftCategoryColor(cat) }}
-                                        >
-                                            <Icon
-                                                icon={info.emoji}
-                                                width={14}
-                                                height={14}
-                                                aria-hidden
-                                                style={{ filter: STICKER_FILTER }}
-                                            />
-                                            <span>{info.name}</span>
-                                        </span>
-                                    ))
-                            )
-                        )}
-                    </span>
-                </button>
-            </div>
-        </div>
-    );
 
     return (
         <div className="relative h-full flex flex-col overflow-hidden animate-phase-enter">
@@ -568,68 +259,12 @@ const Lobby = () => {
                         </div>
 
                         {/* Tabs : intercalaires cartonnés en éventail, coins asymétriques */}
-                        <div className="shrink-0 flex gap-1 md:gap-1.5 -mb-[2.5px] relative z-10 px-1">
-                            {([
-                                {
-                                    id: 'settings' as const,
-                                    color: 'var(--color-warning-500)',
-                                    label: t.lobby.tabs.settings,
-                                    badge: null,
-                                    outer: 'left' as const,
-                                },
-                                {
-                                    id: 'players' as const,
-                                    color: 'var(--color-brand-500)',
-                                    label: t.lobby.tabs.players,
-                                    badge: `${activePlayers.length}/${GAME_CONFIG.MAX_PLAYERS}`,
-                                    outer: 'right' as const,
-                                },
-                            ]).map(tab => {
-                                const active = lobbyTab === tab.id;
-                                // Coin "extérieur" généreusement arrondi (bord du panel),
-                                // coin "intérieur" (entre les deux tabs) légèrement biseauté.
-                                const radiusClasses = tab.outer === 'left'
-                                    ? 'rounded-tl-[22px] rounded-tr-md'
-                                    : 'rounded-tr-[22px] rounded-tl-md';
-                                return (
-                                    <button
-                                        key={tab.id}
-                                        type="button"
-                                        role="tab"
-                                        aria-selected={active}
-                                        onClick={() => setLobbyTab(tab.id)}
-                                        className={`flex-1 relative inline-flex items-center justify-center gap-2 px-3 md:px-4 pt-2 md:pt-2.5 pb-3 md:pb-3.5 bg-white ${radiusClasses} border-[2.5px] border-b-0 border-black cursor-pointer transition-all duration-200 origin-bottom overflow-hidden
-                                        ${active
-                                                ? 'shadow-[3px_-3px_0_0_rgba(0,0,0,0.18)] z-20'
-                                                : 'translate-y-1 hover:translate-y-0 z-10 opacity-90 hover:opacity-100'}
-                                    `}
-                                    >
-                                        {/* Bande accent inférieure colorée - plus haute si actif */}
-                                        <span
-                                            className={`absolute left-0 right-0 bottom-0 pointer-events-none transition-[height] duration-200 ${active ? 'h-2 md:h-2.5' : 'h-1.5'}`}
-                                            style={{ backgroundColor: tab.color }}
-                                            aria-hidden
-                                        />
-
-                                        <span
-                                            className={`relative font-display font-bold tracking-[0.08em] uppercase text-sm md:text-base ${active ? 'text-black' : 'text-gray-600'
-                                                }`}
-                                        >
-                                            {tab.label}
-                                        </span>
-
-                                        {tab.badge && (
-                                            <span
-                                                className={`relative shrink-0 font-display text-[11px] md:text-xs font-bold tabular-nums whitespace-nowrap bg-white/80 rounded-full px-2 py-0.5 border border-black/15 ${active ? 'text-black/85' : 'text-black/60'
-                                                    }`}
-                                            >
-                                                {tab.badge}
-                                            </span>
-                                        )}
-                                    </button>
-                                );
-                            })}
-                        </div>
+                        <LobbyTabs
+                            activeTab={lobbyTab}
+                            onTabChange={setLobbyTab}
+                            activePlayersCount={activePlayers.length}
+                            t={t}
+                        />
 
                         {/* Panel de la tab active - sized to content, capé en dvh pour scroller
                         si le contenu dépasse (settings dense ou liste de joueurs >9). */}
@@ -650,13 +285,34 @@ const Lobby = () => {
                                         className={`col-start-1 row-start-1 ${lobbyTab === 'settings' ? '' : 'invisible pointer-events-none'}`}
                                         aria-hidden={lobbyTab !== 'settings'}
                                     >
-                                        {settingsPanelEl}
+                                        <LobbySettingsPanel
+                                            isHost={isHost}
+                                            hostName={hostName}
+                                            guessMyAnswerMode={guessMyAnswerMode}
+                                            onGuessMyAnswerModeChange={onGuessMyAnswerModeChange}
+                                            timeMultiplier={timeMultiplier}
+                                            onTimeMultiplierChange={onTimeMultiplierChange}
+                                            activePlayersCount={activePlayers.length}
+                                            selectedDecks={selectedDecks}
+                                            decksCatalogMeta={decksCatalogMeta}
+                                            totalThemesSelected={totalThemesSelected}
+                                            onOpenThemePicker={() => setIsThemePickerOpen(true)}
+                                            t={t}
+                                        />
                                     </div>
                                     <div
                                         className={`col-start-1 row-start-1 ${lobbyTab === 'players' ? '' : 'invisible pointer-events-none'}`}
                                         aria-hidden={lobbyTab !== 'players'}
                                     >
-                                        {playersListMobile}
+                                        <LobbyPlayersGrid
+                                            players={players}
+                                            currentPlayer={currentPlayer}
+                                            initialPlayerIds={initialPlayerIdsRef.current}
+                                            activePlayersCount={activePlayers.length}
+                                            onKick={kickPlayer}
+                                            onPromote={promotePlayer}
+                                            t={t}
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -760,7 +416,7 @@ const Lobby = () => {
             {/* Modal fallback : affiche le lien quand le copier-coller automatique a échoué */}
             <InfoModal
                 isOpen={fallbackLink !== null}
-                onClose={() => setFallbackLink(null)}
+                onClose={clearFallbackLink}
                 title={t.lobby.modals.copyLink.title}
             >
                 <div className="space-y-3">
@@ -772,6 +428,7 @@ const Lobby = () => {
                         readOnly
                         value={fallbackLink ?? ''}
                         onFocus={(e) => e.currentTarget.select()}
+                        aria-label={t.lobby.modals.copyLink.title}
                         className="w-full text-sm font-mono text-gray-900 bg-cream-player border-[2.5px] border-black rounded-lg px-3 py-2 outline-none stack-shadow-sm"
                     />
                 </div>
@@ -785,7 +442,7 @@ const Lobby = () => {
                 selected={selectedDecks}
                 mode={isHost ? 'edit' : 'readonly'}
                 hostName={hostName}
-                onChange={handleSelectedDecksChange}
+                onChange={onSelectedDecksChange}
             />
         </div>
     );

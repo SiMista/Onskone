@@ -41,7 +41,20 @@ export interface GameCard {
 }
 
 /**
- * Round de jeu
+ * Round de jeu — **contrat PUBLIC** (vue émise aux clients).
+ *
+ * IMPORTANT : ce type ne contient QUE les champs réellement lus par le frontend.
+ * Tout le bookkeeping serveur (timers, ordre de mélange, attributions intermédiaires,
+ * cartes proposées, corrections de similarité…) vit côté backend dans
+ * `backend/src/types/IRound.ts` + la classe `backend/src/models/Round.ts`, et NE doit
+ * PAS transiter par le réseau (anti-fuite).
+ *
+ * Le backend PROJETTE explicitement vers ce type dans `serializeGame`/`roundStarted`
+ * (il ne renvoie jamais l'instance `Round` brute), de sorte que les champs serveur-only
+ * ne fuitent ni au type, ni au runtime.
+ *
+ * Le nom `IRound` est volontairement conservé : c'est le type importé tel quel par le
+ * frontend (transparence du contrat).
  */
 export interface IRound {
   /** Numéro du round (1-indexed) */
@@ -59,50 +72,19 @@ export interface IRound {
   /** Question sélectionnée par le pilier parmi les 3 de la carte */
   selectedQuestion: string | null;
 
-  /** Réponses des joueurs: { playerId: answerText } */
+  /**
+   * Réponses des joueurs: { playerId: answerText }.
+   * Lu par le frontend uniquement sur les rounds terminés (`gameEnded.rounds`,
+   * stats de fin de partie). Sur le round en cours, le pool n'arrive jamais ici :
+   * il est diffusé mélangé via `shuffledAnswersReceived`.
+   */
   answers: Record<string, string>;
 
-  /** État intermédiaire du drag & drop: { answerId: playerId } */
-  currentGuesses: Record<string, string>;
-
-  /** Attributions finales du pilier: { answerId: playerId } */
-  guesses: Record<string, string>;
-
-  /** Scores des joueurs pour ce round: { playerId: score } */
+  /** Scores des joueurs pour ce round: { playerId: score } (lu en fin de partie) */
   scores: Record<string, number>;
-
-  /** Date de fin du timer pour la phase actuelle */
-  timerEnd: Date | null;
-
-  /** Phase pour laquelle le timer a été traité (protection contre les doubles appels) */
-  timerProcessedForPhase?: RoundPhase | null;
 
   /** Indices des réponses révélées dans la phase REVEAL */
   revealedIndices: number[];
-
-  /** Timestamp de démarrage du timer (pour synchronisation) */
-  timerStartedAt?: number;
-
-  /** Durée du timer en secondes */
-  timerDuration?: number;
-
-  /** Phase pour laquelle le timer a été démarré (évite les conflits entre phases) */
-  timerPhase?: RoundPhase;
-
-  /** Nombre de relances utilisées par le pilier en phase QUESTION_SELECTION */
-  relancesUsed: number;
-
-  /** Les 3 cartes proposées au pilier pour la sélection */
-  proposedCards: GameCard[];
-
-  /** Cartes déjà montrées au pilier (pour éviter les doublons lors des relances) */
-  shownGameCards: GameCard[];
-
-  /** Ordre des réponses mélangées pour la phase GUESSING (stocké pour la reconnexion) */
-  shuffledAnswerIds: string[];
-
-  /** Indices des réponses corrigées par similarité */
-  similarityCorrections: number[];
 
   /** Mode "Devine ma réponse" actif pour ce round (snapshot du lobby au moment du round) */
   guessMyAnswerMode: boolean;

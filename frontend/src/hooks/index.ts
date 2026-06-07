@@ -3,3 +3,7 @@ export { useSyncedTimer } from './useSyncedTimer';
 export { useLeavePrompt } from './useLeavePrompt';
 export { useStartTimerDelayed } from './useStartTimerDelayed';
 export { useReconnectOnVisible } from './useReconnectOnVisible';
+export { useRafProgress } from './useRafProgress';
+export { useSwipe } from './useSwipe';
+export { useModalChrome } from './useModalChrome';
+export { useAdminResource } from './useAdminResource';

@@ -10,7 +10,6 @@ build/
 
 # pnpm
 .pnpm-debug.log*
-pnpm-lock.yaml
 
 # npm (si mélange)
 package-lock.json
@@ -50,3 +49,4 @@ backend/data/
 
 # Misc
 nul
+/.playwright-mcp/

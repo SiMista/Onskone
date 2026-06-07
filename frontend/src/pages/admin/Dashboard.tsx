@@ -12,12 +12,16 @@ import { DecksPanel } from './Decks';
 import { ContentPanel } from './Content';
 import { StatsPanel } from './Stats';
 
+const LOBBY_COUNT_POLL_MS = 5000;
+
 export const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
   const [lobbyCount, setLobbyCount] = useState<number | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  // Filtres transférés au panel Tickets lors d'un jump depuis l'Overview.
+  const [jumpFilter, setJumpFilter] = useState<{ status?: TicketStatus; type?: TicketType }>({});
   const showToast = useToast();
   const ranOnce = useRef(false);
 
@@ -59,11 +63,12 @@ export const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
       } catch { /* silent */ }
     };
     tick();
-    const id = setInterval(tick, 5000);
+    const id = setInterval(tick, LOBBY_COUNT_POLL_MS);
     return () => { cancelled = true; clearInterval(id); };
   }, []);
 
-  const jumpToTickets = useCallback((_status?: TicketStatus, _type?: TicketType) => {
+  const jumpToTickets = useCallback((status?: TicketStatus, type?: TicketType) => {
+    setJumpFilter({ status, type });
     setActiveTab('tickets');
   }, []);
 
@@ -189,6 +194,8 @@ export const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
             tickets={tickets}
             isLoading={isLoading}
             onChangeTickets={setTickets}
+            initialStatusFilter={jumpFilter.status}
+            initialTypeFilter={jumpFilter.type}
           />
         )}
         {activeTab === 'lobbies' && (

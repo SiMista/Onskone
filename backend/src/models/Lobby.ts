@@ -1,6 +1,6 @@
 import { ILobby, IPlayer, GAME_CONSTANTS, SelectedDecks, GameMode, Locale, DEFAULT_LOCALE } from '@onskone/shared';
 import { IGame } from '../types/IGame';
-import { getDefaultSelectedDecks } from '../managers/GameManager';
+import { getDefaultSelectedDecks } from '../data/questionsRepository.js';
 
 export class Lobby implements ILobby {
     code: string;
@@ -38,7 +38,7 @@ export class Lobby implements ILobby {
 
     setHost(player: IPlayer): void {
         this.players.forEach(p => {
-            // Compare by id, not name (two players could theoretically have same name)
+            // Comparer par id, pas par nom (deux joueurs peuvent théoriquement avoir le même nom)
             p.isHost = p.id === player.id;
         });
     }

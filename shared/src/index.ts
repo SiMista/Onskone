@@ -41,6 +41,13 @@ export {
   RevealResult,
   ReconnectionData
 } from './types/socket-events.js';
+export { ERROR_CODES } from './types/socket-events.js';
+export type {
+  ErrorCode,
+  TimerStartedPayload,
+  TimerStatePayload,
+  ErrorPayload
+} from './types/socket-events.js';
 
 // Admin
 export {

@@ -1,9 +1,21 @@
 import crypto from 'crypto';
 import { Request, Response, NextFunction } from 'express';
+import logger from '../utils/logger.js';
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
 const TOKEN_SECRET = process.env.ADMIN_TOKEN_SECRET || ADMIN_PASSWORD || 'change-me-dev-only';
 const TOKEN_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 jours
+
+// Avertissement sécurité au boot (comme pour ALLOWED_ORIGINS) : sans secret ni mot de
+// passe admin en production, les tokens admin retombent sur un secret par défaut connu
+// et seraient donc forgeables.
+if (process.env.NODE_ENV === 'production') {
+  if (!process.env.ADMIN_TOKEN_SECRET && !ADMIN_PASSWORD) {
+    logger.warn('SECURITY WARNING: ADMIN_TOKEN_SECRET and ADMIN_PASSWORD are unset in production. Admin tokens fall back to a known default secret and are forgeable!');
+  } else if (!process.env.ADMIN_TOKEN_SECRET) {
+    logger.warn('SECURITY WARNING: ADMIN_TOKEN_SECRET is unset in production; falling back to ADMIN_PASSWORD as the token secret. Set a dedicated ADMIN_TOKEN_SECRET.');
+  }
+}
 
 function sign(payload: string): string {
   return crypto.createHmac('sha256', TOKEN_SECRET).update(payload).digest('hex');

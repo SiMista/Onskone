@@ -248,9 +248,52 @@ export interface ServerToClientEvents {
   /** Erreur générique */
   error: (data: {
     message: string;
-    code?: string; // Code d'erreur optionnel
+    code?: ErrorCode; // Code d'erreur stable optionnel (cf. ERROR_CODES)
   }) => void;
 }
+
+/**
+ * Codes d'erreur stables émis par le serveur en plus du `message` (localisé/humain).
+ *
+ * Le `message` reste la source de vérité affichée à l'utilisateur ; `code` est un
+ * discriminant machine-stable qui permet au frontend de router sans dépendre du
+ * texte traduit (le frontend retombe sur le `message` si `code` est absent).
+ */
+export const ERROR_CODES = {
+  /** Lobby/partie/round introuvable */
+  NOT_FOUND: 'NOT_FOUND',
+  /** Rate limiter déclenché */
+  RATE_LIMITED: 'RATE_LIMITED',
+  /** Entrée invalide (code, nom, id, réponse, question…) */
+  INVALID: 'INVALID',
+  /** Action réservée au pilier tentée par un autre joueur */
+  NOT_LEADER: 'NOT_LEADER',
+  /** Action réservée à l'hôte tentée par un autre joueur */
+  NOT_HOST: 'NOT_HOST',
+  /** Action interdite (anti-usurpation / hors de portée du joueur) */
+  FORBIDDEN: 'FORBIDDEN',
+  /** Phase de jeu incompatible avec l'action demandée */
+  WRONG_PHASE: 'WRONG_PHASE',
+  /** La partie est déjà en cours (réglage lobby refusé) */
+  GAME_IN_PROGRESS: 'GAME_IN_PROGRESS',
+  /** Le joueur a été expulsé du salon */
+  KICKED: 'KICKED',
+  /** Conflit d'état (reconnexion en cours, déjà soumis, etc.) */
+  CONFLICT: 'CONFLICT',
+  /** Erreur serveur inattendue */
+  INTERNAL: 'INTERNAL',
+} as const;
+
+/** Union des codes d'erreur stables (valeurs de `ERROR_CODES`). */
+export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];
+
+/**
+ * Alias de payloads dérivés du contrat `ServerToClientEvents`, exportés pour que le
+ * frontend type ses handlers sans ré-déclarer la forme inline (anti-drift).
+ */
+export type TimerStartedPayload = Parameters<ServerToClientEvents['timerStarted']>[0];
+export type TimerStatePayload = Parameters<ServerToClientEvents['timerState']>[0];
+export type ErrorPayload = Parameters<ServerToClientEvents['error']>[0];
 
 /**
  * Événements envoyés par les CLIENTS vers le SERVEUR

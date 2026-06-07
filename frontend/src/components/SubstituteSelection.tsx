@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import socket from '../utils/socket';
 import HourglassTimer from './HourglassTimer';
 import Avatar from './Avatar';
 import Button from './Button';
@@ -9,6 +8,7 @@ import Dropdown from './Dropdown';
 import { getPhaseDuration } from '../constants/game';
 import { IPlayer, RoundPhase, GameCard } from '@onskone/shared';
 import { useStartTimerDelayed } from '../hooks';
+import socket from '../utils/socket';
 import { getQuestionSubtitle } from '../utils/questionHelpers';
 import { useLocale } from '../i18n';
 

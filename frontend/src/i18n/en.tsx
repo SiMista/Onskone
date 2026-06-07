@@ -105,6 +105,11 @@ export const en: Dictionary = {
       kickedAnon: 'You were kicked from the lobby',
       closedInactive: 'This lobby was closed due to inactivity',
     },
+    playerMenu: {
+      trigger: 'Player options',
+      promote: 'Promote to host',
+      kick: 'Kick',
+    },
   },
 
   game: {
@@ -235,7 +240,6 @@ export const en: Dictionary = {
 
   report: {
     trigger: 'Report',
-    questionReportLabel: 'Report a question',
     title: 'Report an issue',
     categoryLabel: 'Issue category',
     categoryPlaceholder: 'Pick a category…',
