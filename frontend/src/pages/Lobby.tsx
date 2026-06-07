@@ -27,6 +27,7 @@ import { useLocale } from '../i18n';
 import { GAME_CONFIG } from '../constants/game';
 import { STICKER_FILTER } from '../constants/icons';
 import { studioStorage, isStudioFrame } from '../utils/studioStorage';
+import { getCurrentPlayerFromStorage, storeReconnectToken, getReconnectToken } from '../utils/playerHelpers';
 
 const RECOMMENDED_PLAYERS = 4;
 
@@ -46,6 +47,10 @@ const Lobby = () => {
 
     const [players, setPlayers] = useState<IPlayer[]>([]);
     const [currentPlayer, setCurrentPlayer] = useState<IPlayer | null>(null);
+    // Id du joueur courant tenu à jour pour identifier "moi" dans updatePlayersList
+    // (le serveur ne diffuse plus socketId). Seedé depuis le storage pour couvrir le
+    // tout premier updatePlayersList avant que joinedLobby n'ait renseigné currentPlayer.
+    const currentPlayerIdRef = useRef<string | null>(getCurrentPlayerFromStorage()?.id ?? null);
     const [showFewPlayersModal, setShowFewPlayersModal] = useState(false);
     const [showGameAlreadyStarted, setShowGameAlreadyStarted] = useState(false);
     const [isHowToPlayOpen, setIsHowToPlayOpen] = useState(false);
@@ -120,10 +125,17 @@ const Lobby = () => {
         }
     }, [players, doStartGame]);
 
-    // Rejoindre le lobby au montage ET lors d'une reconnexion socket / retour de l'app au premier plan
+    // Garder l'id "moi" à jour pour l'identification dans updatePlayersList.
+    useEffect(() => {
+        if (currentPlayer?.id) currentPlayerIdRef.current = currentPlayer.id;
+    }, [currentPlayer?.id]);
+
+    // Rejoindre le lobby au montage ET lors d'une reconnexion socket / retour de l'app au premier plan.
+    // On joint le reconnectToken (secret) s'il est connu : il prouve l'identité lors
+    // d'une reconnexion (le serveur réassocie le slot sans dépendre du nom public).
     const joinLobbyFn = useCallback(() => {
         if (lobbyCode && playerName) {
-            socket.emit('joinLobby', { lobbyCode, playerName, avatarId });
+            socket.emit('joinLobby', { lobbyCode, playerName, avatarId, reconnectToken: getReconnectToken(lobbyCode) });
         }
     }, [lobbyCode, playerName, avatarId]);
 
@@ -171,10 +183,13 @@ const Lobby = () => {
             initialPlayerIdsRef.current = new Set(data.players.map(p => p.id));
         }
 
+        // Le serveur ne diffuse plus socketId : on identifie "moi" par l'id du joueur
+        // courant (connu via joinedLobby / le storage).
+        const myId = currentPlayerIdRef.current;
         const newHost = data.players.find(p => p.isHost);
         const newHostId = newHost?.id ?? null;
         if (prevHostIdRef.current !== null && newHostId !== null && prevHostIdRef.current !== newHostId) {
-            const me = data.players.find(p => p.socketId === socket.id);
+            const me = myId ? data.players.find(p => p.id === myId) : undefined;
             if (me?.isHost) {
                 showToast(t.lobby.toasts.promoted, 'success', 4000);
             } else if (newHost) {
@@ -184,15 +199,19 @@ const Lobby = () => {
         prevHostIdRef.current = newHostId;
 
         setPlayers(data.players);
-        const potentialCurrentPlayer = data.players.find((p: IPlayer) => p.socketId === socket.id);
+        const potentialCurrentPlayer = myId ? data.players.find((p: IPlayer) => p.id === myId) : undefined;
         if (potentialCurrentPlayer) {
             setCurrentPlayer(potentialCurrentPlayer);
         }
     }, [showToast, t]);
 
-    const handleJoinedLobby = useCallback((data: { player: IPlayer }) => {
+    const handleJoinedLobby = useCallback((data: { player: IPlayer; reconnectToken: string }) => {
+        currentPlayerIdRef.current = data.player.id;
+        // Stocker le secret de reconnexion (émis au seul propriétaire) pour le renvoyer
+        // lors d'une reconnexion ultérieure (joinLobby / getGameState).
+        storeReconnectToken(lobbyCode, data.reconnectToken);
         setCurrentPlayer(data.player);
-    }, []);
+    }, [lobbyCode]);
 
     // Routing d'erreur sur le `code` stable du contrat ; fallback sur le
     // texte localisé pour les serveurs qui n'émettent pas encore de code.

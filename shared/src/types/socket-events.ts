@@ -62,11 +62,20 @@ export interface RevealResult {
 export interface ServerToClientEvents {
   // ===== LOBBY EVENTS =====
 
-  /** Confirmation de création d'un lobby */
-  lobbyCreated: (data: { lobbyCode: string }) => void;
+  /**
+   * Confirmation de création d'un lobby.
+   * `reconnectToken` est le secret de reconnexion du joueur (host) : émis UNIQUEMENT
+   * à son propre socket (socket.emit). Le client le stocke et le renvoie lors d'une
+   * reconnexion pour prouver son identité sans dépendre du nom/UUID (publics).
+   */
+  lobbyCreated: (data: { lobbyCode: string; reconnectToken: string }) => void;
 
-  /** Confirmation de jointure au lobby */
-  joinedLobby: (data: { player: IPlayer }) => void;
+  /**
+   * Confirmation de jointure au lobby.
+   * `reconnectToken` est le secret de reconnexion du joueur : émis UNIQUEMENT à son
+   * propre socket (socket.emit). À stocker et renvoyer lors d'une reconnexion.
+   */
+  joinedLobby: (data: { player: IPlayer; reconnectToken: string }) => void;
 
   /** Mise à jour de la liste des joueurs */
   updatePlayersList: (data: { players: IPlayer[] }) => void;
@@ -317,6 +326,12 @@ export interface ClientToServerEvents {
     lobbyCode: string;
     playerName: string;
     avatarId?: number;
+    /**
+     * Secret de reconnexion (reçu via lobbyCreated/joinedLobby). Fourni lors d'une
+     * reconnexion pour réassocier le slot existant en toute sécurité (sans dépendre
+     * du nom public). Absent pour une première jointure.
+     */
+    reconnectToken?: string;
   }) => void;
 
   /** Quitter le lobby */
@@ -389,6 +404,12 @@ export interface ClientToServerEvents {
   getGameState: (data: {
     lobbyCode: string;
     playerId?: string;
+    /**
+     * Secret de reconnexion (reçu via lobbyCreated/joinedLobby). Fourni lors d'une
+     * reconnexion pour réassocier le socketId du joueur en toute sécurité (sans
+     * dépendre de l'UUID public).
+     */
+    reconnectToken?: string;
   }) => void;
 
   /** Demander des cartes de questions (réservé au pilier) */

@@ -127,9 +127,20 @@ export class Game implements IGame {
             }
         }
 
-        // Créer le leaderboard et trier par score décroissant
+        // Créer le leaderboard et trier par score décroissant.
+        // Anti-fuite : le leaderboard est diffusé aux clients (gameEnded/revealResults/
+        // gameState). On projette donc chaque joueur sur sa vue publique pour omettre
+        // socketId ET reconnectToken (server-only). Projection INLINE volontaire :
+        // importer serializePlayer (broadcasting) créerait un cycle Game ↔ broadcasting.
         const leaderboard: LeaderboardEntry[] = this.lobby.players.map(player => ({
-            player,
+            player: {
+                id: player.id,
+                name: player.name,
+                isHost: player.isHost,
+                score: player.score,
+                isActive: player.isActive,
+                avatarId: player.avatarId,
+            },
             score: playerScores[player.id] || 0
         }));
 

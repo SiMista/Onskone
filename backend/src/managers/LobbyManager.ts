@@ -1,5 +1,6 @@
 import {Lobby} from "../models/Lobby";
-import { IPlayer, ServerToClientEvents, ClientToServerEvents, Locale, DEFAULT_LOCALE } from '@onskone/shared';
+import type { ServerPlayer } from '../types/ServerPlayer.js';
+import { ServerToClientEvents, ClientToServerEvents, Locale, DEFAULT_LOCALE } from '@onskone/shared';
 import { Server } from 'socket.io';
 import {generateLobbyCode} from '../utils/helpers';
 import logger from '../utils/logger';
@@ -89,7 +90,7 @@ export const stopCleanupInterval = (): void => {
     }
 };
 
-export const addPlayer = (lobby: Lobby, player: IPlayer): void => {
+export const addPlayer = (lobby: Lobby, player: ServerPlayer): void => {
     lobby.addPlayer(player);
 };
 
@@ -97,7 +98,7 @@ export const addPlayer = (lobby: Lobby, player: IPlayer): void => {
  * Retire un joueur du lobby.
  * @returns true si le lobby est devenu vide et a été supprimé, false sinon.
  */
-export const removePlayer = (lobby: Lobby, player: IPlayer): boolean => {
+export const removePlayer = (lobby: Lobby, player: ServerPlayer): boolean => {
     lobby.removePlayer(player);
 
     if (lobby.players.length === 0) {

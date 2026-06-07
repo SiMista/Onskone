@@ -1,10 +1,13 @@
-import { ILobby, IPlayer, GAME_CONSTANTS, SelectedDecks, GameMode, Locale, DEFAULT_LOCALE } from '@onskone/shared';
+import { ILobby, GAME_CONSTANTS, SelectedDecks, GameMode, Locale, DEFAULT_LOCALE } from '@onskone/shared';
 import { IGame } from '../types/IGame';
+import type { ServerPlayer } from '../types/ServerPlayer.js';
 import { getDefaultSelectedDecks } from '../data/questionsRepository.js';
 
 export class Lobby implements ILobby {
     code: string;
-    players: IPlayer[];
+    // Vue serveur : socketId + reconnectToken garantis présents (cf. ServerPlayer).
+    // Assignable au contrat public ILobby.players (IPlayer[]) car ServerPlayer ⊇ IPlayer.
+    players: ServerPlayer[];
     game: IGame | null;
     lastActivity: Date;
     selectedDecks: SelectedDecks;
@@ -29,25 +32,25 @@ export class Lobby implements ILobby {
         this.lastActivity = new Date();
     }
 
-    addPlayer(player: IPlayer): void {
+    addPlayer(player: ServerPlayer): void {
         if (this.players.length >= GAME_CONSTANTS.MAX_PLAYERS) {
             throw new Error(`Le salon est plein (maximum ${GAME_CONSTANTS.MAX_PLAYERS} joueurs)`);
         }
         this.players.push(player);
     }
 
-    setHost(player: IPlayer): void {
+    setHost(player: ServerPlayer): void {
         this.players.forEach(p => {
             // Comparer par id, pas par nom (deux joueurs peuvent théoriquement avoir le même nom)
             p.isHost = p.id === player.id;
         });
     }
 
-    removePlayer(player: IPlayer): void {
+    removePlayer(player: ServerPlayer): void {
         this.players = this.players.filter(p => p.id !== player.id);
     }
 
-    getPlayer(playerId: string): IPlayer | undefined {
+    getPlayer(playerId: string): ServerPlayer | undefined {
         return this.players.find(p => p.id === playerId);
     }
 }
