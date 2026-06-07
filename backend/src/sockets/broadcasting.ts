@@ -11,12 +11,39 @@ import { Game } from '../models/Game';
 // `IRound` (shared) = vue publique projetée vers les clients ; `ServerRound` = contrat
 // serveur complet (méthodes métier + bookkeeping) porté par la classe Round.
 import type { IRound as ServerRound } from '../types/IRound';
-import type { ServerToClientEvents, ClientToServerEvents, IGame, IRound } from '@onskone/shared';
+import type { ServerToClientEvents, ClientToServerEvents, IGame, IRound, IPlayer } from '@onskone/shared';
 import { RoundPhase, GameStatus, formatNoResponse } from '@onskone/shared';
 import logger from '../utils/logger.js';
 
 export type IoServer = Server<ClientToServerEvents, ServerToClientEvents>;
 export type AppSocket = Socket<ClientToServerEvents, ServerToClientEvents>;
+
+/**
+ * Projette un joueur vers la VUE PUBLIQUE diffusée aux clients (anti-fuite).
+ *
+ * On construit explicitement un nouvel objet ne contenant QUE les champs publics :
+ * `socketId` (id de connexion serveur) et `reconnectToken` (secret de reconnexion)
+ * sont des données SERVER-ONLY et ne doivent JAMAIS quitter le serveur via un
+ * broadcast. Diffuser le socketId permettrait à un tiers de cibler/usurper une
+ * connexion ; diffuser le reconnectToken annulerait toute la garde anti-usurpation.
+ */
+export function serializePlayer(p: IPlayer): IPlayer {
+    return {
+        id: p.id,
+        name: p.name,
+        isHost: p.isHost,
+        score: p.score,
+        isActive: p.isActive,
+        avatarId: p.avatarId,
+    };
+}
+
+/**
+ * Projette une liste de joueurs vers la vue publique (cf. serializePlayer).
+ */
+export function serializePlayers(players: IPlayer[]): IPlayer[] {
+    return players.map(serializePlayer);
+}
 
 export interface RevealResult {
     playerId: string;
@@ -111,7 +138,9 @@ export function serializeGame(lobby: Lobby): IGame {
     return {
         lobby: {
             code: lobby.code,
-            players: lobby.players,
+            // Anti-fuite : projeter les joueurs vers la vue publique (omet socketId
+            // ET reconnectToken). serializeGame est diffusé à toute la room.
+            players: serializePlayers(lobby.players),
             selectedDecks: lobby.selectedDecks,
             gameMode: lobby.gameMode,
             guessMyAnswerMode: lobby.guessMyAnswerMode,

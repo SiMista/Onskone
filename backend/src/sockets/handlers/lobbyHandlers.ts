@@ -8,7 +8,7 @@ import { validatePlayerName, validateAvatarId, sanitizeInput } from '../../utils
 import { rateLimiters } from '../../utils/rateLimiter.js';
 import { errMessage } from '../../utils/helpers.js';
 import logger from '../../utils/logger.js';
-import { serializeGame, serializeRound, emitLobbyDecksState } from '../broadcasting.js';
+import { serializeGame, serializeRound, serializePlayer, serializePlayers, emitLobbyDecksState } from '../broadcasting.js';
 import {
     type HandlerContext,
     type AppSocket,
@@ -76,7 +76,8 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
                 lobby.gameMode = data.gameMode;
             }
             socket.join(lobbyCode);
-            socket.emit('lobbyCreated', { lobbyCode });
+            // reconnectToken émis UNIQUEMENT au socket du host (secret de reconnexion).
+            socket.emit('lobbyCreated', { lobbyCode, reconnectToken: hostPlayer.reconnectToken });
             emitLobbyDecksState(io, socket, lobby!);
             logger.game.created(lobbyCode, sanitizedName);
         });
@@ -128,9 +129,9 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
                 registry.cancelInactiveTimeout(lobby.code, existingPlayerBySocket.name);
                 existingPlayerBySocket.isActive = true; // Marquer comme actif (rejouer)
                 socket.join(lobby.code);
-                socket.emit('joinedLobby', { player: existingPlayerBySocket });
+                socket.emit('joinedLobby', { player: serializePlayer(existingPlayerBySocket), reconnectToken: existingPlayerBySocket.reconnectToken });
                 emitLobbyDecksState(io, socket, lobby);
-                io.to(lobby.code).emit('updatePlayersList', { players: lobby.players });
+                io.to(lobby.code).emit('updatePlayersList', { players: serializePlayers(lobby.players) });
 
                 // Si une partie est en cours, envoyer gameStarted pour rediriger vers la page de jeu
                 if (lobby.game && lobby.game.status === 'IN_PROGRESS') {
@@ -143,15 +144,37 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
             // Vérifie si un joueur avec ce nom existe déjà (reconnexion après refresh)
             const existingPlayerByName = lobby.players.find(p => p.name === sanitizedName);
             if (existingPlayerByName) {
-                // Sécurité anti-prise-de-contrôle (même garde que getGameState) : ne traiter
-                // comme une reconnexion QUE si le socket du joueur existant est réellement
-                // déconnecté. Les noms sont publics (getLobbyInfo/updatePlayersList) : sans
-                // cette garde, un attaquant rejoignant sous le nom de l'hôte/pilier
-                // récupérerait son socketId — donc ses privilèges (host/leader takeover).
+                // Chemin sûr : le client présente un reconnectToken qui correspond au
+                // secret du joueur cible → reconnexion prouvée, on contourne la garde de
+                // liveness (le slot lui appartient légitimement même si l'ancien socket
+                // n'est pas encore tombé).
+                const tokenMatches = !!data.reconnectToken
+                    && data.reconnectToken === existingPlayerByName.reconnectToken;
+
+                if (!tokenMatches) {
+                    // Pas de token (ou token erroné) : le joueur cible possède un secret
+                    // défini, donc une reconnexion non prouvée n'est jamais autorisée à
+                    // reprendre le slot — ni pendant la fenêtre de déconnexion. Les noms
+                    // sont publics (getLobbyInfo/updatePlayersList) : sans ce refus, un
+                    // attaquant rejoignant sous le nom de l'hôte/pilier récupérerait son
+                    // socketId — donc ses privilèges (host/leader takeover).
+                    socket.emit('error', { message: 'Reconnexion non autorisée', code: ERROR_CODES.CONFLICT });
+                    logger.warn('Prise de contrôle par nom refusée (token de reconnexion absent/invalide)', {
+                        lobbyCode: lobby.code,
+                        name: sanitizedName,
+                        attackerSocketId: socket.id,
+                        tokenProvided: !!data.reconnectToken,
+                    });
+                    return;
+                }
+
+                // Défense secondaire (garde de liveness conservée) : même avec un token
+                // valide, on ne devrait pas reprendre un slot dont le socket est encore
+                // bien vivant — sinon double-onglet du même joueur s'arracherait le socket.
                 const existingSocket = io.sockets.sockets.get(existingPlayerByName.socketId);
-                if (existingSocket && existingSocket.connected) {
+                if (existingSocket && existingSocket.connected && existingSocket.id !== socket.id) {
                     socket.emit('error', { message: 'Ce nom est déjà utilisé dans ce salon', code: ERROR_CODES.CONFLICT });
-                    logger.warn('Prise de contrôle par nom refusée (joueur encore connecté)', {
+                    logger.warn('Reconnexion refusée (joueur encore connecté malgré token valide)', {
                         lobbyCode: lobby.code,
                         name: sanitizedName,
                         attackerSocketId: socket.id,
@@ -186,9 +209,9 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
                     }
 
                     socket.join(lobby.code);
-                    socket.emit('joinedLobby', { player: existingPlayerByName });
+                    socket.emit('joinedLobby', { player: serializePlayer(existingPlayerByName), reconnectToken: existingPlayerByName.reconnectToken });
                     emitLobbyDecksState(io, socket, lobby);
-                    io.to(lobby.code).emit('updatePlayersList', { players: lobby.players });
+                    io.to(lobby.code).emit('updatePlayersList', { players: serializePlayers(lobby.players) });
 
                     // Si une partie est en cours, envoyer gameStarted pour rediriger vers la page de jeu
                     if (lobby.game && lobby.game.status === 'IN_PROGRESS') {
@@ -215,9 +238,10 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
             LobbyManager.addPlayer(lobby, newPlayer);
 
             socket.join(lobby.code);
-            socket.emit('joinedLobby', { player: newPlayer });
+            // reconnectToken émis UNIQUEMENT au socket du nouveau joueur (secret de reconnexion).
+            socket.emit('joinedLobby', { player: serializePlayer(newPlayer), reconnectToken: newPlayer.reconnectToken });
             emitLobbyDecksState(io, socket, lobby);
-            io.to(lobby.code).emit('updatePlayersList', { players: lobby.players });
+            io.to(lobby.code).emit('updatePlayersList', { players: serializePlayers(lobby.players) });
             logger.info(`${sanitizedName} a rejoint le lobby ${lobby.code}`, { playerCount: lobby.players.length });
         });
     });
@@ -363,7 +387,7 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
 
             const lobbyCode = lobby.code;
             const isLobbyRemoved = LobbyManager.removePlayer(lobby, player);
-            io.to(lobbyCode).emit('updatePlayersList', { players: lobby.players });
+            io.to(lobbyCode).emit('updatePlayersList', { players: serializePlayers(lobby.players) });
             logger.info(`${player.name} a quitté le lobby ${lobbyCode}`);
             if (isLobbyRemoved) {
                 registry.cleanupLobbyResources(lobbyCode);
@@ -435,7 +459,7 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
                 }
 
                 // Mettre à jour la liste des joueurs pour les autres
-                io.to(lobbyCode).emit('updatePlayersList', { players: lobby.players });
+                io.to(lobbyCode).emit('updatePlayersList', { players: serializePlayers(lobby.players) });
 
                 logger.info(`Player ${kickedPlayerName} expulsé du lobby ${lobbyCode}`);
             } catch (error) {
@@ -468,7 +492,7 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
 
             // Promote player to host
             lobby.setHost(playerToPromote);
-            io.to(lobbyCode).emit('updatePlayersList', { players: lobby.players });
+            io.to(lobbyCode).emit('updatePlayersList', { players: serializePlayers(lobby.players) });
             logger.info(`Player ${playerToPromote.name} promu hôte dans ${lobbyCode}`);
         });
     });

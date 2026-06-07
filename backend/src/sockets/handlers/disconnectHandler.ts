@@ -3,7 +3,7 @@ import { Game } from '../../models/Game';
 import { GAME_CONSTANTS, GameStatus } from '@onskone/shared';
 import { errMessage } from '../../utils/helpers.js';
 import logger from '../../utils/logger.js';
-import { serializeRound, endGame } from '../broadcasting.js';
+import { serializeRound, serializePlayers, endGame } from '../broadcasting.js';
 import { ConnectionRegistry } from '../ConnectionRegistry.js';
 import {
     type HandlerContext,
@@ -47,7 +47,7 @@ function scheduleInactiveTimeout(
             player.isActive = false;
             logger.info(`Player ${playerName} marqué inactif après ${INACTIVE_DELAY}ms`);
 
-            io.to(lobbyCode).emit('updatePlayersList', { players: currentLobby.players });
+            io.to(lobbyCode).emit('updatePlayersList', { players: serializePlayers(currentLobby.players) });
         } catch (error) {
             logger.error('Error in inactive timeout', { error: errMessage(error) });
         }
@@ -173,7 +173,7 @@ function scheduleGracePeriodRemoval(
                     registry.cleanupLobbyResources(lobbyCode);
                     logger.info(`Lobby ${lobbyCode} supprimé (vide)`);
                 } else {
-                    io.to(lobbyCode).emit('updatePlayersList', { players: currentLobby.players });
+                    io.to(lobbyCode).emit('updatePlayersList', { players: serializePlayers(currentLobby.players) });
                 }
             }
         } catch (error) {

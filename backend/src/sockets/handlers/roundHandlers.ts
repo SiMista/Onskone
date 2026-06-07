@@ -14,6 +14,7 @@ import {
     serializeGame,
     serializeRound,
     serializeRounds,
+    serializePlayers,
     buildRevealResults,
     transitionToGuessing,
     finishAnsweringPhase,
@@ -213,7 +214,7 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
     // playerId reste dans le corps : elle est OPTIONNELLE (reconnexion sans playerId
     // légitime) donc `requirePlayerId` (inconditionnel) ne convient pas ; on la place
     // AVANT le check game pour préserver l'ordre des erreurs émises.
-    socket.on('getGameState', (data: { lobbyCode: string; playerId?: string }) => {
+    socket.on('getGameState', (data: { lobbyCode: string; playerId?: string; reconnectToken?: string }) => {
         withGuards(socket, data, {
             limiter: rateLimiters.general,
             requireLobbyCode: true,
@@ -247,14 +248,39 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
             if (data.playerId) {
                 const player = lobby.players.find(p => p.id === data.playerId);
                 if (player) {
-                    // Sécurité anti-prise de contrôle :
-                    // refuser d'écraser le socketId si la cible a un socket actuellement
-                    // connecté (cas légitime de reconnexion = la victime est déconnectée).
-                    // On ne refuse PAS si le socket actuel EST déjà celui du joueur (no-op).
+                    // Sécurité anti-prise de contrôle (réassociation du socketId).
+                    // On ne contrôle que si le socket courant n'est PAS déjà celui du
+                    // joueur (sinon c'est un no-op idempotent : rafraîchissement de l'état).
                     if (player.socketId !== socket.id) {
+                        // Chemin sûr : un reconnectToken correspondant au secret du joueur
+                        // prouve l'identité → reconnexion autorisée, on contourne la garde
+                        // de liveness (le slot lui appartient même si l'ancien socket vit
+                        // encore brièvement).
+                        const tokenMatches = !!data.reconnectToken
+                            && data.reconnectToken === player.reconnectToken;
+
+                        if (!tokenMatches) {
+                            // Token absent/erroné : le joueur cible possède un secret défini,
+                            // donc une reconnexion non prouvée ne peut JAMAIS reprendre le slot,
+                            // même pendant la fenêtre de déconnexion. L'UUID public (playerId)
+                            // ne suffit pas — il transite dans des payloads diffusés.
+                            logger.warn(`Tentative de prise de contrôle refusée (token absent/invalide)`, {
+                                lobbyCode: data.lobbyCode,
+                                targetPlayerId: data.playerId,
+                                attackerSocketId: socket.id,
+                                victimSocketId: player.socketId,
+                                tokenProvided: !!data.reconnectToken,
+                            });
+                            socket.emit('error', { message: 'Reconnexion non autorisée', code: ERROR_CODES.CONFLICT });
+                            return;
+                        }
+
+                        // Défense secondaire (garde de liveness conservée) : même avec un
+                        // token valide, ne pas arracher un socket encore bien vivant
+                        // (double-onglet du même joueur).
                         const existingSocket = io.sockets.sockets.get(player.socketId);
                         if (existingSocket && existingSocket.connected) {
-                            logger.warn(`Tentative de prise de contrôle refusée`, {
+                            logger.warn(`Reconnexion refusée (joueur encore connecté malgré token valide)`, {
                                 lobbyCode: data.lobbyCode,
                                 targetPlayerId: data.playerId,
                                 attackerSocketId: socket.id,
@@ -298,7 +324,7 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
                             }
 
                             // Notifier les autres joueurs
-                            io.to(lobby.code).emit('updatePlayersList', { players: lobby.players });
+                            io.to(lobby.code).emit('updatePlayersList', { players: serializePlayers(lobby.players) });
                         } finally {
                             // Relâcher le lock
                             registry.releaseReconnectionLock(lobby.code, player.name);
@@ -336,7 +362,7 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
 
             socket.emit('gameState', {
                 game: serializeGame(lobby),
-                players: lobby.players,
+                players: serializePlayers(lobby.players),
                 leaderboard: game.getLeaderboard(),
                 reconnectionData
             });

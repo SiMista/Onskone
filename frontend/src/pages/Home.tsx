@@ -28,6 +28,7 @@ import {
   getUnseenAchievementIds,
   markAchievementsAsSeen,
 } from '../utils/playerStats';
+import { storeReconnectToken } from '../utils/playerHelpers';
 
 const Home = () => {
   const { locale, t } = useLocale();
@@ -128,7 +129,10 @@ const Home = () => {
     socket.emit('checkPlayerName', { lobbyCode, playerName });
   }, [lobbyCode, playerName, avatarId, showToast, t]);
 
-  const handleLobbyCreated = useCallback((data: { lobbyCode: string }) => {
+  const handleLobbyCreated = useCallback((data: { lobbyCode: string; reconnectToken: string }) => {
+    // Stocker le secret de reconnexion du host (émis à son seul socket) avant de
+    // naviguer vers le lobby : il sera renvoyé lors des reconnexions ultérieures.
+    storeReconnectToken(data.lobbyCode, data.reconnectToken);
     // Studio : prévient la fenêtre parente que le lobby existe pour que les iframes voisines puissent rejoindre auto.
     if (window.parent !== window) {
       try {

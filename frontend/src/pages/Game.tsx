@@ -14,7 +14,7 @@ import { useToast } from '../components/Toast';
 import { getPhaseDuration } from '../constants/game';
 import { useLeavePrompt, useReconnectOnVisible, useSocketEvent } from '../hooks';
 import { useLobbyExitEvents } from '../hooks/useLobbyExitEvents';
-import { getCurrentPlayerFromStorage } from '../utils/playerHelpers';
+import { getCurrentPlayerFromStorage, getReconnectToken } from '../utils/playerHelpers';
 import { IPlayer, IRound, IGame, RoundPhase, GameStatus, RevealResult, GameCard, ReconnectionData } from '@onskone/shared';
 import type { ErrorCode } from '@onskone/shared';
 import { isStudioFrame, studioSlotIndex } from '../utils/studioStorage';
@@ -79,7 +79,10 @@ const GamePage: React.FC = () => {
     if (!lobbyCode) return;
     const player = getCurrentPlayerFromStorage();
     if (player?.id) {
-      socket.emit('getGameState', { lobbyCode, playerId: player.id });
+      // Joindre le reconnectToken (secret) : il prouve l'identité lors d'une
+      // reconnexion, autorisant la réassociation du socketId sans dépendre de l'UUID
+      // public (le serveur retombe sur la garde de liveness si le token manque).
+      socket.emit('getGameState', { lobbyCode, playerId: player.id, reconnectToken: getReconnectToken(lobbyCode) });
     }
   }, [lobbyCode]);
 
