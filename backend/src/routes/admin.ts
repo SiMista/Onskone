@@ -3,17 +3,17 @@ import { Request, Response, NextFunction } from 'express';
 import logger from '../utils/logger.js';
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
-const TOKEN_SECRET = process.env.ADMIN_TOKEN_SECRET || ADMIN_PASSWORD || 'change-me-dev-only';
+// Clé de signature des tokens admin. PAS de valeur par défaut codée en dur : sans secret
+// réel, l'auth admin est DÉSACTIVÉE (fail-closed) au lieu d'être signée par une constante
+// publique (sinon les tokens seraient forgeables par quiconque lit le code source).
+const TOKEN_SECRET = process.env.ADMIN_TOKEN_SECRET || ADMIN_PASSWORD || '';
 const TOKEN_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 jours
 
-// Avertissement sécurité au boot (comme pour ALLOWED_ORIGINS) : sans secret ni mot de
-// passe admin en production, les tokens admin retombent sur un secret par défaut connu
-// et seraient donc forgeables.
 if (process.env.NODE_ENV === 'production') {
-  if (!process.env.ADMIN_TOKEN_SECRET && !ADMIN_PASSWORD) {
-    logger.warn('SECURITY WARNING: ADMIN_TOKEN_SECRET and ADMIN_PASSWORD are unset in production. Admin tokens fall back to a known default secret and are forgeable!');
+  if (!TOKEN_SECRET) {
+    logger.warn('SECURITY: ni ADMIN_TOKEN_SECRET ni ADMIN_PASSWORD ne sont définis en production — auth admin DÉSACTIVÉE (fail-closed).');
   } else if (!process.env.ADMIN_TOKEN_SECRET) {
-    logger.warn('SECURITY WARNING: ADMIN_TOKEN_SECRET is unset in production; falling back to ADMIN_PASSWORD as the token secret. Set a dedicated ADMIN_TOKEN_SECRET.');
+    logger.warn('SECURITY: ADMIN_TOKEN_SECRET non défini ; repli sur ADMIN_PASSWORD comme clé de signature. Définissez un ADMIN_TOKEN_SECRET dédié (haute entropie).');
   }
 }
 
@@ -28,6 +28,8 @@ export function issueToken(): string {
 }
 
 export function verifyToken(token: string | undefined): boolean {
+  // Fail-closed : aucun token n'est valide sans secret de signature réel configuré.
+  if (!TOKEN_SECRET) return false;
   if (!token) return false;
   const parts = token.split('.');
   if (parts.length !== 3) return false;

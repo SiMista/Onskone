@@ -57,14 +57,15 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
         withGuards(socket, data, {
             limiter: rateLimiters.createLobby,
         }, (_resolved, data) => {
-            // Validate player name
-            const nameValidation = validatePlayerName(data.playerName);
+            // Sanitize PUIS valider le résultat : un nom vidé/raccourci par la sanitisation
+            // ne doit pas passer une validation faite sur l'input brut.
+            const sanitizedName = sanitizeInput(data.playerName);
+            const nameValidation = validatePlayerName(sanitizedName);
             if (!nameValidation.isValid) {
                 socket.emit('error', { message: nameValidation.error || 'Nom invalide', code: ERROR_CODES.INVALID });
                 return;
             }
 
-            const sanitizedName = sanitizeInput(data.playerName);
             const avatarId = validateAvatarId(data.avatarId);
             const locale = isLocale(data.locale) ? data.locale : DEFAULT_LOCALE;
             const lobbyCode = LobbyManager.create(locale);
@@ -91,14 +92,14 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
             limiter: rateLimiters.joinLobby,
             requireLobbyCode: true,
         }, ({ lobby }, data) => {
-            // Validate player name
-            const nameValidation = validatePlayerName(data.playerName);
+            // Sanitize PUIS valider le résultat (cf. createLobby).
+            const sanitizedName = sanitizeInput(data.playerName);
+            const nameValidation = validatePlayerName(sanitizedName);
             if (!nameValidation.isValid) {
                 socket.emit('error', { message: nameValidation.error || 'Nom invalide', code: ERROR_CODES.INVALID });
                 return;
             }
 
-            const sanitizedName = sanitizeInput(data.playerName);
             if (!lobby) {
                 socket.emit('error', { message: 'Salon introuvable', code: ERROR_CODES.NOT_FOUND });
                 return;
@@ -142,6 +143,22 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
             // Vérifie si un joueur avec ce nom existe déjà (reconnexion après refresh)
             const existingPlayerByName = lobby.players.find(p => p.name === sanitizedName);
             if (existingPlayerByName) {
+                // Sécurité anti-prise-de-contrôle (même garde que getGameState) : ne traiter
+                // comme une reconnexion QUE si le socket du joueur existant est réellement
+                // déconnecté. Les noms sont publics (getLobbyInfo/updatePlayersList) : sans
+                // cette garde, un attaquant rejoignant sous le nom de l'hôte/pilier
+                // récupérerait son socketId — donc ses privilèges (host/leader takeover).
+                const existingSocket = io.sockets.sockets.get(existingPlayerByName.socketId);
+                if (existingSocket && existingSocket.connected) {
+                    socket.emit('error', { message: 'Ce nom est déjà utilisé dans ce salon', code: ERROR_CODES.CONFLICT });
+                    logger.warn('Prise de contrôle par nom refusée (joueur encore connecté)', {
+                        lobbyCode: lobby.code,
+                        name: sanitizedName,
+                        attackerSocketId: socket.id,
+                    });
+                    return;
+                }
+
                 // Vérifier si une reconnexion est déjà en cours
                 if (registry.hasReconnectionLock(lobby.code, sanitizedName)) {
                     logger.debug(`Reconnexion déjà en cours pour ${sanitizedName}`);
@@ -302,14 +319,14 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
             limiter: rateLimiters.general,
             requireLobbyCode: true,
         }, ({ lobby }, data) => {
-            // Validate player name
-            const nameValidation = validatePlayerName(data.playerName);
+            // Sanitize PUIS valider le résultat (cf. createLobby).
+            const sanitizedName = sanitizeInput(data.playerName);
+            const nameValidation = validatePlayerName(sanitizedName);
             if (!nameValidation.isValid) {
                 socket.emit('error', { message: nameValidation.error || 'Nom invalide', code: ERROR_CODES.INVALID });
                 return;
             }
 
-            const sanitizedName = sanitizeInput(data.playerName);
             if (!lobby) {
                 socket.emit('error', { message: 'Salon introuvable', code: ERROR_CODES.NOT_FOUND });
                 return;
