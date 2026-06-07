@@ -232,6 +232,17 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
                 return;
             }
 
+            // Contrôle d'appartenance : n'exposer l'état complet du lobby qu'aux membres
+            // (socket déjà dans la room) ou à un joueur prouvant son identité par un
+            // playerId correspondant (reconnexion). Sinon, refuser (quiconque a juste le
+            // code de salon ne doit pas lire la liste des joueurs / l'état de jeu).
+            const isMember = socket.rooms.has(lobby.code)
+                || (!!data.playerId && lobby.players.some(p => p.id === data.playerId));
+            if (!isMember) {
+                socket.emit('error', { message: 'Action non autorisée', code: ERROR_CODES.FORBIDDEN });
+                return;
+            }
+
             // Reconnexion: mettre à jour le socketId du joueur
             if (data.playerId) {
                 const player = lobby.players.find(p => p.id === data.playerId);
@@ -306,9 +317,15 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
                 reconnectionData.myAnswer = game.currentRound.answers[data.playerId];
             }
 
-            // Restaurer les guesses pour la phase GUESSING
-            if (game.currentRound?.currentGuesses) {
-                reconnectionData.currentGuesses = game.currentRound.currentGuesses;
+            // Restaurer les guesses (phase GUESSING) : RÉSERVÉ au pilier — les autres
+            // joueurs ne doivent pas connaître les attributions en cours — et traduit en
+            // slots opaques (jamais l'auteur réel).
+            const callerIsLeader = !!game.currentRound && (
+                game.currentRound.leader.socketId === socket.id
+                || (!!data.playerId && game.currentRound.leader.id === data.playerId)
+            );
+            if (callerIsLeader && game.currentRound) {
+                reconnectionData.currentGuesses = (game.currentRound as Round).currentGuessesBySlot();
             }
 
             // Restaurer les résultats pour la phase REVEAL
@@ -608,10 +625,9 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
                 return;
             }
 
-            // Validation stricte : filtrer answerId et playerId via les sets du round.
-            // Empêche pollution d'objet (ex __proto__, constructor) et data garbage.
-            const answerIds = new Set(Object.keys(round.getGuessingAnswers()));
-            if (typeof data.answerId !== 'string' || !answerIds.has(data.answerId)) {
+            // Validation stricte : answerId est un SLOT opaque -> doit exister dans le round.
+            const slotIds = round.getSlotIds();
+            if (typeof data.answerId !== 'string' || !slotIds.has(data.answerId)) {
                 return;
             }
             if (data.playerId !== null) {
@@ -620,8 +636,11 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
                 if (!validTargets.some(p => p.id === data.playerId)) return;
             }
 
-            // Mettre à jour l'état intermédiaire du drag & drop
-            currentRound.updateCurrentGuess(data.answerId, data.playerId);
+            // Slot opaque -> auteur réel : l'état interne reste indexé par auteur
+            // (non corrélable depuis le client, qui ne voit que les slots).
+            const authorId = round.authorForSlot(data.answerId);
+            if (!authorId) return;
+            currentRound.updateCurrentGuess(authorId, data.playerId);
 
             // BROADCASTER le delta seulement (pas l'état complet pour économiser la bande passante)
             io.to(data.lobbyCode).emit('guessUpdated', {
@@ -654,24 +673,25 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
             // Valider et filtrer les guesses (Sets pour lookups O(1))
             // En mode "Devine ma réponse" : la réponse du substitut (clé = leader.id) est un answer
             // valide ET le pilier est une cible draggable valide.
-            const answerIds = new Set(Object.keys(round.getGuessingAnswers()));
             const playerIds = new Set(round.getGuessTargets(lobby.players).map(p => p.id));
 
+            // Les clés reçues sont des SLOTS opaques -> traduction en auteur réel (clé
+            // interne de scoring). Slot inconnu ou cible invalide => ignoré.
             const validGuesses: Record<string, string> = {};
-            for (const [answerId, guessedPlayerId] of Object.entries(data.guesses)) {
+            for (const [slotId, guessedPlayerId] of Object.entries(data.guesses)) {
                 if (typeof guessedPlayerId !== 'string') continue;
 
-                if (!answerIds.has(answerId)) {
-                    logger.warn(`Guess invalide: answerId ${answerId} inexistant`);
+                const authorId = round.authorForSlot(slotId);
+                if (!authorId) {
+                    logger.warn(`Guess invalide: slot ${slotId} inexistant`);
                     continue;
                 }
-
                 if (!playerIds.has(guessedPlayerId)) {
                     logger.warn(`Guess invalide: playerId ${guessedPlayerId} inexistant ou est le pilier`);
                     continue;
                 }
 
-                validGuesses[answerId] = guessedPlayerId;
+                validGuesses[authorId] = guessedPlayerId;
             }
 
             // Contrainte : un joueur peut être attribué à au plus une réponse

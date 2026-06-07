@@ -175,7 +175,10 @@ export interface ServerToClientEvents {
 
   /** Réception des réponses mélangées pour le pilier */
   shuffledAnswersReceived: (data: {
-    answers: Array<{ id: string; text: string }>;
+    // `id` = slot OPAQUE (non corrélé à l'auteur, anti-fuite). `ownerId` n'est fourni
+    // que pour les réponses NO_RESPONSE (dont le texte révèle déjà l'auteur), afin de
+    // permettre l'auto-attribution côté client.
+    answers: Array<{ id: string; text: string; ownerId?: string }>;
     players: IPlayer[]; // Joueurs qui ont répondu (sans le pilier)
     roundNumber: number; // Pour éviter les race conditions sur reconnexion
   }) => void;
