@@ -1,8 +1,8 @@
 import { randomInt } from 'crypto';
-import {IGame, LeaderboardEntry} from '../types/IGame';
+import { IGame } from '../types/IGame';
 import {IRound} from '../types/IRound';
 import {Round} from './Round';
-import { GameCard, ILobby, GameStatus } from '@onskone/shared';
+import { GameCard, ILobby, GameStatus, LeaderboardEntry } from '@onskone/shared';
 
 export class Game implements IGame {
     lobby: ILobby;

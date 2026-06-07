@@ -21,6 +21,3 @@ export interface IGame extends Omit<IGameData, 'rounds' | 'currentRound'> {
   getLeaderboard(): LeaderboardEntry[];
   getMaxRounds(): number;
 }
-
-// Re-export pour compatibilité (LeaderboardEntry consommé via ce module par Game.ts)
-export { LeaderboardEntry };
