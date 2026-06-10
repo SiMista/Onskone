@@ -4,7 +4,7 @@ import { AVATARS } from '../constants/game';
 import { purgeStudioSlot } from '../utils/studioStorage';
 import {
   Layout, SlotConfig, SlotRuntimeState,
-  FUN_NAMES, loadSavedConfig, makeSlot,
+  FUN_NAMES, STORAGE_KEY, loadSavedConfig, makeSlot,
 } from './studio/shared';
 import { Toolbar } from './studio/Toolbar';
 import { SlotCard } from './studio/SlotCard';
@@ -54,7 +54,7 @@ const Studio = () => {
 
   useEffect(() => {
     try {
-      localStorage.setItem('onskone:studio:config:v3', JSON.stringify({ slots, layout, zoom, debugTimers, gameMode, timeMultiplier }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ slots, layout, zoom, debugTimers, gameMode, timeMultiplier }));
     } catch { /* silent */ }
   }, [slots, layout, zoom, debugTimers, gameMode, timeMultiplier]);
 
@@ -75,7 +75,6 @@ const Studio = () => {
             isLeader,
             isSubstitute,
             phase: data.phase ?? null,
-            playerName: data.playerName ?? null,
           },
         }));
       }

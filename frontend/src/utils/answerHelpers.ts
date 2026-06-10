@@ -1,12 +1,9 @@
 /**
- * Utilitaires pour la gestion des réponses automatiques (timeout, déconnexion).
- * Le préfixe et la détection vivent désormais dans `@onskone/shared` pour rester
- * en phase entre front et back. On les re-exporte ici pour minimiser les changements
- * d'imports dans les composants existants.
+ * Utilitaires d'affichage des réponses. Le préfixe de non-réponse et sa détection
+ * vivent dans `@onskone/shared` (partagés front/back) ; on les consomme ici pour
+ * `getDisplayText`.
  */
 import { NO_RESPONSE_PREFIX, isNoResponse } from '@onskone/shared';
-
-export { NO_RESPONSE_PREFIX, isNoResponse };
 
 /**
  * Retourne le texte à afficher (sans le préfixe de non-réponse)

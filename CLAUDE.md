@@ -15,11 +15,13 @@ The shared package is **built**, not watched-into-source. Frontend and backend i
 ## Common commands
 
 ```bash
-# Dev (parallel front + back + shared:watch)
-pnpm dev
+# Dev (parallel front + back)
+pnpm dev                # ⚠️ ne lance QUE front + back (shared n'a pas de script `dev`, seulement `watch`)
 pnpm dev:frontend       # http://localhost:3000
 pnpm dev:backend        # http://localhost:8080
-pnpm dev:shared         # rebuild shared types on change
+pnpm dev:shared         # rebuild shared types on change (alias de `pnpm --filter @onskone/shared watch`)
+# Pour un vrai parallèle front+back+shared:watch, lancer `pnpm dev` ET `pnpm dev:shared` côte à côte
+# (ou utiliser les scripts scripts/start-dev.* qui buildent shared une fois avant de spawn back+front).
 
 # Or via the launcher scripts in scripts/ (build shared once, then spawn back+front)
 ./scripts/start-dev.sh          # Linux/macOS
@@ -28,8 +30,8 @@ scripts\start-dev.bat           # Windows (opens two cmd windows)
 # Build (must be ordered: shared first)
 pnpm build:shared
 pnpm build:frontend
-pnpm build:backend
-pnpm build               # recursive, runs in dependency order
+pnpm build:backend       # ⚠️ NO-OP : backend n'a pas de script `build` (tourne via tsx, jamais compilé)
+pnpm build               # recursive — build shared (tsc) puis frontend (tsc && vite build), PAS le backend
 
 # Mobile (Capacitor — Android présent, iOS à générer sur Mac)
 ./scripts/start-mobile.sh       # live reload sur device/émulateur (le tel charge le Vite du PC)
@@ -37,15 +39,19 @@ pnpm build               # recursive, runs in dependency order
 # (équivalents .bat pour Windows). build-mobile attend VITE_SERVER_URL (URL du backend).
 
 # Checks
-pnpm typecheck           # recursive
-pnpm lint                # recursive
+pnpm typecheck           # ⚠️ NO-OP — aucun package ne définit le script `typecheck`, sort en code 0 sans rien vérifier
+pnpm lint                # ⚠️ NO-OP — pas d'ESLint installé/configuré dans le repo
+# Pour vraiment typer un package : tsc -p <pkg>/tsconfig.json --noEmit
+#   tsc -p shared/tsconfig.json --noEmit
+#   tsc -p frontend/tsconfig.json --noEmit
+#   tsc -p backend/tsconfig.json --noEmit
 
 # Backend tests (Jest, only package with tests)
 pnpm --filter backend test
 pnpm --filter backend test -- path/to/file.test.ts
 pnpm --filter backend test -- -t "name of test"
 
-# Regenerate question deck from the Excel source
+# Regenerate the question deck from the Excel source (génère questions_fr.json + questions_en.json)
 node backend/src/data/build-questions.mjs
 ```
 
@@ -74,7 +80,7 @@ The game runs entirely in-memory; SQLite is only used for the tickets table (`ba
 
 ### Frontend routing
 
-`frontend/src/App.tsx` registers the public routes: `/`, `/lobby/:lobbyCode`, `/game/:lobbyCode`, `/endgame/:lobbyCode`, `/admin` (lazy), and the dev-only `/studio` (guarded by `import.meta.env.DEV`). `Admin` is the only lazy-loaded page; everything else is eager.
+`frontend/src/App.tsx` registers the public routes: `/`, `/lobby/:lobbyCode`, `/game/:lobbyCode`, `/endgame/:lobbyCode`, `/privacy` et `/mentions` (tous deux rendus par `Legal` avec une prop `kind`), `/admin`, et la dev-only `/studio` (guarded by `import.meta.env.DEV`). **Pages lazy** (`React.lazy`) : `Lobby`, `Game`, `EndGame` et `Admin`. Eager : `Home`, `NotFound`, `Studio`, `Legal`.
 
 The single socket connection lives in `frontend/src/utils/socket.ts`; pages subscribe via `useSocketEvent` (`frontend/src/hooks/`). Most game state arrives through `gameStateUpdate`/`gameEnded` payloads — components do not refetch.
 
@@ -84,7 +90,7 @@ The single socket connection lives in `frontend/src/utils/socket.ts`; pages subs
 
 - `frontend/src/utils/studioStorage.ts` namespaces `localStorage` per slot using the `studioSlot` URL param (captured at module load), with `window.name` as a same-origin reload fallback. **Never write directly to `localStorage` from app code that runs inside a studio iframe** — go through `studioStorage` or the Studio slot's state will leak across iframes.
 - `frontend/src/hooks/useStudioBot.ts` reads `?bot=1` or a `studio:setBot` postMessage from the parent and auto-plays the current phase (leader: select question, pick substitute, submit guesses, reveal+next; non-leaders: submit a random answer). Used by the Studio's "Tous bots" toggle.
-- The "Composants" tab in Studio is `StudioGallery.tsx`, a live design-system inspector. The ShareCard preview section calls `buildShareCard` from `frontend/src/utils/shareCard.ts` (canvas 1080×1920 image used by the end-game share button).
+- The "Composants" tab in Studio is `frontend/src/pages/studio/Gallery.tsx`, a live design-system inspector. The ShareCard preview section calls `buildShareCard` from `frontend/src/utils/shareCard.ts` (canvas 1080×1920 image used by the end-game share button).
 
 ### Admin
 
@@ -92,7 +98,9 @@ The single socket connection lives in `frontend/src/utils/socket.ts`; pages subs
 
 ### Questions deck
 
-`backend/src/data/questions.json` is the in-game source of truth, **generated** from `Onskoné_Questions_Structurées_2604.xlsx` via `node backend/src/data/build-questions.mjs`. Don't hand-edit the JSON; edit the xlsx and re-run the script.
+Le deck est par locale : `backend/src/data/questions_fr.json` + `backend/src/data/questions_en.json` sont la source de vérité en jeu, **générés** depuis `Onskoné_2405.xlsx` via `node backend/src/data/build-questions.mjs` (la xlsx vit à côté dans `backend/src/data/`). Ne pas éditer ces JSON à la main ; éditer la xlsx et relancer le script. `GameManager` charge `questions_${locale}.json` selon la langue.
+
+`backend/src/data/themes.json` est un fichier **distinct, maintenu à la main** (PAS généré par le script) : métadonnées de thèmes (`category`, `emoji`, `mature?`, `labels.{fr,en}`, `descriptions.{fr,en}`). `GameManager.loadThemesMeta()` le fusionne avec les questions pour construire le catalogue de decks ; un thème présent dans les questions mais absent de `themes.json` est ignoré avec un warning.
 
 ### Design system (frontend)
 
@@ -109,10 +117,10 @@ All design tokens live in `@theme` inside [frontend/src/index.css](frontend/src/
 - `podium-gold / silver / bronze` - médailles EndGame (codes universels)
 
 **Couleurs intentionnellement hors-tokens** (story palette, ne pas généraliser) :
-- TIERS dans `EndGame.tsx` (5 paliers de couleur du score d'équipe)
+- `TIERS` dans `constants/tiers.ts` (6 paliers de couleur du score d'équipe ; le 6e = violet Onskoné `#b46cff`)
 - `CATEGORY_COLORS` dans `constants/game.ts` (couleur narrative par thème de carte)
 - Onskoné violet (`#b46cff` etc.) dans EndGame, climax visuel
-- Palette sombre `Admin.tsx` / `Studio.tsx` / `StudioGallery.tsx` (dev tooling, isolée)
+- Palette sombre `Admin.tsx` / `Studio.tsx` / `pages/studio/Gallery.tsx` (dev tooling, isolée)
 - `shareCard.ts` peint sur canvas, ne peut pas lire les vars CSS
 
 **Typographie** : trois familles, à composer avec les classes de hiérarchie.
@@ -132,7 +140,6 @@ All design tokens live in `@theme` inside [frontend/src/index.css](frontend/src/
 - `.stack-shadow` / `.stack-shadow-sm` / `.stack-shadow-lg` - ombres de carte empilées
 - `.texture-paper` - grain papier appliqué via ::after avec mix-blend multiply
 - `.bg-pattern-dots` / `.bg-pattern-diagonal` / `.bg-pattern-zigzag` - motifs de fond par ambiance
-- `.surface-notebook` - feuille de carnet (lignes + marge rouge) pour AnswerPhase
 
 **Conventions animations** :
 - Animations one-shot pour entrées/transitions (`animate-modal-pop`, `animate-card-deal-in`, etc.)

@@ -8,7 +8,7 @@ const TICKET_TYPE_LABELS_FR: Record<TicketType, string> = {
   suggestion: 'Idée / suggestion',
 };
 
-// Studio-style shared classes
+// Classes partagées, style Studio (palette sombre du dev tooling)
 export const CLUSTER = 'flex items-center gap-1.5 bg-black/30 border border-white/[0.06] rounded-lg px-2 py-1';
 export const INPUT_CLS =
   'bg-[#0f1117] text-white/85 border border-white/10 rounded-md px-2.5 py-1.5 text-[12px] font-mono ' +

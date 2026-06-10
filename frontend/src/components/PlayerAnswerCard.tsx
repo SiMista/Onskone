@@ -29,18 +29,14 @@ const PlayerAnswerCard = ({
   answer,
   isNoResponse = false,
   bgClass = 'bg-cream-answer',
-  pulse = false,
   className = '',
-  heading = null,
   placeholder = false,
   waitingFor,
 }: {
   answer: string;
   isNoResponse?: boolean;
   bgClass?: string;
-  pulse?: boolean;
   className?: string;
-  heading?: string | null;
   placeholder?: boolean;
   /** Si défini, affiche un état d'attente "En attente que {name} t'attribue une réponse…"
    *  avec avatar inline et police modérée, à la place du texte auto-fit. */
@@ -92,54 +88,47 @@ const PlayerAnswerCard = ({
   }, [displayedAnswer, placeholder]);
 
   return (
-    <>
-      {heading && (
-        <p className="text-gray-900 text-base tablet:text-xl font-semibold text-center">
-          {heading}
+    <div
+      className={`
+        w-full h-32 tablet:h-48 tablet:landscape:h-56 phone-landscape:h-full
+        p-4 tablet:p-6 phone-landscape:p-4
+        rounded-xl border flex items-center justify-center
+        ${placeholder
+          ? 'border-dashed border-gray-400 bg-gray-50 shadow-none'
+          : `border-black stack-shadow-sm texture-paper ${bgClass}`
+        }
+        ${className}
+      `}
+    >
+      {placeholder ? (
+        <p className={`font-bold text-center break-words text-sm tablet:text-base ${textClass}`}>
+          {answer}
         </p>
-      )}
-      <div
-        className={`
-          w-full h-32 tablet:h-48 tablet:landscape:h-56 phone-landscape:h-full
-          p-4 tablet:p-6 phone-landscape:p-4
-          rounded-xl border flex items-center justify-center
-          ${placeholder
-            ? 'border-dashed border-gray-400 bg-gray-50 shadow-none'
-            : `border-black stack-shadow-sm texture-paper ${bgClass}`
-          }
-          ${pulse ? 'animate-card-receive' : ''}
-          ${className}
-        `}
-      >
-        {placeholder ? (
-          <p className={`font-bold text-center break-words text-sm tablet:text-base ${textClass}`}>
-            {answer}
+      ) : waitingFor ? (
+        <div className="w-full h-full flex items-center justify-center overflow-hidden px-2">
+          {/* <div> (et non <p>) : contient un Avatar qui rend un <div> — un <div> dans un <p> est du HTML invalide. */}
+          <div className="text-gray-700 text-sm tablet:text-base phone-landscape:text-lg font-medium text-center italic leading-snug flex items-center justify-center flex-wrap gap-x-1.5 gap-y-1">
+            <span>{t.phases.playerAnswerWaiting.prefix}</span>
+            <span className="inline-flex items-center gap-1.5 not-italic font-semibold text-gray-900">
+              <Avatar avatarId={waitingFor.avatarId} name={waitingFor.name} size="sm" />
+              <span>{waitingFor.name}</span>
+            </span>
+            <span>{t.phases.playerAnswerWaiting.suffix}</span>
+          </div>
+        </div>
+      ) : (
+        <div ref={fitBoxRef} className="w-full h-full flex items-center justify-center overflow-hidden">
+          <p
+            ref={textRef}
+            lang="fr"
+            className={`font-bold text-center break-words hyphens-manual ${textClass}`}
+            style={{ fontSize: `${fontSize}px`, lineHeight: 1.15 }}
+          >
+            {displayedAnswer}
           </p>
-        ) : waitingFor ? (
-          <div className="w-full h-full flex items-center justify-center overflow-hidden px-2">
-            <p className="text-gray-700 text-sm tablet:text-base phone-landscape:text-lg font-medium text-center italic leading-snug flex items-center justify-center flex-wrap gap-x-1.5 gap-y-1">
-              <span>{t.phases.playerAnswerWaiting.prefix}</span>
-              <span className="inline-flex items-center gap-1.5 not-italic font-semibold text-gray-900">
-                <Avatar avatarId={waitingFor.avatarId} name={waitingFor.name} size="sm" />
-                <span>{waitingFor.name}</span>
-              </span>
-              <span>{t.phases.playerAnswerWaiting.suffix}</span>
-            </p>
-          </div>
-        ) : (
-          <div ref={fitBoxRef} className="w-full h-full flex items-center justify-center overflow-hidden">
-            <p
-              ref={textRef}
-              lang="fr"
-              className={`font-bold text-center break-words hyphens-manual ${textClass}`}
-              style={{ fontSize: `${fontSize}px`, lineHeight: 1.15 }}
-            >
-              {displayedAnswer}
-            </p>
-          </div>
-        )}
-      </div>
-    </>
+        </div>
+      )}
+    </div>
   );
 };
 

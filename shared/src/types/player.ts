@@ -5,8 +5,12 @@ export interface IPlayer {
   /** Identifiant unique du joueur (UUID) */
   id: string;
 
-  /** ID du socket actuel (peut changer en cas de reconnexion) */
-  socketId: string;
+  /**
+   * ID du socket actuel (peut changer en cas de reconnexion).
+   * SERVER-ONLY : jamais diffusé aux clients (cf. serializePlayer côté backend).
+   * Optionnel dans le contrat car les payloads publics l'omettent.
+   */
+  socketId?: string;
 
   /** Nom d'affichage du joueur (2-20 caractères) */
   name: string;

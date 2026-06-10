@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Icon } from '@iconify/react';
 import type { AdminLobbySummary } from '@onskone/shared';
-import { useToast } from '../../components/Toast';
+import { useAdminResource } from '../../hooks';
 import { fetchAdminLobbies } from '../../utils/adminDataApi';
 import { CLUSTER } from './shared';
 
@@ -112,36 +112,14 @@ const LobbyCard = ({ lobby }: { lobby: AdminLobbySummary }) => {
 };
 
 export const LobbiesPanel = ({ active, refreshKey }: { active: boolean; refreshKey: number }) => {
-  const [lobbies, setLobbies] = useState<AdminLobbySummary[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [lastFetch, setLastFetch] = useState<number | null>(null);
+  const { data, isLoading, lastFetch } = useAdminResource<AdminLobbySummary[]>({
+    fetcher: fetchAdminLobbies,
+    active,
+    refreshMs: LOBBIES_REFRESH_MS,
+    refreshKey,
+  });
+  const lobbies = useMemo(() => data ?? [], [data]);
   const [search, setSearch] = useState('');
-  const showToast = useToast();
-
-  const load = useCallback(async (silent = false) => {
-    if (!silent) setIsLoading(true);
-    try {
-      const data = await fetchAdminLobbies();
-      setLobbies(data);
-      setLastFetch(Date.now());
-    } catch (err) {
-      if (!silent) showToast(err instanceof Error ? err.message : 'Erreur', 'error');
-    } finally {
-      if (!silent) setIsLoading(false);
-    }
-  }, [showToast]);
-
-  useEffect(() => {
-    if (!active) return;
-    load();
-    const id = setInterval(() => load(true), LOBBIES_REFRESH_MS);
-    return () => clearInterval(id);
-  }, [active, load]);
-
-  useEffect(() => {
-    if (!active || refreshKey === 0) return;
-    load();
-  }, [refreshKey, active, load]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();

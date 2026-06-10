@@ -62,11 +62,20 @@ export interface RevealResult {
 export interface ServerToClientEvents {
   // ===== LOBBY EVENTS =====
 
-  /** Confirmation de création d'un lobby */
-  lobbyCreated: (data: { lobbyCode: string }) => void;
+  /**
+   * Confirmation de création d'un lobby.
+   * `reconnectToken` est le secret de reconnexion du joueur (host) : émis UNIQUEMENT
+   * à son propre socket (socket.emit). Le client le stocke et le renvoie lors d'une
+   * reconnexion pour prouver son identité sans dépendre du nom/UUID (publics).
+   */
+  lobbyCreated: (data: { lobbyCode: string; reconnectToken: string }) => void;
 
-  /** Confirmation de jointure au lobby */
-  joinedLobby: (data: { player: IPlayer }) => void;
+  /**
+   * Confirmation de jointure au lobby.
+   * `reconnectToken` est le secret de reconnexion du joueur : émis UNIQUEMENT à son
+   * propre socket (socket.emit). À stocker et renvoyer lors d'une reconnexion.
+   */
+  joinedLobby: (data: { player: IPlayer; reconnectToken: string }) => void;
 
   /** Mise à jour de la liste des joueurs */
   updatePlayersList: (data: { players: IPlayer[] }) => void;
@@ -175,7 +184,10 @@ export interface ServerToClientEvents {
 
   /** Réception des réponses mélangées pour le pilier */
   shuffledAnswersReceived: (data: {
-    answers: Array<{ id: string; text: string }>;
+    // `id` = slot OPAQUE (non corrélé à l'auteur, anti-fuite). `ownerId` n'est fourni
+    // que pour les réponses NO_RESPONSE (dont le texte révèle déjà l'auteur), afin de
+    // permettre l'auto-attribution côté client.
+    answers: Array<{ id: string; text: string; ownerId?: string }>;
     players: IPlayer[]; // Joueurs qui ont répondu (sans le pilier)
     roundNumber: number; // Pour éviter les race conditions sur reconnexion
   }) => void;
@@ -248,9 +260,52 @@ export interface ServerToClientEvents {
   /** Erreur générique */
   error: (data: {
     message: string;
-    code?: string; // Code d'erreur optionnel
+    code?: ErrorCode; // Code d'erreur stable optionnel (cf. ERROR_CODES)
   }) => void;
 }
+
+/**
+ * Codes d'erreur stables émis par le serveur en plus du `message` (localisé/humain).
+ *
+ * Le `message` reste la source de vérité affichée à l'utilisateur ; `code` est un
+ * discriminant machine-stable qui permet au frontend de router sans dépendre du
+ * texte traduit (le frontend retombe sur le `message` si `code` est absent).
+ */
+export const ERROR_CODES = {
+  /** Lobby/partie/round introuvable */
+  NOT_FOUND: 'NOT_FOUND',
+  /** Rate limiter déclenché */
+  RATE_LIMITED: 'RATE_LIMITED',
+  /** Entrée invalide (code, nom, id, réponse, question…) */
+  INVALID: 'INVALID',
+  /** Action réservée au pilier tentée par un autre joueur */
+  NOT_LEADER: 'NOT_LEADER',
+  /** Action réservée à l'hôte tentée par un autre joueur */
+  NOT_HOST: 'NOT_HOST',
+  /** Action interdite (anti-usurpation / hors de portée du joueur) */
+  FORBIDDEN: 'FORBIDDEN',
+  /** Phase de jeu incompatible avec l'action demandée */
+  WRONG_PHASE: 'WRONG_PHASE',
+  /** La partie est déjà en cours (réglage lobby refusé) */
+  GAME_IN_PROGRESS: 'GAME_IN_PROGRESS',
+  /** Le joueur a été expulsé du salon */
+  KICKED: 'KICKED',
+  /** Conflit d'état (reconnexion en cours, déjà soumis, etc.) */
+  CONFLICT: 'CONFLICT',
+  /** Erreur serveur inattendue */
+  INTERNAL: 'INTERNAL',
+} as const;
+
+/** Union des codes d'erreur stables (valeurs de `ERROR_CODES`). */
+export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];
+
+/**
+ * Alias de payloads dérivés du contrat `ServerToClientEvents`, exportés pour que le
+ * frontend type ses handlers sans ré-déclarer la forme inline (anti-drift).
+ */
+export type TimerStartedPayload = Parameters<ServerToClientEvents['timerStarted']>[0];
+export type TimerStatePayload = Parameters<ServerToClientEvents['timerState']>[0];
+export type ErrorPayload = Parameters<ServerToClientEvents['error']>[0];
 
 /**
  * Événements envoyés par les CLIENTS vers le SERVEUR
@@ -271,6 +326,12 @@ export interface ClientToServerEvents {
     lobbyCode: string;
     playerName: string;
     avatarId?: number;
+    /**
+     * Secret de reconnexion (reçu via lobbyCreated/joinedLobby). Fourni lors d'une
+     * reconnexion pour réassocier le slot existant en toute sécurité (sans dépendre
+     * du nom public). Absent pour une première jointure.
+     */
+    reconnectToken?: string;
   }) => void;
 
   /** Quitter le lobby */
@@ -343,6 +404,12 @@ export interface ClientToServerEvents {
   getGameState: (data: {
     lobbyCode: string;
     playerId?: string;
+    /**
+     * Secret de reconnexion (reçu via lobbyCreated/joinedLobby). Fourni lors d'une
+     * reconnexion pour réassocier le socketId du joueur en toute sécurité (sans
+     * dépendre de l'UUID public).
+     */
+    reconnectToken?: string;
   }) => void;
 
   /** Demander des cartes de questions (réservé au pilier) */

@@ -4,8 +4,10 @@ import { LuX, LuLock } from 'react-icons/lu';
 import type { DecksCatalogWithMeta, SelectedDecks, ThemeInfo } from '@onskone/shared';
 import { useLocale } from '../i18n';
 import { getCategoryColor, lightenHex, darkenHex } from '../constants/game';
-import { STICKER_FILTER, STICKER_FILTER_STRONG } from '../constants/icons';
+import { STICKER_FILTER } from '../constants/icons';
+import { useModalChrome } from '../hooks/useModalChrome';
 import ConfirmModal from './ConfirmModal';
+import EmojiCard from './EmojiCard';
 
 interface ThemePickerModalProps {
   isOpen: boolean;
@@ -72,7 +74,10 @@ const ThemePickerModal = ({ isOpen, onClose, catalog, selected, mode, hostName, 
     return { total, sel };
   }, [catalog, localSelected]);
 
-  // À l'ouverture : bloquer le scroll body, revenir sur la première catégorie.
+  // Scroll-lock body + fermeture Escape, partagés avec ModalShell.
+  useModalChrome(isOpen, onClose);
+
+  // À l'ouverture : revenir sur la première catégorie.
   // Important : le reset de la catégorie ne doit se faire QU'À la transition fermé→ouvert,
   // sinon chaque toggle de thème (qui renvoie un nouveau catalog depuis le serveur, donc
   // une nouvelle ref `categories`) ramènerait l'utilisateur sur ICEBREAKERS.
@@ -82,13 +87,10 @@ const ThemePickerModal = ({ isOpen, onClose, catalog, selected, mode, hostName, 
       wasOpenRef.current = false;
       return;
     }
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
     if (!wasOpenRef.current) {
       setActiveCategory(categories[0] ?? '');
       wasOpenRef.current = true;
     }
-    return () => { document.body.style.overflow = prev; };
   }, [isOpen, categories]);
 
   // Garde-fou : si l'activeCategory courante disparaît du catalogue, retombe sur la première.
@@ -254,22 +256,12 @@ const ThemePickerModal = ({ isOpen, onClose, catalog, selected, mode, hostName, 
                       }`}
                   >
                     {/* Bloc illustration emoji - dégradé diagonal pour le relief */}
-                    <div
-                      className="relative flex items-center justify-center shrink-0 w-20 md:w-24 texture-paper border-r-[2.5px] border-black"
-                      style={{ backgroundImage: buildEmojiGradient(activeColor) }}
-                    >
-                      {activePattern && (
-                        <span aria-hidden className={`absolute inset-0 ${activePattern} opacity-30`} />
-                      )}
-                      <Icon
-                        icon={info.emoji}
-                        width={44}
-                        height={44}
-                        aria-hidden
-                        className="relative transition-transform duration-300 ease-out group-hover:rotate-[-6deg] group-hover:scale-110"
-                        style={{ filter: STICKER_FILTER_STRONG }}
-                      />
-                    </div>
+                    <EmojiCard
+                      icon={info.emoji}
+                      bgImage={buildEmojiGradient(activeColor)}
+                      pattern={activePattern}
+                      filterStrength="strong"
+                    />
                     {/* Texte */}
                     <div className="flex-1 min-w-0 px-3.5 py-3 md:px-4 md:py-3.5 flex flex-col justify-center gap-1">
                       <div className="font-display font-bold text-display-md text-gray-900 leading-tight line-clamp-1 flex items-center gap-1.5">

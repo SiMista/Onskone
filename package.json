@@ -15,7 +15,9 @@
     "clean": "pnpm run --recursive clean && rm -rf node_modules",
     "install:all": "pnpm install",
     "typecheck": "pnpm run --recursive typecheck",
-    "lint": "pnpm run --recursive lint"
+    "lint": "pnpm run --recursive lint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "keywords": [
     "onskone",
@@ -27,13 +29,11 @@
   "license": "ISC",
   "devDependencies": {
     "@types/node": "^22.10.1",
+    "prettier": "^3.8.3",
     "typescript": "^5.7.2"
   },
   "engines": {
     "node": ">=18.0.0",
     "pnpm": ">=8.0.0"
-  },
-  "dependencies": {
-    "claude": "^0.1.2"
   }
 }

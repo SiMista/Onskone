@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import socket from '../utils/socket';
-import { RoundPhase } from '@onskone/shared';
+import { RoundPhase, type TimerStartedPayload, type TimerStatePayload } from '@onskone/shared';
 
 interface UseSyncedTimerOptions {
   onExpire?: () => void;
@@ -24,14 +24,14 @@ export function useSyncedTimer(defaultDuration: number, options: UseSyncedTimerO
   const onExpireRef = useRef(onExpire);
   const hasExpiredRef = useRef(false);
 
-  // Keep onExpire ref up to date
+  // Garder la ref onExpire à jour
   useEffect(() => {
     onExpireRef.current = onExpire;
   }, [onExpire]);
 
   // Écouter l'événement timerStarted du serveur
   useEffect(() => {
-    const handleTimerStarted = (data: { phase: RoundPhase; duration: number; startedAt: number }) => {
+    const handleTimerStarted = (data: TimerStartedPayload) => {
       // Si on filtre par phase, vérifier que c'est la bonne
       if (phase && data.phase !== phase) {
         return;
@@ -50,7 +50,7 @@ export function useSyncedTimer(defaultDuration: number, options: UseSyncedTimerO
     };
 
     // Gérer aussi timerState pour la récupération d'état
-    const handleTimerState = (data: { phase: RoundPhase; duration: number; startedAt: number } | null) => {
+    const handleTimerState = (data: TimerStatePayload) => {
       if (!data) return;
       // Réutiliser la même logique que timerStarted
       handleTimerStarted(data);
@@ -115,7 +115,7 @@ export function useSyncedTimer(defaultDuration: number, options: UseSyncedTimerO
     };
   }, [isRunning, endTime]);
 
-  // Cleanup on unmount
+  // Nettoyage au démontage
   useEffect(() => {
     return () => {
       if (intervalRef.current) {
@@ -125,23 +125,9 @@ export function useSyncedTimer(defaultDuration: number, options: UseSyncedTimerO
     };
   }, []);
 
-  const reset = useCallback(() => {
-    setTimeLeft(defaultDuration);
-    setIsRunning(false);
-    setEndTime(null);
-    setServerDuration(null);
-    hasExpiredRef.current = false;
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-  }, [defaultDuration]);
-
   return {
     timeLeft,
-    isRunning,
     endTime,
     serverDuration,
-    reset,
   };
 }

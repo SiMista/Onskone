@@ -105,6 +105,11 @@ export const fr: Dictionary = {
       kickedAnon: 'Tu as été expulsé du salon',
       closedInactive: 'Ce salon a été fermé pour inactivité',
     },
+    playerMenu: {
+      trigger: 'Options du joueur',
+      promote: 'Promouvoir hôte',
+      kick: 'Expulser',
+    },
   },
 
   game: {
@@ -235,7 +240,6 @@ export const fr: Dictionary = {
 
   report: {
     trigger: 'Signaler',
-    questionReportLabel: 'Signaler une question',
     title: 'Signaler un problème',
     categoryLabel: 'Catégorie de problème',
     categoryPlaceholder: 'Sélectionne une catégorie…',

@@ -1,8 +1,8 @@
 import { randomInt } from 'crypto';
-import {IGame, LeaderboardEntry} from '../types/IGame';
+import { IGame } from '../types/IGame';
 import {IRound} from '../types/IRound';
 import {Round} from './Round';
-import { GameCard, ILobby, GameStatus } from '@onskone/shared';
+import { GameCard, ILobby, GameStatus, LeaderboardEntry } from '@onskone/shared';
 
 export class Game implements IGame {
     lobby: ILobby;
@@ -38,11 +38,10 @@ export class Game implements IGame {
 
         const roundNumber = this.currentRound ? this.currentRound.roundNumber + 1 : 1;
 
-        // Trouver les joueurs actifs qui n'ont pas encore été piliers
-        const previousLeaderIds = new Set(this.rounds.map(r => r.leader.id));
-        const eligibleLeaders = activePlayers.filter(p => !previousLeaderIds.has(p.id));
-
-        // Si tous les joueurs actifs ont été piliers, la partie devrait être terminée
+        // Trouver les joueurs actifs qui n'ont pas encore été piliers.
+        // Ce cas est désormais détecté en amont par isGameOver() : nextRound() ne doit
+        // pas être appelé quand il n'y a plus de pilier éligible (soft-lock).
+        const eligibleLeaders = this.getEligibleLeaders();
         if (eligibleLeaders.length === 0) {
             throw new Error("Tous les joueurs actifs ont déjà été piliers");
         }
@@ -87,11 +86,27 @@ export class Game implements IGame {
         return this.lobby.players.filter(p => p.isActive);
     }
 
+    /**
+     * Joueurs actifs qui n'ont pas encore été piliers cette partie.
+     * Source de vérité partagée entre isGameOver() et nextRound() pour éviter
+     * tout désaccord (soft-lock de fin de partie).
+     */
+    getEligibleLeaders(): typeof this.lobby.players {
+        const previousLeaderIds = new Set(this.rounds.map(r => r.leader.id));
+        return this.getActivePlayers().filter(p => !previousLeaderIds.has(p.id));
+    }
+
     isGameOver(): boolean {
-        // La partie est terminée quand on a fait autant de rounds que prévu initialement
-        // ou s'il n'y a plus assez de joueurs actifs pour continuer
+        // La partie est terminée quand on a fait autant de rounds que prévu initialement,
+        // s'il n'y a plus assez de joueurs actifs pour continuer, ou s'il ne reste plus
+        // aucun pilier éligible (tous les actifs ont déjà été piliers). Ce dernier cas
+        // évite que nextRound() throw en boucle lorsque des joueurs se déconnectent.
         const activePlayers = this.getActivePlayers();
-        return this.rounds.length >= this.initialActivePlayerCount || activePlayers.length < 2;
+        return (
+            this.rounds.length >= this.initialActivePlayerCount ||
+            activePlayers.length < 2 ||
+            this.getEligibleLeaders().length === 0
+        );
     }
 
     getLeaderboard(): LeaderboardEntry[] {
@@ -112,9 +127,20 @@ export class Game implements IGame {
             }
         }
 
-        // Créer le leaderboard et trier par score décroissant
+        // Créer le leaderboard et trier par score décroissant.
+        // Anti-fuite : le leaderboard est diffusé aux clients (gameEnded/revealResults/
+        // gameState). On projette donc chaque joueur sur sa vue publique pour omettre
+        // socketId ET reconnectToken (server-only). Projection INLINE volontaire :
+        // importer serializePlayer (broadcasting) créerait un cycle Game ↔ broadcasting.
         const leaderboard: LeaderboardEntry[] = this.lobby.players.map(player => ({
-            player,
+            player: {
+                id: player.id,
+                name: player.name,
+                isHost: player.isHost,
+                score: player.score,
+                isActive: player.isActive,
+                avatarId: player.avatarId,
+            },
             score: playerScores[player.id] || 0
         }));
 

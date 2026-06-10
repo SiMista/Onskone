@@ -5,7 +5,7 @@ import { requireAdmin, checkPassword, issueToken } from './admin.js';
 import { RateLimiter } from '../utils/rateLimiter.js';
 import logger from '../utils/logger.js';
 
-const router = Router();
+const router: Router = Router();
 
 const TICKET_TYPES = new Set(['question_report', 'bug', 'suggestion']);
 const STATUSES = new Set(['new', 'in_progress', 'resolved', 'wont_fix']);
@@ -20,9 +20,10 @@ const ticketLimiter = new RateLimiter({ windowMs: 10 * 60 * 1000, maxRequests: 5
 const loginLimiter = new RateLimiter({ windowMs: 15 * 60 * 1000, maxRequests: 10 });
 
 function clientIp(req: Request): string {
-  const fwd = req.headers['x-forwarded-for'];
-  if (typeof fwd === 'string' && fwd.length > 0) return fwd.split(',')[0].trim();
-  return req.socket.remoteAddress || 'unknown';
+  // req.ip est résolu par Express selon `trust proxy` (= 1, cf. index.ts) : il prend
+  // le premier X-Forwarded-For derrière le reverse proxy, sinon l'IP socket. Ne pas
+  // lire le header brut (forgeable → contournement du rate-limit).
+  return req.ip || req.socket.remoteAddress || 'unknown';
 }
 
 function hashIp(ip: string): string {

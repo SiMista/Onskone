@@ -3,7 +3,37 @@
  *
  * Schéma versionné -> si on change la forme plus tard, on migre via `version`.
  */
+import type { IRound, LeaderboardEntry } from '@onskone/shared';
 import { studioStorage } from './studioStorage';
+
+/**
+ * Pourcentage de connaissance de l'équipe affiché en fin de partie.
+ *
+ * Aligné sur le scoring backend (Round.calculateScores / getGuessingAnswers) :
+ *  - numérateur  = total des points marqués par l'équipe (seul le pilier marque,
+ *    +1 par bonne attribution, plus les bonus de similarité) -> somme du leaderboard.
+ *  - dénominateur = nombre total d'attributions possibles, c.-à-d. la taille du
+ *    pool deviné à chaque round. Ce pool = `getGuessingAnswers()` côté backend :
+ *    une entrée par réponse de joueur, plus l'entrée du pilier (réponse du
+ *    substitut) en mode "Devine ma réponse".
+ *
+ * On lit la taille réelle du pool par round (round.answers) plutôt qu'un nombre
+ * fixe de joueurs : c'est exact même si des joueurs rejoignent/quittent en cours
+ * de partie. Le résultat est borné à [0, 100].
+ */
+export function computeTeamPct(leaderboard: LeaderboardEntry[], rounds: IRound[]): number {
+  if (!leaderboard.length || !rounds.length) return 0;
+  const scored = leaderboard.reduce((sum, e) => sum + e.score, 0);
+  const possible = rounds.reduce((sum, r) => {
+    const poolSize =
+      Object.keys(r.answers ?? {}).length +
+      (r.guessMyAnswerMode && r.substituteAnswer ? 1 : 0);
+    return sum + poolSize;
+  }, 0);
+  if (possible <= 0) return 0;
+  const pct = Math.round((scored / possible) * 100);
+  return Math.max(0, Math.min(100, pct));
+}
 
 const STORAGE_KEY = 'onskone:profile';
 // v2 -> remplace bestScore par totalPoints, ajoute topFinishes.
