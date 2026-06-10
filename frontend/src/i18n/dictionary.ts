@@ -118,6 +118,11 @@ export interface Dictionary {
       kickedAnon: string;
       closedInactive: string;
     };
+    playerMenu: {
+      trigger: string;
+      promote: string;
+      kick: string;
+    };
   };
 
   game: {
@@ -172,7 +177,6 @@ export interface Dictionary {
 
   report: {
     trigger: string;
-    questionReportLabel: string;
     title: string;
     categoryLabel: string;
     categoryPlaceholder: string;

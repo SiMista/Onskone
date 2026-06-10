@@ -2,6 +2,8 @@
  * Fonctions de détection de similarité entre réponses
  */
 
+import { NO_RESPONSE_PREFIX } from '@onskone/shared';
+
 const FRENCH_STOP_WORDS = new Set([
   'le', 'la', 'les', 'un', 'une', 'de', 'du', 'des',
   'a', 'au', 'aux', 'en', 'et', 'ou', 'mais', 'pour',
@@ -11,7 +13,7 @@ const FRENCH_STOP_WORDS = new Set([
   's', 'j', 'qu', 'ne', 'pas', 'plus', 'se', 'si',
 ]);
 
-export function normalizeAnswer(text: string): string {
+function normalizeAnswer(text: string): string {
   return text
     .toLowerCase()
     .normalize('NFD')
@@ -23,7 +25,7 @@ export function normalizeAnswer(text: string): string {
     .trim();
 }
 
-export function levenshteinDistance(a: string, b: string): number {
+function levenshteinDistance(a: string, b: string): number {
   if (a.length === 0) return b.length;
   if (b.length === 0) return a.length;
 
@@ -59,4 +61,19 @@ export function areAnswersSimilar(a: string, b: string, threshold = 0.65): boole
   const similarity = 1 - distance / maxLen;
 
   return similarity >= threshold;
+}
+
+/**
+ * Prédicat partagé pour décider si deux réponses doivent être traitées comme
+ * « similaires » côté jeu : aucune des deux ne doit être une réponse
+ * automatique (NO_RESPONSE_PREFIX), et elles doivent passer areAnswersSimilar.
+ * Factorisé depuis revealAnswer + confirmSimilarity (roundHandlers) qui
+ * reproduisaient exactement ces gardes. La logique de scoring reste distincte
+ * chez l'appelant.
+ */
+export function isSimilarPair(a: string, b: string): boolean {
+  if (a.startsWith(NO_RESPONSE_PREFIX) || b.startsWith(NO_RESPONSE_PREFIX)) {
+    return false;
+  }
+  return areAnswersSimilar(a, b);
 }

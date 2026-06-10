@@ -45,8 +45,6 @@ export const GAME_CONSTANTS = {
   KICK_BLOCK_DURATION_MS: 5 * 60 * 1000,
 } as const;
 
-export type GameConstants = typeof GAME_CONSTANTS;
-
 /**
  * Préfixe placé devant le contenu d'une réponse automatique (timeout, déconnexion).
  * Le frontend détecte ce préfixe pour afficher un placeholder italique au lieu du texte brut.

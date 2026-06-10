@@ -71,9 +71,6 @@ const logger = {
     disconnect: (socketId: string, reason?: string) => {
       logger.info('User disconnected', { socketId, reason });
     },
-    event: (event: string, socketId: string, data?: Record<string, unknown>) => {
-      logger.debug(`Socket event: ${event}`, { socketId, ...data });
-    },
   },
 
   // Shorthand for game events

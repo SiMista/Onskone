@@ -11,7 +11,7 @@ import * as LobbyManager from '../managers/LobbyManager.js';
 import { Game } from '../models/Game.js';
 import { Lobby } from '../models/Lobby.js';
 
-const router = Router();
+const router: Router = Router();
 
 function buildLobbySummary(lobby: Lobby): AdminLobbySummary {
   const game = lobby.game;

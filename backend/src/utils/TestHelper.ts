@@ -1,8 +1,6 @@
 import * as LobbyManager from "../managers/LobbyManager";
-import * as GameManager from "../managers/GameManager";
 import {Player} from "../models/Player";
 import {Lobby} from "../models/Lobby";
-import {Game} from "../models/Game";
 
 export class TestHelper {
     static createLobbyWithPlayers(playerNames: string[] = []): Lobby {
@@ -18,15 +16,5 @@ export class TestHelper {
             lobby.addPlayer(player);
         });
         return lobby;
-    }
-
-    static createPlayers(playerNames: string[]): Player[] {
-        return playerNames.map((name) => new Player(name, `socket-${name}`));
-    }
-
-
-    static startGameWithPlayers(playerNames: string[]): Game {
-        const lobby = this.createLobbyWithPlayers(playerNames);
-        return GameManager.createGame(lobby);
     }
 }

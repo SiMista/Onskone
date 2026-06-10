@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Icon } from '@iconify/react';
 import { GameMode } from '@onskone/shared';
 import type { Locale } from '@onskone/shared';
 import InfoModal from './InfoModal';
+import EmojiCard from './EmojiCard';
 import { useLocale, LOCALE_META, SUPPORTED_LOCALES } from '../i18n';
 import type { Dictionary } from '../i18n/dictionary';
-import { STICKER_FILTER } from '../constants/icons';
 
 interface GameModeModalProps {
   isOpen: boolean;
@@ -85,21 +84,7 @@ const GameModeModal = ({ isOpen, onClose, onSelect }: GameModeModalProps) => {
               onClick={() => onSelect(opt.mode, deckLocale)}
               className="group flex items-stretch w-full border-[2.5px] border-black rounded-2xl overflow-hidden stack-shadow-sm bg-white hover:scale-[1.02] active:scale-[0.98] transition-transform duration-150 cursor-pointer text-left"
             >
-              <div
-                className={`relative flex items-center justify-center shrink-0 w-20 md:w-24 ${opt.iconBg} texture-paper border-r-[2.5px] border-black`}
-              >
-                {opt.iconPattern && (
-                  <span aria-hidden className={`absolute inset-0 ${opt.iconPattern} opacity-30`} />
-                )}
-                <Icon
-                  icon={opt.icon}
-                  width={44}
-                  height={44}
-                  aria-hidden
-                  className="relative transition-transform duration-300 ease-out group-hover:rotate-[-6deg] group-hover:scale-110"
-                  style={{ filter: STICKER_FILTER }}
-                />
-              </div>
+              <EmojiCard icon={opt.icon} bgClassName={opt.iconBg} pattern={opt.iconPattern} />
               <div className="flex-1 min-w-0 px-3.5 py-3 md:px-4 md:py-3.5 flex flex-col justify-center gap-1">
                 <div className="font-display font-bold text-display-md text-gray-900 leading-tight">
                   {text.title}

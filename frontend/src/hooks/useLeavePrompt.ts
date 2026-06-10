@@ -2,20 +2,20 @@ import { useEffect } from 'react';
 import { isStudioFrame } from '../utils/studioStorage';
 
 /**
- * Custom hook to warn users before leaving the page
- * @param enabled - Whether the prompt is enabled
+ * Avertit l'utilisateur avant qu'il ne quitte la page (rechargement / fermeture).
+ * @param enabled - Active ou non l'avertissement
  */
 export function useLeavePrompt(
   enabled: boolean = true
 ) {
   useEffect(() => {
     if (!enabled) return;
-    // Studio: never block reloads/navigations inside a studio iframe.
+    // Studio : ne jamais bloquer les rechargements/navigations dans une iframe studio.
     if (isStudioFrame) return;
 
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      // Note: Modern browsers ignore custom messages and show a generic prompt
-      // We just need to set returnValue to trigger the prompt
+      // Les navigateurs modernes ignorent les messages custom et affichent un
+      // prompt générique : il suffit de fixer returnValue pour le déclencher.
       e.preventDefault();
       e.returnValue = '';
     };

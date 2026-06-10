@@ -1,292 +1,23 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Icon } from '@iconify/react';
 import type { AdminDeckSummary } from '@onskone/shared';
-import { useToast } from '../../components/Toast';
+import { useAdminResource } from '../../hooks';
 import { fetchAdminDecks } from '../../utils/adminDataApi';
 import { CLUSTER } from './shared';
 import { StatTile } from '../../components/admin/StatTile';
-
-interface CategoryStyle {
-  strip: string;
-  chip: string;
-  dot: string;
-  text: string;
-  ring: string;
-  glow: string;
-}
-
-const CATEGORY_PALETTE: Record<string, CategoryStyle> = {
-  ICEBREAKERS: {
-    strip: 'bg-sky-400',
-    chip: 'bg-sky-500/15 border-sky-400/50 text-sky-100',
-    dot: 'bg-sky-400',
-    text: 'text-sky-300',
-    ring: 'ring-sky-300/40',
-    glow: 'from-sky-400 to-transparent',
-  },
-  FUN: {
-    strip: 'bg-amber-400',
-    chip: 'bg-amber-400/15 border-amber-300/50 text-amber-100',
-    dot: 'bg-amber-400',
-    text: 'text-amber-300',
-    ring: 'ring-amber-300/40',
-    glow: 'from-amber-400 to-transparent',
-  },
-  DEEP: {
-    strip: 'bg-red-400',
-    chip: 'bg-red-500/15 border-red-400/50 text-red-100',
-    dot: 'bg-red-400',
-    text: 'text-red-300',
-    ring: 'ring-red-300/40',
-    glow: 'from-red-400 to-transparent',
-  },
-};
-
-const FALLBACK_PALETTE: CategoryStyle = {
-  strip: 'bg-white/30',
-  chip: 'bg-white/[0.05] border-white/15 text-white/75',
-  dot: 'bg-white/50',
-  text: 'text-white/75',
-  ring: 'ring-white/20',
-  glow: 'from-white/40 to-transparent',
-};
-
-const categoryStyle = (category: string): CategoryStyle =>
-  CATEGORY_PALETTE[category] ?? FALLBACK_PALETTE;
-
-const deckKey = (d: { category: string; theme: string }) => `${d.category}-${d.theme}`;
-
-const SubjectCard = ({
-  subject, palette, collapsed,
-}: {
-  subject: AdminDeckSummary['subjects'][number];
-  palette: CategoryStyle;
-  collapsed: boolean;
-}) => {
-  const hasQuestions = subject.questions.length > 0;
-  const cardRef = useRef<HTMLDivElement>(null);
-  const [preview, setPreview] = useState<{ top: number; left: number; placement: 'top' | 'bottom' } | null>(null);
-
-  const openPreview = useCallback(() => {
-    if (!cardRef.current || !hasQuestions) return;
-    const rect = cardRef.current.getBoundingClientRect();
-    const placement: 'top' | 'bottom' = rect.top > window.innerHeight * 0.45 ? 'top' : 'bottom';
-    setPreview({
-      top: placement === 'top' ? rect.top - 8 : rect.bottom + 8,
-      left: rect.left + rect.width / 2,
-      placement,
-    });
-  }, [hasQuestions]);
-
-  const closePreview = useCallback(() => setPreview(null), []);
-
-  if (!collapsed) {
-    return (
-      <div className="relative rounded-lg border border-white/[0.07] bg-black/20 overflow-hidden">
-        <span className={`absolute left-0 top-0 bottom-0 w-[3px] ${palette.strip}`} />
-        <div className="flex items-center gap-2 px-3 py-2 pl-4 bg-white/[0.015] border-b border-white/[0.05]">
-          <span className="text-[13px] text-white/90 font-medium truncate" title={subject.subject}>
-            {subject.subject}
-          </span>
-        </div>
-        {!hasQuestions ? (
-          <p className="px-3 py-3 text-[11px] text-white/25 italic">aucune question</p>
-        ) : (
-          <ol className="px-3 py-2.5 space-y-1.5">
-            {subject.questions.map((q, i) => (
-              <li key={i} className="flex gap-2 text-[12.5px] text-white/80 leading-snug">
-                <span className="font-mono text-[11px] tabular-nums text-white/25 mt-0.5 shrink-0 w-5 text-right">
-                  {i + 1}.
-                </span>
-                <span className="whitespace-pre-wrap break-words">{q}</span>
-              </li>
-            ))}
-          </ol>
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <>
-      <div
-        ref={cardRef}
-        onClick={openPreview}
-        onPointerEnter={(e) => { if (e.pointerType === 'mouse') openPreview(); }}
-        onPointerLeave={(e) => { if (e.pointerType === 'mouse') closePreview(); }}
-        onContextMenu={(e) => { e.preventDefault(); }}
-        style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
-        className={`relative w-full h-full text-left rounded-md border border-white/[0.07] hover:border-white/20 bg-black/20 transition-all overflow-hidden ${hasQuestions ? 'cursor-pointer' : ''}`}
-      >
-        <span className={`absolute left-0 top-0 bottom-0 w-[2px] ${palette.strip}`} />
-        <div className="px-2 py-1.5 pl-2.5 bg-white/[0.015] h-full flex items-center">
-          <span className="block text-[12px] text-white/85 leading-snug truncate" title={subject.subject}>
-            {subject.subject}
-          </span>
-        </div>
-      </div>
-
-      {preview && hasQuestions && createPortal(
-        <>
-          <div
-            className="fixed inset-0 z-40 md:hidden"
-            onClick={closePreview}
-            onTouchMove={closePreview}
-          />
-          <div
-            className="fixed z-50 animate-fade-in pointer-events-none"
-            style={(() => {
-              const isDesktop = typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches;
-              const baseTransform = preview.placement === 'top' ? 'translateY(-100%)' : 'translateY(0)';
-              if (isDesktop) {
-                const width = Math.min(440, window.innerWidth * 0.9);
-                const left = Math.min(
-                  Math.max(12, preview.left - width / 2),
-                  window.innerWidth - 12 - width,
-                );
-                return { top: preview.top, left, width, transform: baseTransform };
-              }
-              return { top: preview.top, left: 12, right: 12, transform: baseTransform };
-            })()}
-          >
-            <div className="relative rounded-xl border border-white/20 bg-[#1b1f2a]/98 backdrop-blur-md shadow-[0_24px_60px_-10px_rgba(0,0,0,0.85)] overflow-hidden">
-              <span className={`absolute left-0 top-0 bottom-0 w-[3px] ${palette.strip}`} />
-              <div className="px-3 py-2 pl-4 border-b border-white/[0.06] flex items-center">
-                <span className="text-[12.5px] text-white/90 font-medium truncate">
-                  {subject.subject}
-                </span>
-              </div>
-              <ol className="px-3 py-2.5 space-y-1.5 max-h-[55vh] overflow-y-auto custom-scroll">
-                {subject.questions.map((q, i) => (
-                  <li key={i} className="flex gap-2 text-[12.5px] text-white/85 leading-snug">
-                    <span className="font-mono text-[11px] tabular-nums text-white/30 mt-0.5 shrink-0 w-5 text-right">
-                      {i + 1}.
-                    </span>
-                    <span className="whitespace-pre-wrap break-words">{q}</span>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          </div>
-        </>,
-        document.body,
-      )}
-    </>
-  );
-};
-
-const DeckRailItem = ({
-  deck, palette, selected, onSelect,
-}: {
-  deck: AdminDeckSummary;
-  palette: CategoryStyle;
-  selected: boolean;
-  onSelect: () => void;
-}) => (
-  <button
-    onClick={onSelect}
-    className={`group relative w-full flex items-center gap-2 pl-3 pr-2.5 py-1.5 rounded-md border transition-colors text-left ${selected
-      ? `bg-white/[0.08] border-white/15 ring-1 ${palette.ring}`
-      : 'bg-transparent border-transparent hover:bg-white/[0.04]'
-      }`}
-  >
-    <span className={`absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full ${palette.strip} ${selected ? '' : 'opacity-60 group-hover:opacity-100'} transition-opacity`} />
-    <span className={`text-[12.5px] truncate flex-1 ${selected ? 'text-white' : 'text-white/75 group-hover:text-white/95'}`} title={deck.theme}>
-      {deck.theme}
-    </span>
-    <span className="font-mono text-[11px] tabular-nums text-white/40" title={`${deck.subjectCount} sujet${deck.subjectCount > 1 ? 's' : ''}`}>
-      {deck.subjectCount}
-    </span>
-  </button>
-);
-
-const DeckDetail = ({
-  deck, questionsCollapsed, onToggleCollapse,
-}: {
-  deck: AdminDeckSummary;
-  questionsCollapsed: boolean;
-  onToggleCollapse: () => void;
-}) => {
-  const palette = categoryStyle(deck.category);
-  return (
-    <div className="rounded-xl border border-white/[0.07] bg-gradient-to-b from-white/[0.025] to-transparent overflow-hidden">
-      <div className="relative px-5 py-4 border-b border-white/[0.06]">
-        <div className="flex items-baseline gap-2.5 flex-wrap">
-          <span className={`px-1.5 py-0.5 rounded border font-mono text-[11px] uppercase tracking-wider ${palette.chip}`}>
-            {deck.category}
-          </span>
-          <h2 className="text-[22px] font-semibold tracking-tight text-white leading-none">
-            {deck.theme}
-          </h2>
-          <span className="text-[12px] text-white/55 ml-auto">
-            <span className={palette.text}>{deck.subjectCount}</span> sujet{deck.subjectCount > 1 ? 's' : ''}
-          </span>
-          <button
-            onClick={onToggleCollapse}
-            className="px-2.5 py-1 rounded-md border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-white/75 hover:text-white text-[12px] transition-colors inline-flex items-center gap-1.5"
-            title={questionsCollapsed ? 'Afficher les questions de tous les sujets' : 'Cacher les questions (survoler un sujet pour les voir)'}
-          >
-            <Icon icon={questionsCollapsed ? 'mdi:eye-outline' : 'mdi:eye-off-outline'} className="w-3.5 h-3.5" />
-            {questionsCollapsed ? 'Afficher les questions' : 'Cacher les questions'}
-          </button>
-        </div>
-        <div className={`absolute left-0 right-0 bottom-0 h-px bg-gradient-to-r ${palette.glow}`} />
-      </div>
-
-      <div className="p-4">
-        {deck.subjects.length === 0 ? (
-          <p className="text-center py-10 font-mono text-[11px] uppercase tracking-[0.3em] text-white/25">
-            aucun sujet
-          </p>
-        ) : (
-          <div
-            className={`grid gap-1.5 ${questionsCollapsed
-              ? 'grid-cols-3 md:grid-cols-4 xl:grid-cols-5'
-              : 'grid-cols-1 md:grid-cols-2'
-              }`}
-          >
-            {deck.subjects.map((s) => (
-              <SubjectCard
-                key={s.subject}
-                subject={s}
-                palette={palette}
-                collapsed={questionsCollapsed}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
+import { categoryStyle, deckKey } from './decks/shared';
+import { DeckRailItem, DeckDetail } from './decks/DeckDetail';
 
 export const DecksPanel = ({ active }: { active: boolean }) => {
-  const [decks, setDecks] = useState<AdminDeckSummary[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loaded, setLoaded] = useState(false);
+  const { data, isLoading } = useAdminResource<AdminDeckSummary[]>({
+    fetcher: fetchAdminDecks,
+    active,
+  });
+  const decks = data ?? [];
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('');
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [questionsCollapsed, setQuestionsCollapsed] = useState(true);
-  const showToast = useToast();
-
-  const load = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const data = await fetchAdminDecks();
-      setDecks(data);
-      setLoaded(true);
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Erreur', 'error');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [showToast]);
-
-  useEffect(() => {
-    if (active && !loaded) load();
-  }, [active, loaded, load]);
 
   const totals = useMemo(() => {
     const categories = new Set<string>();
@@ -311,30 +42,35 @@ export const DecksPanel = ({ active }: { active: boolean }) => {
     return Array.from(set).sort();
   }, [decks]);
 
+  const filterDeck = useCallback((d: AdminDeckSummary, q: string): AdminDeckSummary | null => {
+    if (!q) return d;
+    const subjects: AdminDeckSummary['subjects'] = [];
+    let questionCount = 0;
+    for (const s of d.subjects) {
+      const subjectMatch = s.subject.toLowerCase().includes(q);
+      const questions = subjectMatch
+        ? s.questions
+        : s.questions.filter((qu) => qu.toLowerCase().includes(q));
+      if (subjectMatch || questions.length > 0) {
+        subjects.push({ ...s, questions });
+        questionCount += questions.length;
+      }
+    }
+    if (subjects.length === 0) return null;
+    return { ...d, subjects, subjectCount: subjects.length, questionCount };
+  }, []);
+
   const filtered = useMemo<AdminDeckSummary[]>(() => {
     const q = search.trim().toLowerCase();
     const byCategory = decks.filter((d) => !categoryFilter || d.category === categoryFilter);
     if (!q) return byCategory;
     const result: AdminDeckSummary[] = [];
     for (const d of byCategory) {
-      const subjects: AdminDeckSummary['subjects'] = [];
-      let questionCount = 0;
-      for (const s of d.subjects) {
-        const subjectMatch = s.subject.toLowerCase().includes(q);
-        const questions = subjectMatch
-          ? s.questions
-          : s.questions.filter((qu) => qu.toLowerCase().includes(q));
-        if (subjectMatch || questions.length > 0) {
-          subjects.push({ ...s, questions });
-          questionCount += questions.length;
-        }
-      }
-      if (subjects.length > 0) {
-        result.push({ ...d, subjects, subjectCount: subjects.length, questionCount });
-      }
+      const match = filterDeck(d, q);
+      if (match) result.push(match);
     }
     return result;
-  }, [decks, search, categoryFilter]);
+  }, [decks, search, categoryFilter, filterDeck]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, AdminDeckSummary[]>();

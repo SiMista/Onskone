@@ -68,6 +68,9 @@ export function useStudioBot({ game, currentPlayer, players, lobbyCode }: UseStu
   useEffect(() => {
     if (!isStudioFrame) return;
     const onMessage = (e: MessageEvent) => {
+      // Les commandes Studio viennent de la fenêtre parente, MÊME ORIGINE que l'iframe.
+      // Rejeter tout message cross-origin (injection postMessage depuis un autre site).
+      if (e.origin !== window.location.origin) return;
       const data = e?.data;
       if (!data || typeof data !== 'object') return;
 
@@ -330,7 +333,12 @@ export function useStudioBot({ game, currentPlayer, players, lobbyCode }: UseStu
       if (firedRef.current.has(key)) return;
       firedRef.current.add(key);
 
-      const totalAnswers = Object.keys(round.answers ?? {}).length;
+      // En mode "Devine ma réponse", le pool de devinette inclut la réponse du substitut
+      // (clé = id du pilier), absente de round.answers : on l'ajoute pour ne pas s'arrêter
+      // une réponse trop tôt (même formule que playerStats.computeTeamPct).
+      const totalAnswers =
+        Object.keys(round.answers ?? {}).length +
+        (round.guessMyAnswerMode && round.substituteAnswer ? 1 : 0);
       const already = new Set(round.revealedIndices ?? []);
       let idx = 0;
 

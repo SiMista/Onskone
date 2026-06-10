@@ -4,6 +4,7 @@ import step2Img from '../assets/images/home/2-answering.png';
 import step3Img from '../assets/images/home/3-guessing.png';
 import step4Img from '../assets/images/home/4-reveal.png';
 import { useLocale } from '../i18n';
+import { useSwipe } from '../hooks/useSwipe';
 import type { HowToPlayMarkers } from '../i18n/dictionary';
 
 type Step = {
@@ -90,7 +91,6 @@ const HowToPlayCarousel = () => {
   const [autoTick, setAutoTick] = useState(0); // bump to restart fill animation
   const [isPaused, setIsPaused] = useState(false);
   const [dragX, setDragX] = useState(0);
-  const touchStartX = useRef<number | null>(null);
   // Suivi du temps écoulé pour reprendre l'autoplay là où on s'est arrêté.
   const slideStartRef = useRef<number>(Date.now());
   const elapsedRef = useRef<number>(0);
@@ -149,34 +149,38 @@ const HowToPlayCarousel = () => {
     requestAnimationFrame(() => requestAnimationFrame(() => setAnimate(true)));
   };
 
+  // Décision de swipe (gauche/droite) + suivi 1:1 du doigt (dragX) factorisés via
+  // useSwipe — mêmes seuils (abs(dx) >= 40 ; abs(dx) < abs(dy) = intention
+  // verticale ignorée). `onMove` pilote le drag live, remis à 0 par useSwipe à la
+  // fin / l'annulation du geste.
+  const swipe = useSwipe({
+    threshold: 40,
+    onMove: setDragX,
+    // Le track continue dans la direction du swipe ; pas de double animation.
+    onPrev: () => {
+      setDisplayIndex((d) => d - 1);
+      setAutoTick((t) => t + 1);
+    },
+    onNext: () => {
+      setDisplayIndex((d) => d + 1);
+      setAutoTick((t) => t + 1);
+    },
+  });
+
   const onTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
     setIsPaused(true);
     setAnimate(false); // suivi 1:1 du doigt sans transition
-  };
-  const onTouchMove = (e: React.TouchEvent) => {
-    if (touchStartX.current === null) return;
-    const delta = e.changedTouches[0].clientX - touchStartX.current;
-    setDragX(delta);
+    swipe.touchHandlers.onTouchStart(e);
   };
   const onTouchEnd = (e: React.TouchEvent) => {
-    if (touchStartX.current === null) return;
-    const delta = e.changedTouches[0].clientX - touchStartX.current;
-    touchStartX.current = null;
-    setDragX(0);
     setAnimate(true);
-    if (Math.abs(delta) > 40) {
-      // Le track continue dans la direction du swipe ; pas de double animation.
-      setDisplayIndex((d) => d + (delta < 0 ? 1 : -1));
-      setAutoTick((t) => t + 1);
-    }
+    swipe.touchHandlers.onTouchEnd(e);
     setIsPaused(false);
   };
   const onTouchCancel = () => {
-    touchStartX.current = null;
-    setDragX(0);
     setAnimate(true);
     setIsPaused(false);
+    swipe.touchHandlers.onTouchCancel(); // reset des refs internes + dragX
   };
 
   // TRACK_SLIDES = [ghost-last, s0, s1, s2, s3, ghost-first]
@@ -189,7 +193,7 @@ const HowToPlayCarousel = () => {
     <div
       className="w-full flex flex-col items-center gap-4 desktop-short:gap-2 select-none pt-4 desktop-short:pt-1 touch-pan-y"
       onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
+      onTouchMove={swipe.touchHandlers.onTouchMove}
       onTouchEnd={onTouchEnd}
       onTouchCancel={onTouchCancel}
       style={{ touchAction: 'pan-y' }}

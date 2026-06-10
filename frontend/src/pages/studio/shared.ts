@@ -27,15 +27,8 @@ export const VIEWPORT_PRESETS: ViewportPreset[] = [
   { id: 'free', label: 'Libre - 480×720', short: 'Free', w: 480, h: 720 },
 ];
 
-const LEGACY_VIEWPORT_ALIAS: Record<string, string> = {
-  'iphone-14': 'iphone-17',
-  'iphone-pm': 'iphone-17-pmax',
-};
-
-export const presetById = (id: string): ViewportPreset => {
-  const resolved = LEGACY_VIEWPORT_ALIAS[id] ?? id;
-  return VIEWPORT_PRESETS.find((p) => p.id === resolved) ?? VIEWPORT_PRESETS[1];
-};
+export const presetById = (id: string): ViewportPreset =>
+  VIEWPORT_PRESETS.find((p) => p.id === id) ?? VIEWPORT_PRESETS[1];
 
 export interface SlotConfig {
   id: string;
@@ -50,7 +43,6 @@ export interface SlotRuntimeState {
   isLeader: boolean;
   isSubstitute: boolean;
   phase: string | null;
-  playerName: string | null;
 }
 
 export const FUN_NAMES = [
@@ -84,17 +76,14 @@ export const loadSavedConfig = (): SavedConfig | null => {
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed?.slots)) return null;
-    parsed.slots = parsed.slots.map((s: Partial<SlotConfig>) => {
-      const aliased = s.viewportId ? LEGACY_VIEWPORT_ALIAS[s.viewportId] ?? s.viewportId : undefined;
-      return {
-        ...makeSlot(0),
-        ...s,
-        bot: !!s.bot,
-        viewportId: aliased && VIEWPORT_PRESETS.some((p) => p.id === aliased)
-          ? aliased
-          : 'iphone-17',
-      };
-    });
+    parsed.slots = parsed.slots.map((s: Partial<SlotConfig>) => ({
+      ...makeSlot(0),
+      ...s,
+      bot: !!s.bot,
+      viewportId: s.viewportId && VIEWPORT_PRESETS.some((p) => p.id === s.viewportId)
+        ? s.viewportId
+        : 'iphone-17',
+    }));
     return parsed;
   } catch { return null; }
 };
@@ -107,11 +96,9 @@ export const viewportDims = (slot: SlotConfig): { w: number; h: number } => {
 };
 
 // ---------- Unified control styles ----------
-export const PILL = 'bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 rounded-md transition-colors';
+const PILL = 'bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 rounded-md transition-colors';
 export const PILL_ICON = `${PILL} w-7 h-7 flex items-center justify-center text-white/70 hover:text-white text-[13px] leading-none`;
-export const PILL_BTN = `${PILL} px-2.5 py-1 text-[11px] font-mono uppercase tracking-wider text-white/70 hover:text-white`;
 export const SELECT_CLS =
   'bg-[#0f1117] text-white/85 border border-white/10 rounded-md px-2 py-1 text-[11px] font-mono ' +
   'focus:outline-none focus:border-amber-400/60 hover:border-white/20 transition-colors ' +
   '[&>option]:bg-[#0f1117] [&>option]:text-white';
-export const CLUSTER = 'flex items-center gap-1.5 bg-black/30 border border-white/[0.06] rounded-lg px-2 py-1';

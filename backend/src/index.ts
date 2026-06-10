@@ -18,6 +18,12 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const server = http.createServer(app);
 
+// Déploiement derrière un reverse proxy (1 hop) : faire confiance au premier
+// X-Forwarded-For pour que req.ip reflète l'IP réelle du client. Sans ça, le
+// rate-limit anti-bruteforce (login admin, tickets) serait contournable en
+// forgeant le header X-Forwarded-For.
+app.set('trust proxy', 1);
+
 import logger from './utils/logger.js';
 
 // Liste blanche des origines autorisées en production
@@ -38,24 +44,23 @@ if (process.env.NODE_ENV === 'production' && ALLOWED_ORIGINS.length === 0) {
 const io = new Server(server, {
   cors: {
     origin: (origin, callback) => {
-      // En production, vérifier la liste blanche strictement
+      // En production, vérifier la liste blanche strictement.
+      // Politique alignée sur le middleware HTTP : on n'autorise plus
+      // inconditionnellement les requêtes sans Origin. Les apps natives Capacitor
+      // envoient bien un Origin (capacitor://localhost / https://localhost) couvert
+      // par CAPACITOR_ORIGINS ; un client navigateur légitime envoie toujours un Origin.
       if (process.env.NODE_ENV === 'production') {
-        // Autoriser les requêtes sans origin (mobile apps, server-to-server)
-        if (!origin) {
-          callback(null, true);
-          return;
-        }
         // Apps natives Capacitor (toujours autorisées)
-        if (CAPACITOR_ORIGINS.includes(origin)) {
+        if (origin && CAPACITOR_ORIGINS.includes(origin)) {
           callback(null, true);
           return;
         }
         // Vérifier si l'origine est dans la liste blanche
-        if (ALLOWED_ORIGINS.length > 0 && ALLOWED_ORIGINS.includes(origin)) {
+        if (origin && ALLOWED_ORIGINS.length > 0 && ALLOWED_ORIGINS.includes(origin)) {
           callback(null, true);
           return;
         }
-        // En production sans ALLOWED_ORIGINS configuré, rejeter les requêtes cross-origin
+        // Sinon (Origin absent ou non autorisé), rejeter
         callback(new Error('Origin not allowed by CORS'));
         return;
       }
@@ -65,7 +70,8 @@ const io = new Server(server, {
         callback(null, true);
         return;
       }
-      if (origin.includes('localhost') || origin.includes('127.0.0.1') || origin.match(/^http:\/\/192\.168\.\d+\.\d+:\d+$/)) {
+      // Match EXACT d'origine (pas de sous-chaîne : 'evil-localhost.com' ne doit pas passer).
+      if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) || /^http:\/\/192\.168\.\d{1,3}\.\d{1,3}:\d+$/.test(origin)) {
         callback(null, true);
         return;
       }
@@ -90,7 +96,7 @@ app.use((req, res, next) => {
     if (process.env.NODE_ENV === 'production') {
       allowed = ALLOWED_ORIGINS.includes(origin) || CAPACITOR_ORIGINS.includes(origin);
     } else {
-      allowed = origin.includes('localhost') || origin.includes('127.0.0.1') || /^http:\/\/192\.168\.\d+\.\d+:\d+$/.test(origin);
+      allowed = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) || /^http:\/\/192\.168\.\d{1,3}\.\d{1,3}:\d+$/.test(origin);
     }
     if (allowed) {
       res.setHeader('Access-Control-Allow-Origin', origin);
@@ -130,7 +136,7 @@ if (fs.existsSync(FRONTEND_DIST)) {
   });
 }
 
-// Lancer le serveur HTTP sur le port 5000
+// Lancer le serveur HTTP (port défini par PORT, sinon 8080 par défaut)
 const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
   printBanner();

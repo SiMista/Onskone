@@ -1,14 +1,15 @@
 import { describe, it, expect } from '@jest/globals';
 import * as GameManager from "../src/managers/GameManager";
+import * as QuestionsRepo from "../src/data/questionsRepository";
 import { TestHelper } from "../src/utils/TestHelper";
 
 describe('GameManager', () => {
     it('should have questions loaded', () => {
-        expect(GameManager.isQuestionsLoaded()).toBe(true);
+        expect(QuestionsRepo.isQuestionsLoaded()).toBe(true);
     });
 
     it('should get random questions', () => {
-        const questions = GameManager.getRandomQuestions(3);
+        const questions = QuestionsRepo.getRandomQuestions(3);
         expect(questions.length).toBe(3);
     });
 

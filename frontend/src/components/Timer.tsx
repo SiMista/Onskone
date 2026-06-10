@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
 import { useSyncedTimer } from '../hooks/useSyncedTimer';
+import { useRafProgress } from '../hooks/useRafProgress';
 import { RoundPhase } from '@onskone/shared';
 
 interface TimerProps {
@@ -12,25 +12,7 @@ interface TimerProps {
 
 const Timer = ({ duration, onExpire, phase, lobbyCode, hidden }: TimerProps) => {
   const { timeLeft, endTime } = useSyncedTimer(duration, { onExpire, phase, lobbyCode });
-
-  const [progress, setProgress] = useState(100);
-  const rafRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    const tick = () => {
-      if (endTime === null) {
-        setProgress(Math.max(0, Math.min(100, (timeLeft / duration) * 100)));
-      } else {
-        const remainingMs = Math.max(0, endTime - Date.now());
-        setProgress(Math.max(0, Math.min(100, (remainingMs / (duration * 1000)) * 100)));
-      }
-      rafRef.current = requestAnimationFrame(tick);
-    };
-    rafRef.current = requestAnimationFrame(tick);
-    return () => {
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-    };
-  }, [endTime, duration, timeLeft]);
+  const { progress } = useRafProgress({ duration, endTime, timeLeft });
 
   const isCritical = progress <= 10;
   const isWarning = progress <= 30 && !isCritical;

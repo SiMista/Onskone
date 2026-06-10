@@ -1,8 +1,8 @@
-// src/components/PlayerCard.tsx
 import { FaCrown, FaEllipsisV, FaUserSlash } from "react-icons/fa";
 import { useState, useEffect, useRef, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
 import Avatar from "./Avatar";
+import { useLocale } from "../i18n";
 
 const MENU_WIDTH = 184;
 const MENU_HEIGHT = 96;
@@ -13,10 +13,12 @@ interface OptionsMenuProps {
   preferBottom: boolean;
   onPromote: () => void;
   onKick: () => void;
+  promoteLabel: string;
+  kickLabel: string;
   innerRef: React.MutableRefObject<HTMLDivElement | null>;
 }
 
-const OptionsMenu = ({ anchorRef, preferBottom, onPromote, onKick, innerRef }: OptionsMenuProps) => {
+const OptionsMenu = ({ anchorRef, preferBottom, onPromote, onKick, promoteLabel, kickLabel, innerRef }: OptionsMenuProps) => {
   const [pos, setPos] = useState<{ top: number; left: number; origin: 'top' | 'bottom' } | null>(null);
 
   useLayoutEffect(() => {
@@ -74,7 +76,7 @@ const OptionsMenu = ({ anchorRef, preferBottom, onPromote, onKick, innerRef }: O
         className="menu-option w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] font-semibold text-gray-700 hover:bg-[#fff6dd] hover:text-[#b07600]"
       >
         <FaCrown className="menu-icon shrink-0" size={14} color="#fcad11" />
-        <span>Promouvoir hôte</span>
+        <span>{promoteLabel}</span>
       </button>
 
       <div className="h-px bg-gray-100 mx-2" />
@@ -86,7 +88,7 @@ const OptionsMenu = ({ anchorRef, preferBottom, onPromote, onKick, innerRef }: O
         className="menu-option w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] font-semibold text-[#d32f2f] hover:bg-[#fdecec]"
       >
         <FaUserSlash className="menu-icon shrink-0" size={14} />
-        <span>Expulser</span>
+        <span>{kickLabel}</span>
       </button>
     </div>,
     document.body
@@ -120,6 +122,7 @@ const PlayerCard = ({
   onKick,
   onPromote,
 }: PlayerCardProps) => {
+  const { t } = useLocale();
   const [isOpen, setIsOpen] = useState(false);
   const buttonRef = useRef<HTMLSpanElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -161,6 +164,10 @@ const PlayerCard = ({
             <>
               <span
                 ref={buttonRef}
+                role="button"
+                aria-label={t.lobby.playerMenu.trigger}
+                aria-haspopup="menu"
+                aria-expanded={isOpen}
                 className="cursor-pointer inline-flex p-1"
                 onClick={() => setIsOpen(!isOpen)}
               >
@@ -171,6 +178,8 @@ const PlayerCard = ({
                   innerRef={menuRef}
                   anchorRef={buttonRef}
                   preferBottom={isFirstPlayer}
+                  promoteLabel={t.lobby.playerMenu.promote}
+                  kickLabel={t.lobby.playerMenu.kick}
                   onPromote={() => { setIsOpen(false); onPromote && onPromote(id); }}
                   onKick={() => { setIsOpen(false); onKick && onKick(id); }}
                 />
@@ -211,6 +220,10 @@ const PlayerCard = ({
           <>
             <span
               ref={buttonRef}
+              role="button"
+              aria-label={t.lobby.playerMenu.trigger}
+              aria-haspopup="menu"
+              aria-expanded={isOpen}
               className="cursor-pointer"
               onClick={() => setIsOpen(!isOpen)}
             >
@@ -221,6 +234,8 @@ const PlayerCard = ({
                 innerRef={menuRef}
                 anchorRef={buttonRef}
                 preferBottom={isFirstPlayer}
+                promoteLabel={t.lobby.playerMenu.promote}
+                kickLabel={t.lobby.playerMenu.kick}
                 onPromote={() => { setIsOpen(false); onPromote && onPromote(id); }}
                 onKick={() => { setIsOpen(false); onKick && onKick(id); }}
               />

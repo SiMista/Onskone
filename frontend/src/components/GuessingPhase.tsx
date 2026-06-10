@@ -1,6 +1,5 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { Icon } from '@iconify/react';
-import socket from '../utils/socket';
 import HourglassTimer from './HourglassTimer';
 import Button from './Button';
 import QuestionCard from './QuestionCard';
@@ -9,16 +8,17 @@ import RevealedAnswerCard from './RevealedAnswerCard';
 import AnswerText from './AnswerText';
 import Avatar from './Avatar';
 import Dropdown from './Dropdown';
-import { IPlayer, RoundPhase, GameCard, GameMode, RevealResult } from '@onskone/shared';
+import { IPlayer, RoundPhase, GameCard, GameMode, RevealResult, isNoResponse } from '@onskone/shared';
 import { getPhaseDuration } from '../constants/game';
-import { isNoResponse } from '../utils/answerHelpers';
-import { useStartTimerDelayed } from '../hooks';
+import { useStartTimerDelayed, useSocketEvent } from '../hooks';
+import socket from '../utils/socket';
 import { useLocale } from '../i18n';
 import { hapticLight, hapticAssigned } from '../utils/haptics';
 
 interface Answer {
-  id: string;
+  id: string; // slot opaque (non corrélé à l'auteur)
   text: string;
+  ownerId?: string; // fourni uniquement pour les NO_RESPONSE (auto-attribution)
 }
 
 // Valeur sentinelle du dropdown pour retirer l'attribution (Dropdown ne renvoie qu'une string).
@@ -57,13 +57,13 @@ const GuessingPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, question,
 
   useStartTimerDelayed(isLeader, lobbyCode, timerDuration);
 
-  // Sync guesses when initialGuesses changes (reconnection during GUESSING phase)
+  // Resynchronise les attributions quand initialGuesses change (reconnexion en phase GUESSING)
   useEffect(() => {
     if (initialGuesses && Object.keys(initialGuesses).length > 0) {
       setGuesses(prev => {
-        // Merge: keep local changes but restore server state for missing keys
+        // Fusion : on repart de l'état serveur mais les attributions locales priment
+        // (le joueur a pu en faire de nouvelles avant la resynchro)
         const merged = { ...initialGuesses };
-        // Local guesses take priority (user may have made changes)
         Object.keys(prev).forEach(key => {
           if (prev[key]) {
             merged[key] = prev[key];
@@ -80,64 +80,59 @@ const GuessingPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, question,
     justAssignedTimeoutRef.current = setTimeout(() => setJustAssignedAnswerId(null), 500);
   };
 
+  // Demander les réponses mélangées à l'entrée dans la phase, et nettoyer les
+  // timeouts d'animation au démontage.
   useEffect(() => {
     socket.emit('requestShuffledAnswers', { lobbyCode });
-
-    const onShuffledAnswersReceived = (data: { answers: Answer[]; players: IPlayer[]; roundNumber?: number }) => {
-      // Ignorer les événements d'anciens rounds (race condition sur reconnexion)
-      if (data.roundNumber !== undefined && data.roundNumber !== roundNumber) {
-        return;
-      }
-
-      setAnswers(data.answers);
-      setPlayers(data.players);
-
-      // Auto-assigner les réponses NO_RESPONSE aux joueurs correspondants
-      const autoGuesses: Record<string, string> = {};
-      data.answers.forEach(answer => {
-        if (isNoResponse(answer.text)) {
-          // answer.id est le playerId, on l'auto-assigne
-          autoGuesses[answer.id] = answer.id;
-        }
-      });
-      if (Object.keys(autoGuesses).length > 0) {
-        setGuesses(prev => ({ ...prev, ...autoGuesses }));
-      }
-
-      setLoading(false);
-    };
-    socket.on('shuffledAnswersReceived', onShuffledAnswersReceived);
-
-    const onGuessUpdated = (data: { answerId: string; playerId: string | null }) => {
-      setGuesses(prev => {
-        const updated = { ...prev };
-        if (data.playerId === null) {
-          delete updated[data.answerId];
-        } else {
-          updated[data.answerId] = data.playerId;
-        }
-        return updated;
-      });
-
-      // Spectateurs (mode remote) : feedback visuel quand le pilier attribue
-      if (data.playerId && !isLeader) {
-        setHighlightedAnswerId(data.answerId);
-        if (highlightTimeoutRef.current) clearTimeout(highlightTimeoutRef.current);
-        highlightTimeoutRef.current = setTimeout(() => setHighlightedAnswerId(null), 1500);
-        flashJustAssigned(data.answerId);
-      }
-    };
-    socket.on('guessUpdated', onGuessUpdated);
-
     return () => {
-      // IMPORTANT: détacher uniquement NOS handlers (sinon on supprime aussi
-      // les listeners du useStudioBot et de tout autre consommateur).
-      socket.off('shuffledAnswersReceived', onShuffledAnswersReceived);
-      socket.off('guessUpdated', onGuessUpdated);
       if (justAssignedTimeoutRef.current) clearTimeout(justAssignedTimeoutRef.current);
       if (highlightTimeoutRef.current) clearTimeout(highlightTimeoutRef.current);
     };
-  }, [lobbyCode, isLeader, roundNumber]);
+  }, [lobbyCode]);
+
+  useSocketEvent('shuffledAnswersReceived', (data) => {
+    // Ignorer les événements d'anciens rounds (race condition sur reconnexion)
+    if (data.roundNumber !== roundNumber) {
+      return;
+    }
+
+    setAnswers(data.answers);
+    setPlayers(data.players);
+
+    // Auto-assigner les réponses NO_RESPONSE aux joueurs correspondants
+    const autoGuesses: Record<string, string> = {};
+    data.answers.forEach(answer => {
+      if (isNoResponse(answer.text)) {
+        // answer.id = slot opaque ; ownerId (fourni pour les NO_RESPONSE) = l'auteur réel
+        autoGuesses[answer.id] = answer.ownerId ?? answer.id;
+      }
+    });
+    if (Object.keys(autoGuesses).length > 0) {
+      setGuesses(prev => ({ ...prev, ...autoGuesses }));
+    }
+
+    setLoading(false);
+  });
+
+  useSocketEvent('guessUpdated', (data) => {
+    setGuesses(prev => {
+      const updated = { ...prev };
+      if (data.playerId === null) {
+        delete updated[data.answerId];
+      } else {
+        updated[data.answerId] = data.playerId;
+      }
+      return updated;
+    });
+
+    // Spectateurs (mode remote) : feedback visuel quand le pilier attribue
+    if (data.playerId && !isLeader) {
+      setHighlightedAnswerId(data.answerId);
+      if (highlightTimeoutRef.current) clearTimeout(highlightTimeoutRef.current);
+      highlightTimeoutRef.current = setTimeout(() => setHighlightedAnswerId(null), 1500);
+      flashJustAssigned(data.answerId);
+    }
+  });
 
   // Attribue (ou retire si playerId === null) une réponse à un joueur, puis sync serveur.
   const handleAssign = (answerId: string, playerId: string | null) => {

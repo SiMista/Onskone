@@ -1,5 +1,6 @@
 import {Lobby} from "../models/Lobby";
-import { IPlayer, ServerToClientEvents, ClientToServerEvents, Locale, DEFAULT_LOCALE } from '@onskone/shared';
+import type { ServerPlayer } from '../types/ServerPlayer.js';
+import { ServerToClientEvents, ClientToServerEvents, Locale, DEFAULT_LOCALE } from '@onskone/shared';
 import { Server } from 'socket.io';
 import {generateLobbyCode} from '../utils/helpers';
 import logger from '../utils/logger';
@@ -12,15 +13,13 @@ const CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 let cleanupIntervalId: NodeJS.Timeout | null = null;
 
 /**
- * Create a lobby and return lobby code
- * Ensures unique lobby codes
+ * Crée un lobby et renvoie son code, garanti unique.
  */
 export const create = (locale: Locale = DEFAULT_LOCALE): string => {
     let lobbyCode: string;
     let attempts = 0;
     const maxAttempts = 10;
 
-    // Generate unique lobby code
     do {
         lobbyCode = generateLobbyCode();
         attempts++;
@@ -35,10 +34,10 @@ export const create = (locale: Locale = DEFAULT_LOCALE): string => {
 };
 
 /**
- * Clean up inactive lobbies
- * Ne supprime pas les lobbies avec une partie en cours
+ * Supprime les lobbies inactifs.
+ * Usage interne uniquement (appelé par startCleanupInterval).
  */
-export const cleanupInactiveLobbies = (io?: IoServer): void => {
+const cleanupInactiveLobbies = (io?: IoServer): void => {
     const now = new Date();
     const lobbiesRemoved: string[] = [];
 
@@ -64,11 +63,11 @@ export const cleanupInactiveLobbies = (io?: IoServer): void => {
 };
 
 /**
- * Start automatic cleanup interval
- * Safe to call multiple times (clears previous interval)
+ * Démarre l'intervalle de nettoyage automatique.
+ * Appelable plusieurs fois sans risque : tout intervalle précédent est annulé
+ * (évite une fuite mémoire au hot reload).
  */
 export const startCleanupInterval = (io?: IoServer): void => {
-    // Clear existing interval to prevent memory leak on hot reload
     if (cleanupIntervalId) {
         clearInterval(cleanupIntervalId);
     }
@@ -81,7 +80,7 @@ export const startCleanupInterval = (io?: IoServer): void => {
 };
 
 /**
- * Stop the cleanup interval
+ * Arrête l'intervalle de nettoyage.
  */
 export const stopCleanupInterval = (): void => {
     if (cleanupIntervalId) {
@@ -91,17 +90,15 @@ export const stopCleanupInterval = (): void => {
     }
 };
 
-export const addPlayer = (lobby: Lobby, player: IPlayer): void => {
+export const addPlayer = (lobby: Lobby, player: ServerPlayer): void => {
     lobby.addPlayer(player);
 };
 
 /**
- * Remove a player from the lobby
- * @param lobby
- * @param player
- * @returns boolean - true if lobby is empty and removed, false otherwise
+ * Retire un joueur du lobby.
+ * @returns true si le lobby est devenu vide et a été supprimé, false sinon.
  */
-export const removePlayer = (lobby: Lobby, player: IPlayer): boolean => {
+export const removePlayer = (lobby: Lobby, player: ServerPlayer): boolean => {
     lobby.removePlayer(player);
 
     if (lobby.players.length === 0) {
@@ -119,7 +116,7 @@ export const removePlayer = (lobby: Lobby, player: IPlayer): boolean => {
 };
 
 export const getLobby = (lobbyCode: string): Lobby | undefined => {
-    // Normalize to uppercase since lobby codes are generated as uppercase
+    // Normaliser en majuscules : les codes de lobby sont générés en majuscules
     return lobbies.get(lobbyCode.toUpperCase());
 };
 

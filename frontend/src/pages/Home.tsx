@@ -28,6 +28,7 @@ import {
   getUnseenAchievementIds,
   markAchievementsAsSeen,
 } from '../utils/playerStats';
+import { storeReconnectToken } from '../utils/playerHelpers';
 
 const Home = () => {
   const { locale, t } = useLocale();
@@ -61,7 +62,7 @@ const Home = () => {
   const autoCreate = searchParams.get('autoCreate') === '1';
   const autoJoin = searchParams.get('autoJoin') === '1';
 
-  // Studio: pre-fill identity from URL params so iframes don't need user input.
+  // Studio : pré-remplit l'identité depuis les params d'URL pour que les iframes n'aient pas besoin de saisie.
   useEffect(() => {
     if (urlPlayerName && !playerName) setPlayerName(urlPlayerName);
     if (urlAvatarId !== null) {
@@ -71,14 +72,14 @@ const Home = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Fetch lobby info when there's a lobby code in URL
+  // Récupère les infos du lobby quand un code est présent dans l'URL
   useEffect(() => {
     if (lobbyCode) {
       socket.emit('getLobbyInfo', { lobbyCode });
     }
   }, [lobbyCode]);
 
-  // Studio: auto-create lobby (slot 0 / host).
+  // Studio : création auto du lobby (slot 0 / hôte).
   const autoFiredRef = useRef(false);
   useEffect(() => {
     if (autoFiredRef.current) return;
@@ -91,7 +92,7 @@ const Home = () => {
     socket.emit('createLobby', { playerName: name, avatarId, gameMode: mode, locale });
   }, [autoCreate, lobbyCode, urlPlayerName, playerName, avatarId, searchParams, locale]);
 
-  // Studio: auto-join existing lobby (slot 1+).
+  // Studio : jointure auto d'un lobby existant (slot 1+).
   useEffect(() => {
     if (autoFiredRef.current) return;
     if (!autoJoin || !lobbyCode || lobbyExists !== true) return;
@@ -128,8 +129,11 @@ const Home = () => {
     socket.emit('checkPlayerName', { lobbyCode, playerName });
   }, [lobbyCode, playerName, avatarId, showToast, t]);
 
-  const handleLobbyCreated = useCallback((data: { lobbyCode: string }) => {
-    // Studio: notify parent window that the lobby exists so siblings can auto-join.
+  const handleLobbyCreated = useCallback((data: { lobbyCode: string; reconnectToken: string }) => {
+    // Stocker le secret de reconnexion du host (émis à son seul socket) avant de
+    // naviguer vers le lobby : il sera renvoyé lors des reconnexions ultérieures.
+    storeReconnectToken(data.lobbyCode, data.reconnectToken);
+    // Studio : prévient la fenêtre parente que le lobby existe pour que les iframes voisines puissent rejoindre auto.
     if (window.parent !== window) {
       try {
         window.parent.postMessage({ type: 'studio:lobbyCreated', lobbyCode: data.lobbyCode }, '*');
@@ -189,11 +193,11 @@ const Home = () => {
     }
   }, [navigate]);
 
-  useSocketEvent('lobbyInfo', handleLobbyInfo, [handleLobbyInfo]);
-  useSocketEvent('lobbyCreated', handleLobbyCreated, [handleLobbyCreated]);
-  useSocketEvent('playerNameExists', handlePlayerNameExists, [handlePlayerNameExists]);
-  useSocketEvent('playerNameValid', handlePlayerNameValid, [handlePlayerNameValid]);
-  useSocketEvent('error', handleError, [handleError]);
+  useSocketEvent('lobbyInfo', handleLobbyInfo);
+  useSocketEvent('lobbyCreated', handleLobbyCreated);
+  useSocketEvent('playerNameExists', handlePlayerNameExists);
+  useSocketEvent('playerNameValid', handlePlayerNameValid);
+  useSocketEvent('error', handleError);
 
   return (
     <div className="relative h-full flex flex-col overflow-hidden">
@@ -227,8 +231,7 @@ const Home = () => {
           const unlocked = new Set(stats.unlockedAchievements);
           return (
             <div className="flex flex-col gap-3 pb-10">
-              {/* Stats top : chiffres + labels rééquilibrés (chiffres plus modestes,
-                  labels plus lisibles - avant : text-xl vs text-[10px], trop disproportionné). */}
+              {/* Stats top : chiffres modestes + labels lisibles, pour éviter un contraste de taille trop disproportionné. */}
               <div className="grid grid-cols-2 gap-2 text-center mb-1">
                 <div className="bg-cream-player border-2 border-black rounded-xl p-2 stack-shadow-sm">
                   <div className="text-lg font-display font-bold tabular-nums leading-none">{stats.gamesPlayed}</div>
