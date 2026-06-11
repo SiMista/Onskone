@@ -50,17 +50,23 @@ const io = new Server(server, {
       // envoient bien un Origin (capacitor://localhost / https://localhost) couvert
       // par CAPACITOR_ORIGINS ; un client navigateur légitime envoie toujours un Origin.
       if (process.env.NODE_ENV === 'production') {
+        // Requêtes same-origin : le navigateur n'envoie pas d'Origin pour les
+        // requêtes vers le même domaine (polling socket.io depuis onskone.fr).
+        if (!origin) {
+          callback(null, true);
+          return;
+        }
         // Apps natives Capacitor (toujours autorisées)
-        if (origin && CAPACITOR_ORIGINS.includes(origin)) {
+        if (CAPACITOR_ORIGINS.includes(origin)) {
           callback(null, true);
           return;
         }
         // Vérifier si l'origine est dans la liste blanche
-        if (origin && ALLOWED_ORIGINS.length > 0 && ALLOWED_ORIGINS.includes(origin)) {
+        if (ALLOWED_ORIGINS.length > 0 && ALLOWED_ORIGINS.includes(origin)) {
           callback(null, true);
           return;
         }
-        // Sinon (Origin absent ou non autorisé), rejeter
+        // Origine inconnue → rejeter
         callback(new Error('Origin not allowed by CORS'));
         return;
       }

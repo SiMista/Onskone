@@ -17,6 +17,13 @@ export PATH="$PNPM_HOME:$HOME/.npm-global/bin:$PATH"
 
 cd "$(dirname "$0")/.."   # racine du repo
 ROOT="$(pwd)"
+
+# En mode manuel (hors CI), on pull d'abord.
+if [ -z "${CI:-}" ]; then
+  echo "==> Mise à jour du code (git pull)"
+  git pull origin main
+fi
+
 echo "==> Déploiement depuis $ROOT (commit $(git rev-parse --short HEAD))"
 
 echo "==> Installation des dépendances (recompile better-sqlite3 natif pour ce serveur)"
