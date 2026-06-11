@@ -209,6 +209,7 @@ export interface Dictionary {
     mentions: LegalSection;
     privacy: LegalSection;
     contact: { title: string; intro: string };
+    openPage: string;
   };
 
   achievements: Record<string, { title: string; description: string }>;

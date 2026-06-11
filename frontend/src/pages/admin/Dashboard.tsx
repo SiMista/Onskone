@@ -161,6 +161,11 @@ export const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
                       >
                         {tab.icon && <Icon icon={tab.icon} className="w-4 h-4" />}
                         {tab.label && <span>{tab.label}</span>}
+                        {tab.id === 'tickets' && tickets.length > 0 && (
+                          <span className="inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full bg-amber-400 text-[9px] font-bold leading-none text-[#0a0c12] tabular-nums">
+                            {tickets.length}
+                          </span>
+                        )}
                         {!tab.enabled && (
                           <span className="w-1 h-1 rounded-full bg-amber-400/80" title="bientôt" />
                         )}
@@ -212,7 +217,7 @@ export const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
         )}
       </main>
 
-      <MobileBottomNav activeTab={activeTab} setActiveTab={setActiveTab} lobbyCount={lobbyCount} />
+      <MobileBottomNav activeTab={activeTab} setActiveTab={setActiveTab} lobbyCount={lobbyCount} ticketCount={tickets.length} />
 
       <style>{`
         .no-scrollbar::-webkit-scrollbar { display: none; }

@@ -7,6 +7,7 @@ import Dropdown from './Dropdown';
 import { useToast } from './Toast';
 import { submitTicket, TicketsApiError } from '../utils/ticketsApi';
 import { TICKET_CATEGORIES, TicketType } from '../constants/ticketCategories';
+import { buildDeviceSummary } from '../utils/deviceInfo';
 import { useLocale } from '../i18n';
 
 interface ReportModalProps {
@@ -41,7 +42,11 @@ const ReportModal = ({ isOpen, onClose, extraContext, defaultType }: ReportModal
     if (!selectedType || message.trim().length < 3) return;
     setIsSubmitting(true);
     try {
-      const contextParts = [`URL: ${location.pathname}${location.search}`];
+      const contextParts = [
+        `Version: ${__APP_VERSION__}`,
+        `Appareil: ${await buildDeviceSummary()}`,
+        `URL: ${location.pathname}${location.search}`,
+      ];
       if (extraContext) contextParts.push(extraContext);
       await submitTicket({
         type: selectedType,
@@ -94,22 +99,24 @@ const ReportModal = ({ isOpen, onClose, extraContext, defaultType }: ReportModal
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-bold text-gray-800 mb-1">
-            {t.report.messageLabel}
-          </label>
-          <textarea
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            disabled={isSubmitting || !selectedType}
-            placeholder={selectedType ? t.report.messagePlaceholder : t.report.messageDisabled}
-            maxLength={2000}
-            rows={5}
-            cols={1}
-            className="block w-full min-w-0 rounded-lg border-2 border-gray-300 px-3 py-2 text-sm text-black placeholder:text-gray-400 focus:outline-none focus:border-black disabled:bg-gray-100 resize-y"
-          />
-          <div className="text-[10px] text-gray-500 mt-1 text-right">{message.length} / 2000</div>
-        </div>
+        {selectedType && (
+          <div className="animate-reveal-soft">
+            <label className="block text-sm font-bold text-gray-800 mb-1">
+              {t.report.messageLabel}
+            </label>
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              disabled={isSubmitting}
+              placeholder={t.report.messagePlaceholder}
+              maxLength={2000}
+              rows={5}
+              cols={1}
+              className="block w-full min-w-0 rounded-lg border-2 border-gray-300 px-3 py-2 text-sm text-black placeholder:text-gray-400 focus:outline-none focus:border-black disabled:bg-gray-100 resize-y"
+            />
+            <div className="text-[10px] text-gray-500 mt-1 text-right">{message.length} / 2000</div>
+          </div>
+        )}
 
         <div className="flex justify-end items-center gap-2 pt-2 pr-1.5 pb-1.5">
           <Button variant="ghost" onClick={handleClose} disabled={isSubmitting}>

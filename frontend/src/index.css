@@ -563,6 +563,16 @@ button {
   animation: fade-in 0.3s ease-out;
 }
 
+/* Apparition douce du champ message (Report) une fois la catégorie choisie */
+@keyframes reveal-soft {
+  from { opacity: 0; transform: translateY(-6px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.animate-reveal-soft {
+  animation: reveal-soft 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 /* Apparition du bouton Suivant à côté de la carte pilier */
 @keyframes next-pop {
   0% { opacity: 0; transform: scale(0.4) rotate(-25deg) translateX(-10px); }
