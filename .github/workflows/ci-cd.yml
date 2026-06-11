@@ -66,7 +66,7 @@ jobs:
           script_stop: true
           script: |
             set -euo pipefail
-            cd "${APP_DIR:-$HOME/Onskone}"
+            cd "${APP_DIR:-$HOME/apps/Onskone}"
             git fetch --depth 1 origin main
             git reset --hard origin/main
             bash scripts/deploy.sh
