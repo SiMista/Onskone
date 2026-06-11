@@ -366,6 +366,7 @@ export const en: Dictionary = {
       title: 'Contact us',
       intro: "Want to reach out but not sure how? No worries, drop us a line anywhere, we'll be happy to reply:",
     },
+    openPage: 'Open the full page',
   },
 
   achievements: {

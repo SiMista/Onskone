@@ -304,7 +304,7 @@ const GuessingPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, question,
               key={answer.id}
               className={`
                 rounded-xl p-2.5 md:p-3 space-y-2 border border-black stack-shadow-sm texture-paper
-                ${noResponse ? 'bg-gray-100 border-gray-300' : 'bg-cream-answer'}
+                ${noResponse ? 'bg-gray-100 border-gray-300' : 'bg-cream-question'}
                 ${isHighlighted ? 'animate-halo-pulse' : ''}
                 ${isJustAssigned ? 'animate-snap-bounce' : ''}
               `}
@@ -320,6 +320,7 @@ const GuessingPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, question,
                 options={options}
                 placeholder={t.phases.guessing.choosePlayer}
                 disabled={!isLeader || noResponse}
+                variant="flat"
               />
             </div>
           );

@@ -26,12 +26,12 @@ const Legal = ({ kind }: LegalProps) => {
           <LanguageSwitcher />
         </div>
 
-        <div className="bg-cream-paper rounded-2xl border-[2.5px] border-black stack-shadow-sm p-5 md:p-7 mb-4">
-          <h1 className="text-display-lg mb-5">{section.title}</h1>
-          <div className="space-y-5 text-gray-700">
+        <div className="bg-white rounded-[28px] border-[3px] border-black texture-paper stack-shadow-lg p-5 md:p-7 mb-4">
+          <h1 className="marker-highlight text-lg md:text-xl font-display font-bold text-gray-900 tracking-tight mb-5">{section.title}</h1>
+          <div className="space-y-5 text-gray-800">
             {section.sections.map((s, i) => (
               <section key={i}>
-                <h2 className="text-display-sm mb-2">{s.title}</h2>
+                <h2 className="font-bold text-lg mb-2">{s.title}</h2>
                 <p className="m-0" dangerouslySetInnerHTML={{ __html: s.content }} />
                 {s.list && (
                   <ul className="list-disc list-inside mt-2 space-y-1">

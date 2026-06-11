@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.onskone.app',
-  appName: 'Onskoné',
+  appName: 'Onskoné?',
   // Vite build (outDir 'build') : c'est ce dossier statique qui est embarqué.
   webDir: 'build',
   // En dev, `cap run android -l --host=<ip>` injecte l'URL du serveur Vite.

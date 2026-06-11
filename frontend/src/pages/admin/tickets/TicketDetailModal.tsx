@@ -102,21 +102,6 @@ export const TicketDetailModal = ({
             </div>
           )}
 
-          {ticket.user_agent && (
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <p className="font-mono text-[11px] uppercase tracking-wider text-white/35">User agent</p>
-                <button
-                  onClick={() => copy(ticket.user_agent!)}
-                  className="font-mono text-[11px] text-white/40 hover:text-white transition-colors"
-                  title="Copier le user agent"
-                >copier ⧉</button>
-              </div>
-              <p className="rounded-md border border-white/[0.06] bg-black/30 p-3 font-mono text-[12px] text-white/75 break-all">
-                {ticket.user_agent}
-              </p>
-            </div>
-          )}
         </div>
 
         <div className="sticky bottom-0 bg-[#1b1f2a]/95 backdrop-blur px-4 sm:px-5 py-3 border-t border-white/[0.06] space-y-2 sm:space-y-0 sm:flex sm:flex-wrap sm:items-center sm:gap-2">

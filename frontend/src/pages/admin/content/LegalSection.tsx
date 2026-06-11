@@ -3,10 +3,10 @@ import { SectionHeader } from './SectionHeader';
 import { LEGAL_CONTENT, LEGAL_LABELS_FR } from './shared';
 
 export const LegalSection = () => {
-  const entries = Object.entries(LEGAL_CONTENT) as Array<[
-    keyof typeof LEGAL_CONTENT,
-    typeof LEGAL_CONTENT[keyof typeof LEGAL_CONTENT],
-  ]>;
+  const entries = Object.entries(LEGAL_CONTENT).filter(
+    (entry): entry is [keyof typeof LEGAL_CONTENT, Extract<typeof LEGAL_CONTENT[keyof typeof LEGAL_CONTENT], object>] =>
+      typeof entry[1] === 'object',
+  );
   const [openKey, setOpenKey] = useState<string | null>(null);
   return (
     <div>

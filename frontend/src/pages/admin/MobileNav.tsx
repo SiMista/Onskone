@@ -3,11 +3,12 @@ import { Icon } from '@iconify/react';
 import { AdminTab, MOBILE_TAB_META, MOBILE_TAB_ORDER } from './shared';
 
 export const MobileBottomNav = ({
-  activeTab, setActiveTab, lobbyCount,
+  activeTab, setActiveTab, lobbyCount, ticketCount,
 }: {
   activeTab: AdminTab;
   setActiveTab: (t: AdminTab) => void;
   lobbyCount: number | null;
+  ticketCount: number;
 }) => (
   <nav
     aria-label="Navigation"
@@ -19,6 +20,7 @@ export const MobileBottomNav = ({
         const meta = MOBILE_TAB_META[id];
         const active = activeTab === id;
         const showLive = id === 'lobbies' && (lobbyCount ?? 0) > 0;
+        const showTickets = id === 'tickets' && ticketCount > 0;
         return (
           <button
             key={id}
@@ -32,6 +34,11 @@ export const MobileBottomNav = ({
               {showLive && (
                 <span className="absolute -top-1.5 -right-2 inline-flex items-center justify-center min-w-[14px] h-[14px] px-1 rounded-full bg-emerald-400 text-[8.5px] font-bold leading-none text-[#0a0c12] tabular-nums ring-1 ring-[#12151e] animate-pulse">
                   {lobbyCount ?? 0}
+                </span>
+              )}
+              {showTickets && (
+                <span className="absolute -top-1.5 -right-2 inline-flex items-center justify-center min-w-[14px] h-[14px] px-1 rounded-full bg-amber-400 text-[8.5px] font-bold leading-none text-[#0a0c12] tabular-nums ring-1 ring-[#12151e]">
+                  {ticketCount}
                 </span>
               )}
             </span>

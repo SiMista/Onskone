@@ -366,6 +366,7 @@ export const fr: Dictionary = {
       title: 'Nous contacter',
       intro: "Tu veux nous contacter mais tu sais pas comment ? T'inquiète, écris-nous où tu veux, ce sera un plaisir de te répondre :",
     },
+    openPage: 'Ouvrir la page complète',
   },
 
   achievements: {

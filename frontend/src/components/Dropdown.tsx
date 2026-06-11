@@ -17,6 +17,12 @@ interface DropdownProps<V extends string = string> {
   placeholder?: ReactNode;
   disabled?: boolean;
   className?: string;
+  /**
+   * `paper` (défaut) : carte papier autonome (bordure épaisse, grain, ombre).
+   * `flat` : champ discret en retrait, pour s'imbriquer dans une carte parente
+   * sans empiler deux surfaces papier.
+   */
+  variant?: 'paper' | 'flat';
 }
 
 interface TriggerRect {
@@ -33,6 +39,7 @@ function Dropdown<V extends string = string>({
   placeholder = 'Sélectionner...',
   disabled = false,
   className = '',
+  variant = 'paper',
 }: DropdownProps<V>) {
   const [open, setOpen] = useState(false);
   const [rect, setRect] = useState<TriggerRect | null>(null);
@@ -144,7 +151,11 @@ function Dropdown<V extends string = string>({
         disabled={isDisabled}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-[12px] border-[2.5px] border-black bg-cream-player texture-paper stack-shadow-sm transition-transform duration-150 active:scale-[0.99] cursor-pointer ${isDisabled ? 'opacity-60 pointer-events-none' : ''}`}
+        className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 transition-transform duration-150 active:scale-[0.99] cursor-pointer ${
+          variant === 'flat'
+            ? 'rounded-[10px] border-2 border-black/15 bg-white/55'
+            : 'rounded-[12px] border-[2.5px] border-black bg-cream-player texture-paper stack-shadow-sm'
+        } ${isDisabled ? 'opacity-60 pointer-events-none' : ''}`}
       >
         <span className="flex items-center gap-2.5 min-w-0 flex-1">
           {selected ? (
