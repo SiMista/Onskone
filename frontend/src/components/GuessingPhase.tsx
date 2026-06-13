@@ -3,7 +3,6 @@ import { Icon } from '@iconify/react';
 import HourglassTimer from './HourglassTimer';
 import Button from './Button';
 import QuestionCard from './QuestionCard';
-import PlayerBadge from './PlayerBadge';
 import RevealedAnswerCard from './RevealedAnswerCard';
 import AnswerText from './AnswerText';
 import Avatar from './Avatar';
@@ -261,9 +260,10 @@ const GuessingPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, question,
             {t.phases.guessing.instruction}
           </h2>
         ) : (
-          <div className="flex flex-col items-center gap-1 mt-1.5">
-            <PlayerBadge player={leader} size="sm" />
-            <p className="text-xs text-center text-gray-500 italic">{t.phases.guessing.assignWaiting}</p>
+          <div className="flex items-center justify-center flex-wrap gap-x-2 gap-y-1 my-4 text-sm leading-none">
+            <Avatar avatarId={leader?.avatarId ?? 0} name={leader?.name ?? ''} size="sm" />
+            {leader?.name && <span className="font-semibold text-gray-900">{leader.name}</span>}
+            <span className="italic text-gray-500">{t.phases.guessing.assignWaiting}</span>
           </div>
         )}
         <HourglassTimer
