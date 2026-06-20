@@ -4,9 +4,9 @@
 #   1. Teams > Integrations > App Store Connect : ajouter la cle API Apple
 #      (.p8 + Key ID + Issuer ID). Le nom de l'integration doit correspondre
 #      a la valeur sous integrations.app_store_connect ci-dessous.
-#   2. C'est tout : le bloc ios_signing ci-dessous declenche la signature
-#      automatique Codemagic (certificat + profil crees ET cle privee persistee
-#      cote Codemagic, contrairement a une creation manuelle ou la cle est perdue).
+#   2. Creer un groupe de variables "ios_signing" contenant CERTIFICATE_PRIVATE_KEY
+#      = une cle privee RSA (openssl genrsa 2048). fetch-signing-files --create
+#      l'utilise pour creer un certificat de distribution reutilisable a chaque build.
 #
 # La plateforme iOS (frontend/ios) n'a pas besoin d'exister en local : elle est
 # generee ici par `cap add ios` sur le Mac cloud.
@@ -25,6 +25,10 @@ workflows:
       # Pas de bloc ios_signing : la signature auto Codemagic ne CREE pas les
       # profils manquants (elle echoue "No matching profiles"). On cree cert +
       # profil nous-memes via fetch-signing-files --create (cf etape signature).
+      groups:
+        # Groupe Codemagic contenant CERTIFICATE_PRIVATE_KEY (cle privee RSA fixe).
+        # Sans cle persistante, --create ne genere pas de certificat utilisable.
+        - ios_signing
       vars:
         # URL ABSOLUE du backend de prod : l'app native ne peut pas la deduire
         # de window.location (origine = capacitor://localhost). Cf getServerUrl().
@@ -69,6 +73,7 @@ workflows:
           # le supprimer dans le portail Apple avant, sinon --create ne recree rien.
           app-store-connect fetch-signing-files "com.onskone.app" \
             --type IOS_APP_STORE \
+            --certificate-key "@env:CERTIFICATE_PRIVATE_KEY" \
             --create
           keychain add-certificates
           echo "--- profils provisioning telecharges ---"
