@@ -53,6 +53,9 @@ workflows:
         script: |
           cd frontend
           if [ ! -d ios ]; then pnpm exec cap add ios; fi
+          # iOS est regenere a neuf a chaque build : il faut (re)generer les icones
+          # + splash depuis frontend/assets/ sinon on garde l'icone Capacitor par defaut.
+          pnpm exec capacitor-assets generate --ios
           pnpm exec cap sync ios
 
       - name: Injecter la version (source unique = scripts/app-version.mjs)
