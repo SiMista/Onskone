@@ -18,10 +18,15 @@ export PATH="$PNPM_HOME:$HOME/.npm-global/bin:$PATH"
 cd "$(dirname "$0")/.."   # racine du repo
 ROOT="$(pwd)"
 
-# En mode manuel (hors CI), on pull d'abord.
+# En mode manuel (hors CI), on se réaligne sur origin/main.
+# Le VPS est un pur miroir de GitHub (aucun commit local à préserver) : on évite
+# `git pull` (qui casse en erreur si un tag local diverge, ex. v1.3 réutilisé, et
+# qui peut diverger après un force-push). On fetch en forçant les tags puis on
+# reset dur sur origin/main -> déploiement déterministe, insensible aux tags.
 if [ -z "${CI:-}" ]; then
-  echo "==> Mise à jour du code (git pull)"
-  git pull origin main
+  echo "==> Mise à jour du code (fetch + reset --hard origin/main)"
+  git fetch --prune --tags --force origin
+  git reset --hard origin/main
 fi
 
 echo "==> Déploiement depuis $ROOT (commit $(git rev-parse --short HEAD))"
