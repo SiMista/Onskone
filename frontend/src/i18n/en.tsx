@@ -270,7 +270,7 @@ export const en: Dictionary = {
 
   footer: {
     about: 'About',
-    mentions: 'Legal',
+    mentions: 'Terms',
     contact: 'Contact',
     dontClick: "Don't click",
     versionLabel: 'Version',
@@ -311,7 +311,7 @@ export const en: Dictionary = {
         {
           title: 'Intellectual property',
           content: `All content (text, images, graphics, logo, icons, etc.) on the Onskone site is protected by intellectual property laws and belongs to the publisher or is used with permission.`,
-          extra: `Any reproduction, representation, modification, publication or adaptation of all or part of the site's elements is forbidden without prior written authorization.`,
+          extra: `The detail of rights and prohibitions is set out in the <a href="/cgu" class="text-primary underline">Terms of Use</a>.`,
         },
         {
           title: 'Credits',
@@ -362,6 +362,51 @@ export const en: Dictionary = {
         },
       ],
     },
+    cgu: {
+      title: 'Terms of Use',
+      sections: [
+        {
+          title: 'Article 1 - Purpose',
+          content: `These Terms of Use ("Terms") govern access to and use of the Onskoné application (the "App"), a digital game available on the Google Play Store, the Apple App Store and at onskone.fr, together with all related content: questions, themed decks, game mechanic, text and graphics. By using the App, the user acknowledges having read these Terms and accepts them without reservation. Otherwise, the user must stop using the App.`,
+        },
+        {
+          title: 'Article 2 - Intellectual property',
+          content: `All elements making up Onskoné are original works protected by copyright (articles L.111-1 et seq. of the French Intellectual Property Code), from their creation and without any prior formality. Protected elements include in particular:`,
+          list: [
+            'The questions, wording, themes and sub-themes forming the game decks',
+            'The game mechanic, its design, wording and integration',
+            'The "Onskoné" name, logo and associated visual and audio identities',
+            "The source code, algorithms, interfaces and the App's user experience",
+            'Translations and cultural adaptations of the content, including the English version',
+          ],
+          extra: `Any reproduction, extraction, imitation, adaptation, translation, distribution or reuse - partial or total - of these elements, without prior written authorisation, is strictly prohibited, on any medium and for any purpose, and constitutes infringement punishable under articles L.335-2 and L.335-3 of the French Intellectual Property Code. Use of the App is granted under a personal, non-exclusive, non-transferable and non-commercial licence, conferring no ownership over the App or its content.`,
+        },
+        {
+          title: 'Article 3 - User content',
+          content: `The App does not collect user-generated content for retention. Answers given during a game stay private and temporary: they are not kept after the session, nor exploited, nor linked to an identified profile.`,
+        },
+        {
+          title: 'Article 4 - Mature content (+18)',
+          content: `Some decks flagged +18 contain content reserved for adults. The user is solely responsible for how they use the content in their social context and undertakes not to use the App in a way that could harm others. Onskoné cannot be held liable for a minor accessing such content or for any inappropriate use of the App.`,
+        },
+        {
+          title: 'Article 5 - Personal data',
+          content: `Onskoné processes personal data in accordance with the GDPR (EU 2016/679) and French data protection law, collecting only the data strictly necessary to run the game. Details are set out in the <a href="/privacy" class="text-primary underline">Privacy Policy</a>.`,
+        },
+        {
+          title: 'Article 6 - Availability & liability',
+          content: `Onskoné strives to keep the App available but does not guarantee uninterrupted availability. Onskoné cannot be held liable for any direct or indirect damage resulting from a service interruption, a content error or inappropriate use.`,
+        },
+        {
+          title: 'Article 7 - Changes to the Terms',
+          content: `Onskoné reserves the right to amend these Terms at any time. The version in force is the one available in the App and at onskone.fr. Continued use of the App after a change constitutes acceptance of the new version.`,
+        },
+        {
+          title: 'Article 8 - Governing law & jurisdiction',
+          content: `These Terms are governed by French law. In the event of a dispute, the parties undertake to seek an amicable solution before any legal action. Failing agreement, the French courts shall have jurisdiction.`,
+        },
+      ],
+    },
     support: {
       title: 'Help & Support',
       sections: [
@@ -377,6 +422,7 @@ export const en: Dictionary = {
       intro: "Want to reach out but not sure how? No worries, drop us a line anywhere, we'll be happy to reply:",
     },
     openPage: 'Open the full page',
+    tabs: { cgu: 'Terms', mentions: 'Legal', privacy: 'Privacy' },
   },
 
   achievements: {

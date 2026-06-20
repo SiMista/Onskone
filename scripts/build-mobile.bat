@@ -17,6 +17,9 @@ if "%VITE_SERVER_URL%"=="" (
   timeout /t 4 /nobreak >nul
 )
 
+:: Build natif : base d'assets relative (cf vite.config.ts).
+set CAPACITOR_BUILD=1
+
 echo Building shared package...
 call pnpm build:shared
 

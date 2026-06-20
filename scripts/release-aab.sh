@@ -10,6 +10,8 @@ set -e
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 export VITE_SERVER_URL="${VITE_SERVER_URL:-https://onskone.fr}"
+# Build natif : base d'assets relative (cf vite.config.ts).
+export CAPACITOR_BUILD=1
 
 # Version calculee une seule fois (source de verite), injectee a Gradle via -P.
 VNAME="$(node "$ROOT/scripts/app-version.mjs")"

@@ -9,7 +9,7 @@ import { useLocale } from '../i18n';
 // Pages publiques (URL accessibles hors app) requises par les stores :
 // /privacy et /mentions affichent le meme contenu que la modale MentionsModal.
 interface LegalProps {
-  kind: 'privacy' | 'mentions' | 'support';
+  kind: 'privacy' | 'mentions' | 'cgu' | 'support';
 }
 
 const Legal = ({ kind }: LegalProps) => {
