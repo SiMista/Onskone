@@ -3,12 +3,13 @@ import Logo from '../components/Logo';
 import Button from '../components/Button';
 import Footer from '../components/Footer';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+import ReportTrigger from '../components/ReportTrigger';
 import { useLocale } from '../i18n';
 
 // Pages publiques (URL accessibles hors app) requises par les stores :
 // /privacy et /mentions affichent le meme contenu que la modale MentionsModal.
 interface LegalProps {
-  kind: 'privacy' | 'mentions';
+  kind: 'privacy' | 'mentions' | 'support';
 }
 
 const Legal = ({ kind }: LegalProps) => {
@@ -44,6 +45,12 @@ const Legal = ({ kind }: LegalProps) => {
               </section>
             ))}
           </div>
+
+          {kind === 'support' && (
+            <div className="mt-6 flex justify-center">
+              <ReportTrigger variant="footer" label={t.report.title} className="!text-gray-700 hover:!text-black" />
+            </div>
+          )}
         </div>
 
         <div className="flex justify-center pb-2">

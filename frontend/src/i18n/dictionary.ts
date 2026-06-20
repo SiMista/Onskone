@@ -208,6 +208,7 @@ export interface Dictionary {
     about: LegalSection;
     mentions: LegalSection;
     privacy: LegalSection;
+    support: LegalSection;
     contact: { title: string; intro: string };
     openPage: string;
   };

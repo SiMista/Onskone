@@ -362,6 +362,16 @@ export const en: Dictionary = {
         },
       ],
     },
+    support: {
+      title: 'Help & Support',
+      sections: [
+        {
+          title: 'A bug or a question?',
+          content: `Write to us, we read everything and reply with pleasure:<br /><strong>Contact:</strong> <a href="mailto:onskonelejeu@gmail.com" class="text-primary underline">onskonelejeu@gmail.com</a>`,
+          extra: `You can also report an issue directly using the button below.`,
+        },
+      ],
+    },
     contact: {
       title: 'Contact us',
       intro: "Want to reach out but not sure how? No worries, drop us a line anywhere, we'll be happy to reply:",
