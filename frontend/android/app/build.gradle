@@ -47,8 +47,10 @@ android {
         applicationId "com.onskone.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode gitVersionCode()
-        versionName gitVersionName()
+        // Source de verite = scripts/app-version.mjs, injectee par scripts/release-aab via -P.
+        // Fallback sur le calcul git local pour les builds Android Studio hors de ce script.
+        versionCode project.hasProperty('appVersionCode') ? project.property('appVersionCode').toInteger() : gitVersionCode()
+        versionName project.hasProperty('appVersionName') ? project.property('appVersionName') : gitVersionName()
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
