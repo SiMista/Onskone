@@ -362,6 +362,16 @@ export const fr: Dictionary = {
         },
       ],
     },
+    support: {
+      title: 'Aide & Support',
+      sections: [
+        {
+          title: 'Un bug, une question ?',
+          content: `Écris-nous, on lit tout et on répond avec plaisir :<br /><strong>Contact :</strong> <a href="mailto:onskonelejeu@gmail.com" class="text-primary underline">onskonelejeu@gmail.com</a>`,
+          extra: `Tu peux aussi nous remonter un souci directement via le bouton ci-dessous.`,
+        },
+      ],
+    },
     contact: {
       title: 'Nous contacter',
       intro: "Tu veux nous contacter mais tu sais pas comment ? T'inquiète, écris-nous où tu veux, ce sera un plaisir de te répondre :",

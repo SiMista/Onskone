@@ -1,0 +1,99 @@
+# Build + publication iOS sur TestFlight, sans Mac (Codemagic build sur leurs Mac cloud).
+#
+# Prerequis a configurer UNE fois dans l'interface Codemagic (pas dans ce fichier) :
+#   1. Teams > Integrations > App Store Connect : ajouter la cle API Apple
+#      (.p8 + Key ID + Issuer ID). Le nom de l'integration doit correspondre
+#      a la valeur sous integrations.app_store_connect ci-dessous.
+#   2. C'est tout : le bloc ios_signing ci-dessous declenche la signature
+#      automatique Codemagic (certificat + profil crees ET cle privee persistee
+#      cote Codemagic, contrairement a une creation manuelle ou la cle est perdue).
+#
+# La plateforme iOS (frontend/ios) n'a pas besoin d'exister en local : elle est
+# generee ici par `cap add ios` sur le Mac cloud.
+
+workflows:
+  ios-testflight:
+    name: iOS - TestFlight
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+
+    integrations:
+      app_store_connect: onskone_app_store_connect
+
+    environment:
+      node: 22
+      # Pas de bloc ios_signing : la signature auto Codemagic ne CREE pas les
+      # profils manquants (elle echoue "No matching profiles"). On cree cert +
+      # profil nous-memes via fetch-signing-files --create (cf etape signature).
+      vars:
+        # URL ABSOLUE du backend de prod : l'app native ne peut pas la deduire
+        # de window.location (origine = capacitor://localhost). Cf getServerUrl().
+        VITE_SERVER_URL: "https://onskone.fr"
+        XCODE_PROJECT: "frontend/ios/App/App.xcodeproj"
+        XCODE_SCHEME: "App"
+
+    scripts:
+      - name: Installer pnpm
+        # --force : l'image Codemagic a deja pnpm/pnpx, sans ca npm plante (EEXIST).
+        script: npm install -g pnpm@9 --force
+
+      - name: Installer les dependances
+        script: pnpm install
+
+      - name: Build shared (types) puis frontend
+        script: |
+          pnpm build:shared
+          pnpm build:frontend
+
+      - name: Generer + synchroniser la plateforme iOS
+        script: |
+          cd frontend
+          if [ ! -d ios ]; then pnpm exec cap add ios; fi
+          pnpm exec cap sync ios
+
+      - name: Injecter la version (source unique = scripts/app-version.mjs)
+        script: |
+          VNAME=$(node scripts/app-version.mjs)
+          VCODE=$(node scripts/app-version.mjs --code)
+          echo "Version $VNAME (build $VCODE)"
+          cd frontend/ios/App
+          agvtool new-marketing-version "$VNAME"
+          agvtool new-version -all "$VCODE"
+
+      - name: Generer / recuperer la signature puis l'appliquer
+        script: |
+          keychain initialize
+          # --create cree le certificat de distribution + sa cle privee + le
+          # provisioning profile s'ils n'existent pas. IMPORTANT : si un certificat
+          # de distribution existe deja chez Apple sans sa cle privee (orphelin),
+          # le supprimer dans le portail Apple avant, sinon --create ne recree rien.
+          app-store-connect fetch-signing-files "com.onskone.app" \
+            --type IOS_APP_STORE \
+            --create
+          keychain add-certificates
+          echo "--- profils provisioning telecharges ---"
+          ls -la "$HOME/Library/MobileDevice/Provisioning Profiles/" || true
+          # --project explicite : le glob par defaut ne descend pas dans frontend/ios/...
+          xcode-project use-profiles --project "$XCODE_PROJECT"
+
+      - name: Construire l'IPA
+        script: |
+          # Diagnostic : doit afficher PROVISIONING_PROFILE_SPECIFIER + DEVELOPMENT_TEAM
+          # une fois la signature appliquee.
+          echo "--- reglages de signature du target App ---"
+          xcodebuild -project "$XCODE_PROJECT" -showBuildSettings 2>/dev/null \
+            | grep -E "PROVISIONING_PROFILE|CODE_SIGN_IDENTITY|DEVELOPMENT_TEAM|PRODUCT_BUNDLE_IDENTIFIER" \
+            | sort -u || true
+          echo "-------------------------------------------"
+          # Capacitor 8 = SPM, pas de App.xcworkspace CocoaPods : on build le projet.
+          xcode-project build-ipa --project "$XCODE_PROJECT" --scheme "$XCODE_SCHEME"
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        # Envoie automatiquement le build sur TestFlight apres compilation.
+        submit_to_testflight: true
