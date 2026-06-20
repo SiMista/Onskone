@@ -1,0 +1,12 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["KRJ3L83RCL.com.onskone.app"],
+        "components": [
+          { "/": "/join/*", "comment": "Invitations a un lobby" }
+        ]
+      }
+    ]
+  }
+}
