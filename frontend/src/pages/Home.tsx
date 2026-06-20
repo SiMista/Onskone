@@ -357,6 +357,7 @@ const Home = () => {
                     onChange={(e) => setPlayerName(e.target.value)}
                     placeholder={t.common.pseudoPlaceholderUpper}
                     maxLength={GAME_CONFIG.MAX_NAME_LENGTH}
+                    onSubmit={!lobbyCode ? createLobby : lobbyExists ? joinLobby : undefined}
                   />
                 </div>
                 {!lobbyCode ? (
