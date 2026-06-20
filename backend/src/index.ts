@@ -131,6 +131,12 @@ const FRONTEND_DIST = process.env.FRONTEND_DIST
 
 if (fs.existsSync(FRONTEND_DIST)) {
   logger.info(`Serving frontend from ${FRONTEND_DIST}`);
+  // Apple Universal Links : le fichier n'a pas d'extension, express.static ne lui
+  // applique donc pas le bon type. Apple exige application/json -> route dediee.
+  app.get('/.well-known/apple-app-site-association', (_req, res) => {
+    res.type('application/json');
+    res.sendFile(path.join(FRONTEND_DIST, '.well-known', 'apple-app-site-association'));
+  });
   app.use(express.static(FRONTEND_DIST));
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api') || req.path.startsWith('/socket.io')) return next();

@@ -1,0 +1,13 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.onskone.app",
+      "sha256_cert_fingerprints": [
+        "E7:23:35:75:59:C4:A7:B0:4E:2E:12:32:9F:11:1D:7E:EC:51:73:CF:BE:D1:F2:7A:94:51:7D:A5:B7:54:DF:F7",
+        "C4:9B:44:19:F6:57:68:CF:B0:CE:86:A2:97:A1:2E:FC:9D:2C:D8:F6"
+      ]
+    }
+  }
+]

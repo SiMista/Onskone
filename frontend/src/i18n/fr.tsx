@@ -71,7 +71,7 @@ export const fr: Dictionary = {
     shareInvite: {
       button: "Partager l'invitation",
       title: 'Onskoné',
-      message: 'On va voir si on se connaît vraiment... rejoins ma partie sur Onskoné ! 🎭',
+      message: "Viens jouer, on va voir si on s'connaît vraiment... enfin, si Onskoné ! 😂",
     },
     minPlayers: (n) => `Il faut au moins ${n} joueurs pour lancer`,
     selectAtLeastOneTheme: 'Sélectionne au moins 1 thème',

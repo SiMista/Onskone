@@ -3,6 +3,7 @@ import { Capacitor } from '@capacitor/core';
 import { Share } from '@capacitor/share';
 import type { Dictionary } from '../i18n/dictionary';
 import { useToast } from '../components/Toast';
+import { buildInviteUrl } from '../constants/game';
 
 interface UseShareInviteResult {
   /** Déclenche le partage de l'invitation (cascade native → Web Share → copie). */
@@ -28,10 +29,11 @@ export function useShareInvite(
   const [fallbackLink, setFallbackLink] = useState<string | null>(null);
 
   const shareInvite = useCallback(async () => {
-    const link = `${window.location.origin}/?lobbyCode=${lobbyCode!}`;
+    const link = buildInviteUrl(lobbyCode!);
     const message = t.lobby.shareInvite.message;
-    // Texte copié dans le presse-papier : message + lien (l'API share gère le lien à part)
-    const copyText = `${message} ${link}`;
+    // Texte copié dans le presse-papier : message + lien sur une nouvelle ligne
+    // (l'API share native gère le lien à part)
+    const copyText = `${message}\n${link}`;
 
     const showCopied = () => {
       showToast(t.lobby.toasts.linkCopied, 'success');

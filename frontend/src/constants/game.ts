@@ -1,5 +1,36 @@
 // Game configuration constants
 import { GAME_CONSTANTS, RoundPhase } from '@onskone/shared';
+import { Capacitor } from '@capacitor/core';
+
+// Domaine public canonique du jeu (site web prod). Sert de base aux liens
+// partageables : dans l'app native, window.location.origin vaut capacitor://localhost
+// / https://localhost (inexploitable), donc on ne peut PAS s'appuyer dessus.
+export const PUBLIC_WEB_URL = 'https://onskone.fr';
+
+// Base d'URL pour un lien partagé à l'extérieur (invitation).
+// - natif : toujours le domaine public (le lien doit marcher chez le destinataire) ;
+// - web : l'origine courante (reste flexible sur previews / domaines alternatifs).
+export const getShareBaseUrl = (): string => {
+  if (Capacitor.isNativePlatform()) return PUBLIC_WEB_URL;
+  return typeof window !== 'undefined' ? window.location.origin : PUBLIC_WEB_URL;
+};
+
+// Construit le lien d'invitation à un lobby (chemin /join/<code>, matchable par
+// les App Links Android / Universal Links iOS, contrairement à un query param).
+export const buildInviteUrl = (lobbyCode: string): string =>
+  `${getShareBaseUrl()}/join/${encodeURIComponent(lobbyCode)}`;
+
+// Extrait le code de lobby d'une URL d'invitation (chemin /join/<code> ou ancien
+// ?lobbyCode=). Renvoie undefined si l'URL est non parsable ou sans code.
+export const extractLobbyCode = (url: string): string | undefined => {
+  try {
+    const parsed = new URL(url);
+    const fromPath = parsed.pathname.match(/\/join\/([^/?#]+)/)?.[1];
+    return fromPath ?? parsed.searchParams.get('lobbyCode') ?? undefined;
+  } catch {
+    return undefined;
+  }
+};
 
 // Mode debug: met les timers à 1 heure pour travailler sur le front tranquillement
 // Activé via VITE_DEBUG_MODE=true dans .env OU via le query param ?debug=1
