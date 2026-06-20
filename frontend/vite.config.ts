@@ -6,9 +6,14 @@ import { fileURLToPath, URL } from 'node:url'
 import { getVersionName } from '../scripts/app-version.mjs'
 
 export default defineConfig({
-    // Chemins relatifs : requis pour Capacitor (la page est servie depuis
-    // le système de fichiers de l'app, pas depuis la racine d'un domaine).
-    base: './',
+    // Base des assets :
+    // - natif (Capacitor) : relatif './' obligatoire (page servie depuis le
+    //   filesystem de l'app, pas la racine d'un domaine) ;
+    // - web : absolu '/' obligatoire, sinon les routes a 2+ segments chargees a
+    //   froid (ex /join/<code>, /lobby/<code>) resolvent les assets en relatif
+    //   (/join/assets/...) -> 404 -> index.html -> erreur MIME module script.
+    // Les scripts de build mobile posent CAPACITOR_BUILD=1 (cf release-aab / build-mobile / codemagic).
+    base: process.env.CAPACITOR_BUILD ? './' : '/',
     define: {
         __APP_VERSION__: JSON.stringify(getVersionName()),
     },

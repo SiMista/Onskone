@@ -11,6 +11,9 @@ if "%VITE_SERVER_URL%"=="" (
   set VITE_SERVER_URL=https://onskone.fr
 )
 
+:: Build natif : base d'assets relative (cf vite.config.ts).
+set CAPACITOR_BUILD=1
+
 :: Version calculee une seule fois (source de verite), injectee a Gradle via -P.
 for /f "delims=" %%i in ('node "%~dp0app-version.mjs"') do set APP_VNAME=%%i
 for /f "delims=" %%i in ('node "%~dp0app-version.mjs" --code') do set APP_VCODE=%%i
@@ -30,8 +33,16 @@ echo Generation du bundle signe (gradlew bundleRelease)...
 cd android
 call gradlew.bat bundleRelease -PappVersionName=%APP_VNAME% -PappVersionCode=%APP_VCODE% || exit /b 1
 
+:: Chemin absolu (on est dans frontend\android) pour copier-coller direct.
+set AAB_PATH=%CD%\app\build\outputs\bundle\release\app-release.aab
+
 echo.
 echo ============================================================
-echo  .aab pret a uploader :
-echo  frontend\android\app\build\outputs\bundle\release\app-release.aab
+echo  .aab pret a uploader sur la Play Console (v%APP_VNAME%, code %APP_VCODE%) :
+echo  %AAB_PATH%
 echo ============================================================
+if exist "%AAB_PATH%" (
+  echo  ^(fichier OK^)
+) else (
+  echo  [ATTENTION] fichier introuvable - le build a peut-etre echoue plus haut.
+)

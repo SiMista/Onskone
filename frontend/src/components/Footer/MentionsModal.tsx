@@ -23,7 +23,7 @@ interface MentionsModalProps {
   onClose: () => void;
 }
 
-type Tab = 'mentions' | 'privacy';
+type Tab = 'cgu' | 'mentions' | 'privacy';
 
 const tabWrapClass = (active: boolean): string =>
   [
@@ -38,31 +38,25 @@ const tabClass = (active: boolean): string =>
   ].join(' ');
 
 const MentionsModal = ({ isOpen, onClose }: MentionsModalProps) => {
-  const [tab, setTab] = useState<Tab>('mentions');
+  const [tab, setTab] = useState<Tab>('cgu');
   const { t } = useLocale();
+
+  const tabDef: { id: Tab; label: string; to: string; title: string }[] = [
+    { id: 'cgu', label: t.legal.tabs.cgu, to: '/cgu', title: t.legal.cgu.title },
+    { id: 'mentions', label: t.legal.tabs.mentions, to: '/mentions', title: t.legal.mentions.title },
+    { id: 'privacy', label: t.legal.tabs.privacy, to: '/privacy', title: t.legal.privacy.title },
+  ];
 
   const tabs = (
     <div className="flex border-b border-gray-200">
-      <div className={tabWrapClass(tab === 'mentions')}>
-        <button
-          type="button"
-          onClick={() => setTab('mentions')}
-          className={tabClass(tab === 'mentions')}
-        >
-          {t.legal.mentions.title}
-        </button>
-        <OpenInNewTabIcon to="/mentions" label={t.legal.openPage} />
-      </div>
-      <div className={tabWrapClass(tab === 'privacy')}>
-        <button
-          type="button"
-          onClick={() => setTab('privacy')}
-          className={tabClass(tab === 'privacy')}
-        >
-          {t.legal.privacy.title}
-        </button>
-        <OpenInNewTabIcon to="/privacy" label={t.legal.openPage} />
-      </div>
+      {tabDef.map(({ id, label, to }) => (
+        <div key={id} className={tabWrapClass(tab === id)}>
+          <button type="button" onClick={() => setTab(id)} className={tabClass(tab === id)}>
+            {label}
+          </button>
+          <OpenInNewTabIcon to={to} label={t.legal.openPage} />
+        </div>
+      ))}
     </div>
   );
 
@@ -70,16 +64,44 @@ const MentionsModal = ({ isOpen, onClose }: MentionsModalProps) => {
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={tab === 'mentions' ? t.legal.mentions.title : t.legal.privacy.title}
+      title={tabDef.find((d) => d.id === tab)?.title ?? t.legal.cgu.title}
       subHeader={tabs}
     >
       <div className="text-gray-700">
+        {tab === 'cgu' && (
+          <div className="space-y-4">
+            {t.legal.cgu.sections.map((section, index) => (
+              <section key={index}>
+                <h3 className="font-bold text-lg mb-2">{section.title}</h3>
+                <p dangerouslySetInnerHTML={{ __html: section.content }} />
+                {section.list && (
+                  <ul className="list-disc list-inside mt-2 space-y-1">
+                    {section.list.map((item, itemIndex) => (
+                      <li key={itemIndex}>{item}</li>
+                    ))}
+                  </ul>
+                )}
+                {section.extra && (
+                  <p className="mt-2" dangerouslySetInnerHTML={{ __html: section.extra }} />
+                )}
+              </section>
+            ))}
+          </div>
+        )}
+
         {tab === 'mentions' && (
           <div className="space-y-4">
             {t.legal.mentions.sections.map((section, index) => (
               <section key={index}>
                 <h3 className="font-bold text-lg mb-2">{section.title}</h3>
                 <p dangerouslySetInnerHTML={{ __html: section.content }} />
+                {section.list && (
+                  <ul className="list-disc list-inside mt-2 space-y-1">
+                    {section.list.map((item, itemIndex) => (
+                      <li key={itemIndex}>{item}</li>
+                    ))}
+                  </ul>
+                )}
                 {section.extra && (
                   <p className="mt-2" dangerouslySetInnerHTML={{ __html: section.extra }} />
                 )}

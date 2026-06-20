@@ -270,7 +270,7 @@ export const fr: Dictionary = {
 
   footer: {
     about: 'À propos',
-    mentions: 'Mentions',
+    mentions: 'CGU',
     contact: 'Contact',
     dontClick: 'Ne clique pas',
     versionLabel: 'Version',
@@ -311,7 +311,7 @@ export const fr: Dictionary = {
         {
           title: 'Propriété intellectuelle',
           content: `L'ensemble des contenus (textes, images, graphismes, logo, icônes, etc.) figurant sur le site Onskone sont protégés par les lois relatives à la propriété intellectuelle et appartiennent à l'éditeur ou font l'objet d'une autorisation d'utilisation.`,
-          extra: `Toute reproduction, représentation, modification, publication ou adaptation de tout ou partie des éléments du site est interdite sans autorisation préalable écrite.`,
+          extra: `Le détail des droits et interdictions figure dans les <a href="/cgu" class="text-primary underline">Conditions Générales d'Utilisation</a>.`,
         },
         {
           title: 'Crédits',
@@ -362,6 +362,51 @@ export const fr: Dictionary = {
         },
       ],
     },
+    cgu: {
+      title: "Conditions Générales d'Utilisation",
+      sections: [
+        {
+          title: 'Article 1 - Objet',
+          content: `Les présentes Conditions Générales d'Utilisation (« CGU ») régissent l'accès et l'utilisation de l'application Onskoné (ci-après « l'Application »), jeu numérique disponible sur le Google Play Store, l'Apple App Store et sur onskone.fr, ainsi que de l'ensemble du contenu associé : questions, decks thématiques, mécanique de jeu, textes et graphismes. En utilisant l'Application, l'utilisateur reconnaît avoir pris connaissance des présentes CGU et les accepter sans réserve. À défaut d'acceptation, il doit cesser toute utilisation.`,
+        },
+        {
+          title: 'Article 2 - Propriété intellectuelle',
+          content: `L'ensemble des éléments constitutifs d'Onskoné sont des créations originales protégées par le droit d'auteur (articles L.111-1 et suivants du Code de la propriété intellectuelle), dès leur création et sans formalité préalable. Sont notamment protégés :`,
+          list: [
+            'Les questions, formulations, thèmes et sous-thèmes constituant les decks de jeu',
+            'La mécanique de jeu, sa conception, sa formulation et son intégration',
+            "Le nom « Onskoné », le logo et les identités visuelles et sonores associées",
+            "Le code source, les algorithmes, les interfaces et l'expérience utilisateur de l'Application",
+            'Les traductions et adaptations culturelles des contenus, notamment la version anglaise',
+          ],
+          extra: `Toute reproduction, extraction, imitation, adaptation, traduction, diffusion ou réutilisation - partielle ou totale - de ces éléments, sans autorisation écrite et préalable, est strictement interdite, sur tout support et à toute finalité, et constitue une contrefaçon sanctionnée par les articles L.335-2 et L.335-3 du Code de la propriété intellectuelle. L'utilisation de l'Application est concédée au titre d'une licence personnelle, non exclusive, non transférable et non commerciale, ne conférant aucun droit de propriété sur l'Application ou son contenu.`,
+        },
+        {
+          title: 'Article 3 - Contenu utilisateur',
+          content: `L'Application ne collecte pas de contenu généré par les utilisateurs à des fins de conservation. Les réponses formulées lors d'une partie restent privées et temporaires : elles ne sont ni conservées après la session, ni exploitées, ni associées à un profil identifié.`,
+        },
+        {
+          title: 'Article 4 - Contenu mature (+18)',
+          content: `Certains decks signalés +18 comportent un contenu réservé aux personnes majeures. L'utilisateur est seul responsable de l'usage qu'il fait du contenu dans son contexte social et s'engage à ne pas utiliser l'Application d'une manière qui pourrait nuire à autrui. Onskoné ne saurait être tenu responsable d'un accès à ces contenus par un mineur ni d'un usage inadapté de l'Application.`,
+        },
+        {
+          title: 'Article 5 - Données personnelles',
+          content: `Onskoné traite les données personnelles conformément au RGPD (UE 2016/679) et à la loi Informatique et Libertés, en ne collectant que les données strictement nécessaires au fonctionnement du jeu. Le détail figure dans la <a href="/privacy" class="text-primary underline">Politique de confidentialité</a>.`,
+        },
+        {
+          title: 'Article 6 - Disponibilité & responsabilité',
+          content: `Onskoné s'efforce de maintenir l'Application disponible mais ne garantit pas une disponibilité ininterrompue. Onskoné ne pourra être tenu responsable des dommages directs ou indirects résultant d'une interruption de service, d'une erreur de contenu ou d'un usage inapproprié.`,
+        },
+        {
+          title: 'Article 7 - Modification des CGU',
+          content: `Onskoné se réserve le droit de modifier les présentes CGU à tout moment. La version en vigueur est celle disponible dans l'Application et sur onskone.fr. L'usage continu de l'Application après une modification vaut acceptation de la nouvelle version.`,
+        },
+        {
+          title: 'Article 8 - Loi applicable & juridiction',
+          content: `Les présentes CGU sont soumises au droit français. En cas de litige, les parties s'engagent à rechercher une solution amiable avant tout recours judiciaire. À défaut d'accord, les tribunaux français seront compétents.`,
+        },
+      ],
+    },
     support: {
       title: 'Aide & Support',
       sections: [
@@ -377,6 +422,7 @@ export const fr: Dictionary = {
       intro: "Tu veux nous contacter mais tu sais pas comment ? T'inquiète, écris-nous où tu veux, ce sera un plaisir de te répondre :",
     },
     openPage: 'Ouvrir la page complète',
+    tabs: { cgu: 'CGU', mentions: 'Mentions', privacy: 'Confidentialité' },
   },
 
   achievements: {

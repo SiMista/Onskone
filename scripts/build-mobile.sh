@@ -9,6 +9,8 @@
 set -e
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# Build natif : base d'assets relative (cf vite.config.ts).
+export CAPACITOR_BUILD=1
 
 if [ -z "$VITE_SERVER_URL" ]; then
   echo "[ATTENTION] VITE_SERVER_URL non defini : l'app ne pourra pas joindre le backend."

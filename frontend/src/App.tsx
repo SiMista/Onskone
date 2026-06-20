@@ -130,6 +130,7 @@ const App = () => {
               <Route path="/endgame/:lobbyCode" element={<EndGame />} />
               <Route path="/privacy" element={<Legal kind="privacy" />} />
               <Route path="/mentions" element={<Legal kind="mentions" />} />
+              <Route path="/cgu" element={<Legal kind="cgu" />} />
               <Route path="/support" element={<Legal kind="support" />} />
               {import.meta.env.DEV && <Route path="/studio" element={<Studio />} />}
               <Route
