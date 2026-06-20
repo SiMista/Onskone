@@ -67,6 +67,9 @@ export const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
     return () => { cancelled = true; clearInterval(id); };
   }, []);
 
+  // Pastille : ne compte que les tickets non résolus.
+  const openTicketCount = tickets.filter((t) => t.status !== 'resolved').length;
+
   const jumpToTickets = useCallback((status?: TicketStatus, type?: TicketType) => {
     setJumpFilter({ status, type });
     setActiveTab('tickets');
@@ -161,9 +164,9 @@ export const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
                       >
                         {tab.icon && <Icon icon={tab.icon} className="w-4 h-4" />}
                         {tab.label && <span>{tab.label}</span>}
-                        {tab.id === 'tickets' && tickets.length > 0 && (
+                        {tab.id === 'tickets' && openTicketCount > 0 && (
                           <span className="inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full bg-amber-400 text-[9px] font-bold leading-none text-[#0a0c12] tabular-nums">
-                            {tickets.length}
+                            {openTicketCount}
                           </span>
                         )}
                         {!tab.enabled && (
@@ -217,7 +220,7 @@ export const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
         )}
       </main>
 
-      <MobileBottomNav activeTab={activeTab} setActiveTab={setActiveTab} lobbyCount={lobbyCount} ticketCount={tickets.length} />
+      <MobileBottomNav activeTab={activeTab} setActiveTab={setActiveTab} lobbyCount={lobbyCount} ticketCount={openTicketCount} />
 
       <style>{`
         .no-scrollbar::-webkit-scrollbar { display: none; }
