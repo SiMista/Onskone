@@ -8,6 +8,7 @@ import { Server } from 'socket.io';
 import { SocketHandler } from './sockets/SocketHandler';
 import * as LobbyManager from './managers/LobbyManager.js';
 import { stopAllRateLimiters } from './utils/rateLimiter.js';
+import { versionGate, getMinSupportedVersion } from './utils/versionGate.js';
 import ticketsRouter from './routes/tickets.js';
 import adminDataRouter from './routes/adminData.js';
 import { printBanner } from './utils/banner.js';
@@ -87,6 +88,15 @@ const io = new Server(server, {
     methods: ["GET", "POST"],
   },
 });
+
+// Refus des clients trop vieux (maj forcée). Le plancher est dynamique (pilotable
+// en 1 clic depuis l'admin) : on enregistre toujours le middleware, il no-op tant
+// qu'aucun plancher actif n'est posé.
+io.use(versionGate);
+const bootFloor = getMinSupportedVersion();
+logger.info(bootFloor
+  ? `Maj forcée active au boot: version minimale requise = ${bootFloor}`
+  : 'Maj forcée inactive au boot (aucun plancher posé).');
 
 // Instancier le gestionnaire de sockets avec l'instance 'io'
 new SocketHandler(io);

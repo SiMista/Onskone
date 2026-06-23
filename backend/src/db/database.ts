@@ -33,6 +33,14 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_tickets_status ON tickets(status);
   CREATE INDEX IF NOT EXISTS idx_tickets_type ON tickets(type);
   CREATE INDEX IF NOT EXISTS idx_tickets_created_at ON tickets(created_at);
+
+  -- Config runtime modifiable depuis l'admin (ex: plancher de maj forcée).
+  -- Survit aux restarts ET aux redéploiements git (le .db vit hors du repo).
+  CREATE TABLE IF NOT EXISTS app_config (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
 `);
 
 export default db;

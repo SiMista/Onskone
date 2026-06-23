@@ -56,6 +56,14 @@ export interface Dictionary {
     pseudoPlaceholder: string;
   };
 
+  /** Écran bloquant "maj forcée" (version trop vieille refusée par le serveur) */
+  update: {
+    title: string;
+    message: string;
+    cta: string;
+    ctaWeb: string;
+  };
+
   home: {
     playNow: string;
     invite: (hostName: string) => ReactNode;

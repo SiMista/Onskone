@@ -11,6 +11,7 @@ import { LobbiesPanel } from './Lobbies';
 import { DecksPanel } from './Decks';
 import { ContentPanel } from './Content';
 import { StatsPanel } from './Stats';
+import { VersionGateButton } from './VersionGateButton';
 
 const LOBBY_COUNT_POLL_MS = 5000;
 
@@ -106,6 +107,10 @@ export const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
             <span className="font-mono text-[13px] sm:text-[14px] text-white/25 leading-none">/</span>
             <span className="font-mono text-[13px] sm:text-[14px] font-bold text-amber-200 uppercase tracking-[0.12em] leading-none">
               admin
+            </span>
+
+            <span className="ml-2 sm:ml-3">
+              <VersionGateButton />
             </span>
 
             <button

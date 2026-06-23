@@ -13,6 +13,13 @@ export const fr: Dictionary = {
     pseudoPlaceholder: 'Ton pseudo',
   },
 
+  update: {
+    title: 'Mise à jour requise',
+    message: 'Une nouvelle version est disponible. Mets à jour Onskoné pour continuer à jouer.',
+    cta: 'Mettre à jour',
+    ctaWeb: 'Recharger',
+  },
+
   home: {
     playNow: 'Joue maintenant !',
     invite: (hostName) => (
