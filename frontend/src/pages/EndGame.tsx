@@ -49,7 +49,7 @@ const EndGame: React.FC = () => {
   const [isSharing, setIsSharing] = useState(false);
   const preparedBlobRef = useRef<Blob | null>(null);
   const showToast = useToast();
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
 
   // Pour chaque joueur, retrouver le round où il a été pilier (sa question)
   const roundByLeaderId = useMemo(() => {
@@ -255,11 +255,12 @@ const EndGame: React.FC = () => {
         avatarId: e.player.avatarId,
       })),
       texts: t.shareCard,
+      locale,
     })
       .then(blob => { if (!cancelled) preparedBlobRef.current = blob; })
       .catch(err => console.error('buildShareCard failed', err));
     return () => { cancelled = true; };
-  }, [revealed, leaderboard, pct, verdict, verdictTexts, verdictMessage, t]);
+  }, [revealed, leaderboard, pct, verdict, verdictTexts, verdictMessage, t, locale]);
 
   const handleShare = async () => {
     if (isSharing) return;

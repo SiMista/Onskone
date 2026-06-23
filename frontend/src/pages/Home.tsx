@@ -9,6 +9,7 @@ import Footer from '../components/Footer';
 import AvatarSelector from '../components/AvatarSelector';
 import InfoModal from '../components/InfoModal';
 import GameModeModal from '../components/GameModeModal';
+import JoinByCodeModal from '../components/JoinByCodeModal';
 import HowToPlayCarousel from '../components/HowToPlayCarousel';
 import HowToPlayButton from '../components/HowToPlayButton';
 import LanguageSwitcher from '../components/LanguageSwitcher';
@@ -31,7 +32,7 @@ import {
 import { storeReconnectToken } from '../utils/playerHelpers';
 
 const Home = () => {
-  const { locale, t } = useLocale();
+  const { locale, setLocale, t } = useLocale();
   // Pré-remplit depuis le profil persistant (lazy init -> 1 lecture localStorage).
   const initialStats = (() => {
     try { return getStats(); } catch { return null; }
@@ -45,6 +46,10 @@ const Home = () => {
   const [isInfoOpen, setIsInfoOpen] = useState(false);
   const [isStatsOpen, setIsStatsOpen] = useState(false);
   const [isGameModeOpen, setIsGameModeOpen] = useState(false);
+  const [isJoinByCodeOpen, setIsJoinByCodeOpen] = useState(false);
+  // Code saisi dans la popup "Rejoindre" en cours de validation (getLobbyInfo).
+  // Tant qu'il est posé, la réponse lobbyInfo concerne la popup (pas l'URL).
+  const [pendingJoinCode, setPendingJoinCode] = useState<string | null>(null);
   const [unseenAchievementIds, setUnseenAchievementIds] = useState<string[]>(() => {
     try { return getUnseenAchievementIds(); } catch { return []; }
   });
@@ -110,11 +115,19 @@ const Home = () => {
     setIsGameModeOpen(true);
   }, [playerName, showToast, t]);
 
-  const handleGameModeSelected = useCallback((mode: GameMode, deckLocale: Locale) => {
+  const handleGameModeSelected = useCallback((mode: GameMode) => {
     setIsGameModeOpen(false);
     rememberIdentity(playerName, avatarId);
-    socket.emit('createLobby', { playerName, avatarId, gameMode: mode, locale: deckLocale });
-  }, [playerName, avatarId]);
+    // La langue des questions = langue de l'appli de l'hôte (plus de choix séparé).
+    socket.emit('createLobby', { playerName, avatarId, gameMode: mode, locale });
+  }, [playerName, avatarId, locale]);
+
+  const handleJoinByCode = useCallback((code: string) => {
+    // On valide le code AVANT de fermer la popup : si le salon n'existe pas, la
+    // popup reste ouverte (cf. handleLobbyInfo). On ne navigue donc pas encore.
+    setPendingJoinCode(code);
+    socket.emit('getLobbyInfo', { lobbyCode: code });
+  }, []);
 
   const joinLobby = useCallback(() => {
     if (!playerName.trim()) {
@@ -184,14 +197,35 @@ const Home = () => {
     showToast(data.message, 'error');
   }, [showToast]);
 
-  const handleLobbyInfo = useCallback((data: { exists: boolean; hostName?: string | null }) => {
+  const handleLobbyInfo = useCallback((data: { exists: boolean; hostName?: string | null; locale?: Locale }) => {
+    // Flow popup "Rejoindre" : la réponse concerne le code saisi à la main.
+    if (pendingJoinCode !== null) {
+      const code = pendingJoinCode;
+      setPendingJoinCode(null);
+      if (data.exists) {
+        // Code valide : ferme la popup et bascule en mode rejoindre via l'URL.
+        setIsJoinByCodeOpen(false);
+        navigate(`/?lobbyCode=${encodeURIComponent(code)}`);
+      } else {
+        // Salon introuvable : on reste sur la popup avec un toast.
+        showToast(t.home.toasts.lobbyNotFound, 'error');
+      }
+      return;
+    }
+
     setLobbyExists(data.exists);
-    if (data.exists && data.hostName) {
-      setHostName(data.hostName);
-    } else if (!data.exists) {
+    if (data.exists) {
+      if (data.hostName) setHostName(data.hostName);
+      // Le joiner suit la langue du salon (UI + questions cohérentes), sans
+      // écraser sa préférence sauvegardée (override de session uniquement).
+      if (data.locale && data.locale !== locale) setLocale(data.locale, { persist: false });
+    } else {
+      // Salon inexistant via URL (ex : lien périmé, salon solo quitté qui vient
+      // d'être supprimé) : on rentre à l'accueil sans toast (pas une action
+      // utilisateur explicite ici).
       navigate('/', { replace: true });
     }
-  }, [navigate]);
+  }, [navigate, locale, setLocale, showToast, t, pendingJoinCode]);
 
   useSocketEvent('lobbyInfo', handleLobbyInfo);
   useSocketEvent('lobbyCreated', handleLobbyCreated);
@@ -219,6 +253,12 @@ const Home = () => {
         isOpen={isGameModeOpen}
         onClose={() => setIsGameModeOpen(false)}
         onSelect={handleGameModeSelected}
+      />
+
+      <JoinByCodeModal
+        isOpen={isJoinByCodeOpen}
+        onClose={() => { setIsJoinByCodeOpen(false); setPendingJoinCode(null); }}
+        onSubmit={handleJoinByCode}
       />
 
       <InfoModal
@@ -345,7 +385,7 @@ const Home = () => {
                 {lobbyCode && lobbyExists ? (
                   <h3 className="text-sm md:text-base font-normal">{t.home.invite(hostName || t.home.fallbackFriend)}</h3>
                 ) : (
-                  <h3 className="font-accent text-display-lg">{t.home.playNow}</h3>
+                  <h3 className="font-accent text-display-lg phone-landscape:text-display-md">{t.home.playNow}</h3>
                 )}
                 <AvatarSelector
                   selectedAvatarId={avatarId}
@@ -361,13 +401,26 @@ const Home = () => {
                   />
                 </div>
                 {!lobbyCode ? (
-                  <div className="text-center space-y-2">
-                    <Button
-                      text={t.home.createLobby}
-                      variant="primary"
-                      size="md"
-                      onClick={createLobby}
-                    />
+                  <div className="flex justify-center">
+                    {/* inline-grid : les 2 boutons partagent la largeur du plus
+                        large label (locale-proof), donc "Rejoindre" ne dépasse
+                        jamais "Créer un salon". Le primaire reste plus haut (md). */}
+                    <div className="inline-grid gap-2 justify-items-stretch">
+                      <Button
+                        text={t.home.createLobby}
+                        variant="primary"
+                        size="md"
+                        onClick={createLobby}
+                        className="w-full"
+                      />
+                      <Button
+                        text={t.home.joinByCode.button}
+                        variant="warning"
+                        size="sm"
+                        onClick={() => setIsJoinByCodeOpen(true)}
+                        className="w-full"
+                      />
+                    </div>
                   </div>
                 ) : lobbyExists === null ? (
                   <div className="text-center">
@@ -392,7 +445,7 @@ const Home = () => {
             <Frame textAlign="left">
               <div className="w-full border-b-2 border-dashed border-gray-300 pb-3 mb-4 desktop-short:pb-1 desktop-short:mb-1 flex items-center gap-2">
                 <Icon icon="fluent-emoji-flat:direct-hit" className="desktop-short:w-5 desktop-short:h-5" width={26} height={26} aria-hidden />
-                <h2 className="marker-highlight font-accent text-display-lg desktop-short:text-display-md text-gray-900 m-0">
+                <h2 className="marker-highlight font-accent text-display-lg desktop-short:text-display-md phone-landscape:text-display-md text-gray-900 m-0">
                   {t.home.howToPlayHeading}
                 </h2>
               </div>
@@ -410,9 +463,7 @@ const Home = () => {
           auto sur le Footer pour garder les liens cliquables et laisser
           les zones vides traversables. */}
       <div className="absolute bottom-0 left-0 right-0 pointer-events-none z-10">
-        <div className="pointer-events-auto">
-          <Footer />
-        </div>
+        <Footer />
       </div>
 
       {import.meta.env.DEV && window.self === window.top && (

@@ -6,6 +6,7 @@ import {
   SelectedDecks,
   GAME_CONSTANTS,
 } from '@onskone/shared';
+import type { GameMode } from '@onskone/shared';
 import type { ServerToClientEvents } from '@onskone/shared';
 import { useSocketEvent } from './useSocketEvent';
 
@@ -13,6 +14,7 @@ interface UseLobbyStateResult {
   decksCatalog: DecksCatalog;
   decksCatalogMeta: DecksCatalogWithMeta;
   selectedDecks: SelectedDecks;
+  gameMode: GameMode | null;
   guessMyAnswerMode: boolean;
   timeMultiplier: number;
   onGuessMyAnswerModeChange: (next: boolean) => void;
@@ -33,6 +35,7 @@ export function useLobbyState(lobbyCode: string | undefined): UseLobbyStateResul
   const [decksCatalog, setDecksCatalog] = useState<DecksCatalog>({});
   const [decksCatalogMeta, setDecksCatalogMeta] = useState<DecksCatalogWithMeta>({});
   const [selectedDecks, setSelectedDecks] = useState<SelectedDecks>({});
+  const [gameMode, setGameMode] = useState<GameMode | null>(null);
   const [guessMyAnswerMode, setGuessMyAnswerMode] = useState<boolean>(false);
   const [timeMultiplier, setTimeMultiplier] = useState<number>(GAME_CONSTANTS.TIME_MULTIPLIER_DEFAULT);
 
@@ -42,6 +45,7 @@ export function useLobbyState(lobbyCode: string | undefined): UseLobbyStateResul
     setDecksCatalog(data.catalog);
     setDecksCatalogMeta(data.catalogWithMeta);
     setSelectedDecks(data.selected);
+    setGameMode(data.gameMode);
     setGuessMyAnswerMode(data.guessMyAnswerMode);
     setTimeMultiplier(data.timeMultiplier);
   }, []);
@@ -107,6 +111,7 @@ export function useLobbyState(lobbyCode: string | undefined): UseLobbyStateResul
     decksCatalog,
     decksCatalogMeta,
     selectedDecks,
+    gameMode,
     guessMyAnswerMode,
     timeMultiplier,
     onGuessMyAnswerModeChange,

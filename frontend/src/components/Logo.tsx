@@ -1,5 +1,14 @@
 // src/components/Logo.tsx
-import logoSloganImg from '../assets/logos/logo_slogan.png';
+import type { Locale } from '@onskone/shared';
+import { useLocale } from '../i18n';
+import logoSloganFr from '../assets/logos/logo-slogan-fr.png';
+import logoSloganEn from '../assets/logos/logo-slogan-en.png';
+
+// Logo avec slogan par langue ; repli sur le FR pour toute locale sans variante.
+const LOGO_BY_LOCALE: Record<Locale, string> = {
+  fr: logoSloganFr,
+  en: logoSloganEn,
+};
 
 interface LogoProps {
   size?: 'small' | 'large';
@@ -8,6 +17,8 @@ interface LogoProps {
 const Logo = ({
   size = 'small'
 }: LogoProps) => {
+  const { locale } = useLocale();
+  const logoSloganImg = LOGO_BY_LOCALE[locale] ?? logoSloganFr;
   // Tailles responsive: plus grand sur mobile, plus petit sur desktop.
   // max-h en dvh cape la hauteur sur PC court (large mais peu haut) avec
   // un plancher px pour ne pas devenir illisible sur écran très court.

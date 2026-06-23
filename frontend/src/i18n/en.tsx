@@ -40,7 +40,13 @@ export const en: Dictionary = {
       enterPseudoCreate: 'Enter your name before creating a lobby',
       enterPseudoJoin: 'Enter your name before joining a lobby',
       invalidLobbyCode: 'Invalid lobby code',
+      lobbyNotFound: 'Lobby not found',
       pseudoTaken: (name) => `The name "${name}" is already taken in this lobby`,
+    },
+    joinByCode: {
+      button: 'Join a game',
+      modalTitle: 'Join a game',
+      submit: 'Join',
     },
     studioButtonTitle: 'Debug mode: open the multi-screen Studio',
   },
@@ -71,7 +77,13 @@ export const en: Dictionary = {
     shareInvite: {
       button: 'Share the invite',
       title: 'Onskoné',
-      message: "Onskoné ? What ? Do we really know each other ? Let's find out 😂",
+      message: "Onskoné ? What ? Do we really know each other ? Let's find out 😜",
+      sheetTitle: 'Invite friends',
+      codeLabel: 'Lobby code',
+      copyLink: 'Copy link',
+      share: 'Share',
+      qrLabel: 'QR code to join the lobby',
+      scanHint: 'Show this QR code to your friends to invite them',
     },
     minPlayers: (n) => `You need at least ${n} players to start`,
     selectAtLeastOneTheme: 'Pick at least 1 theme',
@@ -98,6 +110,8 @@ export const en: Dictionary = {
     },
     toasts: {
       linkCopied: 'Link copied! Send it to your friends',
+      codeCopied: 'Code copied!',
+      shareUnavailable: "Sharing didn't work, copy the link instead",
       aloneRemoved: 'You were alone in the lobby, it has been deleted',
       promoted: 'You are now the lobby host!',
       newHost: (name) => `${name} is now the lobby host`,
@@ -147,6 +161,8 @@ export const en: Dictionary = {
           'You share the wifi, that\'s already a solid foundation.',
           'Maybe start with a coffee together, no?',
           'Take your time, you\'ll get to know each other... one day.',
+          'You have more in common with your Uber Eats driver...',
+          'At this point, your conversations still start with "So, what do you do for a living?"',
         ],
       },
       {
@@ -154,7 +170,9 @@ export const en: Dictionary = {
         messages: [
           'The basics are there, you just need to build on top.',
           'You\'re making progress, slowly but surely... mostly slowly.',
-          'A couple of drinks and it should take off.',
+          'You know who\'s who. That\'s more than some coworkers after 5 years.',
+          'You know each other\'s first names... It\'s already a start.',
+          'Your relationship currently survives thanks to WhatsApp groups.',
         ],
       },
       {
@@ -163,6 +181,7 @@ export const en: Dictionary = {
           'One more step and you\'re a real team.',
           "You could carpool 3 hours without killing each other. That's already huge.",
           'There\'s some trust, but the Netflix password stays sacred.',
+          'You\'ve got enough shared memories to fuel a few juicy stories.',
         ],
       },
       {
@@ -171,6 +190,7 @@ export const en: Dictionary = {
           'You get each other without speaking, beautiful to watch.',
           "You finish each other's sentences, and each other's fries too.",
           'You could rob a bank together',
+          'You know exactly which embarrassing photo to use if things go south.',
         ],
       },
       {
@@ -199,7 +219,6 @@ export const en: Dictionary = {
 
   modes: {
     title: 'Pick your game mode',
-    questionLanguage: 'Question language',
     local: {
       title: 'In person',
       description: 'Same room, players are close enough to show each other their phones',
@@ -292,6 +311,7 @@ export const en: Dictionary = {
             "My sister Mimi, who kept cheering me on throughout the development",
             "My brother Sylvain, for fully trusting me to build the website for his game",
             "Brinda and Sathya, who gave me ambition right from the start of the project",
+            "Thanks to Sujee, creator of the Gigglz app, the GOAT of games: go install his app!!",
             "And finally all my friends and cousins who tested the game with me and gave great feedback!",
           ],
         },
@@ -461,16 +481,18 @@ export const en: Dictionary = {
   },
 
   funFacts: [
-    "On the day he was born, Squeezie's first words were: 'Is that good for you guys?'",
     "At the casino you can win 4000 times your bet but you can only lose 1 time your bet, so bet it all next time ;)",
-    "League of Legends players shower on average once a week",
     "It's statistically safer to bet on a Kylian Mbappé goal than on a goal by the referee.",
     "Going to the gym regularly gives you muscle gains plus a nauseating body odor",
     "Skipping brushing your teeth systematically results in dragon breath",
     "Eating KFC every day greatly increases your toilet paper expenses",
     "Whoever falls asleep with itchy butt cheeks wakes up with stinky fingers",
-    "If in a rap song you hear 'number 10 like ...', that rapper is necessarily bad",
-    "4 out of 5 men don't understand the pain women go through daily (I'm the 5th)",
+    "Onskoné has created 10 couples. Amazing! (and destroyed 35)",
+    "The round's pillar who ends with 0 correct answers has a 50% chance of being bad and a 50% chance of being drunk.",
+    "Your husband or wife didn't guess a single one of your answers the whole game? That's valid grounds for a breakup (Article 711 of the Civil Code)",
+    "If nobody guesses your answers, two theories: you're a misunderstood genius, or you're just extremely weird.",
+    "Onskoné is currently banned in 0 countries. But that could change (fingers crossed!)",
+    "Onskoné is the only game where you can make friends and lose some at the same time.",
   ],
 
   decks: {

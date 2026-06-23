@@ -1,15 +1,13 @@
-import { useEffect, useState } from 'react';
 import { GameMode } from '@onskone/shared';
-import type { Locale } from '@onskone/shared';
 import InfoModal from './InfoModal';
 import EmojiCard from './EmojiCard';
-import { useLocale, LOCALE_META, SUPPORTED_LOCALES } from '../i18n';
+import { useLocale } from '../i18n';
 import type { Dictionary } from '../i18n/dictionary';
 
 interface GameModeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (mode: GameMode, deckLocale: Locale) => void;
+  onSelect: (mode: GameMode) => void;
 }
 
 interface ModeOption {
@@ -38,50 +36,18 @@ const modeText = (mode: GameMode, modes: Dictionary['modes']) =>
   mode === 'local' ? modes.local : modes.remote;
 
 const GameModeModal = ({ isOpen, onClose, onSelect }: GameModeModalProps) => {
-  const { locale: uiLocale, t } = useLocale();
-  const [deckLocale, setDeckLocale] = useState<Locale>(uiLocale);
-
-  // Quand on rouvre la modale, on resync sur la langue UI courante (défaut sensé)
-  useEffect(() => {
-    if (isOpen) setDeckLocale(uiLocale);
-  }, [isOpen, uiLocale]);
+  const { t } = useLocale();
 
   return (
     <InfoModal isOpen={isOpen} onClose={onClose} title={t.modes.title} disableScrollFade>
       <div className="flex flex-col gap-3 pb-4">
-        <fieldset className="flex flex-col gap-1.5 pb-1">
-          <legend className="text-display-xs text-gray-600 px-1">{t.modes.questionLanguage}</legend>
-          <div className="flex gap-1.5 flex-wrap">
-            {SUPPORTED_LOCALES.map((code) => {
-              const meta = LOCALE_META[code];
-              const active = code === deckLocale;
-              return (
-                <button
-                  key={code}
-                  type="button"
-                  onClick={() => setDeckLocale(code)}
-                  aria-pressed={active}
-                  aria-label={meta.label}
-                  title={meta.label}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl border-2 border-black font-display font-semibold text-sm transition-transform ${
-                    active ? 'bg-brand-200 stack-shadow-sm scale-[1.02]' : 'bg-cream-paper hover:scale-105'
-                  }`}
-                >
-                  <span aria-hidden className="text-base leading-none">{meta.flag}</span>
-                  <span>{meta.shortLabel}</span>
-                </button>
-              );
-            })}
-          </div>
-        </fieldset>
-
         {MODES.map((opt) => {
           const text = modeText(opt.mode, t.modes);
           return (
             <button
               key={opt.mode}
               type="button"
-              onClick={() => onSelect(opt.mode, deckLocale)}
+              onClick={() => onSelect(opt.mode)}
               className="group flex items-stretch w-full border-[2.5px] border-black rounded-2xl overflow-hidden stack-shadow-sm bg-white hover:scale-[1.02] active:scale-[0.98] transition-transform duration-150 cursor-pointer text-left"
             >
               <EmojiCard icon={opt.icon} bgClassName={opt.iconBg} pattern={opt.iconPattern} />
