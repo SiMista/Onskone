@@ -8,6 +8,7 @@ import ConfirmModal from '../components/ConfirmModal';
 import InfoModal from '../components/InfoModal';
 import HowToPlayCarousel from '../components/HowToPlayCarousel';
 import HowToPlayButton from '../components/HowToPlayButton';
+import ShareInviteSheet from '../components/ShareInviteSheet';
 import { Icon } from '@iconify/react';
 import ThemePickerModal from '../components/ThemePickerModal';
 import BackButton from '../components/BackButton';
@@ -55,6 +56,7 @@ const Lobby = () => {
     const [showGameAlreadyStarted, setShowGameAlreadyStarted] = useState(false);
     const [isHowToPlayOpen, setIsHowToPlayOpen] = useState(false);
     const [isThemePickerOpen, setIsThemePickerOpen] = useState(false);
+    const [shareSheetOpen, setShareSheetOpen] = useState(false);
     const [lobbyTab, setLobbyTab] = useState<LobbyTabId>('settings');
     const lobbyTabScrollRef = useRef<HTMLDivElement | null>(null);
     // Le scroll-container est partagé entre les 2 tabs (grid stacking).
@@ -74,6 +76,7 @@ const Lobby = () => {
         decksCatalog,
         decksCatalogMeta,
         selectedDecks,
+        gameMode,
         guessMyAnswerMode,
         timeMultiplier,
         onGuessMyAnswerModeChange,
@@ -81,8 +84,8 @@ const Lobby = () => {
         onSelectedDecksChange,
     } = useLobbyState(lobbyCode);
 
-    // Partage de l'invitation (cascade native/Web Share/copie + modale de repli).
-    const { shareInvite, fallbackLink, clearFallbackLink } = useShareInvite(lobbyCode, t);
+    // Partage de l'invitation : actions granulaires (partage OS, copie lien, copie code) + modale de repli.
+    const { shareNative, copyLink, copyCode, fallbackLink, clearFallbackLink } = useShareInvite(lobbyCode, t);
 
     // Avertissement avant de quitter la page (le serveur gère la déconnexion automatiquement via socket.disconnect)
     useLeavePrompt(!!currentPlayer);
@@ -362,7 +365,7 @@ const Lobby = () => {
                                     variant="warning"
                                     size="sm"
                                     className="!text-xs md:!text-sm whitespace-nowrap"
-                                    onClick={shareInvite}
+                                    onClick={() => setShareSheetOpen(true)}
                                 />
                             </div>
 
@@ -386,9 +389,7 @@ const Lobby = () => {
             {/* Footer transparent en overlay (desktop uniquement) : ne mange pas
                 la place verticale, le contenu peut passer dessous. */}
             <div className="hidden md:block absolute bottom-0 left-0 right-0 pointer-events-none z-10">
-                <div className="pointer-events-auto">
-                    <Footer />
-                </div>
+                <Footer />
             </div>
 
             {/* Modal de confirmation pour peu de joueurs */}
@@ -431,6 +432,17 @@ const Lobby = () => {
             >
                 <HowToPlayCarousel />
             </InfoModal>
+
+            {/* Bottom sheet de partage : code + copie rapide, copier le lien, partage OS */}
+            <ShareInviteSheet
+                isOpen={shareSheetOpen}
+                onClose={() => setShareSheetOpen(false)}
+                lobbyCode={lobbyCode ?? ''}
+                gameMode={gameMode}
+                onCopyCode={copyCode}
+                onCopyLink={copyLink}
+                onShare={shareNative}
+            />
 
             {/* Modal fallback : affiche le lien quand le copier-coller automatique a échoué */}
             <InfoModal

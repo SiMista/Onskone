@@ -75,7 +75,13 @@ export interface Dictionary {
       enterPseudoCreate: string;
       enterPseudoJoin: string;
       invalidLobbyCode: string;
+      lobbyNotFound: string;
       pseudoTaken: (name: string) => string;
+    };
+    joinByCode: {
+      button: string;
+      modalTitle: string;
+      submit: string;
     };
     studioButtonTitle: string;
   };
@@ -97,7 +103,17 @@ export interface Dictionary {
     themes: string;
     start: string;
     copyInviteLink: string;
-    shareInvite: { button: string; title: string; message: string };
+    shareInvite: {
+      button: string;
+      title: string;
+      message: string;
+      sheetTitle: string;
+      codeLabel: string;
+      copyLink: string;
+      share: string;
+      qrLabel: string;
+      scanHint: string;
+    };
     minPlayers: (n: number) => string;
     selectAtLeastOneTheme: string;
     loadingThemes: string;
@@ -111,6 +127,8 @@ export interface Dictionary {
     };
     toasts: {
       linkCopied: string;
+      codeCopied: string;
+      shareUnavailable: string;
       aloneRemoved: string;
       promoted: string;
       newHost: (name: string) => string;
@@ -163,7 +181,6 @@ export interface Dictionary {
 
   modes: {
     title: string;
-    questionLanguage: string;
     local: { title: string; description: string };
     remote: { title: string; description: string };
   };

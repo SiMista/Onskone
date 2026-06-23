@@ -92,8 +92,9 @@ export interface ServerToClientEvents {
   /** Le nom du joueur est valide */
   playerNameValid: () => void;
 
-  /** Informations sur un lobby (pour les liens d'invitation) */
-  lobbyInfo: (data: { exists: boolean; hostName?: string | null }) => void;
+  /** Informations sur un lobby (pour les liens d'invitation).
+   *  `locale` = langue du salon (fixée par l'hôte) : le joiner s'aligne dessus. */
+  lobbyInfo: (data: { exists: boolean; hostName?: string | null; locale?: Locale }) => void;
 
   /** Notification que la partie a déjà commencé (nouveau joueur refusé) */
   gameAlreadyStarted: (data: { message: string }) => void;

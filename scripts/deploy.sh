@@ -30,6 +30,9 @@ if [ -z "${CI:-}" ]; then
 fi
 
 echo "==> Déploiement depuis $ROOT (commit $(git rev-parse --short HEAD))"
+# Affiche la version qui sera buildee : une regression silencieuse (ex: VERSION non
+# bumpe) saute aux yeux ici plutot que de se decouvrir sur le store.
+echo "==> Version: $(node scripts/app-version.mjs 2>/dev/null || echo '?') (code $(node scripts/app-version.mjs --code 2>/dev/null || echo '?'))"
 
 echo "==> Installation des dépendances (recompile better-sqlite3 natif pour ce serveur)"
 pnpm install --frozen-lockfile

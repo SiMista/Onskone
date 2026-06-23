@@ -1,22 +1,26 @@
 apply plugin: 'com.android.application'
 
-// Version derivee des git tags, alignee sur la version web (vite.config.ts) :
-// versionName = MAJOR.MINOR (dernier tag) + PATCH (commits depuis le tag).
-// versionCode = nb total de commits (entier toujours croissant, exige par le Play Store).
+// Version alignee sur scripts/app-version.mjs (et vite.config.ts), SANS tags git :
+// MAJOR.MINOR = fichier VERSION a la racine du repo ; PATCH = commits depuis le
+// dernier commit ayant modifie VERSION ; versionCode = nb total de commits.
+// rootDir = frontend/android -> la racine du repo est deux niveaux au-dessus.
+def repoRoot = new File(rootDir, '../..')
 def gitVersionName = { ->
     try {
-        def tag = 'git describe --tags --abbrev=0'.execute(null, rootDir).text.trim()
-        def parts = tag.replaceFirst('^v', '').split('\\.')
-        def count = "git rev-list ${tag}..HEAD --count".execute(null, rootDir).text.trim()
+        def mv = new File(repoRoot, 'VERSION').text.trim().replaceFirst('^v', '')
+        def parts = mv.split('\\.')
+        def bump = 'git log -1 --format=%H -- VERSION'.execute(null, repoRoot).text.trim()
+        def count = (bump ? "git rev-list ${bump}..HEAD --count" : 'git rev-list --count HEAD')
+            .execute(null, repoRoot).text.trim()
         return "${parts[0]}.${parts[1]}.${count}"
     } catch (ignored) {
-        def count = 'git rev-list --count HEAD'.execute(null, rootDir).text.trim()
+        def count = 'git rev-list --count HEAD'.execute(null, repoRoot).text.trim()
         return "0.0.${count}"
     }
 }
 def gitVersionCode = { ->
     try {
-        return 'git rev-list --count HEAD'.execute(null, rootDir).text.trim().toInteger()
+        return 'git rev-list --count HEAD'.execute(null, repoRoot).text.trim().toInteger()
     } catch (ignored) {
         return 1
     }

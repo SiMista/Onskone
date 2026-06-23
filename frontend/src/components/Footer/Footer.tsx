@@ -7,7 +7,10 @@ import { useLocale } from '../../i18n';
 
 type ModalType = 'about' | 'mentions' | 'contact' | null;
 
-const footerLinkClass = 'hover:text-white transition-colors underline cursor-pointer';
+// pointer-events-auto : seuls les liens captent le clic. Le <footer> reste
+// pointer-events-none pour que ses zones vides (padding, bande pleine largeur)
+// laissent passer les taps vers le contenu dessous (ex: bouton sous l'overlay).
+const footerLinkClass = 'pointer-events-auto hover:text-white transition-colors underline cursor-pointer';
 
 const Footer = () => {
   const [activeModal, setActiveModal] = useState<ModalType>(null);
@@ -18,11 +21,13 @@ const Footer = () => {
   return (
     <>
       <footer
-        className="w-full py-5 text-center text-white/60 text-[10px] md:text-xs select-none"
+        className="w-full py-5 text-center text-white/60 text-[10px] md:text-xs select-none pointer-events-none"
         style={{ paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom, 0px))' }}
       >
         <div className="mb-2">
-          <ReportTrigger variant="footer" label={t.report.footerLabel} />
+          <span className="pointer-events-auto inline-block">
+            <ReportTrigger variant="footer" label={t.report.footerLabel} />
+          </span>
         </div>
         <div className="flex justify-center items-center gap-3 md:gap-5 whitespace-nowrap">
           <button

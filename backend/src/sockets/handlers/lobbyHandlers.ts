@@ -141,8 +141,9 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
                 return;
             }
 
-            // Vérifie si un joueur avec ce nom existe déjà (reconnexion après refresh)
-            const existingPlayerByName = lobby.players.find(p => p.name === sanitizedName);
+            // Vérifie si un joueur avec ce nom existe déjà (reconnexion après refresh).
+            // Comparaison insensible à la casse : "Loic" et "loic" = même joueur.
+            const existingPlayerByName = lobby.players.find(p => p.name.toLowerCase() === sanitizedName.toLowerCase());
             if (existingPlayerByName) {
                 // Chemin sûr : le client présente un reconnectToken qui correspond au
                 // secret du joueur cible → reconnexion prouvée, on contourne la garde de
@@ -263,7 +264,8 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
             const host = lobby.players.find(p => p.isHost);
             socket.emit('lobbyInfo', {
                 exists: true,
-                hostName: host?.name || null
+                hostName: host?.name || null,
+                locale: lobby.locale
             });
         } catch (error) {
             logger.error('Error getting lobby info', { error: errMessage(error) });
@@ -355,7 +357,8 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
                 socket.emit('error', { message: 'Salon introuvable', code: ERROR_CODES.NOT_FOUND });
                 return;
             }
-            if (lobby.players.find(p => p.name === sanitizedName)) {
+            // Insensible à la casse : "Loic" bloque "loic" (cf. joinLobby).
+            if (lobby.players.find(p => p.name.toLowerCase() === sanitizedName.toLowerCase())) {
                 socket.emit('playerNameExists', { playerName: sanitizedName });
             } else {
                 socket.emit('playerNameValid');

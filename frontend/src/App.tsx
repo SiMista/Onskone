@@ -72,11 +72,22 @@ const JoinRedirect = () => {
    - warm start : event `appUrlOpen` (app déjà en mémoire). */
 const DeepLinkHandler = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  // Pathname courant en ref : lu dans le callback sans re-souscrire le listener.
+  const pathRef = useRef(location.pathname);
+  useEffect(() => { pathRef.current = location.pathname; }, [location.pathname]);
+
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
     const route = (url: string) => {
       const code = extractLobbyCode(url);
-      if (code) navigate(`/?lobbyCode=${encodeURIComponent(code)}`);
+      if (!code) return;
+      // iOS relivre l'URL de cold-start via un appUrlOpen tardif EN PLUS de
+      // getLaunchUrl : sans ce garde, ce 2e navigate ejecte le joueur deja
+      // entre dans le lobby vers l'accueil. On ne route que s'il n'est pas
+      // deja sur une route de ce salon (lobby/game/endgame).
+      if (pathRef.current.includes(`/${code}`)) return;
+      navigate(`/?lobbyCode=${encodeURIComponent(code)}`);
     };
     CapacitorApp.getLaunchUrl().then((res) => { if (res?.url) route(res.url); });
     const handle = CapacitorApp.addListener('appUrlOpen', ({ url }) => route(url));

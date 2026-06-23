@@ -299,6 +299,16 @@ button,
   -webkit-tap-highlight-color: transparent;
 }
 
+/* --- Images : pas de menu "Enregistrer l'image" ni de drag au long-press --- */
+/* Le long-press iOS ouvre sinon le menu de sauvegarde d'image (avatars,
+   visuels "comment jouer", logo...). N'empêche pas les clics. */
+img {
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 body {
   @apply m-0 font-sans relative;
   background:
@@ -433,6 +443,24 @@ button {
 
 .animate-modal-content {
   animation: modal-content-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+
+/* Bottom sheet : glisse depuis le bas de l'écran */
+@keyframes bottomsheet-in {
+  0% {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-bottomsheet {
+  animation: bottomsheet-in 0.4s cubic-bezier(0.32, 0.72, 0, 1) forwards;
   will-change: transform, opacity;
   backface-visibility: hidden;
 }

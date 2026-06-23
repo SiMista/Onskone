@@ -22,7 +22,9 @@ const detectInitialLocale = (): Locale => {
 
 interface LocaleContextValue {
   locale: Locale;
-  setLocale: (l: Locale) => void;
+  /** `persist: false` change la langue active sans toucher la préférence
+   *  sauvegardée (utilisé quand un joiner suit la langue de l'hôte). */
+  setLocale: (l: Locale, opts?: { persist?: boolean }) => void;
   t: Dictionary;
 }
 
@@ -31,8 +33,9 @@ const LocaleContext = createContext<LocaleContextValue | null>(null);
 export const LocaleProvider = ({ children }: { children: ReactNode }) => {
   const [locale, setLocaleState] = useState<Locale>(detectInitialLocale);
 
-  const setLocale = useCallback((l: Locale) => {
+  const setLocale = useCallback((l: Locale, opts?: { persist?: boolean }) => {
     setLocaleState(l);
+    if (opts?.persist === false) return;
     try {
       window.localStorage.setItem(STORAGE_KEY, l);
     } catch { /* quota / private mode */ }

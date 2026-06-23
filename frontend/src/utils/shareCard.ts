@@ -1,7 +1,15 @@
-import logoSloganImg from '../assets/logos/logo_slogan.png';
+import logoSloganFr from '../assets/logos/logo-slogan-fr.png';
+import logoSloganEn from '../assets/logos/logo-slogan-en.png';
 import bgImg from '../assets/images/interrogation_bg_transparent.png';
 import { getAvatarUrl } from '../constants/game';
+import type { Locale } from '@onskone/shared';
 import type { Dictionary } from '../i18n/dictionary';
+
+// Logo par langue ; repli FR (canvas n'a pas accès au contexte React).
+const LOGO_BY_LOCALE: Record<Locale, string> = {
+  fr: logoSloganFr,
+  en: logoSloganEn,
+};
 
 export interface ShareCardOptions {
   pct: number;
@@ -12,6 +20,8 @@ export interface ShareCardOptions {
   topPlayers: { name: string; score: number; avatarId?: number }[];
   /** Textes localisés (canvas n'a pas accès au contexte React) */
   texts: Dictionary['shareCard'];
+  /** Langue pour le logo ; repli FR si absent. */
+  locale?: Locale;
 }
 
 const loadImage = (src: string): Promise<HTMLImageElement> =>
@@ -192,7 +202,7 @@ export async function buildShareCard(opts: ShareCardOptions): Promise<Blob> {
   // === Logo en haut à gauche, plus petit ===
   let logoBottomY = 180;
   try {
-    const logo = await loadImage(logoSloganImg);
+    const logo = await loadImage(LOGO_BY_LOCALE[opts.locale ?? 'fr'] ?? logoSloganFr);
     const logoW = 280;
     const logoH = (logo.height / logo.width) * logoW;
     const logoX = 85;

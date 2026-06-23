@@ -40,7 +40,13 @@ export const fr: Dictionary = {
       enterPseudoCreate: 'Entre ton pseudo avant de créer un salon',
       enterPseudoJoin: 'Entre ton pseudo avant de rejoindre un salon',
       invalidLobbyCode: 'Code de salon invalide',
+      lobbyNotFound: 'Salon introuvable',
       pseudoTaken: (name) => `Le pseudo "${name}" est déjà pris dans ce salon`,
+    },
+    joinByCode: {
+      button: 'Rejoindre une partie',
+      modalTitle: 'Rejoindre une partie',
+      submit: 'Rejoindre',
     },
     studioButtonTitle: 'Mode debug : ouvrir le Studio multi-écrans',
   },
@@ -71,7 +77,13 @@ export const fr: Dictionary = {
     shareInvite: {
       button: "Partager l'invitation",
       title: 'Onskoné',
-      message: "Viens jouer, on va voir si on s'connaît vraiment... enfin, si Onskoné ! 😂",
+      message: "Viens jouer, on va voir si on s'connaît vraiment... enfin, si Onskoné ! 😜",
+      sheetTitle: 'Inviter des amis',
+      codeLabel: 'Code du salon',
+      copyLink: 'Copier le lien',
+      share: 'Partager',
+      qrLabel: "QR code pour rejoindre le salon",
+      scanHint: 'Montre ce QR code à tes amis pour les inviter',
     },
     minPlayers: (n) => `Il faut au moins ${n} joueurs pour lancer`,
     selectAtLeastOneTheme: 'Sélectionne au moins 1 thème',
@@ -98,6 +110,8 @@ export const fr: Dictionary = {
     },
     toasts: {
       linkCopied: 'Lien copié ! Envoie le à tes amis',
+      codeCopied: 'Code copié !',
+      shareUnavailable: "Le partage n'a pas fonctionné, copie plutôt le lien",
       aloneRemoved: 'Tu étais seul dans le salon, il a été supprimé',
       promoted: 'Tu es maintenant le chef du salon !',
       newHost: (name) => `${name} est maintenant le chef du salon`,
@@ -147,6 +161,8 @@ export const fr: Dictionary = {
           'Vous partagez le wifi, c\'est déjà une base solide.',
           'Faut peut-être commencer par un café ensemble, non ?',
           'Tranquille, vous apprendrez à vous connaître… un jour.',
+          "Vous avez plus de points communs avec votre livreur Uber Eats ...",
+          "À ce stade, vos conversations commencent encore par \"Tu fais quoi dans la vie ?\"",
         ],
       },
       {
@@ -154,7 +170,9 @@ export const fr: Dictionary = {
         messages: [
           'Les bases sont là, reste juste à construire au-dessus.',
           'Vous avancez, doucement mais sûrement… enfin surtout doucement.',
-          'Un apéro ou deux et ça devrait décoller.',
+          "Vous savez qui est qui. C'est plus que certains collègues après 5 ans.",
+          "Vous connaissez vos prénoms... C'est déjà un début.",
+          "Votre relation tient actuellement grâce aux groupes WhatsApp.",
         ],
       },
       {
@@ -163,6 +181,7 @@ export const fr: Dictionary = {
           'Un pas de plus et vous êtes une vraie team.',
           "Vous pourriez covoiturer 3h sans tuer personne. C'est déjà énorme.",
           "Y'a de la confiance, mais le mot de passe Netflix reste sacré.",
+          "Vous avez suffisamment de souvenirs communs pour alimenter quelques dossiers.",
         ],
       },
       {
@@ -171,6 +190,7 @@ export const fr: Dictionary = {
           "Vous vous captez presque sans parler, c'est beau à voir.",
           'Vous finissez les phrases des autres, et aussi leurs frites.',
           'Vous pourriez braquer une banque ensemble',
+          "Vous savez très bien quelle photo embarrassante utiliser en cas d'embrouille.",
         ],
       },
       {
@@ -199,7 +219,6 @@ export const fr: Dictionary = {
 
   modes: {
     title: 'Choisis ton mode de jeu',
-    questionLanguage: 'Langue des questions',
     local: {
       title: 'Sur place',
       description: 'Dans la même pièce, les joueurs sont à proximité pour montrer leur téléphone',
@@ -292,6 +311,7 @@ export const fr: Dictionary = {
             "Ma soeur, Mimi, qui m'a encouragé à continuer le site tout au long du développement",
             "Mon frère Sylvain, pour m'avoir fait entièrement confiance pour réaliser le site web de son jeu",
             "Brinda et Sathya, vous m'avez donné de l'ambition sans hésiter dès le début du projet",
+            "Merci à Sujee, le créateur de l'appli Gigglz, le GOAT des jeux : allez installer son appli !!",
             "Et enfin tous mes amis, mes cousins avec qui j'ai pu tester le jeu et avoir des supers retours !",
           ],
         },
@@ -463,14 +483,17 @@ export const fr: Dictionary = {
   funFacts: [
     "Le jour de sa naissance, la première phrase prononcée par Squeezie a été : 'Est-ce que c'est bon pour vous ?'",
     "Au casino, tu peux remporter 4000 fois ta mise, mais tu ne peux perdre qu’1 fois ta mise, donc mise tout la prochaine fois ;)",
-    'Un joueur de League of Legends se lave en moyenne une fois par semaine',
     "Il est statistiquement plus sûr de parier sur un but de Kylian Mbappé que sur un but de l’arbitre.",
     'Aller à la salle de sport régulièrement confère en plus du gain musculaire, une odeur corporelle nauséabonde',
     'Ne pas se brosser les dents entraîne systématiquement une haleine de dragon',
     'Manger du KFC tous les jours augmente fortement tes dépenses en papier toilette',
     "Celui qui s'endort avec les fesses qui grattent, se réveille avec les doigts qui puent",
-    "Si dans une musique de rap, tu entends 'numéro 10 comme ...', ce rappeur est forcément nul",
-    '4 hommes sur 5 ne comprennent pas la douleur subie par les femmes au quotidien (je suis le 5ème)',
+    "Onskoné a crée 10 couples. Incroyable ! (et en a détruit 35)",
+    "Le pilier de la manche qui arrive à 0 bonnes réponses a 50% d'être mauvais et 50% de chances d'être bourré.",
+    "Ton mari ou ta femme n'a pas trouvé tes réponses pendant toute la partie ? C'est un motif valide de rupture (Article 711 du Code Civil)",
+    "Si personne ne trouve tes réponses, deux hypothèses : tu es un génie incompris ou tu es juste extrêmement bizarre.",
+    "Onskoné est actuellement interdit dans 0 pays. Mais ça pourrait changer (on croise les doigts !) ",
+    "Onskoné est le seul jeu où tu peux te faire des amis et en perdre en même temps.",
   ],
 
   decks: {
