@@ -33,10 +33,12 @@ pnpm build:frontend
 pnpm build:backend       # ⚠️ NO-OP : backend n'a pas de script `build` (tourne via tsx, jamais compilé)
 pnpm build               # recursive — build shared (tsc) puis frontend (tsc && vite build), PAS le backend
 
-# Mobile (Capacitor — Android présent, iOS à générer sur Mac)
+# Mobile (Capacitor — Android local, iOS buildé sur CI Codemagic)
 ./scripts/start-mobile.sh       # live reload sur device/émulateur (le tel charge le Vite du PC)
 ./scripts/build-mobile.sh       # build statique final + cap sync + ouvre Android Studio
 # (équivalents .bat pour Windows). build-mobile attend VITE_SERVER_URL (URL du backend).
+# iOS : pas de build local (pas de Mac). codemagic.yaml génère frontend/ios à la
+# volée (cap add ios) sur Mac cloud, signe, et publie sur TestFlight.
 
 # Checks
 pnpm typecheck           # ⚠️ NO-OP — aucun package ne définit le script `typecheck`, sort en code 0 sans rien vérifier
@@ -147,7 +149,7 @@ All design tokens live in `@theme` inside [frontend/src/index.css](frontend/src/
 
 ### Mobile (Capacitor)
 
-Le même build web `frontend/build` est embarqué dans une coquille native via Capacitor. Config dans [frontend/capacitor.config.ts](frontend/capacitor.config.ts) (`appId: com.onskone.app`, `webDir: build`). La plateforme **Android** est générée (`frontend/android/`) ; **iOS** n'est pas encore généré (nécessite un Mac : `pnpm exec cap add ios` le jour venu, la config est déjà prête).
+Le même build web `frontend/build` est embarqué dans une coquille native via Capacitor. Config dans [frontend/capacitor.config.ts](frontend/capacitor.config.ts) (`appId: com.onskone.app`, `webDir: build`). La plateforme **Android** est commitée (`frontend/android/`, build local). La plateforme **iOS** n'est **pas** commitée : elle est régénérée à neuf (`cap add ios`) à chaque build sur le Mac cloud Codemagic (cf [codemagic.yaml](codemagic.yaml)), signée, puis publiée sur TestFlight. Donc tout réglage iOS qui doit persister (entitlements Universal Links, icônes, version) est réinjecté par le pipeline, pas posé en dur dans `frontend/ios/`. App Store ID (Apple ID numérique) : `6782334531` ; Team ID : `KRJ3L83RCL`.
 
 - `vite.config.ts` a `base: './'` (chemins relatifs obligatoires : la page est servie depuis le filesystem de l'app, pas la racine d'un domaine).
 - **URL backend** : en natif, `window.location.origin` vaut `https://localhost` (Android) / `capacitor://localhost` (iOS), donc inexploitable. Le build mobile doit fournir `VITE_SERVER_URL` (URL absolue du backend) — c'est la première branche de `getServerUrl()` dans `frontend/src/constants/game.ts`. En live reload, l'origine devient l'IP du PC (`http://192.168.x.x:3000`) et retombe sur la branche réseau local.

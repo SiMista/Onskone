@@ -11,6 +11,7 @@ import { initSounds } from './utils/sounds';
 import { ToastProvider } from './components/Toast';
 import { LocaleProvider } from './i18n';
 import { extractLobbyCode } from './constants/game';
+import UpdateRequiredModal from './components/UpdateRequiredModal';
 
 const Lobby = lazy(() => import('./pages/Lobby'));
 const Game = lazy(() => import('./pages/Game'));
@@ -131,6 +132,7 @@ const App = () => {
       <LocaleProvider>
       <Router>
         <AppShell>
+          <UpdateRequiredModal />
           <DeepLinkHandler />
           <Suspense fallback={<div />}>
             <Routes>

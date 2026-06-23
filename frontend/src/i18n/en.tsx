@@ -13,6 +13,13 @@ export const en: Dictionary = {
     pseudoPlaceholder: 'Your name',
   },
 
+  update: {
+    title: 'Update required',
+    message: 'A new version is available. Update Onskoné to keep playing.',
+    cta: 'Update',
+    ctaWeb: 'Reload',
+  },
+
   home: {
     playNow: 'Play now!',
     invite: (hostName) => (

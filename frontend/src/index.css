@@ -582,6 +582,29 @@ button {
   animation: swipe-hint 1.4s ease-in-out infinite;
 }
 
+/* Emoji "Mise à jour requise" : balancement gauche-droite facon telephone qui
+   vibre pour une notif (oscillation rotative qui s'amortit). Une seule idle
+   infinie sur l'ecran. */
+@keyframes phone-update {
+  0%, 50%, 100% { transform: rotate(0deg); }
+  62%       { transform: rotate(-9deg); }   /* depart a gauche plus lent */
+  70%       { transform: rotate(9deg); }
+  76%       { transform: rotate(-7deg); }
+  82%       { transform: rotate(5deg); }
+  88%       { transform: rotate(-2deg); }
+  94%       { transform: rotate(0deg); }
+}
+.animate-phone-update {
+  /* Courbe springy (idem boutons) : leger depassement elastique facon chewing
+     gum entre chaque etape, sans rien changer aux transform. */
+  animation: phone-update 3.4s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
+  transform-origin: center bottom;
+  will-change: transform;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-phone-update { animation: none; }
+}
+
 @keyframes fade-in {
   from { opacity: 0; }
   to { opacity: 1; }

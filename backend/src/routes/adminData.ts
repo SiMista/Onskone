@@ -10,6 +10,8 @@ import { requireAdmin } from './admin.js';
 import * as LobbyManager from '../managers/LobbyManager.js';
 import { Game } from '../models/Game.js';
 import { Lobby } from '../models/Lobby.js';
+import { getMinSupportedVersion, setMinSupportedVersion } from '../utils/versionGate.js';
+import { DEPLOYED_VERSION } from '../utils/appVersion.js';
 
 const router: Router = Router();
 
@@ -118,6 +120,39 @@ router.get('/admin/decks', requireAdmin, (req: Request, res: Response) => {
   const locale: Locale = isLocale(raw) ? raw : DEFAULT_LOCALE;
   const decks = loadDecks(locale);
   res.json({ decks, locale, availableLocales: SUPPORTED_LOCALES });
+});
+
+// --- Maj forcée (version gate) ---
+// État courant : version déployée + plancher effectif. `minVersion` vide = aucun blocage.
+const versionGateState = () => {
+  const minVersion = getMinSupportedVersion();
+  return { deployedVersion: DEPLOYED_VERSION, minVersion, blocking: !!minVersion };
+};
+
+router.get('/admin/version-gate', requireAdmin, (_req: Request, res: Response) => {
+  res.json(versionGateState());
+});
+
+// Pilotage 1-clic : le serveur décide le numéro (= version déployée), l'admin ne
+// saisit rien. `force_latest` bloque tout client < version déployée ; `disable`
+// lève le blocage.
+router.post('/admin/version-gate', requireAdmin, (req: Request, res: Response) => {
+  const action = String(req.body?.action ?? '');
+  if (action === 'force_latest') {
+    if (!DEPLOYED_VERSION) {
+      res.status(409).json({ error: 'unknown_version' });
+      return;
+    }
+    setMinSupportedVersion(DEPLOYED_VERSION);
+  } else if (action === 'disable') {
+    setMinSupportedVersion('');
+  } else {
+    res.status(400).json({ error: 'invalid_action' });
+    return;
+  }
+  const state = versionGateState();
+  logger.info(`Maj forcée: action=${action} -> plancher=${state.minVersion || '(désactivé)'}`);
+  res.json(state);
 });
 
 export default router;

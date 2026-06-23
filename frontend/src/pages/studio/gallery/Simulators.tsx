@@ -10,6 +10,7 @@ import ReportModal from '../../../components/ReportModal';
 import AboutModal from '../../../components/Footer/AboutModal';
 import ContactModal from '../../../components/Footer/ContactModal';
 import MentionsModal from '../../../components/Footer/MentionsModal';
+import { UpdateRequiredCard } from '../../../components/UpdateRequiredCard';
 import { useToast } from '../../../components/Toast';
 import { STICKER_FILTER } from '../../../constants/icons';
 import { ACHIEVEMENTS } from '../../../utils/playerStats';
@@ -43,6 +44,8 @@ export const Simulators = () => {
   const [contactOpen, setContactOpen] = useState(false);
   const [mentionsOpen, setMentionsOpen] = useState(false);
   const [achievementsOpen, setAchievementsOpen] = useState(false);
+  const [updateNative, setUpdateNative] = useState(true);
+  const [updateFullscreen, setUpdateFullscreen] = useState(false);
   const [unlockedIds, setUnlockedIds] = useState<Set<string>>(() => new Set());
   // Succès qui doivent jouer l'anim de déblocage à la prochaine ouverture de la modale.
   const [animatedIds, setAnimatedIds] = useState<Set<string>>(() => new Set());
@@ -290,6 +293,48 @@ export const Simulators = () => {
           </div>
         </div>
       </InfoModal>
+
+      <Section title="Maj forcée - écran bloquant" subtitle="affiché quand le serveur refuse une version trop vieille (versionGate)">
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              text={updateNative ? 'Libellé : natif (Mettre à jour)' : 'Libellé : web (Recharger)'}
+              variant="secondary"
+              size="sm"
+              onClick={() => setUpdateNative((v) => !v)}
+            />
+            <Button text="Voir en plein écran" variant="primary" size="sm" onClick={() => setUpdateFullscreen(true)} />
+          </div>
+          <div className="relative rounded-xl overflow-hidden border border-white/[0.08] bg-brand-700 bg-pattern-dots p-8 flex items-center justify-center min-h-[380px]">
+            <UpdateRequiredCard
+              title={fr.update.title}
+              message={fr.update.message}
+              ctaLabel={updateNative ? fr.update.cta : fr.update.ctaWeb}
+              onAction={() => showToast('Redirection vers le store / reload', 'info')}
+            />
+          </div>
+        </div>
+      </Section>
+
+      {updateFullscreen && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6 bg-brand-700/95 bg-pattern-dots">
+          <UpdateRequiredCard
+            title={fr.update.title}
+            message={fr.update.message}
+            ctaLabel={updateNative ? fr.update.cta : fr.update.ctaWeb}
+            onAction={() => showToast('Redirection vers le store / reload', 'info')}
+          />
+          {/* Fermeture réservée à l'aperçu Studio : la vraie modale est non-fermable. */}
+          <button
+            type="button"
+            onClick={() => setUpdateFullscreen(false)}
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/40 text-white font-display text-xl leading-none hover:bg-black/60 transition-colors"
+            aria-label="Fermer l'aperçu"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       <Section title="ShareCard - aperçu" subtitle="image générée pour le bouton Partager en fin de partie">
         <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-6 items-start">

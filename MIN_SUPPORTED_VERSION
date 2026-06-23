@@ -1,0 +1,13 @@
+# Version minimale de l'app autorisée à se connecter (maj forcée) - VALEUR PAR DÉFAUT.
+# Les clients dont le versionName est STRICTEMENT inférieur sont refusés au
+# handshake socket et voient l'écran "Mise à jour requise".
+#
+# Le geste normal se fait désormais EN 1 CLIC depuis /admin (onglet Contenu >
+# Maj forcée) : "Forcer la maj" pose le plancher = version déployée, "Désactiver"
+# le lève. Cette valeur est stockée en base (app_config) et PRIORITAIRE sur ce
+# fichier ; elle survit aux redéploiements.
+#
+# Ce fichier ne sert plus que de défaut initial, tant que rien n'a jamais été posé
+# en admin (ou via la var d'env MIN_SUPPORTED_VERSION, prioritaire sur le fichier).
+# "0.0.0" ou vide => aucune contrainte. Les lignes # sont ignorées (1re valeur lue).
+0.0.0
