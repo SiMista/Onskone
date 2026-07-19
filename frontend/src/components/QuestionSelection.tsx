@@ -1,13 +1,14 @@
 import { useEffect, useState, useRef } from 'react';
 import socket from '../utils/socket';
 import Timer from './Timer';
-import { GameCard, IPlayer, RoundPhase } from '@onskone/shared';
+import { GameCard, IPlayer, RoundPhase, GAME_CONSTANTS } from '@onskone/shared';
 import { getPhaseDuration } from '../constants/game';
 import { getRandomFunFact, getNextFunFact } from '../constants/funFacts';
 import { playSound } from '../utils/sounds';
 import PlayerBadge from './PlayerBadge';
 import ReportTrigger from './ReportTrigger';
 import CardHand from './CardHand';
+import Button from './Button';
 import { useSwipe } from '../hooks/useSwipe';
 import { useSocketEvent } from '../hooks';
 import { useLocale } from '../i18n';
@@ -18,11 +19,17 @@ const QuestionSelection = ({ lobbyCode, isLeader, leader, timeMultiplier }: {
   leader: Pick<IPlayer, 'id' | 'name' | 'avatarId'>;
   timeMultiplier: number;
 }) => {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const [cards, setCards] = useState<GameCard[]>([]);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [selectedQuestion, setSelectedQuestion] = useState<string | null>(null);
   const [loading, setLoading] = useState(isLeader);
+  // Nombre de relances déjà utilisées par le pilier durant cette manche. Suivi
+  // localement : le serveur ne renvoie pas ce compteur au client (payload
+  // `questionsReceived` = { questions } uniquement). Le serveur reste l'autorité
+  // sur la limite réelle (il émet une erreur si dépassée) ; ce compteur repart
+  // de 0 à chaque nouvelle manche, comme `round.relancesUsed` côté serveur.
+  const [relancesUsed, setRelancesUsed] = useState(0);
   const [funFact, setFunFact] = useState<string>(() => getRandomFunFact(t.funFacts));
   const [factFading, setFactFading] = useState(false);
   const factFadeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -116,6 +123,16 @@ const QuestionSelection = ({ lobbyCode, isLeader, leader, timeMultiplier }: {
 
     setSelectedQuestion(question);
     socket.emit('selectQuestion', { lobbyCode, selectedQuestion: question });
+  };
+
+  const relancesLeft = GAME_CONSTANTS.DEFAULT_CARD_RELANCES - relancesUsed;
+
+  const handleRelance = () => {
+    if (!isLeader || locked || relancesLeft <= 0) return;
+    setRelancesUsed(n => n + 1);
+    // Repasser en "loading" jusqu'à réception des nouvelles cartes (feedback).
+    setLoading(true);
+    socket.emit('requestQuestions', { lobbyCode, count: 3, isRelance: true });
   };
 
   const handleTimerExpire = () => {
@@ -241,6 +258,20 @@ const QuestionSelection = ({ lobbyCode, isLeader, leader, timeMultiplier }: {
             onNext={goNext}
             onGoToCard={goToCard}
           />
+
+          {/* Relancer : repioche 3 cartes inédites (limité à DEFAULT_CARD_RELANCES
+              par manche, borne appliquée côté serveur). Masqué une fois verrouillé
+              ou les relances épuisées. */}
+          {!locked && relancesLeft > 0 && (
+            <div className="text-center mt-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleRelance}
+                text={locale === 'fr' ? `Nouvelles cartes (${relancesLeft})` : `New cards (${relancesLeft})`}
+              />
+            </div>
+          )}
 
           {/* Signaler une question pourrie (pilier uniquement, tant que pas verrouillé) */}
           {!locked && currentCard && (

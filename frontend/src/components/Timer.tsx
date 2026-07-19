@@ -12,7 +12,7 @@ interface TimerProps {
 
 const Timer = ({ duration, onExpire, phase, lobbyCode, hidden }: TimerProps) => {
   const { timeLeft, endTime } = useSyncedTimer(duration, { onExpire, phase, lobbyCode });
-  const { progress } = useRafProgress({ duration, endTime, timeLeft });
+  const { progress } = useRafProgress({ duration, endTime, timeLeft, active: !hidden });
 
   const isCritical = progress <= 10;
   const isWarning = progress <= 30 && !isCritical;

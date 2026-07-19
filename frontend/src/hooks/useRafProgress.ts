@@ -11,6 +11,13 @@ interface UseRafProgressOptions {
   endTime: number | null;
   /** Temps restant local (secondes), utilisé tant que `endTime` est null. */
   timeLeft: number;
+  /**
+   * Quand `false`, la boucle requestAnimationFrame est suspendue (aucune frame
+   * n'est planifiée). Utile pour un timer monté uniquement pour sa logique
+   * d'expiration mais masqué (`hidden`) : on évite un re-render à 60fps.
+   * Défaut : `true`.
+   */
+  active?: boolean;
 }
 
 interface RafProgress {
@@ -31,7 +38,7 @@ interface RafProgress {
  * La RAF est annulée au démontage et relancée à chaque changement de
  * duration/endTime/timeLeft (mêmes dépendances que l'effet d'origine).
  */
-export function useRafProgress({ duration, endTime, timeLeft }: UseRafProgressOptions): RafProgress {
+export function useRafProgress({ duration, endTime, timeLeft, active = true }: UseRafProgressOptions): RafProgress {
   // `progress` change à chaque frame (animation continue). `seconds` (ms + sec
   // entière) ne change qu'au passage d'une seconde, ce qui permet aux consommateurs
   // n'observant que la seconde de ne pas re-render à chaque frame.
@@ -43,6 +50,9 @@ export function useRafProgress({ duration, endTime, timeLeft }: UseRafProgressOp
   const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
+    // Suspendu : ne rien planifier (un pending éventuel a déjà été annulé par le
+    // cleanup de la frame précédente). Évite le re-render à 60fps d'un timer masqué.
+    if (!active) return;
     const tick = () => {
       const remainingMs = endTime === null
         ? timeLeft * 1000
@@ -59,7 +69,7 @@ export function useRafProgress({ duration, endTime, timeLeft }: UseRafProgressOp
     return () => {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     };
-  }, [endTime, duration, timeLeft]);
+  }, [endTime, duration, timeLeft, active]);
 
   return { progress, remainingMs: seconds.remainingMs, remainingSec: seconds.remainingSec };
 }

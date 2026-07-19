@@ -26,7 +26,7 @@ const HourglassTimer = ({ duration, onExpire, phase, lobbyCode, size = 'md', hid
 
   // Durée de référence pour le calcul de progress : priorité au serveur (vraie durée démarrée)
   const effectiveDuration = serverDuration ?? duration;
-  const { progress, remainingSec } = useRafProgress({ duration: effectiveDuration, endTime, timeLeft });
+  const { progress, remainingSec } = useRafProgress({ duration: effectiveDuration, endTime, timeLeft, active: !hidden });
 
   const sizeClass = SIZE_CLASSES[size];
   const isCritical = progress <= 15;
