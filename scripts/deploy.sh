@@ -15,6 +15,22 @@ set -euo pipefail
 export PNPM_HOME="${PNPM_HOME:-$HOME/.local/share/pnpm}"
 export PATH="$PNPM_HOME:$HOME/.npm-global/bin:$PATH"
 
+# node/pnpm/pm2 sont installés via nvm sur ce serveur ; le shell non-interactif
+# de la CD ne source pas nvm -> `node: command not found`. On charge nvm si
+# présent, sinon on ajoute au PATH le bin de la version node installée la plus
+# récente. Insensible au numéro de version (survit à un upgrade node).
+if ! command -v node > /dev/null 2>&1; then
+  export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+  if [ -s "$NVM_DIR/nvm.sh" ]; then
+    # shellcheck disable=SC1091
+    . "$NVM_DIR/nvm.sh"
+  fi
+  if ! command -v node > /dev/null 2>&1; then
+    NODE_BIN="$(ls -d "$NVM_DIR"/versions/node/*/bin 2>/dev/null | sort -V | tail -1)"
+    [ -n "$NODE_BIN" ] && export PATH="$NODE_BIN:$PATH"
+  fi
+fi
+
 cd "$(dirname "$0")/.."   # racine du repo
 ROOT="$(pwd)"
 
