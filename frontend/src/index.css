@@ -35,6 +35,9 @@
   --color-danger-500: #ff5757;
   --color-danger-400: #ff7373;
   --color-danger-700: #d63838;
+  --color-danger-kick: #d32f2f;    /* Texte "kick" du menu joueur */
+  --color-danger-kick-bg: #fdecec; /* Fond hover "kick" du menu joueur */
+  --color-danger-back: #c83030;    /* Teinte hover du BackButton destructif */
 
   --color-warning-500: #FFC700; /* CTA warning */
   --color-warning-400: #ffd633; /* hover warning */
@@ -44,6 +47,9 @@
   --color-warning-50:  #fffbeb; /* card pulse base */
   --color-warning-700: #cc9f00;
   --color-warning-orange: #FFB347; /* achievements bottom */
+  --color-warning-crown: #fcad11;      /* Couronne hôte (FaCrown) */
+  --color-warning-crown-bg: #fff6dd;   /* Fond hover "promouvoir" du menu joueur */
+  --color-warning-crown-text: #b07600; /* Texte hover "promouvoir" du menu joueur */
 
   --color-cream-player: #f9f4ee; /* Cartes joueurs (lobby, tuiles guessing) */
   --color-cream-question: #f9f4ee; /* Carte de question */
@@ -51,6 +57,7 @@
   --color-cream-paper: #fdfaf0; /* Feuille notebook (AnswerPhase) */
   --color-cream-kraft: #FFF6D6; /* Étiquettes kraft "settings hôte" */
   --color-cream-settings: #f9f7f3; /* Cartes de réglages du lobby (ton crème abaissé, recède sur le panneau blanc) */
+  --color-cream-focus: #fff8ec; /* Fond focus de l'input pseudo */
 
   /* Jaune pastel (tooltips, current player highlight) - 4 hex pâles consolidés ici */
   --color-warning-100: #FFF3C4;
@@ -60,6 +67,10 @@
 
   --color-quit: #9ca3af; /* Boutons de retrait neutres (Quitter, Attendre) */
   --color-quit-hover: #d1d5db;
+
+  /* Bordures neutres (cartes joueur) */
+  --color-stroke-strong: #2b2b2b; /* Bordure carte joueur courant */
+  --color-stroke-soft: #ddd;      /* Bordure carte joueur au repos */
 
   /* Médailles podium (universelles, ne pas changer) */
   --color-podium-gold: #FFC700;
@@ -148,6 +159,28 @@
   isolation: isolate;
 }
 .texture-paper::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  opacity: 0.55;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.3  0 0 0 0 0.25  0 0 0 0 0.2  0 0 0 0.08 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  background-size: 160px 160px;
+}
+
+/* --- Carte papier : composite bordure noire 2.5px + grain papier --- */
+/* Ne bundle QUE ce qui est identique partout : la bordure noire 2.5px + la
+   texture-paper. Le `rounded-*` et la variante `stack-shadow`/-sm/-lg restent
+   au call site (ils varient). Équivalent à `border-[2.5px] border-black
+   texture-paper`. */
+.card-paper {
+  border: 2.5px solid #000;
+  position: relative;
+  isolation: isolate;
+}
+.card-paper::after {
   content: "";
   position: absolute;
   inset: 0;

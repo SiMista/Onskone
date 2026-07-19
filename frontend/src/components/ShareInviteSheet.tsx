@@ -25,7 +25,7 @@ const ActionBubble = ({
   <button
     type="button"
     onClick={onClick}
-    className={`group flex flex-col items-center justify-center gap-1 w-24 py-2.5 rounded-2xl border-[2.5px] border-black texture-paper stack-shadow-sm text-black cursor-pointer ${bg} hover:-translate-y-0.5 active:translate-x-[2px] active:translate-y-[2px] active:[box-shadow:none!important] transition-all duration-[300ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]`}
+    className={`group flex flex-col items-center justify-center gap-1 w-24 py-2.5 rounded-2xl card-paper stack-shadow-sm text-black cursor-pointer ${bg} hover:-translate-y-0.5 active:translate-x-[2px] active:translate-y-[2px] active:[box-shadow:none!important] transition-all duration-[300ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]`}
   >
     <span className="relative z-10 flex flex-col items-center gap-1">
       {icon}

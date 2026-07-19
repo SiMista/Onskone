@@ -24,7 +24,7 @@ const BackButton = ({
   // Au hover : pill subtile qui apparaît (bg + border translucides). Le tone
   // teinte le hover en rouge si destructif.
   const hoverClasses = isDanger
-    ? "hover:bg-[#c83030]/30 hover:border-[#c83030]/60 hover:text-white"
+    ? "hover:bg-danger-back/30 hover:border-danger-back/60 hover:text-white"
     : "hover:bg-white/15 hover:border-white/40 hover:text-white";
 
   return (

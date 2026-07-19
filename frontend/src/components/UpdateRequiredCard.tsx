@@ -12,7 +12,7 @@ interface UpdateRequiredCardProps {
 }
 
 export const UpdateRequiredCard = ({ title, message, ctaLabel, onAction }: UpdateRequiredCardProps) => (
-  <div className="w-full max-w-sm bg-cream-paper border-[2.5px] border-black rounded-3xl stack-shadow-lg texture-paper px-6 py-8 flex flex-col items-center text-center gap-4">
+  <div className="w-full max-w-sm bg-cream-paper card-paper rounded-3xl stack-shadow-lg px-6 py-8 flex flex-col items-center text-center gap-4">
     <div className="text-6xl animate-phone-update" style={{ filter: STICKER_FILTER_STRONG }}>📲</div>
     <h2 className="font-display font-bold text-display-lg text-gray-900">{title}</h2>
     <p className="font-sans text-sm text-gray-700 leading-snug">{message}</p>

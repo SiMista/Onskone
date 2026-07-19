@@ -79,7 +79,7 @@ const ScoreLeaderboard: React.FC<ScoreLeaderboardProps> = ({
 
   return (
     <div
-      className={`bg-white border-[2.5px] border-black rounded-2xl stack-shadow texture-paper p-3 md:p-5 transition-all duration-500 ${showLeaderboard ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+      className={`bg-white card-paper rounded-2xl stack-shadow p-3 md:p-5 transition-all duration-500 ${showLeaderboard ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
     >
       <h2 className="text-base md:text-xl font-display font-bold text-gray-900 mb-2 md:mb-3 text-center uppercase tracking-wider m-0">
         {t.endGame.individualScores}

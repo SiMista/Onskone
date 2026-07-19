@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import socket from '../utils/socket';
 import { IPlayer, LeaderboardEntry, IRound } from '@onskone/shared';
-import Logo from '../components/Logo';
+import ScreenLogo from '../components/ScreenLogo';
 import { TIERS, ONSKONE_INDEX } from '../constants/tiers';
 import { getCurrentPlayerFromStorage } from '../utils/playerHelpers';
 import { studioStorage } from '../utils/studioStorage';
@@ -303,11 +303,7 @@ const EndGame: React.FC = () => {
 
   return (
     <div className="h-full p-3 md:p-6 relative overflow-hidden flex flex-col items-center justify-center safe-pt">
-      {/* Logo desktop uniquement - positionné absolu pour ne pas perturber le centrage vertical.
-          tablet: (pas md:) pour l'exclure des téléphones en paysage (largeur >768px mais hauteur basse). */}
-      <div className="hidden tablet:flex absolute top-0 left-0 right-0 justify-center pointer-events-none z-20">
-        <Logo size="small" />
-      </div>
+      <ScreenLogo z="z-20" />
       <div
         className="pointer-events-none fixed inset-0 z-10 transition-opacity duration-1000"
         style={{

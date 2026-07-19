@@ -101,7 +101,7 @@ function Dropdown<V extends string = string>({
     <ul
       ref={listboxRef}
       role="listbox"
-      className="list-none p-1 rounded-[12px] border-[2.5px] border-black bg-cream-player texture-paper stack-shadow overflow-y-auto overscroll-contain animate-menu-open"
+      className="list-none p-1 rounded-[12px] card-paper bg-cream-player stack-shadow overflow-y-auto overscroll-contain animate-menu-open"
       style={{
         position: 'fixed',
         top: rect.bottom + 6,
@@ -154,7 +154,7 @@ function Dropdown<V extends string = string>({
         className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 transition-transform duration-150 active:scale-[0.99] cursor-pointer ${
           variant === 'flat'
             ? 'rounded-[10px] border-2 border-black/15 bg-white/55'
-            : 'rounded-[12px] border-[2.5px] border-black bg-cream-player texture-paper stack-shadow-sm'
+            : 'rounded-[12px] card-paper bg-cream-player stack-shadow-sm'
         } ${isDisabled ? 'opacity-60 pointer-events-none' : ''}`}
       >
         <span className="flex items-center gap-2.5 min-w-0 flex-1">

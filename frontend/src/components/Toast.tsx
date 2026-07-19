@@ -115,7 +115,7 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
             <div
               key={t.id}
               role="status"
-              className={`relative pointer-events-auto w-full flex items-center gap-2.5 px-3 py-2.5 border-[2.5px] border-black rounded-xl stack-shadow-sm texture-paper overflow-hidden ${isExiting ? 'animate-toast-out' : 'animate-toast-drop'}`}
+              className={`relative pointer-events-auto w-full flex items-center gap-2.5 px-3 py-2.5 card-paper rounded-xl stack-shadow-sm overflow-hidden ${isExiting ? 'animate-toast-out' : 'animate-toast-drop'}`}
               style={isGradient ? { backgroundImage: style.bg } : { backgroundColor: style.bg }}
             >
               <Icon

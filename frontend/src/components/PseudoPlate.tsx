@@ -33,7 +33,7 @@ const PseudoPlate = ({
       placeholder={placeholder ?? t.common.pseudoPlaceholder}
       maxLength={maxLength}
       enterKeyHint="go"
-      className="w-full text-center font-display text-lg md:text-xl text-gray-900 bg-[#f9f4ee] border-[2.5px] border-black rounded-lg px-4 py-2.5 outline-none stack-shadow-sm placeholder:text-gray-400 focus:bg-[#fff8ec] transition-colors"
+      className="w-full text-center font-display text-lg md:text-xl text-gray-900 bg-cream-player border-[2.5px] border-black rounded-lg px-4 py-2.5 outline-none stack-shadow-sm placeholder:text-gray-400 focus:bg-cream-focus transition-colors"
     />
   );
 };

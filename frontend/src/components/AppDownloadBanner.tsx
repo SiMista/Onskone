@@ -33,7 +33,7 @@ const AppDownloadBanner = () => {
           }}
         />
 
-        <div className="relative flex items-center gap-2.5 rounded-2xl border-[2.5px] border-black bg-cream-kraft texture-paper stack-shadow-sm rotate-[-0.6deg] pl-2.5 pr-2 py-1.5">
+        <div className="relative flex items-center gap-2.5 rounded-2xl card-paper bg-cream-kraft stack-shadow-sm rotate-[-0.6deg] pl-2.5 pr-2 py-1.5">
           {/* Icône de l'app, façon vignette collée */}
           <img
             src="/logo192.png"

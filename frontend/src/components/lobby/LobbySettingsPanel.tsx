@@ -46,7 +46,7 @@ const LobbySettingsPanel = ({
       {!isHost && (
         <div className="flex justify-center pt-4 pb-1">
           <div className="relative rotate-[-1.2deg] hover:rotate-0 transition-transform duration-300 ease-out">
-            <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-cream-kraft border-[2.5px] border-black rounded-lg stack-shadow-sm texture-paper">
+            <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-cream-kraft card-paper rounded-lg stack-shadow-sm">
               <span className="font-display text-[13px] tracking-tight text-black leading-snug whitespace-nowrap">
                 {t.lobby.settingsHostOnlyPrefix}{' '}
                 <span className="relative inline-block font-bold uppercase bg-black text-warning-500 px-1.5 py-0.5 rounded-md">

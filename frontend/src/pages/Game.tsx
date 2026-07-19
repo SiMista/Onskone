@@ -9,7 +9,7 @@ import RevealPhase from '../components/RevealPhase';
 import SubstituteSelection from '../components/SubstituteSelection';
 import SubstituteAnsweringPhase from '../components/SubstituteAnsweringPhase';
 import HourglassTimer from '../components/HourglassTimer';
-import Logo from '../components/Logo';
+import ScreenLogo from '../components/ScreenLogo';
 import { useToast } from '../components/Toast';
 import { getPhaseDuration } from '../constants/game';
 import { useLeavePrompt, useReconnectOnVisible, useSocketEvent } from '../hooks';
@@ -333,18 +333,14 @@ const GamePage: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col items-center justify-center overflow-hidden px-2 tablet:px-0 safe-pt relative">
-      {/* Logo desktop uniquement - positionné absolu pour ne pas perturber le centrage vertical.
-          tablet: (pas md:) pour l'exclure des téléphones en paysage (largeur >768px mais hauteur basse). */}
-      <div className="hidden tablet:flex absolute top-0 left-0 right-0 justify-center pointer-events-none z-0">
-        <Logo size="small" />
-      </div>
+      <ScreenLogo />
       {/* Main game area - sized to content, centré dans la fenêtre. La carte
           interne a son propre cap dvh pour scroller si la phase dépasse.
           Erreurs et notifs sont remontées via le Toast global (haut centré). */}
       <div
         className="w-full max-w-4xl max-h-full min-h-0 mx-auto px-2 pt-2 tablet:pt-4 flex flex-col safe-pb"
       >
-        <div className="min-h-0 max-h-[80dvh] phone-landscape:max-h-none phone-landscape:h-[90dvh] bg-white rounded-xl px-2 py-5 tablet:px-4 tablet:py-7 phone-landscape:!p-2 phone-landscape:tablet:!p-4 flex flex-col overflow-hidden border-[2.5px] border-black stack-shadow texture-paper">
+        <div className="min-h-0 max-h-[80dvh] phone-landscape:max-h-none phone-landscape:h-[90dvh] bg-white rounded-xl px-2 py-5 tablet:px-4 tablet:py-7 phone-landscape:!p-2 phone-landscape:tablet:!p-4 flex flex-col overflow-hidden card-paper stack-shadow">
           {/* Game info header : round + host à gauche, sablier à droite */}
           <div className="shrink-0 flex items-center justify-between gap-3 mb-2 tablet:mb-4 pb-2 tablet:pb-3 border-b-[2.5px] border-dashed border-black/30">
             <div className="flex items-center gap-1.5 flex-wrap text-gray-800 text-left">

@@ -74,9 +74,9 @@ const OptionsMenu = ({ anchorRef, preferBottom, onPromote, onKick, promoteLabel,
         type="button"
         role="menuitem"
         onClick={onPromote}
-        className="menu-option w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] font-semibold text-gray-700 hover:bg-[#fff6dd] hover:text-[#b07600]"
+        className="menu-option w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] font-semibold text-gray-700 hover:bg-warning-crown-bg hover:text-warning-crown-text"
       >
-        <FaCrown className="menu-icon shrink-0" size={14} color="#fcad11" />
+        <FaCrown className="menu-icon shrink-0" size={14} color="var(--color-warning-crown)" />
         <span>{promoteLabel}</span>
       </button>
 
@@ -86,7 +86,7 @@ const OptionsMenu = ({ anchorRef, preferBottom, onPromote, onKick, promoteLabel,
         type="button"
         role="menuitem"
         onClick={onKick}
-        className="menu-option w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] font-semibold text-[#d32f2f] hover:bg-[#fdecec]"
+        className="menu-option w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] font-semibold text-danger-kick hover:bg-danger-kick-bg"
       >
         <FaUserSlash className="menu-icon shrink-0" size={14} />
         <span>{kickLabel}</span>
@@ -152,7 +152,7 @@ const PlayerCard = ({
     };
   }, [isOpen]);
 
-  const currentBorder = isCurrentPlayer ? 'border-[2px] border-[#2b2b2b] ring-2 ring-black/15' : 'border-2 border-[#ddd]';
+  const currentBorder = isCurrentPlayer ? 'border-[2px] border-stroke-strong ring-2 ring-black/15' : 'border-2 border-stroke-soft';
 
   if (variant === 'square') {
     return (
@@ -162,7 +162,7 @@ const PlayerCard = ({
         {/* Couronne ou menu en haut à droite */}
         <div className="absolute top-1 right-1">
           {isHost ? (
-            <FaCrown color="#fcad11" size={22} />
+            <FaCrown color="var(--color-warning-crown)" size={22} />
           ) : currentPlayerIsHost ? (
             <>
               <span
@@ -222,7 +222,7 @@ const PlayerCard = ({
       {/* Partie droite → couronne ou menu */}
       <div className="relative">
         {isHost ? (
-          <FaCrown color="#fcad11" size={30} />
+          <FaCrown color="var(--color-warning-crown)" size={30} />
         ) : currentPlayerIsHost ? (
           <>
             <span

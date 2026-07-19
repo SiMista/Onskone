@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import socket from '../utils/socket';
 import Button from '../components/Button';
-import Logo from '../components/Logo';
+import ScreenLogo from '../components/ScreenLogo';
 import Footer from '../components/Footer';
 import ConfirmModal from '../components/ConfirmModal';
 import InfoModal from '../components/InfoModal';
@@ -285,11 +285,7 @@ const Lobby = () => {
 
     return (
         <div className="relative h-full flex flex-col overflow-hidden animate-phase-enter">
-            {/* Logo desktop uniquement - positionné absolu pour ne pas perturber le centrage vertical.
-                tablet: (pas md:) pour l'exclure des téléphones en paysage (largeur >768px mais hauteur basse). */}
-            <div className="hidden tablet:flex absolute top-0 left-0 right-0 justify-center pointer-events-none z-0">
-                <Logo size="small" />
-            </div>
+            <ScreenLogo />
             {/* Zone centrale qui prend toute la place dispo et centre le contenu.
                 Le Footer (en dessous) reste collé au bas de l'écran sur desktop. */}
             <div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center overflow-hidden">
@@ -316,7 +312,7 @@ const Lobby = () => {
                         si le contenu dépasse (settings dense ou liste de joueurs >9). */}
                         <div
                             key={lobbyTab}
-                            className="relative min-h-0 bg-white border-[2.5px] border-black rounded-2xl stack-shadow texture-paper overflow-hidden animate-phase-enter"
+                            className="relative min-h-0 bg-white card-paper rounded-2xl stack-shadow overflow-hidden animate-phase-enter"
                         >
                             <div
                                 ref={lobbyTabScrollRef}
