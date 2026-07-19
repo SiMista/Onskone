@@ -138,6 +138,15 @@ export const fr: Dictionary = {
   game: {
     loading: 'Chargement du jeu...',
     leaderDisconnected: (name) => `${name} s'est déconnecté - round passé`,
+    newCards: (n) => `Nouvelles cartes (${n})`,
+  },
+
+  seo: {
+    homeTitle: "Onskoné? - Le jeu d'ambiance entre amis",
+    homeDescription:
+      "Onskoné? - Le jeu d'ambiance multijoueur où vous devinez qui a écrit quoi ! Jouez entre amis et découvrez qui se connaît vraiment.",
+    homeH1: "Onskoné ? — Le jeu d'ambiance entre amis, en local ou à distance",
+    logoAlt: "Onskoné ? — le jeu d'ambiance entre amis",
   },
 
   endGame: {
@@ -307,6 +316,7 @@ export const fr: Dictionary = {
   legal: {
     about: {
       title: 'À propos',
+      seoDescription: "À propos d'Onskoné : l'histoire du jeu d'ambiance, ses créateurs et les remerciements.",
       sections: [
         {
           title: 'Message du créateur',
@@ -328,6 +338,7 @@ export const fr: Dictionary = {
     },
     mentions: {
       title: 'Mentions Légales',
+      seoDescription: 'Mentions légales du jeu Onskoné : éditeur, hébergement, propriété intellectuelle et responsabilité.',
       sections: [
         {
           title: 'Développeur du site',
@@ -355,6 +366,7 @@ export const fr: Dictionary = {
     },
     privacy: {
       title: 'Politique de Confidentialité',
+      seoDescription: "Politique de confidentialité d'Onskoné : quelles données de jeu sont collectées, comment elles sont utilisées et conservées.",
       sections: [
         {
           title: 'Collecte des données',
@@ -393,6 +405,7 @@ export const fr: Dictionary = {
     },
     cgu: {
       title: "Conditions Générales d'Utilisation",
+      seoDescription: "Conditions générales d'utilisation d'Onskoné : règles d'usage du jeu, contenu utilisateur et responsabilités.",
       sections: [
         {
           title: 'Article 1 - Objet',
@@ -438,6 +451,7 @@ export const fr: Dictionary = {
     },
     support: {
       title: 'Aide & Support',
+      seoDescription: 'Aide et support Onskoné : signaler un bug, poser une question ou nous contacter.',
       sections: [
         {
           title: 'Un bug, une question ?',

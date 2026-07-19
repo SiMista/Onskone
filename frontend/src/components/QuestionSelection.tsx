@@ -19,7 +19,7 @@ const QuestionSelection = ({ lobbyCode, isLeader, leader, timeMultiplier }: {
   leader: Pick<IPlayer, 'id' | 'name' | 'avatarId'>;
   timeMultiplier: number;
 }) => {
-  const { t, locale } = useLocale();
+  const { t } = useLocale();
   const [cards, setCards] = useState<GameCard[]>([]);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [selectedQuestion, setSelectedQuestion] = useState<string | null>(null);
@@ -221,9 +221,8 @@ const QuestionSelection = ({ lobbyCode, isLeader, leader, timeMultiplier }: {
   }
 
   const handleCardClick = (idx: number) => {
-    if (locked) return;
     if (idx === currentCardIndex) return;
-    setCurrentCardIndex(idx);
+    goToCard(idx);
   };
 
   return (
@@ -268,7 +267,7 @@ const QuestionSelection = ({ lobbyCode, isLeader, leader, timeMultiplier }: {
                 variant="secondary"
                 size="sm"
                 onClick={handleRelance}
-                text={locale === 'fr' ? `Nouvelles cartes (${relancesLeft})` : `New cards (${relancesLeft})`}
+                text={t.game.newCards(relancesLeft)}
               />
             </div>
           )}

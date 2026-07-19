@@ -7,8 +7,7 @@ import { useEffect, useRef } from 'react';
  * restauré au démontage de la DERNIÈRE (évite qu'un seul Escape ferme toutes
  * les modales empilées et que chaque modale réinitialise `overflow` de son côté).
  */
-const modalStack: number[] = [];
-let nextModalId = 1;
+const modalStack: object[] = [];
 let savedBodyOverflow = '';
 
 /**
@@ -22,9 +21,9 @@ let savedBodyOverflow = '';
  * plein-écran sombre distinct, qui n'adopte que ce comportement chrome).
  */
 export function useModalChrome(isOpen: boolean, onClose: () => void): void {
-  // Identifiant stable pour cette instance de modale (utilisé dans la pile).
-  const idRef = useRef<number>(0);
-  if (idRef.current === 0) idRef.current = nextModalId++;
+  // Jeton stable et unique par instance de modale (identité par référence dans
+  // la pile). `useRef({}).current` reste le même objet à travers les renders.
+  const token = useRef({}).current;
 
   // Garder la ref onClose à jour pour que l'effet ne dépende que de `isOpen`
   // (sinon un changement de handler dépilerait/rempilerait la modale).
@@ -35,18 +34,17 @@ export function useModalChrome(isOpen: boolean, onClose: () => void): void {
 
   useEffect(() => {
     if (!isOpen) return;
-    const id = idRef.current;
 
     // Verrouiller le scroll uniquement à l'empilement de la première modale.
     if (modalStack.length === 0) {
       savedBodyOverflow = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
     }
-    modalStack.push(id);
+    modalStack.push(token);
 
     const onKeyDown = (e: KeyboardEvent) => {
       // Seule la modale au sommet de la pile réagit à Escape.
-      if (e.key === 'Escape' && modalStack[modalStack.length - 1] === id) {
+      if (e.key === 'Escape' && modalStack[modalStack.length - 1] === token) {
         onCloseRef.current();
       }
     };
@@ -54,7 +52,7 @@ export function useModalChrome(isOpen: boolean, onClose: () => void): void {
 
     return () => {
       document.removeEventListener('keydown', onKeyDown);
-      const idx = modalStack.lastIndexOf(id);
+      const idx = modalStack.indexOf(token);
       if (idx !== -1) modalStack.splice(idx, 1);
       // Restaurer le scroll seulement au démontage de la dernière modale.
       if (modalStack.length === 0) {

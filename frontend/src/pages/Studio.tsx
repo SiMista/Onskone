@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { GameMode, GAME_CONSTANTS } from '@onskone/shared';
 import { AVATARS } from '../constants/game';
+import { useDocumentMeta } from '../hooks/useDocumentMeta';
 import { purgeStudioSlot } from '../utils/studioStorage';
 import {
   Layout, SlotConfig, SlotRuntimeState,
@@ -17,11 +18,7 @@ import { Gallery } from './studio/Gallery';
 const Studio = () => {
   const saved = useMemo(loadSavedConfig, []);
 
-  useEffect(() => {
-    const prev = document.title;
-    document.title = 'Onskoné - Studio';
-    return () => { document.title = prev; };
-  }, []);
+  useDocumentMeta({ title: 'Onskoné - Studio', robots: 'noindex, nofollow' });
 
   const [slots, setSlots] = useState<SlotConfig[]>(
     saved?.slots && saved.slots.length >= 2

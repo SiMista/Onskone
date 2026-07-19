@@ -2,7 +2,6 @@ import { useEffect, useRef, lazy, Suspense, ReactNode } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate, useParams, Navigate } from 'react-router-dom';
 import Home from './pages/Home';
 import NotFound from './pages/NotFound';
-import Studio from './pages/Studio';
 import Legal from './pages/Legal';
 import { Capacitor } from '@capacitor/core';
 import { App as CapacitorApp } from '@capacitor/app';
@@ -19,6 +18,7 @@ const Lobby = lazy(() => import('./pages/Lobby'));
 const Game = lazy(() => import('./pages/Game'));
 const EndGame = lazy(() => import('./pages/EndGame'));
 const Admin = lazy(() => import('./pages/Admin'));
+const Studio = lazy(() => import('./pages/Studio'));
 
 /* Le body est figé en h:100dvh + overflow:hidden côté CSS. Studio (multi-iframes
    dev only) et Admin ont besoin de scroll global - on libère les contraintes

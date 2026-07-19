@@ -83,7 +83,6 @@ const SubstituteSelection = ({
   };
 
   const subtitle = isLeader ? getQuestionSubtitle(t.phases, RoundPhase.SUBSTITUTE_SELECTION, isLeader) : '';
-  const subtitleBadge = undefined;
 
   const dropdownOptions = candidates.map(p => ({
     value: p.id,
@@ -103,7 +102,7 @@ const SubstituteSelection = ({
 
       {!isLeader && <QuestionByline player={leader} />}
 
-      <QuestionCard question={question} card={card} subtitle={subtitle} subtitleBadge={subtitleBadge} variant="compact" />
+      <QuestionCard question={question} card={card} subtitle={subtitle} variant="compact" />
 
       {isLeader ? (
         <>

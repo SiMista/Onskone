@@ -36,20 +36,80 @@ import { usePremium } from '../utils/premium';
 import { useAppBannerVisible } from '../utils/appBanner';
 import { studioStorage } from '../utils/studioStorage';
 
-// Titre h1 (masqué visuellement) et copie SEO de l'accueil, par langue. Le h1
-// donne aux moteurs un intitulé riche que la maquette ne porte pas (le logo est
-// une image). Le titre/description de l'onglet restent la copie FR historique.
-const HOME_H1: Record<Locale, string> = {
-  fr: "Onskoné ? — Le jeu d'ambiance entre amis, en local ou à distance",
-  en: 'Onskoné? — The party game to play with friends, in person or remotely',
+// Contenu de la modale "Mes succès". Extrait en composant enfant pour que sa
+// lecture localStorage (getStats) + le map sur ACHIEVEMENTS ne s'exécutent que
+// lorsque la modale est réellement montée (ModalShell ne rend ses enfants qu'à
+// l'ouverture), et non à chaque render de Home (ex. chaque frappe du pseudo).
+const StatsContent = ({ highlightedAchievementIds }: { highlightedAchievementIds: Set<string> }) => {
+  const { t } = useLocale();
+  const stats = getStats();
+  const unlocked = new Set(stats.unlockedAchievements);
+  return (
+    <div className="flex flex-col gap-3 pb-10">
+      {/* Stats top : chiffres modestes + labels lisibles, pour éviter un contraste de taille trop disproportionné. */}
+      <div className="grid grid-cols-2 gap-2 text-center mb-1">
+        <div className="bg-cream-player border-2 border-black rounded-xl p-2 stack-shadow-sm">
+          <div className="text-lg font-display font-bold tabular-nums leading-none">{stats.gamesPlayed}</div>
+          <div className="text-[11px] font-display font-semibold text-gray-600 mt-1">{t.home.stats.gamesPlayed}</div>
+        </div>
+        <div className="bg-cream-player border-2 border-black rounded-xl p-2 stack-shadow-sm">
+          <div className="text-lg font-display font-bold tabular-nums leading-none">{stats.totalPoints}</div>
+          <div className="text-[11px] font-display font-semibold text-gray-600 mt-1">{t.home.stats.pointsScored}</div>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        {ACHIEVEMENTS.map((ach) => {
+          const isUnlocked = unlocked.has(ach.id);
+          // Succès caché non débloqué -> on masque titre/description/icône.
+          const isMystery = !!ach.hidden && !isUnlocked;
+          const isHighlighted = highlightedAchievementIds.has(ach.id);
+          const meta = t.achievements[ach.id];
+          // Stagger doux entre nouveaux succès pour qu'ils ne bondissent pas tous en même temps.
+          const highlightedOrder = isHighlighted
+            ? Array.from(highlightedAchievementIds).indexOf(ach.id)
+            : 0;
+          return (
+            <div
+              key={ach.id}
+              className={`flex items-center gap-3 p-2.5 rounded-xl border-2 border-black transition-all ${isUnlocked ? 'stack-shadow-sm bg-gradient-to-br from-warning-300 to-warning-orange' : 'bg-gray-100 opacity-60'} ${isHighlighted ? 'animate-achievement-unlock' : ''}`}
+              style={isHighlighted ? { animationDelay: `${0.15 + highlightedOrder * 0.12}s` } : undefined}
+            >
+              <div
+                className="flex-shrink-0"
+                style={{
+                  filter: isUnlocked ? STICKER_FILTER : 'grayscale(1)',
+                  opacity: isUnlocked ? 1 : 0.5,
+                }}
+              >
+                <Icon
+                  icon={isMystery ? 'fluent-emoji-flat:white-question-mark' : ach.icon}
+                  width={40}
+                  height={40}
+                  aria-hidden
+                />
+              </div>
+              <div className="flex-1 text-left min-w-0">
+                <div className="font-display font-bold text-sm text-gray-900 leading-tight">
+                  {isMystery ? '???' : meta?.title ?? ach.id}
+                </div>
+                <div className={`text-xs leading-snug ${isUnlocked ? 'text-gray-800' : 'text-gray-600'}`}>
+                  {isMystery ? '...' : meta?.description ?? ''}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 };
 
 const Home = () => {
   const { locale, setLocale, t } = useLocale();
   useDocumentMeta({
-    title: "Onskoné? - Le jeu d'ambiance entre amis",
-    description:
-      "Onskoné? - Le jeu d'ambiance multijoueur où vous devinez qui a écrit quoi ! Jouez entre amis et découvrez qui se connaît vraiment.",
+    title: t.seo.homeTitle,
+    description: t.seo.homeDescription,
     canonicalPath: '/',
     robots: 'index, follow',
   });
@@ -285,7 +345,7 @@ const Home = () => {
     <div className="relative h-full flex flex-col overflow-hidden">
       {/* Titre principal de la page pour les moteurs/lecteurs d'écran : le logo
           visible est une image, ce h1 porte donc l'intitulé réel de l'accueil. */}
-      <h1 className="sr-only">{HOME_H1[locale] ?? HOME_H1.fr}</h1>
+      <h1 className="sr-only">{t.seo.homeH1}</h1>
       {!isPremium && (
         <div className={`absolute ${topControlsClass} left-3 z-30 safe-pt transition-[top] duration-200`}>
           <button
@@ -333,69 +393,7 @@ const Home = () => {
         onClose={closeStats}
         title={t.home.achievementsTitle}
       >
-        {(() => {
-          const stats = getStats();
-          const unlocked = new Set(stats.unlockedAchievements);
-          return (
-            <div className="flex flex-col gap-3 pb-10">
-              {/* Stats top : chiffres modestes + labels lisibles, pour éviter un contraste de taille trop disproportionné. */}
-              <div className="grid grid-cols-2 gap-2 text-center mb-1">
-                <div className="bg-cream-player border-2 border-black rounded-xl p-2 stack-shadow-sm">
-                  <div className="text-lg font-display font-bold tabular-nums leading-none">{stats.gamesPlayed}</div>
-                  <div className="text-[11px] font-display font-semibold text-gray-600 mt-1">{t.home.stats.gamesPlayed}</div>
-                </div>
-                <div className="bg-cream-player border-2 border-black rounded-xl p-2 stack-shadow-sm">
-                  <div className="text-lg font-display font-bold tabular-nums leading-none">{stats.totalPoints}</div>
-                  <div className="text-[11px] font-display font-semibold text-gray-600 mt-1">{t.home.stats.pointsScored}</div>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                {ACHIEVEMENTS.map((ach) => {
-                  const isUnlocked = unlocked.has(ach.id);
-                  // Succès caché non débloqué -> on masque titre/description/icône.
-                  const isMystery = !!ach.hidden && !isUnlocked;
-                  const isHighlighted = highlightedAchievementIds.has(ach.id);
-                  const meta = t.achievements[ach.id];
-                  // Stagger doux entre nouveaux succès pour qu'ils ne bondissent pas tous en même temps.
-                  const highlightedOrder = isHighlighted
-                    ? Array.from(highlightedAchievementIds).indexOf(ach.id)
-                    : 0;
-                  return (
-                    <div
-                      key={ach.id}
-                      className={`flex items-center gap-3 p-2.5 rounded-xl border-2 border-black transition-all ${isUnlocked ? 'stack-shadow-sm bg-gradient-to-br from-warning-300 to-warning-orange' : 'bg-gray-100 opacity-60'} ${isHighlighted ? 'animate-achievement-unlock' : ''}`}
-                      style={isHighlighted ? { animationDelay: `${0.15 + highlightedOrder * 0.12}s` } : undefined}
-                    >
-                      <div
-                        className="flex-shrink-0"
-                        style={{
-                          filter: isUnlocked ? STICKER_FILTER : 'grayscale(1)',
-                          opacity: isUnlocked ? 1 : 0.5,
-                        }}
-                      >
-                        <Icon
-                          icon={isMystery ? 'fluent-emoji-flat:white-question-mark' : ach.icon}
-                          width={40}
-                          height={40}
-                          aria-hidden
-                        />
-                      </div>
-                      <div className="flex-1 text-left min-w-0">
-                        <div className="font-display font-bold text-sm text-gray-900 leading-tight">
-                          {isMystery ? '???' : meta?.title ?? ach.id}
-                        </div>
-                        <div className={`text-xs leading-snug ${isUnlocked ? 'text-gray-800' : 'text-gray-600'}`}>
-                          {isMystery ? '...' : meta?.description ?? ''}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })()}
+        <StatsContent highlightedAchievementIds={highlightedAchievementIds} />
       </InfoModal>
 
       {/* Contenu principal */}

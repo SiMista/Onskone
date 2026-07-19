@@ -1,16 +1,13 @@
 import { useEffect, useState } from 'react';
 import { checkAdminAuth, clearAdminToken } from '../utils/ticketsApi';
+import { useDocumentMeta } from '../hooks/useDocumentMeta';
 import { LoginScreen } from './admin/LoginScreen';
 import { Dashboard } from './admin/Dashboard';
 
 const Admin = () => {
   const [isAuth, setIsAuth] = useState<boolean | null>(null);
 
-  useEffect(() => {
-    const prev = document.title;
-    document.title = 'Onskoné - Admin';
-    return () => { document.title = prev; };
-  }, []);
+  useDocumentMeta({ title: 'Onskoné - Admin', robots: 'noindex, nofollow' });
 
   useEffect(() => {
     checkAdminAuth().then(setIsAuth);

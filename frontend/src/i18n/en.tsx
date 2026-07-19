@@ -138,6 +138,15 @@ export const en: Dictionary = {
   game: {
     loading: 'Loading game...',
     leaderDisconnected: (name) => `${name} disconnected - round skipped`,
+    newCards: (n) => `New cards (${n})`,
+  },
+
+  seo: {
+    homeTitle: 'Onskoné? - The party game to play with friends',
+    homeDescription:
+      'Onskoné? - The multiplayer party game where you guess who wrote what! Play with friends and find out who really knows each other.',
+    homeH1: 'Onskoné? — The party game to play with friends, in person or remotely',
+    logoAlt: 'Onskoné? — the party game to play with friends',
   },
 
   endGame: {
@@ -307,6 +316,7 @@ export const en: Dictionary = {
   legal: {
     about: {
       title: 'About',
+      seoDescription: 'About Onskoné: the story behind the party game, its creators and the acknowledgements.',
       sections: [
         {
           title: 'A word from the creator',
@@ -328,6 +338,7 @@ export const en: Dictionary = {
     },
     mentions: {
       title: 'Legal Notice',
+      seoDescription: 'Legal notice for the Onskoné game: publisher, hosting, intellectual property and liability.',
       sections: [
         {
           title: 'Site developer',
@@ -355,6 +366,7 @@ export const en: Dictionary = {
     },
     privacy: {
       title: 'Privacy Policy',
+      seoDescription: "Onskoné's privacy policy: what game data is collected, how it is used and how long it is kept.",
       sections: [
         {
           title: 'Data collection',
@@ -393,6 +405,7 @@ export const en: Dictionary = {
     },
     cgu: {
       title: 'Terms of Use',
+      seoDescription: "Onskoné's terms of use: rules for using the game, user content and responsibilities.",
       sections: [
         {
           title: 'Article 1 - Purpose',
@@ -438,6 +451,7 @@ export const en: Dictionary = {
     },
     support: {
       title: 'Help & Support',
+      seoDescription: 'Onskoné help and support: report a bug, ask a question or get in touch.',
       sections: [
         {
           title: 'A bug or a question?',

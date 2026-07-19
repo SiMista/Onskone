@@ -112,40 +112,32 @@ const GamePage: React.FC = () => {
     setGame(data.game);
   }, []);
 
-  const handleQuestionSelected = useCallback((data: { question: string; phase: RoundPhase; auto?: boolean; card?: GameCard }) => {
+  // Applique un patch partiel au round courant en factorisant la double garde
+  // (game non-null + currentRound non-null) partagée par tous les handlers.
+  const patchRound = useCallback((patch: Partial<IRound>) => {
     setGame(prev => prev ? {
       ...prev,
-      currentRound: prev.currentRound ? {
-        ...prev.currentRound,
-        selectedQuestion: data.question,
-        phase: data.phase,
-        gameCard: data.card ?? prev.currentRound.gameCard
-      } : null
+      currentRound: prev.currentRound ? { ...prev.currentRound, ...patch } : null
     } : null);
   }, []);
 
+  const handleQuestionSelected = useCallback((data: { question: string; phase: RoundPhase; auto?: boolean; card?: GameCard }) => {
+    // gameCard seulement si fourni (sinon on conserve la carte courante via le spread).
+    const patch: Partial<IRound> = { selectedQuestion: data.question, phase: data.phase };
+    if (data.card) patch.gameCard = data.card;
+    patchRound(patch);
+  }, [patchRound]);
+
   // Met à jour uniquement la phase du round courant (transitions sans autre payload).
-  const setPhase = useCallback((phase: RoundPhase) => {
-    setGame(prev => prev ? {
-      ...prev,
-      currentRound: prev.currentRound ? { ...prev.currentRound, phase } : null
-    } : null);
-  }, []);
+  const setPhase = useCallback((phase: RoundPhase) => patchRound({ phase }), [patchRound]);
 
   const handleAllAnswersSubmitted = useCallback((data: { phase: RoundPhase; answersCount: number; forced?: boolean }) => {
     setPhase(data.phase);
   }, [setPhase]);
 
   const handleSubstituteSelected = useCallback((data: { substitutePlayerId: string; phase: RoundPhase; auto?: boolean }) => {
-    setGame(prev => prev ? {
-      ...prev,
-      currentRound: prev.currentRound ? {
-        ...prev.currentRound,
-        substitutePlayerId: data.substitutePlayerId,
-        phase: data.phase
-      } : null
-    } : null);
-  }, []);
+    patchRound({ substitutePlayerId: data.substitutePlayerId, phase: data.phase });
+  }, [patchRound]);
 
   const handleSubstituteAnswerSubmitted = useCallback((data: { phase: RoundPhase; forced?: boolean }) => {
     setPhase(data.phase);

@@ -6,7 +6,6 @@ import LanguageSwitcher from '../components/LanguageSwitcher';
 import ReportTrigger from '../components/ReportTrigger';
 import { useLocale } from '../i18n';
 import { useDocumentMeta } from '../hooks/useDocumentMeta';
-import type { Locale } from '@onskone/shared';
 
 // Pages publiques (URL accessibles hors app) requises par les stores :
 // /privacy et /mentions affichent le meme contenu que la modale MentionsModal.
@@ -14,35 +13,13 @@ interface LegalProps {
   kind: 'privacy' | 'mentions' | 'cgu' | 'support';
 }
 
-// Descriptions SEO courtes par page + langue. Locales ici (et non dans le dico
-// i18n) : chaque page légale doit annoncer un contenu distinct au moteur pour
-// ne plus être vue comme un doublon de l'accueil.
-const LEGAL_DESCRIPTIONS: Record<LegalProps['kind'], Record<Locale, string>> = {
-  privacy: {
-    fr: "Politique de confidentialité d'Onskoné : quelles données de jeu sont collectées, comment elles sont utilisées et conservées.",
-    en: "Onskoné's privacy policy: what game data is collected, how it is used and how long it is kept.",
-  },
-  mentions: {
-    fr: 'Mentions légales du jeu Onskoné : éditeur, hébergement, propriété intellectuelle et responsabilité.',
-    en: 'Legal notice for the Onskoné game: publisher, hosting, intellectual property and liability.',
-  },
-  cgu: {
-    fr: "Conditions générales d'utilisation d'Onskoné : règles d'usage du jeu, contenu utilisateur et responsabilités.",
-    en: "Onskoné's terms of use: rules for using the game, user content and responsibilities.",
-  },
-  support: {
-    fr: 'Aide et support Onskoné : signaler un bug, poser une question ou nous contacter.',
-    en: 'Onskoné help and support: report a bug, ask a question or get in touch.',
-  },
-};
-
 const Legal = ({ kind }: LegalProps) => {
   const navigate = useNavigate();
-  const { t, locale } = useLocale();
+  const { t } = useLocale();
   const section = t.legal[kind];
   useDocumentMeta({
     title: `${section.title} - Onskoné?`,
-    description: LEGAL_DESCRIPTIONS[kind][locale] ?? LEGAL_DESCRIPTIONS[kind].fr,
+    description: section.seoDescription,
     canonicalPath: `/${kind}`,
     robots: 'index, follow',
   });

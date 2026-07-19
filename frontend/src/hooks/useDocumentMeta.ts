@@ -49,23 +49,28 @@ export function useDocumentMeta({ title, description, canonicalPath, robots }: D
     const prevTitle = document.title;
     document.title = title;
 
-    const descEl = description !== undefined ? ensureMeta('description') : null;
-    const prevDesc = descEl ? descEl.getAttribute('content') : null;
-    if (descEl && description !== undefined) descEl.setAttribute('content', description);
+    // Canonical résolu avant la boucle (chemin relatif -> URL absolue).
+    const canonicalHref = canonicalPath !== undefined ? SITE_ORIGIN + canonicalPath : undefined;
 
-    const canonicalEl = canonicalPath !== undefined ? ensureCanonical() : null;
-    const prevCanonical = canonicalEl ? canonicalEl.getAttribute('href') : null;
-    if (canonicalEl && canonicalPath !== undefined) canonicalEl.setAttribute('href', SITE_ORIGIN + canonicalPath);
+    // Balises pilotées : élément cible + attribut + valeur souhaitée. On ne
+    // pilote que celles dont la valeur est fournie (les autres restent intactes).
+    const targets: Array<{ el: Element; attr: string; value: string }> = [];
+    if (description !== undefined) targets.push({ el: ensureMeta('description'), attr: 'content', value: description });
+    if (canonicalHref !== undefined) targets.push({ el: ensureCanonical(), attr: 'href', value: canonicalHref });
+    if (robots !== undefined) targets.push({ el: ensureMeta('robots'), attr: 'content', value: robots });
 
-    const robotsEl = robots !== undefined ? ensureMeta('robots') : null;
-    const prevRobots = robotsEl ? robotsEl.getAttribute('content') : null;
-    if (robotsEl && robots !== undefined) robotsEl.setAttribute('content', robots);
+    // Sauvegarde de l'ancienne valeur, puis application de la nouvelle.
+    const restores = targets.map(({ el, attr, value }) => {
+      const prev = el.getAttribute(attr);
+      el.setAttribute(attr, value);
+      return { el, attr, prev };
+    });
 
     return () => {
       document.title = prevTitle;
-      if (descEl && prevDesc !== null) descEl.setAttribute('content', prevDesc);
-      if (canonicalEl && prevCanonical !== null) canonicalEl.setAttribute('href', prevCanonical);
-      if (robotsEl && prevRobots !== null) robotsEl.setAttribute('content', prevRobots);
+      restores.forEach(({ el, attr, prev }) => {
+        if (prev !== null) el.setAttribute(attr, prev);
+      });
     };
   }, [title, description, canonicalPath, robots]);
 }

@@ -17,6 +17,9 @@ import type { ReactNode } from 'react';
 
 export interface LegalSection {
   title: string;
+  /** Meta description SEO courte de la page (chaque page légale annonce un
+   *  contenu distinct au moteur pour ne pas être vue comme un doublon). */
+  seoDescription: string;
   sections: Array<{
     title: string;
     content: string;
@@ -156,6 +159,16 @@ export interface Dictionary {
   game: {
     loading: string;
     leaderDisconnected: (name: string) => string;
+    /** Bouton "relancer" en sélection de question : n = relances restantes. */
+    newCards: (n: number) => string;
+  };
+
+  /** Chaînes SEO / méta de l'accueil (titre onglet, description, h1, alt logo). */
+  seo: {
+    homeTitle: string;
+    homeDescription: string;
+    homeH1: string;
+    logoAlt: string;
   };
 
   endGame: {

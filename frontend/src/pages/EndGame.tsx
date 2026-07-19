@@ -4,7 +4,7 @@ import { Icon } from '@iconify/react';
 import socket from '../utils/socket';
 import { IPlayer, LeaderboardEntry, IRound } from '@onskone/shared';
 import Logo from '../components/Logo';
-import { TIERS, ONSKONE_INDEX, type Tier } from '../constants/tiers';
+import { TIERS, ONSKONE_INDEX } from '../constants/tiers';
 import { getCurrentPlayerFromStorage } from '../utils/playerHelpers';
 import { studioStorage } from '../utils/studioStorage';
 import { buildShareCard, shareBlob } from '../utils/shareCard';
@@ -20,7 +20,6 @@ const getTierIndex = (pct: number) => {
   const idx = TIERS.findIndex(t => pct <= t.max);
   return idx === -1 ? TIERS.length - 1 : idx;
 };
-const getVerdict = (pct: number): Tier => TIERS[getTierIndex(pct)];
 
 const EndGame: React.FC = () => {
   const { lobbyCode } = useParams<{ lobbyCode: string }>();
@@ -98,8 +97,10 @@ const EndGame: React.FC = () => {
   // % de connaissance d'équipe, aligné sur le scoring backend (voir computeTeamPct).
   const pct = useMemo(() => computeTeamPct(leaderboard, rounds), [leaderboard, rounds]);
 
-  const verdict = useMemo(() => getVerdict(pct), [pct]);
-  const verdictIdx = useMemo(() => getTierIndex(pct), [pct]);
+  // Un seul lookup O(6) : l'index dérive le tier (référence stable via TIERS) et
+  // les textes i18n. Pas de useMemo (calcul trivial, TIERS[idx] est stable).
+  const verdictIdx = getTierIndex(pct);
+  const verdict = TIERS[verdictIdx];
   const verdictTexts = t.endGame.tiers[verdictIdx];
   // Sélection déterministe basée sur lobbyCode + pct + nb de rounds pour que
   // tous les clients de la même partie voient le même message.
