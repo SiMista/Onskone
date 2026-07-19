@@ -5,7 +5,15 @@
  */
 
 // Constants
-export { GAME_CONSTANTS, NO_RESPONSE_PREFIX, isNoResponse, formatNoResponse } from './constants.js';
+export {
+  GAME_CONSTANTS,
+  NO_RESPONSE_PREFIX,
+  isNoResponse,
+  formatNoResponse,
+  clampTimeMultiplier,
+  getBasePhaseDuration,
+  getPhaseDuration,
+} from './constants.js';
 
 // Player
 export { IPlayer } from './types/player.js';

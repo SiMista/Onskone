@@ -74,7 +74,9 @@ const loadOne = (locale: Locale): boolean => {
         const data = JSON.parse(raw) as QuestionsFile;
         const p: LocalePool = empty();
 
-        // Construire les index code <-> label pour cette langue.
+        // Un seul passage sur themes.json (ordre du fichier, groupé par catégorie) :
+        // construit à la fois les index code <-> label ET catalog + catalogWithMeta.
+        // Un thème sans label pour cette langue est ignoré (warn) dans les deux index.
         for (const [code, meta] of Object.entries(THEMES_META)) {
             const label = meta.labels[locale];
             if (!label) {
@@ -83,14 +85,8 @@ const loadOne = (locale: Locale): boolean => {
             }
             p.labelByCode[code] = label;
             p.codeByLabel[label] = code;
-        }
 
-        // Construire catalog + catalogWithMeta dans l'ordre de themes.json,
-        // groupés par catégorie (ICEBREAKERS / FUN / DEEP - ordre du fichier).
-        for (const [code, meta] of Object.entries(THEMES_META)) {
             const cat = meta.category;
-            const label = meta.labels[locale];
-            if (!label) continue;
             if (!p.catalog[cat]) p.catalog[cat] = [];
             if (!p.catalogWithMeta[cat]) p.catalogWithMeta[cat] = [];
             const info: ThemeInfo = {
@@ -150,6 +146,14 @@ const PREMIUM_CODES = new Set(
         .map(([code]) => code)
 );
 
+// Codes des thèmes mature (langue-indépendants) - construits une fois depuis themes.json.
+// Toujours exclus de la sélection par défaut (avertissement 18+ à activer manuellement).
+const MATURE_CODES = new Set(
+    Object.entries(THEMES_META)
+        .filter(([, meta]) => meta.mature)
+        .map(([code]) => code)
+);
+
 /** Codes des thèmes premium (lecture seule) - exposé pour le gating/les tests. */
 export const getPremiumCodes = (): string[] => [...PREMIUM_CODES];
 
@@ -163,14 +167,9 @@ export const getDefaultSelectedDecks = (
     allowPremium = false,
 ): SelectedDecks => {
     const selected: SelectedDecks = {};
-    const matureCodes = new Set(
-        Object.entries(THEMES_META)
-            .filter(([, meta]) => meta.mature)
-            .map(([code]) => code)
-    );
     for (const [category, codes] of Object.entries(pools[locale].catalog)) {
         selected[category] = codes.filter(
-            code => !matureCodes.has(code) && (allowPremium || !PREMIUM_CODES.has(code)),
+            code => !MATURE_CODES.has(code) && (allowPremium || !PREMIUM_CODES.has(code)),
         );
     }
     return selected;
@@ -252,12 +251,13 @@ export const getRandomQuestions = (
         return [];
     }
 
-    // Filtrer les cartes déjà vues (Set de signatures pour O(1) lookup)
+    // Filtrer les cartes déjà vues. `excludeCards` (round.shownGameCards) contient les
+    // MÊMES références d'objets que le pool (elles proviennent d'un précédent tirage sur
+    // ce même pool), donc un Set de références suffit — O(1) sans reconstruire de signature.
     let availableCards = sourcePool;
     if (excludeCards.length > 0) {
-        const cardSignature = (c: GameCard) => `${c.theme}|${c.subject}|${c.questions.join('§')}`;
-        const excludedSignatures = new Set(excludeCards.map(cardSignature));
-        availableCards = sourcePool.filter(card => !excludedSignatures.has(cardSignature(card)));
+        const excluded = new Set(excludeCards);
+        availableCards = sourcePool.filter(card => !excluded.has(card));
     }
 
     // Si toutes les cartes ont été vues, reset et utiliser tout le pool

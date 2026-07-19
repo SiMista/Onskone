@@ -1,9 +1,6 @@
-import * as LobbyManager from '../../managers/LobbyManager';
-import { Game } from '../../models/Game';
 import { rateLimiters } from '../../utils/rateLimiter.js';
-import { errMessage } from '../../utils/helpers.js';
 import logger from '../../utils/logger.js';
-import { processTimerExpiration } from '../broadcasting.js';
+import { armServerTimer, processTimerExpiration } from '../broadcasting.js';
 import {
     type HandlerContext,
     type AppSocket,
@@ -41,48 +38,10 @@ export function registerTimerHandlers(socket: AppSocket, ctx: HandlerContext): v
             // Calculer la fin du timer (en secondes) - validation: 1s minimum, 1h maximum
             const rawDuration = typeof data.duration === 'number' ? data.duration : 60;
             const timerDuration = Math.max(1, Math.min(3600, Math.floor(rawDuration)));
-            const startedAt = Date.now();
 
-            // Stocker les infos du timer pour pouvoir les renvoyer sur demande
-            currentRound.timerEnd = new Date(startedAt + timerDuration * 1000);
-            currentRound.timerStartedAt = startedAt;
-            currentRound.timerDuration = timerDuration;
-            currentRound.timerPhase = currentRound.phase; // Pour éviter les conflits entre phases
-
-            // Armer un timeout SERVEUR autoritatif. On ne réinitialise la garde
-            // anti-double-traitement que pour une phase qui n'a pas encore été traitée :
-            // un re-arm pour la même phase déjà expirée ne doit pas pouvoir la rejouer.
-            const armedPhase = currentRound.phase;
-            if (currentRound.timerProcessedForPhase !== armedPhase) {
-                currentRound.timerProcessedForPhase = null;
-            }
-            const roundForTimer = currentRound;
-            roundForTimer.clearServerTimer();
-            roundForTimer.serverTimerHandle = setTimeout(() => {
-                roundForTimer.serverTimerHandle = null;
-                try {
-                    const currentLobby = LobbyManager.getLobby(data.lobbyCode);
-                    const currentGame = currentLobby?.game;
-                    // Revérifier que c'est toujours le même round (pas déjà passé au suivant)
-                    if (
-                        !currentLobby ||
-                        !currentGame ||
-                        currentGame.currentRound !== roundForTimer
-                    ) {
-                        return;
-                    }
-                    processTimerExpiration(io, data.lobbyCode, currentLobby, currentGame as Game, roundForTimer);
-                } catch (error) {
-                    logger.error('Error in server timer expiration', { error: errMessage(error) });
-                }
-            }, timerDuration * 1000);
-
-            // Broadcaster le démarrage du timer à tous
-            io.to(data.lobbyCode).emit('timerStarted', {
-                phase: currentRound.phase,
-                duration: timerDuration,
-                startedAt: startedAt
-            });
+            // Armer un timeout SERVEUR autoritatif (bookkeeping + setTimeout + broadcast
+            // `timerStarted`), mutualisé avec le ré-armement après auto-transition.
+            armServerTimer(io, data.lobbyCode, currentRound, timerDuration);
             logger.debug(`Timer démarré: ${timerDuration}s`, { lobbyCode: data.lobbyCode, phase: currentRound.phase });
         });
     });

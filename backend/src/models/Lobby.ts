@@ -60,4 +60,9 @@ export class Lobby implements ILobby {
     getPlayer(playerId: string): ServerPlayer | undefined {
         return this.players.find(p => p.id === playerId);
     }
+
+    /** L'hôte courant du lobby (le joueur marqué isHost), ou undefined s'il n'y en a pas. */
+    getHost(): ServerPlayer | undefined {
+        return this.players.find(p => p.isHost);
+    }
 }

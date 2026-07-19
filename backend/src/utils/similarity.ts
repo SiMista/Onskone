@@ -2,7 +2,7 @@
  * Fonctions de détection de similarité entre réponses
  */
 
-import { NO_RESPONSE_PREFIX } from '@onskone/shared';
+import { isNoResponse } from '@onskone/shared';
 
 const FRENCH_STOP_WORDS = new Set([
   'le', 'la', 'les', 'un', 'une', 'de', 'du', 'des',
@@ -72,7 +72,7 @@ export function areAnswersSimilar(a: string, b: string, threshold = 0.65): boole
  * chez l'appelant.
  */
 export function isSimilarPair(a: string, b: string): boolean {
-  if (a.startsWith(NO_RESPONSE_PREFIX) || b.startsWith(NO_RESPONSE_PREFIX)) {
+  if (isNoResponse(a) || isNoResponse(b)) {
     return false;
   }
   return areAnswersSimilar(a, b);

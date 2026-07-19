@@ -1,5 +1,11 @@
 // Game configuration constants
-import { GAME_CONSTANTS, RoundPhase } from '@onskone/shared';
+import {
+  GAME_CONSTANTS,
+  RoundPhase,
+  clampTimeMultiplier,
+  getBasePhaseDuration,
+  getPhaseDuration as getSharedPhaseDuration,
+} from '@onskone/shared';
 import { Capacitor } from '@capacitor/core';
 
 // Domaine public canonique du jeu (site web prod). Sert de base aux liens
@@ -114,34 +120,9 @@ export const GAME_CONFIG = {
 } as const;
 
 // ===== Durée des phases avec multiplicateur de temps réglable =====
-// Le multiplicateur (réglé par l'hôte dans le lobby) scale toutes les durées de
-// phase. On centralise ici plutôt que de multiplier inline dans chaque composant
-// de phase (il y en a 6) — single source of truth.
-
-// Borne le multiplicateur dans la plage des niveaux autorisés (fallback DEFAULT si NaN).
-const clampMultiplier = (m: number): number => {
-  if (!Number.isFinite(m)) return GAME_CONSTANTS.TIME_MULTIPLIER_DEFAULT;
-  const levels = GAME_CONSTANTS.TIME_MULTIPLIER_LEVELS;
-  return Math.min(Math.max(m, levels[0]), levels[levels.length - 1]);
-};
-
-// Durée "de base" (avant multiplicateur) d'une phase, en secondes.
-// La phase GUESSING a une durée dynamique : 120s à 3 joueurs, +20s par joueur
-// supplémentaire (règle historiquement portée par GuessingPhase.tsx).
-const GUESSING_BASE = 120;
-const GUESSING_EXTRA_PER_PLAYER = 20;
-const basePhaseDuration = (phase: RoundPhase, playerCount: number): number => {
-  if (phase === RoundPhase.GUESSING) {
-    return GUESSING_BASE + Math.max(0, playerCount - 3) * GUESSING_EXTRA_PER_PLAYER;
-  }
-  switch (phase) {
-    case RoundPhase.QUESTION_SELECTION: return GAME_CONSTANTS.TIMERS.QUESTION_SELECTION;
-    case RoundPhase.SUBSTITUTE_SELECTION: return GAME_CONSTANTS.TIMERS.SUBSTITUTE_SELECTION;
-    case RoundPhase.ANSWERING: return GAME_CONSTANTS.TIMERS.ANSWERING;
-    case RoundPhase.SUBSTITUTE_ANSWERING: return GAME_CONSTANTS.TIMERS.SUBSTITUTE_ANSWERING;
-    default: return 0; // REVEAL (pas de timer)
-  }
-};
+// La logique (clamp + durée de base + durée effective) vit désormais dans
+// @onskone/shared (single source of truth partagée avec le backend, cf.
+// broadcasting.getServerPhaseDuration). Ici on n'ajoute QUE l'enveloppe DEBUG_MODE.
 
 /**
  * Durée effective d'une phase en secondes, multiplicateur appliqué.
@@ -153,8 +134,7 @@ export const getPhaseDuration = (
   playerCount = 3,
 ): number => {
   if (DEBUG_MODE) return DEBUG_TIMER;
-  const base = basePhaseDuration(phase, playerCount);
-  return Math.max(1, Math.round(base * clampMultiplier(timeMultiplier)));
+  return getSharedPhaseDuration(phase, timeMultiplier, playerCount);
 };
 
 // Marge approximative pour la phase REVEAL (pas de timer serveur) dans l'estimation.
@@ -174,10 +154,10 @@ export const estimateGameMinutes = (
   timeMultiplier: number,
   guessMyAnswerMode: boolean,
 ): number => {
-  const m = clampMultiplier(timeMultiplier);
+  const m = clampTimeMultiplier(timeMultiplier);
   // Fraction du timer réellement consommée (les joueurs répondent avant la fin).
   const dur = (phase: RoundPhase) =>
-    Math.round(basePhaseDuration(phase, playerCount) * m * ESTIMATE_TIMER_USAGE);
+    Math.round(getBasePhaseDuration(phase, playerCount) * m * ESTIMATE_TIMER_USAGE);
   let roundSeconds =
     dur(RoundPhase.QUESTION_SELECTION) +
     dur(RoundPhase.ANSWERING) +

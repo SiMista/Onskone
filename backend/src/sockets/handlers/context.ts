@@ -3,7 +3,7 @@ import { Lobby } from '../../models/Lobby';
 import { Game } from '../../models/Game';
 import { Player } from '../../models/Player';
 import type { IGame } from '@onskone/shared';
-import { ERROR_CODES } from '@onskone/shared';
+import { ERROR_CODES, RoundPhase } from '@onskone/shared';
 import { validateLobbyCode, validatePlayerId } from '../../utils/validation.js';
 import { Round } from '../../models/Round';
 import { RateLimiter } from '../../utils/rateLimiter.js';
@@ -106,7 +106,7 @@ export function requireHost(
     lobby: Lobby,
     action: string,
 ): boolean {
-    const host = lobby.players.find(p => p.isHost);
+    const host = lobby.getHost();
     if (!host || host.socketId !== socket.id) {
         socket.emit('error', { message: `Seul l'hôte peut ${action}`, code: ERROR_CODES.NOT_HOST });
         return false;
@@ -147,6 +147,13 @@ export interface GuardOptions {
      * "Partie ou round introuvable" (NOT_FOUND) si le round est absent, sinon vérifie le pilier.
      */
     requireLeaderAction?: string;
+    /**
+     * Garde de phase idempotente (double-tap) : si la phase courante du round diffère,
+     * la garde log en debug et court-circuite EN SILENCE (aucun emit d'erreur). Vérifiée
+     * après le leader check. À réserver aux checks de phase "silent-return" (les checks
+     * qui émettent une erreur restent inline chez l'appelant).
+     */
+    requirePhase?: RoundPhase;
     /**
      * Canal alternatif d'échec : si fourni, est appelé À LA PLACE de chaque
      * `socket.emit('error', ...)` standard — aussi bien quand une garde échoue que
@@ -243,18 +250,13 @@ export function withGuards<TData extends GuardData>(
             reject('Salon introuvable', ERROR_CODES.NOT_FOUND);
             return;
         }
-        if (options.onReject) {
-            // En mode canal alternatif, on ne peut pas déléguer à requireHost (qui
-            // emit l'erreur directement). On reproduit sa garde en passant par reject.
-            const hostPlayer = lobby.players.find(p => p.isHost);
-            if (!hostPlayer || hostPlayer.socketId !== socket.id) {
-                reject(`Seul l'hôte peut ${options.requireHostAction}`, ERROR_CODES.NOT_HOST);
-                return;
-            }
-        } else if (!requireHost(socket, lobby, options.requireHostAction)) {
+        // Aucun appelant ne combine onReject avec une action host : la garde délègue
+        // simplement à requireHost (le canal alternatif onReject ne concerne que
+        // requestTimerState, qui n'exige ni host ni pilier).
+        if (!requireHost(socket, lobby, options.requireHostAction)) {
             return;
         }
-        host = lobby.players.find(p => p.isHost) ?? null;
+        host = lobby.getHost() ?? null;
     }
 
     // 7) Reject if game already in progress (lobby settings)
@@ -264,18 +266,27 @@ export function withGuards<TData extends GuardData>(
     }
 
     // 8) Leader check (action réservée au pilier du round courant)
+    // Comme pour le host check : aucun appelant ne combine onReject avec une action
+    // pilier, la garde délègue donc directement à requireLeader.
     if (options.requireLeaderAction !== undefined) {
-        if (options.onReject) {
-            // Cf. host check : reproduire requireLeader via reject en mode canal alternatif.
-            if (!game?.currentRound) {
-                reject('Partie ou round introuvable', ERROR_CODES.NOT_FOUND);
-                return;
-            }
-            if (socket.id !== game.currentRound.leader.socketId) {
-                reject(`Seul le pilier peut ${options.requireLeaderAction}`, ERROR_CODES.NOT_LEADER);
-                return;
-            }
-        } else if (!requireLeader(socket, game, options.requireLeaderAction)) {
+        if (!requireLeader(socket, game, options.requireLeaderAction)) {
+            return;
+        }
+    }
+
+    // 8b) Phase check (idempotence des double-taps) : si la phase courante ne
+    // correspond pas à `requirePhase`, on log en debug et on court-circuite en silence
+    // (pas d'emit d'erreur) — reproduit les gardes de phase "silent-return" des handlers.
+    // Placé APRÈS le leader check pour préserver l'ordre d'origine (leader vérifié
+    // avant la phase). `requireLeaderAction` garantit alors `game.currentRound`.
+    if (options.requirePhase !== undefined) {
+        const round = game?.currentRound;
+        if (round && round.phase !== options.requirePhase) {
+            logger.debug('Action ignorée : phase incorrecte', {
+                lobbyCode: data.lobbyCode,
+                phase: round.phase,
+                expected: options.requirePhase,
+            });
             return;
         }
     }

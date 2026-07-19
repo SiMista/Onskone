@@ -60,9 +60,8 @@ export class Game implements IGame {
         if (this.cards.length === 0) {
             throw new Error("Aucune carte de jeu disponible");
         }
-        const items = Array.from(this.cards);
-        const randomIndex = randomInt(0, items.length);
-        return items[randomIndex];
+        // Indexation directe : pas besoin de copier tout le tableau pour un simple tirage.
+        return this.cards[randomInt(0, this.cards.length)];
     }
 
     start(): void {

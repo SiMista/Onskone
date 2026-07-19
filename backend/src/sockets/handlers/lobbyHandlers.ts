@@ -1,7 +1,7 @@
 import * as LobbyManager from '../../managers/LobbyManager';
 import { createGame } from '../../managers/GameManager.js';
 import { sanitizeSelectedDecks, getDefaultSelectedDecks } from '../../data/questionsRepository.js';
-import { isPremiumPromoActive } from '../../utils/premiumPromo.js';
+import { isPremiumPromoActive, readHandshakePremium } from '../../utils/premiumPromo.js';
 import { Player } from '../../models/Player';
 import { Lobby } from '../../models/Lobby';
 import { GAME_CONSTANTS, GameStatus, DEFAULT_LOCALE, isLocale, ERROR_CODES } from '@onskone/shared';
@@ -75,7 +75,7 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
             // Statut premium de l'host, déclaré au handshake (cf. front socket.ts).
             // Gating "l'host débloque pour la table" : autorise les thèmes premium
             // pour tout le lobby. Auto-déclaré (falsifiable, enjeu faible assumé).
-            const hostPremium = socket.handshake.auth?.premium === true || socket.handshake.auth?.premium === 'true';
+            const hostPremium = readHandshakePremium(socket);
             if (lobby) {
                 lobby.hostIsPremium = hostPremium || isPremiumPromoActive();
                 // Host premium (ou promo) : les thèmes premium sont sélectionnés d'office
@@ -125,7 +125,7 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
 
             // Statut premium déclaré au handshake (rafraîchi à chaque (re)connexion :
             // achat ou override Studio peut avoir changé depuis le 1er join).
-            const joinerPremium = socket.handshake.auth?.premium === true || socket.handshake.auth?.premium === 'true';
+            const joinerPremium = readHandshakePremium(socket);
 
             // Nettoyer les joueurs vraiment déconnectés (ceux qui ont quitté l'onglet)
             // IMPORTANT: Exclure le joueur qui se reconnecte pour ne pas le supprimer
@@ -283,7 +283,7 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
                 socket.emit('lobbyInfo', { exists: false });
                 return;
             }
-            const host = lobby.players.find(p => p.isHost);
+            const host = lobby.getHost();
             socket.emit('lobbyInfo', {
                 exists: true,
                 hostName: host?.name || null,
@@ -297,66 +297,56 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
 
     // Update selected decks (host only)
     socket.on('updateSelectedDecks', (data) => {
-        try {
-            applyHostSetting(socket, data, 'modifier les decks', (lobby) => {
-                const allowPremium = lobby.hostIsPremium || isPremiumPromoActive();
-                const sanitized = sanitizeSelectedDecks(data.selected || {}, lobby.locale, allowPremium);
-                const totalSelected = Object.values(sanitized).reduce((acc, arr) => acc + arr.length, 0);
-                if (totalSelected === 0) {
-                    socket.emit('error', { message: 'Au moins un thème doit être sélectionné', code: ERROR_CODES.INVALID });
-                    return;
-                }
+        // Pas de try/catch externe : applyHostSetting → withGuards possède déjà son
+        // propre try/catch interne (emit INTERNAL, jamais rethrow), donc ce wrapper
+        // serait mort.
+        applyHostSetting(socket, data, 'modifier les decks', (lobby) => {
+            const allowPremium = lobby.hostIsPremium || isPremiumPromoActive();
+            const sanitized = sanitizeSelectedDecks(data.selected || {}, lobby.locale, allowPremium);
+            const totalSelected = Object.values(sanitized).reduce((acc, arr) => acc + arr.length, 0);
+            if (totalSelected === 0) {
+                socket.emit('error', { message: 'Au moins un thème doit être sélectionné', code: ERROR_CODES.INVALID });
+                return;
+            }
 
-                lobby.selectedDecks = sanitized;
-                lobby.updateActivity();
+            lobby.selectedDecks = sanitized;
+            lobby.updateActivity();
 
-                emitLobbyDecksState(io, null, lobby);
-            });
-        } catch (error) {
-            logger.error('Error updating selected decks', { error: errMessage(error) });
-            socket.emit('error', { message: 'Une erreur inattendue est survenue', code: ERROR_CODES.INTERNAL });
-        }
+            emitLobbyDecksState(io, null, lobby);
+        });
     });
 
     // Update Guess My Answer Mode (host only)
     socket.on('updateGuessMyAnswerMode', (data) => {
-        try {
-            applyHostSetting(socket, data, 'modifier ce mode', (lobby) => {
-                lobby.guessMyAnswerMode = !!data.guessMyAnswerMode;
-                lobby.updateActivity();
+        // Cf. updateSelectedDecks : le try/catch interne de withGuards suffit.
+        applyHostSetting(socket, data, 'modifier ce mode', (lobby) => {
+            lobby.guessMyAnswerMode = !!data.guessMyAnswerMode;
+            lobby.updateActivity();
 
-                emitLobbyDecksState(io, null, lobby);
-                io.to(lobby.code).emit('guessMyAnswerModeUpdated', {
-                    guessMyAnswerMode: lobby.guessMyAnswerMode,
-                });
+            emitLobbyDecksState(io, null, lobby);
+            io.to(lobby.code).emit('guessMyAnswerModeUpdated', {
+                guessMyAnswerMode: lobby.guessMyAnswerMode,
             });
-        } catch (error) {
-            logger.error('Error updating guess my answer mode', { error: errMessage(error) });
-            socket.emit('error', { message: 'Une erreur inattendue est survenue', code: ERROR_CODES.INTERNAL });
-        }
+        });
     });
 
     // Update phase time multiplier (host only)
     socket.on('updateTimeMultiplier', (data) => {
-        try {
-            applyHostSetting(socket, data, 'modifier ce réglage', (lobby) => {
-                // Snap à l'un des 3 niveaux autorisés (le plus proche), fallback DEFAULT si NaN.
-                const raw = Number(data.timeMultiplier);
-                const levels = GAME_CONSTANTS.TIME_MULTIPLIER_LEVELS;
-                lobby.timeMultiplier = Number.isFinite(raw)
-                    ? levels.reduce((best, lvl) => (Math.abs(lvl - raw) < Math.abs(best - raw) ? lvl : best), levels[0])
-                    : GAME_CONSTANTS.TIME_MULTIPLIER_DEFAULT;
-                lobby.updateActivity();
+        // Cf. updateSelectedDecks : le try/catch interne de withGuards suffit.
+        applyHostSetting(socket, data, 'modifier ce réglage', (lobby) => {
+            // Snap à l'un des 3 niveaux autorisés (le plus proche), fallback DEFAULT si NaN.
+            const raw = Number(data.timeMultiplier);
+            const levels = GAME_CONSTANTS.TIME_MULTIPLIER_LEVELS;
+            lobby.timeMultiplier = Number.isFinite(raw)
+                ? levels.reduce((best, lvl) => (Math.abs(lvl - raw) < Math.abs(best - raw) ? lvl : best), levels[0])
+                : GAME_CONSTANTS.TIME_MULTIPLIER_DEFAULT;
+            lobby.updateActivity();
 
-                emitLobbyDecksState(io, null, lobby);
-                io.to(lobby.code).emit('timeMultiplierUpdated', {
-                    timeMultiplier: lobby.timeMultiplier,
-                });
+            emitLobbyDecksState(io, null, lobby);
+            io.to(lobby.code).emit('timeMultiplierUpdated', {
+                timeMultiplier: lobby.timeMultiplier,
             });
-        } catch (error) {
-            logger.error('Error updating time multiplier', { error: errMessage(error) });
-            socket.emit('error', { message: 'Une erreur inattendue est survenue', code: ERROR_CODES.INTERNAL });
-        }
+        });
     });
 
     // Check player name before joining lobby

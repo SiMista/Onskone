@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import { IRound } from '../types/IRound';
-import { IPlayer, GameCard, RoundPhase, formatNoResponse, NO_RESPONSE_PREFIX } from '@onskone/shared';
+import { IPlayer, GameCard, RoundPhase, formatNoResponse, isNoResponse } from '@onskone/shared';
 import { shuffleArray } from '../utils/helpers.js';
 
 /** Une entrée du pool de devinette telle que diffusée aux clients (auteur anonymisé). */
@@ -208,7 +208,7 @@ export class Round implements IRound {
             id: s.slotId,
             text: s.text,
             // NO_RESPONSE : le texte révèle déjà l'auteur -> on le fournit pour l'auto-attribution.
-            ownerId: s.text.startsWith(NO_RESPONSE_PREFIX) ? s.authorId : undefined,
+            ownerId: isNoResponse(s.text) ? s.authorId : undefined,
         }));
     }
 

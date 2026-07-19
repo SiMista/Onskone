@@ -12,7 +12,7 @@ import { Game } from '../models/Game';
 // serveur complet (méthodes métier + bookkeeping) porté par la classe Round.
 import type { IRound as ServerRound } from '../types/IRound';
 import type { ServerToClientEvents, ClientToServerEvents, IGame, IRound, IPlayer } from '@onskone/shared';
-import { RoundPhase, GameStatus, GAME_CONSTANTS, formatNoResponse } from '@onskone/shared';
+import { RoundPhase, GameStatus, formatNoResponse, getPhaseDuration } from '@onskone/shared';
 import { errMessage } from '../utils/helpers.js';
 import logger from '../utils/logger.js';
 
@@ -152,7 +152,7 @@ export function serializeGame(lobby: Lobby): IGame {
         },
         currentRound: serializeRound(game.currentRound),
         status: game.status,
-        rounds: game.rounds.map(r => serializeRound(r)!),
+        rounds: serializeRounds(game.rounds),
     };
 }
 
@@ -352,17 +352,28 @@ function handleGuessingTimeout(io: IoServer, lobbyCode: string, lobby: Lobby, ga
         validGuesses[answerId] = playerId;
     }
     currentRound.submitGuesses(validGuesses);
-    currentRound.calculateScores();
-    currentRound.nextPhase();
+    finishGuessing(io, lobbyCode, lobby, game, currentRound, true);
+}
 
-    const results = buildRevealResults(lobby, currentRound);
+/**
+ * Conclusion commune GUESSING → REVEAL (partagée entre l'expiration du timer et la
+ * validation interactive du pilier) : calcule les scores, avance la phase, construit les
+ * résultats de révélation et diffuse `revealResults`. Les attributions finales doivent
+ * avoir été enregistrées AVANT l'appel (`round.submitGuesses(...)`), chaque appelant
+ * gardant sa propre logique de construction/validation des guesses.
+ */
+export function finishGuessing(io: IoServer, lobbyCode: string, lobby: Lobby, game: Game, round: Round, forced: boolean): void {
+    round.calculateScores();
+    round.nextPhase();
+
+    const results = buildRevealResults(lobby, round);
 
     io.to(lobbyCode).emit('revealResults', {
-        phase: currentRound.phase,
+        phase: round.phase,
         results,
-        scores: currentRound.scores,
+        scores: round.scores,
         leaderboard: game.getLeaderboard(),
-        forced: true,
+        forced,
     });
 }
 
@@ -374,30 +385,12 @@ function handleGuessingTimeout(io: IoServer, lobbyCode: string, lobby: Lobby, ga
  * REVEAL (ou toute phase sans timer) renvoie 0.
  */
 function getServerPhaseDuration(phase: RoundPhase, lobby: Lobby): number {
-    const levels = GAME_CONSTANTS.TIME_MULTIPLIER_LEVELS;
-    const raw = lobby.timeMultiplier;
-    // Borne le multiplicateur dans la plage des niveaux autorisés (fallback DEFAULT si NaN),
-    // comme clampMultiplier côté frontend.
-    const multiplier = Number.isFinite(raw)
-        ? Math.min(Math.max(raw, levels[0]), levels[levels.length - 1])
-        : GAME_CONSTANTS.TIME_MULTIPLIER_DEFAULT;
-
-    const timers = GAME_CONSTANTS.TIMERS;
-    let base: number;
-    switch (phase) {
-        case RoundPhase.QUESTION_SELECTION: base = timers.QUESTION_SELECTION; break;
-        case RoundPhase.SUBSTITUTE_SELECTION: base = timers.SUBSTITUTE_SELECTION; break;
-        case RoundPhase.ANSWERING: base = timers.ANSWERING; break;
-        case RoundPhase.SUBSTITUTE_ANSWERING: base = timers.SUBSTITUTE_ANSWERING; break;
-        case RoundPhase.GUESSING:
-            // GUESSING : durée dynamique = base + 20s par joueur au-delà de 3
-            // (règle portée par le frontend : GUESSING_EXTRA_PER_PLAYER = 20).
-            base = timers.GUESSING + Math.max(0, lobby.players.length - 3) * 20;
-            break;
-        default:
-            return 0; // REVEAL : pas de timer serveur
-    }
-    return Math.max(1, Math.round(base * multiplier));
+    // REVEAL (et toute phase sans timer) : pas de timeout serveur à armer.
+    // La fonction partagée renvoie un plancher de 1s pour ces phases (côté front,
+    // getPhaseDuration ne descend jamais sous 1) ; ici on veut explicitement 0.
+    if (phase === RoundPhase.REVEAL) return 0;
+    // Délègue à la source de vérité partagée (mêmes clamp/base/arrondi que le front).
+    return getPhaseDuration(phase, lobby.timeMultiplier, lobby.players.length);
 }
 
 /**
@@ -411,41 +404,52 @@ function getServerPhaseDuration(phase: RoundPhase, lobby: Lobby): number {
  * encore actif et ne le réinitialise pas.
  */
 function armServerTimerForPhase(io: IoServer, lobbyCode: string, lobby: Lobby, currentRound: Round): void {
-    const phase = currentRound.phase;
-    const duration = getServerPhaseDuration(phase, lobby);
+    const duration = getServerPhaseDuration(currentRound.phase, lobby);
     if (duration <= 0) return; // REVEAL : rien à armer
+    armServerTimer(io, lobbyCode, currentRound, duration);
+    logger.debug(`Timer serveur ré-armé après auto-transition: ${duration}s`, { lobbyCode, phase: currentRound.phase });
+}
 
+/**
+ * Cœur commun de l'armement d'un timeout serveur autoritatif pour la phase COURANTE
+ * du round : écrit le bookkeeping de timer (end/startedAt/duration/phase), réinitialise
+ * la garde anti-double-traitement pour cette phase, (ré)arme le setTimeout avec la
+ * revalidation d'identité de round, puis diffuse `timerStarted`. Partagé par le handler
+ * `startTimer` (démarrage explicite du pilier) et `armServerTimerForPhase` (ré-armement
+ * après auto-transition). Idempotent : un `startTimer` ultérieur du pilier pour la même
+ * phase voit le timer encore actif (côté handler) et ne le réinitialise pas.
+ */
+export function armServerTimer(io: IoServer, lobbyCode: string, round: Round, duration: number): void {
+    const phase = round.phase;
     const startedAt = Date.now();
-    currentRound.timerEnd = new Date(startedAt + duration * 1000);
-    currentRound.timerStartedAt = startedAt;
-    currentRound.timerDuration = duration;
-    currentRound.timerPhase = phase;
-    // La garde anti-double-traitement pointe encore sur la phase PRÉCÉDENTE (marquée dans
-    // processTimerExpiration) ; la nouvelle phase n'a pas été traitée, donc on la remet à
-    // null pour autoriser son propre traitement d'expiration.
-    if (currentRound.timerProcessedForPhase !== phase) {
-        currentRound.timerProcessedForPhase = null;
+    round.timerEnd = new Date(startedAt + duration * 1000);
+    round.timerStartedAt = startedAt;
+    round.timerDuration = duration;
+    round.timerPhase = phase;
+    // La garde anti-double-traitement peut encore pointer sur une phase précédente ; on ne
+    // la remet à null que si elle ne vise pas déjà la phase courante (un re-arm pour une
+    // phase déjà expirée ne doit pas pouvoir la rejouer).
+    if (round.timerProcessedForPhase !== phase) {
+        round.timerProcessedForPhase = null;
     }
 
-    const roundForTimer = currentRound;
-    roundForTimer.clearServerTimer();
-    roundForTimer.serverTimerHandle = setTimeout(() => {
-        roundForTimer.serverTimerHandle = null;
+    round.clearServerTimer();
+    round.serverTimerHandle = setTimeout(() => {
+        round.serverTimerHandle = null;
         try {
             const currentLobby = LobbyManager.getLobby(lobbyCode);
             const currentGame = currentLobby?.game;
             // Revérifier que c'est toujours le même round (pas déjà passé au suivant).
-            if (!currentLobby || !currentGame || currentGame.currentRound !== roundForTimer) {
+            if (!currentLobby || !currentGame || currentGame.currentRound !== round) {
                 return;
             }
-            processTimerExpiration(io, lobbyCode, currentLobby, currentGame as Game, roundForTimer);
+            processTimerExpiration(io, lobbyCode, currentLobby, currentGame as Game, round);
         } catch (error) {
-            logger.error('Error in auto-armed server timer expiration', { error: errMessage(error) });
+            logger.error('Error in server timer expiration', { error: errMessage(error) });
         }
     }, duration * 1000);
 
     io.to(lobbyCode).emit('timerStarted', { phase, duration, startedAt });
-    logger.debug(`Timer serveur ré-armé après auto-transition: ${duration}s`, { lobbyCode, phase });
 }
 
 /**

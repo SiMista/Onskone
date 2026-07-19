@@ -18,6 +18,7 @@ import {
     buildRevealResults,
     transitionToGuessing,
     finishAnsweringPhase,
+    finishGuessing,
     endGame,
 } from '../broadcasting.js';
 import {
@@ -102,15 +103,10 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
         withLeaderGuards(socket, data, {
             limiter: rateLimiters.selectQuestion,
             requireLeaderAction: 'sélectionner une question',
+            // Guard de phase (silent-return) : ignore les double-soumissions hors
+            // QUESTION_SELECTION (client malveillant ou double-tap).
+            requirePhase: RoundPhase.QUESTION_SELECTION,
         }, ({ round: currentRound }, data) => {
-            // Guard de phase : seul un client malveillant (ou un double-tap) peut envoyer
-            // selectQuestion en dehors de la phase QUESTION_SELECTION. Refuser silencieusement
-            // les double-soumissions, throw seulement en cas de phase franchement incohérente.
-            if (currentRound.phase !== RoundPhase.QUESTION_SELECTION) {
-                logger.debug('selectQuestion ignoré : phase incorrecte', { lobbyCode: data.lobbyCode, phase: currentRound.phase });
-                return;
-            }
-
             // Valider que la question sélectionnée est bien une des questions proposées
             const validQuestion = typeof data.selectedQuestion === 'string'
                 && data.selectedQuestion.length > 0
@@ -642,14 +638,10 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
             extraRateKeys,
             requireLobbyCode: true,
             requireLeaderAction: 'modifier les attributions',
+            // Guard de phase : updateGuess n'a de sens qu'en GUESSING.
+            requirePhase: RoundPhase.GUESSING,
         }, ({ lobby, round }, data) => {
             const currentRound = round;
-
-            // Guard de phase : updateGuess n'a de sens qu'en GUESSING.
-            if (currentRound.phase !== RoundPhase.GUESSING) {
-                logger.debug('updateGuess ignoré : phase incorrecte', { lobbyCode: data.lobbyCode, phase: currentRound.phase });
-                return;
-            }
 
             // Validation stricte : answerId est un SLOT opaque -> doit exister dans le round.
             const slotIds = round.getSlotIds();
@@ -685,16 +677,12 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
             limiter: rateLimiters.submitGuesses,
             extraRateKeys,
             requireLeaderAction: 'valider les attributions',
+            // Guard de phase : submitGuesses n'est valide qu'en GUESSING. Évite qu'un
+            // double-tap du pilier (ou un client malveillant) déclenche la transition
+            // vers REVEAL plusieurs fois.
+            requirePhase: RoundPhase.GUESSING,
         }, ({ lobby, game, round }, data) => {
             const currentRound = round;
-
-            // Guard de phase : submitGuesses n'est valide qu'en GUESSING.
-            // Évite qu'un double-tap du pilier ou un client malveillant déclenche
-            // la transition vers REVEAL plusieurs fois.
-            if (currentRound.phase !== RoundPhase.GUESSING) {
-                logger.debug('submitGuesses ignoré : phase incorrecte', { lobbyCode: data.lobbyCode, phase: currentRound.phase });
-                return;
-            }
 
             // Valider et filtrer les guesses (Sets pour lookups O(1))
             // En mode "Devine ma réponse" : la réponse du substitut (clé = leader.id) est un answer
@@ -727,23 +715,11 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
                 return;
             }
 
-            // Enregistrer les attributions finales et calculer les scores
+            // Enregistrer les attributions finales, puis conclure GUESSING → REVEAL
+            // (calcul des scores + avance de phase + diffusion revealResults), mutualisé
+            // avec l'expiration du timer (handleGuessingTimeout).
             currentRound.submitGuesses(validGuesses);
-            currentRound.calculateScores();
-
-            // Passer à la phase REVEAL
-            currentRound.nextPhase();
-
-            // Créer les résultats détaillés
-            const results = buildRevealResults(lobby, currentRound);
-
-            // Broadcast les résultats à tous
-            io.to(data.lobbyCode).emit('revealResults', {
-                phase: currentRound.phase,
-                results,
-                scores: currentRound.scores,
-                leaderboard: game.getLeaderboard()
-            });
+            finishGuessing(io, data.lobbyCode, lobby, game, currentRound, false);
 
             logger.info(`Attributions validées`, { lobbyCode: data.lobbyCode, leaderScore: currentRound.scores[currentRound.leader.id] || 0 });
         });
@@ -754,13 +730,9 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
         withLeaderGuards(socket, data, {
             limiter: rateLimiters.revealAnswer,
             requireLeaderAction: 'révéler les réponses',
-        }, ({ lobby, round: currentRound }, data) => {
             // Guard de phase : revealAnswer n'a de sens qu'en REVEAL.
-            if (currentRound.phase !== RoundPhase.REVEAL) {
-                logger.debug('revealAnswer ignoré : phase incorrecte', { lobbyCode: data.lobbyCode, phase: currentRound.phase });
-                return;
-            }
-
+            requirePhase: RoundPhase.REVEAL,
+        }, ({ lobby, round: currentRound }, data) => {
             // Validation stricte : answerIndex doit être un entier dans [0, totalAnswers)
             const totalAnswers = Object.keys(currentRound.getGuessingAnswers()).length;
             if (
