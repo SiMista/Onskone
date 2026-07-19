@@ -14,7 +14,7 @@ const webVibrate = (pattern: number | number[]) => {
 // Petit retour tactile (sélection / drag côté pilier).
 export const hapticLight = () => {
   if (isNative) {
-    Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+    Haptics.impact({ style: ImpactStyle.Light }).catch(() => { /* haptics best-effort */ });
   } else {
     webVibrate(10);
   }
@@ -23,7 +23,7 @@ export const hapticLight = () => {
 // Retour marqué : une réponse vient d'être attribuée au joueur.
 export const hapticAssigned = () => {
   if (isNative) {
-    Haptics.notification({ type: NotificationType.Success }).catch(() => {});
+    Haptics.notification({ type: NotificationType.Success }).catch(() => { /* haptics best-effort */ });
   } else {
     webVibrate([120, 60, 120]);
   }

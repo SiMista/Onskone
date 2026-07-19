@@ -138,7 +138,7 @@ export const Catalog = () => {
             <div className="w-full max-w-xs">
               <Dropdown
                 value={DROPDOWN_PLAYERS[1].id}
-                onChange={() => {}}
+                onChange={() => { /* démo galerie, sans effet */ }}
                 options={DROPDOWN_PLAYERS.map(p => ({
                   value: p.id,
                   label: p.name,
@@ -153,7 +153,7 @@ export const Catalog = () => {
             <div className="w-full max-w-xs">
               <Dropdown
                 value=""
-                onChange={() => {}}
+                onChange={() => { /* démo galerie, sans effet */ }}
                 options={[]}
                 placeholder="Aucune option disponible"
               />

@@ -60,5 +60,7 @@ export function useModalChrome(isOpen: boolean, onClose: () => void): void {
         savedBodyOverflow = '';
       }
     };
-  }, [isOpen]);
+    // `token` est stable (useRef().current) : l'inclure satisfait exhaustive-deps
+    // sans changer le comportement — l'effet ne se re-exécute qu'au changement d'`isOpen`.
+  }, [isOpen, token]);
 }

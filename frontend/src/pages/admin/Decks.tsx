@@ -13,7 +13,9 @@ export const DecksPanel = ({ active }: { active: boolean }) => {
     fetcher: fetchAdminDecks,
     active,
   });
-  const decks = data ?? [];
+  // Référence stable quand `data` ne change pas (sinon `data ?? []` recrée un
+  // tableau à chaque render et invalide les useMemo qui en dépendent).
+  const decks = useMemo(() => data ?? [], [data]);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('');
   const [selectedKey, setSelectedKey] = useState<string | null>(null);

@@ -162,8 +162,8 @@ export async function buildShareCard(opts: ShareCardOptions): Promise<Blob> {
   if (!ctx) throw new Error('Canvas 2D context unavailable');
 
   try {
-    if ((document as any).fonts?.ready) {
-      await (document as any).fonts.ready;
+    if (document.fonts?.ready) {
+      await document.fonts.ready;
     }
   } catch {
     /* ignore */

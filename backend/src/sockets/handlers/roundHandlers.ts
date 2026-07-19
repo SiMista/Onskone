@@ -609,7 +609,7 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
     socket.on('requestShuffledAnswers', (data) => {
         withGuards(socket, data, {
             limiter: rateLimiters.general,
-        }, ({ lobby, game }, data) => {
+        }, ({ lobby, game }) => {
             if (!game || !game.currentRound) {
                 socket.emit('error', { message: 'Partie ou round introuvable', code: ERROR_CODES.NOT_FOUND });
                 return;

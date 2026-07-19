@@ -58,8 +58,12 @@ const PlayerAnswerCard = ({
     [answer, placeholder]
   );
 
+  // Booléen stable (l'objet `waitingFor` change d'identité à chaque render) :
+  // permet à l'effet de re-fitter le texte quand on quitte l'état d'attente.
+  const isWaiting = waitingFor != null;
+
   useLayoutEffect(() => {
-    if (placeholder || waitingFor) return;
+    if (placeholder || isWaiting) return;
     const fit = () => {
       const box = fitBoxRef.current;
       const txt = textRef.current;
@@ -85,7 +89,7 @@ const PlayerAnswerCard = ({
     const ro = new ResizeObserver(fit);
     if (fitBoxRef.current) ro.observe(fitBoxRef.current);
     return () => ro.disconnect();
-  }, [displayedAnswer, placeholder]);
+  }, [displayedAnswer, placeholder, isWaiting]);
 
   return (
     <div

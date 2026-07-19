@@ -163,7 +163,7 @@ export const LobbyCodeInput = ({
         // gérer l'édition à une position arbitraire. On garde l'input pour le focus
         // clavier et l'ouverture du clavier natif sur mobile.
         value=""
-        onChange={() => {}}
+        onChange={() => { /* saisie pilotée par onKeyDown (input contrôlé, value="") */ }}
         onKeyDown={handleKeyDown}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
