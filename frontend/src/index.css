@@ -1,4 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,900&display=swap');
+/* Les polices Google Fonts sont chargées via <link rel="stylesheet"> dans
+   index.html (avec preconnect), pas via @import ici : le preload scanner du
+   navigateur les découvre alors immédiatement au lieu d'attendre le CSS. */
 @import "tailwindcss";
 
 /* Variant "vraie tablette / desktop" : md largeur + hauteur suffisante. Évite

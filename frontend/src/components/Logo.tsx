@@ -10,6 +10,13 @@ const LOGO_BY_LOCALE: Record<Locale, string> = {
   en: logoSloganEn,
 };
 
+// Alt descriptif (et non "Logo") : le nom + le slogan renseignent moteurs et
+// lecteurs d'écran, puisque l'image porte l'intitulé de marque.
+const LOGO_ALT: Record<Locale, string> = {
+  fr: "Onskoné ? — le jeu d'ambiance entre amis",
+  en: 'Onskoné? — the party game to play with friends',
+};
+
 interface LogoProps {
   size?: 'small' | 'large';
 }
@@ -29,7 +36,7 @@ const Logo = ({
   return (
     <img
       src={logoSloganImg}
-      alt="Logo"
+      alt={LOGO_ALT[locale] ?? LOGO_ALT.fr}
       className={`block my-3 md:my-5 desktop-short:my-2 mx-auto h-auto object-contain ${sizeClasses}`}
     />
   );

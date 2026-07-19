@@ -148,6 +148,18 @@ if (fs.existsSync(FRONTEND_DIST)) {
     res.sendFile(path.join(FRONTEND_DIST, '.well-known', 'apple-app-site-association'));
   });
   app.use(express.static(FRONTEND_DIST));
+  // SEO : le SPA sert le même index.html partout, donc on ne peut pas mettre un
+  // <meta robots noindex> statique sur les routes privées/éphémères. On pose donc
+  // l'en-tête HTTP X-Robots-Tag pour ces préfixes (lobby, game, admin…) afin que
+  // Google ne les indexe pas. On laisse passer /api et /socket.io intacts.
+  const NOINDEX_PREFIXES = ['/admin', '/lobby/', '/game/', '/endgame/', '/join/', '/studio'];
+  app.use((req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/socket.io')) return next();
+    if (NOINDEX_PREFIXES.some(prefix => req.path.startsWith(prefix))) {
+      res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+    }
+    next();
+  });
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api') || req.path.startsWith('/socket.io')) return next();
     res.sendFile(path.join(FRONTEND_DIST, 'index.html'));

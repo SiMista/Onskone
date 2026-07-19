@@ -20,6 +20,7 @@ import type { Locale } from '@onskone/shared';
 import BackButton from '../components/BackButton';
 import { Icon } from '@iconify/react';
 import { useSocketEvent } from '../hooks';
+import { useDocumentMeta } from '../hooks/useDocumentMeta';
 import { GameMode } from '@onskone/shared';
 import { GAME_CONFIG, AVATARS } from '../constants/game';
 import { STICKER_FILTER } from '../constants/icons';
@@ -35,8 +36,23 @@ import { usePremium } from '../utils/premium';
 import { useAppBannerVisible } from '../utils/appBanner';
 import { studioStorage } from '../utils/studioStorage';
 
+// Titre h1 (masqué visuellement) et copie SEO de l'accueil, par langue. Le h1
+// donne aux moteurs un intitulé riche que la maquette ne porte pas (le logo est
+// une image). Le titre/description de l'onglet restent la copie FR historique.
+const HOME_H1: Record<Locale, string> = {
+  fr: "Onskoné ? — Le jeu d'ambiance entre amis, en local ou à distance",
+  en: 'Onskoné? — The party game to play with friends, in person or remotely',
+};
+
 const Home = () => {
   const { locale, setLocale, t } = useLocale();
+  useDocumentMeta({
+    title: "Onskoné? - Le jeu d'ambiance entre amis",
+    description:
+      "Onskoné? - Le jeu d'ambiance multijoueur où vous devinez qui a écrit quoi ! Jouez entre amis et découvrez qui se connaît vraiment.",
+    canonicalPath: '/',
+    robots: 'index, follow',
+  });
   // Pré-remplit depuis le profil persistant (lazy init -> 1 lecture localStorage).
   const initialStats = (() => {
     try { return getStats(); } catch { return null; }
@@ -267,6 +283,9 @@ const Home = () => {
 
   return (
     <div className="relative h-full flex flex-col overflow-hidden">
+      {/* Titre principal de la page pour les moteurs/lecteurs d'écran : le logo
+          visible est une image, ce h1 porte donc l'intitulé réel de l'accueil. */}
+      <h1 className="sr-only">{HOME_H1[locale] ?? HOME_H1.fr}</h1>
       {!isPremium && (
         <div className={`absolute ${topControlsClass} left-3 z-30 safe-pt transition-[top] duration-200`}>
           <button
@@ -431,9 +450,9 @@ const Home = () => {
               </button>
               <Frame>
                 {lobbyCode && lobbyExists ? (
-                  <h3 className="text-sm md:text-base font-normal">{t.home.invite(hostName || t.home.fallbackFriend)}</h3>
+                  <h2 className="text-sm md:text-base font-normal">{t.home.invite(hostName || t.home.fallbackFriend)}</h2>
                 ) : (
-                  <h3 className="font-accent text-display-lg phone-landscape:text-display-md">{t.home.playNow}</h3>
+                  <h2 className="font-accent text-display-lg phone-landscape:text-display-md">{t.home.playNow}</h2>
                 )}
                 <AvatarSelector
                   selectedAvatarId={avatarId}

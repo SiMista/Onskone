@@ -13,6 +13,13 @@
     <link rel="apple-touch-icon" href="/logo192.png" />
     <link rel="manifest" href="/manifest.json" />
 
+    <!-- Polices : preconnect + stylesheet dans le <head> (au lieu d'un @import CSS)
+         pour que le preload scanner les trouve immédiatement. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,900&display=swap" />
+
     <!-- SEO -->
     <title>Onskoné? - Le jeu d'ambiance entre amis</title>
     <meta name="description"
@@ -30,6 +37,7 @@
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:locale" content="fr_FR" />
+    <meta property="og:locale:alternate" content="en_US" />
     <meta property="og:site_name" content="Onskoné?" />
 
     <!-- Twitter -->
@@ -41,6 +49,36 @@
 
     <!-- Google Site Verification -->
     <meta name="google-site-verification" content="5CpnK9KlXXWR8noLySgkeg1oLHPOcsxzxNe4A5RB7TM" />
+
+    <!-- Données structurées (JSON-LD) : identité de l'éditeur + fiche appli. -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Onskoné",
+      "url": "https://onskone.fr/",
+      "logo": "https://onskone.fr/logo512.png"
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "MobileApplication",
+      "name": "Onskoné?",
+      "operatingSystem": "iOS, Android",
+      "applicationCategory": "GameApplication",
+      "url": "https://onskone.fr/",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "EUR"
+      },
+      "downloadUrl": [
+        "https://apps.apple.com/app/id6782334531",
+        "https://play.google.com/store/apps/details?id=com.onskone.app"
+      ]
+    }
+    </script>
 
     <!-- Umami: stats sur stats.onskone.fr -->
     <script defer src="https://stats.onskone.fr/script.js" data-website-id="7ac005be-3f53-41ed-86a4-49088e497b6b"></script>
