@@ -26,7 +26,15 @@ const HourglassTimer = ({ duration, onExpire, phase, lobbyCode, size = 'md', hid
 
   // Durée de référence pour le calcul de progress : priorité au serveur (vraie durée démarrée)
   const effectiveDuration = serverDuration ?? duration;
-  const { progress, remainingSec } = useRafProgress({ duration: effectiveDuration, endTime, timeLeft, active: !hidden });
+  // Le sablier n'a PAS besoin de la progression à 60fps : ses `rect` de sable sont
+  // animés par des transitions CSS. On opte donc pour `emitProgress: false` (aucun
+  // re-render par frame) et on dérive `progress` de la seconde entière (`remainingSec`,
+  // mise à jour ~1Hz). Les transitions CSS interpolent en continu entre deux secondes,
+  // donc le rendu visuel reste fluide.
+  const { remainingSec } = useRafProgress({ duration: effectiveDuration, endTime, timeLeft, active: !hidden, emitProgress: false });
+  const progress = effectiveDuration > 0
+    ? Math.max(0, Math.min(100, (remainingSec / effectiveDuration) * 100))
+    : 0;
 
   const sizeClass = SIZE_CLASSES[size];
   const isCritical = progress <= 15;
@@ -102,7 +110,7 @@ const HourglassTimer = ({ duration, onExpire, phase, lobbyCode, size = 'md', hid
           height={topSandH + 2}
           fill={sandColor}
           clipPath="url(#top-bulb-clip)"
-          style={{ transition: 'y 0.4s linear, height 0.4s linear, fill 0.5s ease' }}
+          style={{ transition: 'y 1s linear, height 1s linear, fill 0.5s ease' }}
         />
 
         {/* Sable dans le bulb du bas - rectangle qui remplit par le bas */}
@@ -113,7 +121,7 @@ const HourglassTimer = ({ duration, onExpire, phase, lobbyCode, size = 'md', hid
           height={bottomSandH + 2}
           fill={sandColor}
           clipPath="url(#bottom-bulb-clip)"
-          style={{ transition: 'y 0.4s linear, height 0.4s linear, fill 0.5s ease' }}
+          style={{ transition: 'y 1s linear, height 1s linear, fill 0.5s ease' }}
         />
 
         {/* Grains en chute dans le col */}
@@ -139,7 +147,7 @@ const HourglassTimer = ({ duration, onExpire, phase, lobbyCode, size = 'md', hid
             fill={sandColor}
             opacity="0.85"
             clipPath="url(#bottom-bulb-clip)"
-            style={{ transition: 'cy 0.4s linear, rx 0.4s linear, fill 0.5s ease' }}
+            style={{ transition: 'cy 1s linear, rx 1s linear, fill 0.5s ease' }}
           />
         )}
       </svg>

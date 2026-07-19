@@ -68,9 +68,14 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
                 currentRound.relancesUsed = currentRelances + 1;
             }
 
+            // Relances restantes (autorité serveur) : renvoyées à chaque payload pour
+            // que le client n'ait pas à maintenir un compteur optimiste (qui sur-offre
+            // après une reconnexion mid-manche). Recalculé après l'éventuel incrément ci-dessus.
+            const relancesLeft = Math.max(0, GAME_CONSTANTS.DEFAULT_CARD_RELANCES - (currentRound.relancesUsed || 0));
+
             // Si des cartes existent déjà et ce n'est pas une relance, c'est une reconnexion → renvoyer les cartes existantes
             if ((currentRound.proposedCards?.length ?? 0) > 0 && data.isRelance !== true) {
-                socket.emit('questionsReceived', { questions: currentRound.proposedCards! });
+                socket.emit('questionsReceived', { questions: currentRound.proposedCards!, relancesLeft });
                 logger.debug(`Cartes existantes renvoyées au leader (reconnexion)`, { lobbyCode: data.lobbyCode });
                 return;
             }
@@ -93,7 +98,7 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
                 currentRound.shownGameCards.push(...questions);
             }
 
-            socket.emit('questionsReceived', { questions });
+            socket.emit('questionsReceived', { questions, relancesLeft });
             logger.debug(`${questions.length} carte(s) envoyée(s) au leader (${excludeCards.length} exclues)`, { lobbyCode: data.lobbyCode });
         });
     });

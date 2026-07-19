@@ -24,12 +24,12 @@ const QuestionSelection = ({ lobbyCode, isLeader, leader, timeMultiplier }: {
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [selectedQuestion, setSelectedQuestion] = useState<string | null>(null);
   const [loading, setLoading] = useState(isLeader);
-  // Nombre de relances déjà utilisées par le pilier durant cette manche. Suivi
-  // localement : le serveur ne renvoie pas ce compteur au client (payload
-  // `questionsReceived` = { questions } uniquement). Le serveur reste l'autorité
-  // sur la limite réelle (il émet une erreur si dépassée) ; ce compteur repart
-  // de 0 à chaque nouvelle manche, comme `round.relancesUsed` côté serveur.
-  const [relancesUsed, setRelancesUsed] = useState(0);
+  // Relances restantes pour cette manche. Source de vérité = serveur : chaque
+  // payload `questionsReceived` porte `relancesLeft` (DEFAULT_CARD_RELANCES -
+  // round.relancesUsed, borné ≥0). On part du maximum comme valeur gracieuse
+  // avant la 1re réception, puis on se recale sur le serveur — ce qui évite
+  // qu'un compteur local sur-offre après une reconnexion mid-manche.
+  const [relancesLeft, setRelancesLeft] = useState<number>(GAME_CONSTANTS.DEFAULT_CARD_RELANCES);
   const [funFact, setFunFact] = useState<string>(() => getRandomFunFact(t.funFacts));
   const [factFading, setFactFading] = useState(false);
   const factFadeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -88,11 +88,13 @@ const QuestionSelection = ({ lobbyCode, isLeader, leader, timeMultiplier }: {
     return () => clearTimeout(startTimerTimeout);
   }, [isLeader, lobbyCode, phaseDuration]);
 
-  useSocketEvent('questionsReceived', (data: { questions: GameCard[] }) => {
+  useSocketEvent('questionsReceived', (data: { questions: GameCard[]; relancesLeft: number }) => {
     if (data.questions.length > 0) {
       setCards(data.questions);
       setCurrentCardIndex(0);
     }
+    // Se recaler sur l'autorité serveur (corrige un éventuel décrément optimiste).
+    setRelancesLeft(Math.max(0, data.relancesLeft));
     setLoading(false);
   });
 
@@ -125,11 +127,11 @@ const QuestionSelection = ({ lobbyCode, isLeader, leader, timeMultiplier }: {
     socket.emit('selectQuestion', { lobbyCode, selectedQuestion: question });
   };
 
-  const relancesLeft = GAME_CONSTANTS.DEFAULT_CARD_RELANCES - relancesUsed;
-
   const handleRelance = () => {
     if (!isLeader || locked || relancesLeft <= 0) return;
-    setRelancesUsed(n => n + 1);
+    // Décrément optimiste (UX immédiate) ; le prochain `questionsReceived` recalera
+    // la valeur sur l'autorité serveur.
+    setRelancesLeft(n => Math.max(0, n - 1));
     // Repasser en "loading" jusqu'à réception des nouvelles cartes (feedback).
     setLoading(true);
     socket.emit('requestQuestions', { lobbyCode, count: 3, isRelance: true });

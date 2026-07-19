@@ -18,6 +18,15 @@ interface UseRafProgressOptions {
    * Défaut : `true`.
    */
   active?: boolean;
+  /**
+   * Quand `false`, la valeur `progress` retournée n'est PLUS mise à jour à chaque
+   * frame : `setProgress` n'est jamais appelé, donc le consommateur ne se re-render
+   * pas à 60fps. La RAF continue de tourner pour rafraîchir `remainingMs`/`remainingSec`
+   * (au passage de chaque seconde uniquement). À utiliser par un consommateur qui
+   * n'a besoin que de la seconde entière (ex. HourglassTimer, dont le sable est animé
+   * en CSS et piloté par la seconde). Défaut : `true`.
+   */
+  emitProgress?: boolean;
 }
 
 interface RafProgress {
@@ -38,7 +47,7 @@ interface RafProgress {
  * La RAF est annulée au démontage et relancée à chaque changement de
  * duration/endTime/timeLeft (mêmes dépendances que l'effet d'origine).
  */
-export function useRafProgress({ duration, endTime, timeLeft, active = true }: UseRafProgressOptions): RafProgress {
+export function useRafProgress({ duration, endTime, timeLeft, active = true, emitProgress = true }: UseRafProgressOptions): RafProgress {
   // `progress` change à chaque frame (animation continue). `seconds` (ms + sec
   // entière) ne change qu'au passage d'une seconde, ce qui permet aux consommateurs
   // n'observant que la seconde de ne pas re-render à chaque frame.
@@ -48,6 +57,12 @@ export function useRafProgress({ duration, endTime, timeLeft, active = true }: U
     remainingSec: duration,
   }));
   const rafRef = useRef<number | null>(null);
+  // `emitProgress` est effectivement constant par consommateur, mais on le lit via
+  // une ref (rafraîchie à chaque render) plutôt que via les deps de l'effet : ça
+  // évite de relancer la boucle RAF si la valeur changeait, tout en gardant les
+  // dépendances de l'effet identiques à l'origine.
+  const emitProgressRef = useRef(emitProgress);
+  emitProgressRef.current = emitProgress;
 
   useEffect(() => {
     // Suspendu : ne rien planifier (un pending éventuel a déjà été annulé par le
@@ -57,8 +72,12 @@ export function useRafProgress({ duration, endTime, timeLeft, active = true }: U
       const remainingMs = endTime === null
         ? timeLeft * 1000
         : Math.max(0, endTime - Date.now());
-      const progress = Math.max(0, Math.min(100, (remainingMs / (duration * 1000)) * 100));
-      setProgress(progress);
+      // Ne pousser `progress` (et donc re-render à chaque frame) que si le
+      // consommateur en a besoin ; sinon la RAF ne sert qu'à rafraîchir la seconde.
+      if (emitProgressRef.current) {
+        const progress = Math.max(0, Math.min(100, (remainingMs / (duration * 1000)) * 100));
+        setProgress(progress);
+      }
       const remainingSec = Math.ceil(remainingMs / 1000);
       // Bail-out : ne pousser un nouvel objet `seconds` que si la seconde entière
       // change réellement (évite un re-render par frame des consommateurs de sec).

@@ -5,11 +5,14 @@ import Frame from '../components/Frame';
 import Button from '../components/Button';
 import Footer from '../components/Footer';
 import { useLocale } from '../i18n';
+import { useDocumentMeta } from '../hooks/useDocumentMeta';
 import { STICKER_FILTER } from '../constants/icons';
 
 const NotFound = () => {
   const navigate = useNavigate();
   const { t } = useLocale();
+  // Page d'erreur : ne pas indexer (locale-aware via le titre traduit).
+  useDocumentMeta({ title: `Onskoné - ${t.notFound.title}`, robots: 'noindex, nofollow' });
 
   return (
     <div className="h-full flex flex-col overflow-hidden">

@@ -151,8 +151,14 @@ export interface ServerToClientEvents {
     reason: 'leader_disconnected';
   }) => void;
 
-  /** Réception des 3 questions pour le pilier */
-  questionsReceived: (data: { questions: GameCard[] }) => void;
+  /**
+   * Réception des 3 questions pour le pilier.
+   * `relancesLeft` = nombre de relances encore disponibles pour cette manche
+   * (autorité serveur = DEFAULT_CARD_RELANCES - round.relancesUsed, borné ≥0).
+   * Le client s'en sert comme source de vérité pour le bouton « nouvelles cartes »,
+   * ce qui évite qu'un compteur local optimiste sur-offre après une reconnexion.
+   */
+  questionsReceived: (data: { questions: GameCard[]; relancesLeft: number }) => void;
 
   /** Une question a été sélectionnée par le pilier */
   questionSelected: (data: {
