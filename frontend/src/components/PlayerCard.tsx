@@ -183,8 +183,8 @@ const PlayerCard = ({
                   preferBottom={isFirstPlayer}
                   promoteLabel={t.lobby.playerMenu.promote}
                   kickLabel={t.lobby.playerMenu.kick}
-                  onPromote={() => { setIsOpen(false); onPromote && onPromote(id); }}
-                  onKick={() => { setIsOpen(false); onKick && onKick(id); }}
+                  onPromote={() => { setIsOpen(false); onPromote?.(id); }}
+                  onKick={() => { setIsOpen(false); onKick?.(id); }}
                 />
               )}
             </>
@@ -243,8 +243,8 @@ const PlayerCard = ({
                 preferBottom={isFirstPlayer}
                 promoteLabel={t.lobby.playerMenu.promote}
                 kickLabel={t.lobby.playerMenu.kick}
-                onPromote={() => { setIsOpen(false); onPromote && onPromote(id); }}
-                onKick={() => { setIsOpen(false); onKick && onKick(id); }}
+                onPromote={() => { setIsOpen(false); onPromote?.(id); }}
+                onKick={() => { setIsOpen(false); onKick?.(id); }}
               />
             )}
           </>

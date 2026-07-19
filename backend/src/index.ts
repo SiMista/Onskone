@@ -108,7 +108,7 @@ LobbyManager.startCleanupInterval(io);
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   if (origin) {
-    let allowed = false;
+    let allowed: boolean;
     if (process.env.NODE_ENV === 'production') {
       allowed = ALLOWED_ORIGINS.includes(origin) || CAPACITOR_ORIGINS.includes(origin);
     } else {

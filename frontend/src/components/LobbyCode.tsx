@@ -167,7 +167,7 @@ export const LobbyCodeInput = ({
         onKeyDown={handleKeyDown}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
-        // eslint-disable-next-line jsx-a11y/no-autofocus
+        // autoFocus intentionnel (champ code lobby) — voir jsx-a11y/no-autofocus
         autoFocus={autoFocus}
         inputMode="text"
         autoCapitalize="characters"

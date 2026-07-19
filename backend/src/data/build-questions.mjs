@@ -1,3 +1,4 @@
+/* eslint-disable */
 // Reads the Excel file in this folder and rebuilds questions_fr.json + questions_en.json.
 // Usage (from repo root or backend/):
 //   node backend/src/data/build-questions.mjs
