@@ -2,6 +2,11 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Git & commits (IMPORTANT)
+
+- **Always ask the user for confirmation before ANY `git commit` AND ANY `git push`.** Never commit or push autonomously, even after a "finished" task or for an obvious fix.
+- **Do not add a `Co-Authored-By` trailer** to commit messages (no generated co-author).
+
 ## Stack & layout
 
 pnpm workspace monorepo with three packages:
