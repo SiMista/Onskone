@@ -61,7 +61,7 @@ function scheduleInactiveTimeout(
  * passé LEADER_DISCONNECT_DELAY sans reconnexion, le round est sauté et soit la
  * partie se termine, soit on enchaîne sur un nouveau pilier.
  */
-function scheduleLeaderSkipTimeout(
+export function scheduleLeaderSkipTimeout(
     io: IoServer,
     registry: ConnectionRegistry,
     lobbyCode: string,

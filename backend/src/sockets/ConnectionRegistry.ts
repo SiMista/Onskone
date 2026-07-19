@@ -36,7 +36,12 @@ export class ConnectionRegistry {
     private readonly KICK_BLOCK_DURATION = GAME_CONSTANTS.KICK_BLOCK_DURATION_MS;
 
     getDisconnectKey(lobbyCode: string, playerName: string): string {
-        return `${lobbyCode}_${playerName}`;
+        // Identité CANONIQUE (insensible à la casse) : la reconnexion et checkPlayerName
+        // comparent les noms en lowercase, donc les clés de timeout/lock/kick doivent l'être
+        // aussi. Sinon un joueur kické sous « Loic » (clé CODE_loic) contournerait le blocage
+        // en rejoignant sous « loic ». Le lobbyCode est normalisé pareil (getLobby le résout
+        // en uppercase) pour rester cohérent avec le préfixe de cleanupLobbyResources.
+        return `${lobbyCode.toLowerCase()}_${playerName.toLowerCase()}`;
     }
 
     // ===== Disconnect timeouts =====
@@ -153,7 +158,10 @@ export class ConnectionRegistry {
      * reconnexion et les entrées de joueurs kickés appartenant à un lobby donné.
      */
     cleanupLobbyResources(lobbyCode: string): void {
-        const prefix = `${lobbyCode}_`;
+        // Préfixe normalisé pour matcher les clés canoniques (cf. getDisconnectKey, qui
+        // lowercase lobbyCode + playerName). Un préfixe en casse brute manquerait toutes
+        // les clés si le lobbyCode fourni n'est pas déjà en lowercase.
+        const prefix = `${lobbyCode.toLowerCase()}_`;
 
         // Clean up all disconnect timeouts for this lobby
         const keysToDelete: string[] = [];

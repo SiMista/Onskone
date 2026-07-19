@@ -12,7 +12,8 @@ import { Game } from '../models/Game';
 // serveur complet (méthodes métier + bookkeeping) porté par la classe Round.
 import type { IRound as ServerRound } from '../types/IRound';
 import type { ServerToClientEvents, ClientToServerEvents, IGame, IRound, IPlayer } from '@onskone/shared';
-import { RoundPhase, GameStatus, formatNoResponse } from '@onskone/shared';
+import { RoundPhase, GameStatus, GAME_CONSTANTS, formatNoResponse } from '@onskone/shared';
+import { errMessage } from '../utils/helpers.js';
 import logger from '../utils/logger.js';
 
 export type IoServer = Server<ClientToServerEvents, ServerToClientEvents>;
@@ -109,13 +110,14 @@ export function serializeRound(round: IGame['currentRound'] | null): IRound | nu
         gameCard: round.gameCard,
         phase: round.phase,
         selectedQuestion: round.selectedQuestion,
-        // Anti-fuite : la map `answers` (qui-a-écrit-quoi) et la réponse du
-        // substitut ne sont exposées qu'en phase REVEAL. Avant (ANSWERING/GUESSING), les
-        // diffuser permettrait à un client reconnecté/modifié de relier chaque réponse à
-        // son auteur (et de scorer 100%). Les rounds terminés (historique) restent en
-        // phase REVEAL, donc gameEnded.rounds conserve les données complètes pour les stats.
+        // Anti-fuite : la map `answers` (qui-a-écrit-quoi), les `scores` du round et la
+        // réponse du substitut ne sont exposées qu'en phase REVEAL. Avant
+        // (ANSWERING/GUESSING), les diffuser permettrait à un client reconnecté/modifié de
+        // relier chaque réponse à son auteur (et de scorer 100%), ou de lire le score du
+        // pilier avant la révélation. Les rounds terminés (historique) restent en phase
+        // REVEAL, donc gameEnded.rounds conserve les données complètes pour les stats.
         answers: round.phase === RoundPhase.REVEAL ? round.answers : {},
-        scores: round.scores,
+        scores: round.phase === RoundPhase.REVEAL ? round.scores : {},
         revealedIndices: round.revealedIndices,
         guessMyAnswerMode: round.guessMyAnswerMode,
         substitutePlayerId: round.substitutePlayerId,
@@ -290,7 +292,16 @@ function handleAnsweringTimeout(io: IoServer, lobbyCode: string, lobby: Lobby, c
  */
 function handleSubstituteSelectionTimeout(io: IoServer, lobbyCode: string, lobby: Lobby, currentRound: Round): void {
     if (currentRound.substitutePlayerId) {
+        // Un substitut a déjà été désigné mais la phase n'a pas encore avancé : il faut
+        // AVANCER *et* DIFFUSER la transition. Le bare early-return d'avant laissait les
+        // clients bloqués sur l'écran de sélection du substitut (deadlock silencieux).
+        const substitutePlayerId = currentRound.substitutePlayerId;
         currentRound.nextPhase();
+        io.to(lobbyCode).emit('substituteSelected', {
+            substitutePlayerId,
+            phase: currentRound.phase,
+            auto: true,
+        });
         return;
     }
     const candidates = lobby.players.filter(p => p.isActive && p.id !== currentRound.leader.id);
@@ -356,6 +367,88 @@ function handleGuessingTimeout(io: IoServer, lobbyCode: string, lobby: Lobby, ga
 }
 
 /**
+ * Durée par défaut (en secondes) d'une phase côté serveur, multiplicateur de temps du
+ * lobby appliqué. MIROIR de `getPhaseDuration` côté frontend
+ * (frontend/src/constants/game.ts) : c'est la durée que le pilier aurait émise via
+ * `startTimer`. Sert à ré-armer un timeout serveur autoritatif après une auto-transition.
+ * REVEAL (ou toute phase sans timer) renvoie 0.
+ */
+function getServerPhaseDuration(phase: RoundPhase, lobby: Lobby): number {
+    const levels = GAME_CONSTANTS.TIME_MULTIPLIER_LEVELS;
+    const raw = lobby.timeMultiplier;
+    // Borne le multiplicateur dans la plage des niveaux autorisés (fallback DEFAULT si NaN),
+    // comme clampMultiplier côté frontend.
+    const multiplier = Number.isFinite(raw)
+        ? Math.min(Math.max(raw, levels[0]), levels[levels.length - 1])
+        : GAME_CONSTANTS.TIME_MULTIPLIER_DEFAULT;
+
+    const timers = GAME_CONSTANTS.TIMERS;
+    let base: number;
+    switch (phase) {
+        case RoundPhase.QUESTION_SELECTION: base = timers.QUESTION_SELECTION; break;
+        case RoundPhase.SUBSTITUTE_SELECTION: base = timers.SUBSTITUTE_SELECTION; break;
+        case RoundPhase.ANSWERING: base = timers.ANSWERING; break;
+        case RoundPhase.SUBSTITUTE_ANSWERING: base = timers.SUBSTITUTE_ANSWERING; break;
+        case RoundPhase.GUESSING:
+            // GUESSING : durée dynamique = base + 20s par joueur au-delà de 3
+            // (règle portée par le frontend : GUESSING_EXTRA_PER_PLAYER = 20).
+            base = timers.GUESSING + Math.max(0, lobby.players.length - 3) * 20;
+            break;
+        default:
+            return 0; // REVEAL : pas de timer serveur
+    }
+    return Math.max(1, Math.round(base * multiplier));
+}
+
+/**
+ * (Ré)arme un timeout serveur autoritatif pour la phase COURANTE du round après une
+ * auto-transition, puis diffuse `timerStarted` pour que tous les clients affichent le
+ * compte à rebours. Sans ça, seul le `startTimer` du pilier arme un timer : si le pilier
+ * est throttlé en arrière-plan (mobile), la nouvelle phase n'aurait aucun timeout et le
+ * round figerait pour tout le monde. Reprend exactement le bookkeeping du handler
+ * `startTimer` (timerHandlers.ts) — champs de timer + garde anti-double-traitement — et
+ * reste idempotent : un `startTimer` ultérieur du pilier pour la même phase voit le timer
+ * encore actif et ne le réinitialise pas.
+ */
+function armServerTimerForPhase(io: IoServer, lobbyCode: string, lobby: Lobby, currentRound: Round): void {
+    const phase = currentRound.phase;
+    const duration = getServerPhaseDuration(phase, lobby);
+    if (duration <= 0) return; // REVEAL : rien à armer
+
+    const startedAt = Date.now();
+    currentRound.timerEnd = new Date(startedAt + duration * 1000);
+    currentRound.timerStartedAt = startedAt;
+    currentRound.timerDuration = duration;
+    currentRound.timerPhase = phase;
+    // La garde anti-double-traitement pointe encore sur la phase PRÉCÉDENTE (marquée dans
+    // processTimerExpiration) ; la nouvelle phase n'a pas été traitée, donc on la remet à
+    // null pour autoriser son propre traitement d'expiration.
+    if (currentRound.timerProcessedForPhase !== phase) {
+        currentRound.timerProcessedForPhase = null;
+    }
+
+    const roundForTimer = currentRound;
+    roundForTimer.clearServerTimer();
+    roundForTimer.serverTimerHandle = setTimeout(() => {
+        roundForTimer.serverTimerHandle = null;
+        try {
+            const currentLobby = LobbyManager.getLobby(lobbyCode);
+            const currentGame = currentLobby?.game;
+            // Revérifier que c'est toujours le même round (pas déjà passé au suivant).
+            if (!currentLobby || !currentGame || currentGame.currentRound !== roundForTimer) {
+                return;
+            }
+            processTimerExpiration(io, lobbyCode, currentLobby, currentGame as Game, roundForTimer);
+        } catch (error) {
+            logger.error('Error in auto-armed server timer expiration', { error: errMessage(error) });
+        }
+    }, duration * 1000);
+
+    io.to(lobbyCode).emit('timerStarted', { phase, duration, startedAt });
+    logger.debug(`Timer serveur ré-armé après auto-transition: ${duration}s`, { lobbyCode, phase });
+}
+
+/**
  * Exécute la logique d'expiration de phase, gardée contre le double-traitement.
  * Source unique appelée à la fois par l'événement `timerExpired` du pilier
  * (optimisation de réactivité) et par le timeout serveur autoritatif,
@@ -411,5 +504,16 @@ export function processTimerExpiration(io: IoServer, lobbyCode: string, lobby: L
         case 'REVEAL':
             // Rien à faire : on attend que le pilier lance le round suivant.
             break;
+    }
+
+    // Après une auto-transition pilotée par le serveur, ré-armer un timeout autoritatif
+    // pour la NOUVELLE phase (P0-1). Sans ça, l'avancement dépendrait du prochain
+    // `startTimer` du pilier — et le round figerait si le pilier est throttlé en
+    // arrière-plan. On ne ré-arme que si la phase a EFFECTIVEMENT changé : les handlers
+    // qui court-circuitent (question déjà choisie, aucun candidat substitut…) laissent la
+    // phase inchangée et ne doivent pas ré-armer. `armServerTimerForPhase` ignore de
+    // lui-même les phases sans timer (REVEAL).
+    if (currentRound.phase !== currentPhase) {
+        armServerTimerForPhase(io, lobbyCode, lobby, currentRound);
     }
 }

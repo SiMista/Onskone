@@ -10,6 +10,7 @@ import { rateLimiters } from '../../utils/rateLimiter.js';
 import { errMessage } from '../../utils/helpers.js';
 import logger from '../../utils/logger.js';
 import { serializeGame, serializeRound, serializePlayer, serializePlayers, emitLobbyDecksState } from '../broadcasting.js';
+import { scheduleLeaderSkipTimeout } from './disconnectHandler.js';
 import {
     type HandlerContext,
     type AppSocket,
@@ -411,6 +412,28 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
             }
 
             const lobbyCode = lobby.code;
+
+            // Parité avec kickPlayer : pendant une partie EN COURS, on ne RETIRE pas le
+            // joueur de lobby.players. `getLeaderboard` itère sur lobby.players → le retirer
+            // lui ferait perdre ses points au calcul final ; et si c'est le pilier, le round
+            // figerait faute de saut armé. On le marque donc inactif (comme une déconnexion)
+            // et, s'il est pilier, on arme le saut de round différé. Son slot est conservé
+            // jusqu'à gameEnded, où le lobby est nettoyé normalement.
+            if (lobby.game?.status === GameStatus.IN_PROGRESS) {
+                player.isActive = false;
+                io.to(lobbyCode).emit('updatePlayersList', { players: serializePlayers(lobby.players) });
+                logger.info(`${player.name} a quitté pendant la partie (marqué inactif) dans ${lobbyCode}`);
+
+                const game = lobby.game;
+                if (game.currentRound && game.currentRound.leader.id === player.id) {
+                    registry.cancelLeaderDisconnectTimeout(lobbyCode);
+                    scheduleLeaderSkipTimeout(io, registry, lobbyCode, player.id, player.name);
+                    logger.info(`Pilier ${player.name} a quitté, délai avant saut de round`, { lobbyCode });
+                }
+                socket.leave(lobbyCode);
+                return;
+            }
+
             const isLobbyRemoved = LobbyManager.removePlayer(lobby, player);
             io.to(lobbyCode).emit('updatePlayersList', { players: serializePlayers(lobby.players) });
             logger.info(`${player.name} a quitté le lobby ${lobbyCode}`);
