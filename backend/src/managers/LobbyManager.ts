@@ -3,6 +3,7 @@ import type { ServerPlayer } from '../types/ServerPlayer.js';
 import { ServerToClientEvents, ClientToServerEvents, Locale, DEFAULT_LOCALE } from '@onskone/shared';
 import { Server } from 'socket.io';
 import {generateLobbyCode} from '../utils/helpers';
+import { unregisterSocket } from './socketLobbyIndex.js';
 import logger from '../utils/logger';
 
 type IoServer = Server<ClientToServerEvents, ServerToClientEvents>;
@@ -45,6 +46,11 @@ const cleanupInactiveLobbies = (io?: IoServer): void => {
         const inactiveTime = now.getTime() - lobby.lastActivity.getTime();
 
         if (inactiveTime > INACTIVE_TIMEOUT_MS) {
+            // Suppression EN MASSE (contourne removePlayer) : purger l'index socketId
+            // de chaque joueur pour ne pas laisser d'entrées orphelines.
+            for (const player of lobby.players) {
+                unregisterSocket(player.socketId);
+            }
             lobbies.delete(code);
             lobbiesRemoved.push(code);
 

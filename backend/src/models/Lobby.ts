@@ -2,6 +2,7 @@ import { ILobby, GAME_CONSTANTS, SelectedDecks, GameMode, Locale, DEFAULT_LOCALE
 import { IGame } from '../types/IGame';
 import type { ServerPlayer } from '../types/ServerPlayer.js';
 import { getDefaultSelectedDecks } from '../data/questionsRepository.js';
+import { registerSocket, unregisterSocket } from '../managers/socketLobbyIndex.js';
 
 export class Lobby implements ILobby {
     code: string;
@@ -44,6 +45,8 @@ export class Lobby implements ILobby {
             throw new Error(`Le salon est plein (maximum ${GAME_CONSTANTS.MAX_PLAYERS} joueurs)`);
         }
         this.players.push(player);
+        // Chokepoint unique d'entrée d'un joueur : maintient l'index socketId -> lobby.
+        registerSocket(player.socketId, this.code);
     }
 
     setHost(player: ServerPlayer): void {
@@ -55,6 +58,8 @@ export class Lobby implements ILobby {
 
     removePlayer(player: ServerPlayer): void {
         this.players = this.players.filter(p => p.id !== player.id);
+        // Chokepoint unique de sortie d'un joueur : purge son entrée d'index.
+        unregisterSocket(player.socketId);
     }
 
     getPlayer(playerId: string): ServerPlayer | undefined {

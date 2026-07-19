@@ -28,6 +28,7 @@ import {
     withGameGuards,
     withLeaderGuards,
 } from './context.js';
+import { reconnectPlayerSlot } from './reconnection.js';
 
 export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): void {
     const { io, registry } = ctx;
@@ -302,27 +303,14 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
 
                         try {
                             const oldSocketId = player.socketId;
-                            player.socketId = socket.id;
-                            player.isActive = true;
-                            socket.join(lobby.code);
-
-                            // Annuler les timeouts de déconnexion et d'inactivité s'ils existent
-                            registry.cancelDisconnectTimeout(lobby.code, player.name);
-                            registry.cancelInactiveTimeout(lobby.code, player.name);
+                            // Cœur partagé : cancel timeouts + réassociation slot/socket + pilier.
+                            reconnectPlayerSlot(registry, lobby, player, socket);
 
                             logger.info(`Player ${player.name} reconnected to game`, {
                                 lobbyCode: data.lobbyCode,
                                 oldSocketId,
                                 newSocketId: socket.id
                             });
-
-                            // Si c'est le leader du round actuel, mettre à jour son socketId
-                            if (game.currentRound && game.currentRound.leader.id === data.playerId) {
-                                game.currentRound.leader.socketId = socket.id;
-                                // Annuler le timeout de saut de round si le pilier se reconnecte
-                                registry.cancelLeaderDisconnectTimeout(lobby.code);
-                                logger.info(`Leader socketId updated for round ${game.currentRound.roundNumber}`);
-                            }
 
                             // Notifier les autres joueurs
                             io.to(lobby.code).emit('updatePlayersList', { players: serializePlayers(lobby.players) });

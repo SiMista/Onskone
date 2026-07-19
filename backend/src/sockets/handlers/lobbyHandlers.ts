@@ -11,6 +11,7 @@ import { errMessage } from '../../utils/helpers.js';
 import logger from '../../utils/logger.js';
 import { serializeGame, serializeRound, serializePlayer, serializePlayers, emitLobbyDecksState } from '../broadcasting.js';
 import { scheduleLeaderSkipTimeout } from './disconnectHandler.js';
+import { reconnectPlayerSlot } from './reconnection.js';
 import {
     type HandlerContext,
     type AppSocket,
@@ -217,21 +218,12 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
                 try {
                     // C'est une reconnexion - mettre à jour le socketId
                     logger.info(`Player ${sanitizedName} reconnecte au lobby ${lobby.code}`);
-                    // Annuler les timeouts de déconnexion et d'inactivité s'ils existent
-                    registry.cancelDisconnectTimeout(lobby.code, sanitizedName);
-                    registry.cancelInactiveTimeout(lobby.code, sanitizedName);
-                    existingPlayerByName.socketId = socket.id;
-                    existingPlayerByName.isActive = true; // Marquer comme actif (rejouer)
+                    // Rafraîchir le premium AVANT le cœur partagé pour que l'emit
+                    // updatePlayersList (ci-dessous) reflète le statut à jour.
                     existingPlayerByName.isPremium = joinerPremium; // rafraîchir le premium
+                    // Cœur partagé : cancel timeouts + réassociation slot/socket + pilier.
+                    reconnectPlayerSlot(registry, lobby, existingPlayerByName, socket);
 
-                    // Si c'est le pilier du round actuel, annuler le timeout de saut de round
-                    if (lobby.game?.currentRound?.leader.id === existingPlayerByName.id) {
-                        registry.cancelLeaderDisconnectTimeout(lobby.code);
-                        lobby.game.currentRound.leader.socketId = socket.id;
-                        logger.info(`Pilier reconnecté via joinLobby, timeout saut annulé`);
-                    }
-
-                    socket.join(lobby.code);
                     socket.emit('joinedLobby', { player: serializePlayer(existingPlayerByName), reconnectToken: existingPlayerByName.reconnectToken });
                     emitLobbyDecksState(io, socket, lobby);
                     io.to(lobby.code).emit('updatePlayersList', { players: serializePlayers(lobby.players) });

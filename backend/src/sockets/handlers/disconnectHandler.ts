@@ -1,4 +1,5 @@
 import * as LobbyManager from '../../managers/LobbyManager';
+import { getLobbyCodeForSocket } from '../../managers/socketLobbyIndex.js';
 import { Game } from '../../models/Game';
 import { GAME_CONSTANTS, GameStatus } from '@onskone/shared';
 import { errMessage } from '../../utils/helpers.js';
@@ -191,7 +192,13 @@ export function registerDisconnectHandler(socket: AppSocket, ctx: HandlerContext
     socket.on('disconnect', (reason) => {
         logger.socket.disconnect(socket.id, reason);
 
-        LobbyManager.getLobbies().forEach((lobby) => {
+        // Lookup O(1) du lobby via l'index socketId -> lobbyCode (remplace le balayage
+        // de tous les lobbies × tous les joueurs). Un socketId n'appartient qu'à un
+        // seul joueur d'un seul lobby, donc au plus une itération comme auparavant.
+        const lobbyCodeForSocket = getLobbyCodeForSocket(socket.id);
+        if (!lobbyCodeForSocket) return;
+        const lobby = LobbyManager.getLobby(lobbyCodeForSocket);
+        if (lobby) {
             const disconnectedPlayer = lobby.players.find(p => p.socketId === socket.id);
             if (!disconnectedPlayer) return;
 
@@ -219,6 +226,6 @@ export function registerDisconnectHandler(socket: AppSocket, ctx: HandlerContext
             // 3) Suppression après la période de grâce (remplace tout timeout existant).
             registry.cancelDisconnectTimeout(lobbyCode, playerName);
             scheduleGracePeriodRemoval(io, registry, lobbyCode, playerName);
-        });
+        }
     });
 }
