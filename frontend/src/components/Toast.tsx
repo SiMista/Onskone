@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { Icon } from '@iconify/react';
 import { STICKER_FILTER } from '../constants/icons';
 
-export type ToastVariant = 'info' | 'success' | 'warning' | 'error' | 'achievement';
+export type ToastVariant = 'info' | 'success' | 'warning' | 'error' | 'achievement' | 'join' | 'leave';
 
 interface Toast {
   id: number;
@@ -35,6 +35,10 @@ const VARIANT_STYLE: Record<ToastVariant, VariantStyle> = {
     icon: 'fluent-emoji-flat:trophy',
     iconOutlined: true,
   },
+  // Arrivée / départ d'un joueur dans le lobby : la main qui salue / la porte
+  // servent d'icône (pas de "i" info générique).
+  join: { bg: '#E6F8E6', icon: 'fluent-emoji-flat:waving-hand', iconOutlined: true },
+  leave: { bg: '#FFF3C4', icon: 'fluent-emoji-flat:door', iconOutlined: true },
 };
 
 const EXIT_DURATION = 280; // ms - doit matcher .animate-toast-out

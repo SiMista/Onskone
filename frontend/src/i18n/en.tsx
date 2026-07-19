@@ -117,7 +117,7 @@ export const en: Dictionary = {
     },
     toasts: {
       linkCopied: 'Link copied! Send it to your friends',
-      codeCopied: 'Code copied!',
+      codeCopied: 'Code copied! Send it to your friends',
       shareUnavailable: "Sharing didn't work, copy the link instead",
       aloneRemoved: 'You were alone in the lobby, it has been deleted',
       promoted: 'You are now the lobby host!',
@@ -125,6 +125,8 @@ export const en: Dictionary = {
       kicked: (name) => `${name} kicked you from the lobby`,
       kickedAnon: 'You were kicked from the lobby',
       closedInactive: 'This lobby was closed due to inactivity',
+      playerJoined: (name) => `${name} joined the lobby`,
+      playerLeft: (name) => `${name} left the lobby`,
     },
     playerMenu: {
       trigger: 'Player options',
@@ -524,12 +526,40 @@ export const en: Dictionary = {
     hostHint: "You're the only one who can pick the themes.",
     readOnlyHint: (hostName) => `Only ${hostName} can pick the themes.`,
     matureBadge: '18+',
+    premiumBadge: 'PREMIUM',
     matureConfirm: {
       title: 'Adult content',
       message: 'This theme contains explicit content for adults only. Are you sure you want to enable it?',
       confirm: "I'm 18+",
       cancel: 'Uhhh, no',
     },
+  },
+
+  premium: {
+    title: 'Onskoné Premium',
+    subtitle: 'Unlock everything, once and for all.',
+    perkQuestions: '+50 extra questions',
+    perkThemes: 'All premium themes',
+    perkFuture: 'All future content included',
+    perkName: 'Your name in shiny gold',
+    perkNameSample: 'You',
+    perkNamePreviewHint: 'Your premium preview',
+    perkAdsTitle: 'ZERO ADS',
+    perkAdsDesc: 'Never a single interruption again.',
+    unlock: 'Unlock Premium',
+    restore: 'Restore purchases',
+    purchasing: 'Purchasing…',
+    webOnly: 'Premium is unlocked in the mobile app. Download it to enjoy it!',
+    getOnAppStore: 'Download on the App Store',
+    getOnPlayStore: 'Get it on Google Play',
+    close: 'Later',
+  },
+
+  appBanner: {
+    message: 'Onskoné, the app',
+    tagline: 'even better on your phone',
+    cta: 'Get',
+    close: 'Close',
   },
 
   phases: {

@@ -10,6 +10,7 @@ import { IPlayer, RoundPhase, GameCard, GameMode } from '@onskone/shared';
 import { useStartTimerDelayed } from '../hooks';
 import socket from '../utils/socket';
 import { useLocale } from '../i18n';
+import { hapticAssigned } from '../utils/haptics';
 
 const SubstituteAnsweringPhase = ({
   lobbyCode,
@@ -50,6 +51,12 @@ const SubstituteAnsweringPhase = ({
       if (expireTimeoutRef.current) clearTimeout(expireTimeoutRef.current);
     };
   }, []);
+
+  // Le pilier vient de me refiler sa réponse à recopier : buzz marqué pour
+  // que je regarde mon écran même si le tel était dans la poche.
+  useEffect(() => {
+    if (isSubstitute) hapticAssigned();
+  }, [isSubstitute]);
 
   const handleSubmit = () => {
     if (!isSubstitute || !answer.trim() || submitted) return;

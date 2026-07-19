@@ -11,6 +11,7 @@ import * as LobbyManager from '../managers/LobbyManager.js';
 import { Game } from '../models/Game.js';
 import { Lobby } from '../models/Lobby.js';
 import { getMinSupportedVersion, setMinSupportedVersion } from '../utils/versionGate.js';
+import { isPremiumPromoActive, setPremiumPromoActive } from '../utils/premiumPromo.js';
 import { DEPLOYED_VERSION } from '../utils/appVersion.js';
 
 const router: Router = Router();
@@ -153,6 +154,28 @@ router.post('/admin/version-gate', requireAdmin, (req: Request, res: Response) =
   const state = versionGateState();
   logger.info(`Maj forcée: action=${action} -> plancher=${state.minVersion || '(désactivé)'}`);
   res.json(state);
+});
+
+// --- Promo premium ---
+// Flag global : quand actif, le premium est offert à tous (gating serveur des
+// thèmes premium considère tout host comme premium). Pilotage 1-clic.
+router.get('/admin/premium-promo', requireAdmin, (_req: Request, res: Response) => {
+  res.json({ active: isPremiumPromoActive() });
+});
+
+router.post('/admin/premium-promo', requireAdmin, (req: Request, res: Response) => {
+  const action = String(req.body?.action ?? '');
+  if (action === 'enable') {
+    setPremiumPromoActive(true);
+  } else if (action === 'disable') {
+    setPremiumPromoActive(false);
+  } else {
+    res.status(400).json({ error: 'invalid_action' });
+    return;
+  }
+  const active = isPremiumPromoActive();
+  logger.info(`Promo premium: action=${action} -> ${active ? 'ACTIVE' : 'inactive'}`);
+  res.json({ active });
 });
 
 export default router;

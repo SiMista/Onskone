@@ -26,6 +26,16 @@
       "en": "What you watch, what you listen to, and what it says about you without you realizing it !"
     }
   },
+  "WYD": {
+    "category": "ICEBREAKERS",
+    "emoji": "fluent-emoji-flat:performing-arts",
+    "premium": true,
+    "labels": { "fr": "MISE EN SITUATION", "en": "WYD?" },
+    "descriptions": {
+      "fr": "On te met dans un contexte, et on juge ce que ça donne !",
+      "en": "What would you do ? We put you in a scenario, show us how you act."
+    }
+  },
   "TRAVEL": {
     "category": "ICEBREAKERS",
     "emoji": "fluent-emoji-flat:globe-showing-europe-africa",
@@ -42,15 +52,6 @@
     "descriptions": {
       "fr": "Ton introduction, et les premiers détails qui apprennent à savoir qui tu es !",
       "en": "Your intro. The first details that tell us who you really are."
-    }
-  },
-  "WYD": {
-    "category": "ICEBREAKERS",
-    "emoji": "fluent-emoji-flat:performing-arts",
-    "labels": { "fr": "MISE EN SITUATION", "en": "WYD?" },
-    "descriptions": {
-      "fr": "On te met dans un contexte, et on juge ce que ça donne !",
-      "en": "What would you do ? We put you in a scenario, show us how you act."
     }
   },
   "BETWEEN_US": {
@@ -84,6 +85,7 @@
     "category": "FUN",
     "emoji": "fluent-emoji-flat:no-one-under-eighteen",
     "mature": true,
+    "premium": true,
     "labels": { "fr": "HOT", "en": "SPICYYY" },
     "descriptions": {
       "fr": "En dehors des regards ! Pour les adultes uniquement.",
@@ -94,6 +96,7 @@
     "category": "FUN",
     "emoji": "fluent-emoji-flat:speaking-head",
     "mature": true,
+    "premium": true,
     "labels": { "fr": "TES OPINIONS", "en": "HOT TAKES" },
     "descriptions": {
       "fr": "Ce que tu penses à voix haute, sur plusieurs sujets... particuliers !",
@@ -112,6 +115,7 @@
   "AMBITIONS": {
     "category": "DEEP",
     "emoji": "fluent-emoji-flat:rocket",
+    "premium": true,
     "labels": { "fr": "AMBITIONS", "en": "AMBITIONS" },
     "descriptions": {
       "fr": "Tes rêves, ton argent, ta vision ! Que veux-tu vraiment construire ?",

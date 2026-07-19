@@ -17,4 +17,7 @@ import type { IPlayer } from '@onskone/shared';
 export interface ServerPlayer extends IPlayer {
     socketId: string;
     reconnectToken: string;
+    // Toujours défini côté serveur (le modèle Player l'initialise). Requis ici
+    // pour rester assignable à Player (où isPremium n'est pas optionnel).
+    isPremium: boolean;
 }

@@ -117,7 +117,7 @@ export const fr: Dictionary = {
     },
     toasts: {
       linkCopied: 'Lien copié ! Envoie le à tes amis',
-      codeCopied: 'Code copié !',
+      codeCopied: 'Code copié ! Envoie le à tes amis',
       shareUnavailable: "Le partage n'a pas fonctionné, copie plutôt le lien",
       aloneRemoved: 'Tu étais seul dans le salon, il a été supprimé',
       promoted: 'Tu es maintenant le chef du salon !',
@@ -125,6 +125,8 @@ export const fr: Dictionary = {
       kicked: (name) => `${name} t'a expulsé du salon`,
       kickedAnon: 'Tu as été expulsé du salon',
       closedInactive: 'Ce salon a été fermé pour inactivité',
+      playerJoined: (name) => `${name} a rejoint le salon`,
+      playerLeft: (name) => `${name} a quitté le salon`,
     },
     playerMenu: {
       trigger: 'Options du joueur',
@@ -525,12 +527,40 @@ export const fr: Dictionary = {
     hostHint: 'Tu es le seul à pouvoir choisir les thèmes.',
     readOnlyHint: (hostName) => `Seul ${hostName} peut choisir les thèmes.`,
     matureBadge: '18+',
+    premiumBadge: 'PREMIUM',
     matureConfirm: {
       title: 'Contenu pour adultes',
       message: 'Ce thème contient des questions explicites réservées aux adultes. Tu confirmes vouloir l\'activer ?',
       confirm: 'J\'ai +18 ans',
       cancel: 'Euhhh, non',
     },
+  },
+
+  premium: {
+    title: 'Onskoné Premium',
+    subtitle: 'Débloque tout, une fois pour toutes.',
+    perkQuestions: '+50 questions en plus',
+    perkThemes: 'Tous les thèmes premium',
+    perkFuture: 'Tout le futur contenu inclus',
+    perkName: 'Ton pseudo en or brillant',
+    perkNameSample: 'Toi',
+    perkNamePreviewHint: 'Ton aperçu premium',
+    perkAdsTitle: 'ZÉRO PUB',
+    perkAdsDesc: 'Plus jamais une seule interruption.',
+    unlock: 'Débloquer le Premium',
+    restore: 'Restaurer mes achats',
+    purchasing: 'Achat en cours…',
+    webOnly: 'Le Premium se débloque dans l\'appli mobile. Télécharge-la pour en profiter !',
+    getOnAppStore: 'Télécharger sur l\'App Store',
+    getOnPlayStore: 'Télécharger sur Google Play',
+    close: 'Plus tard',
+  },
+
+  appBanner: {
+    message: 'Onskoné, l\'appli',
+    tagline: 'encore mieux sur ton tel',
+    cta: 'Obtenir',
+    close: 'Fermer',
   },
 
   phases: {

@@ -27,6 +27,12 @@ export const setTestVersionOverride = (v: string | null): void => {
 // Version effectivement annoncée au handshake (override de test sinon build réel).
 const announcedVersion = (): string => getTestVersionOverride() || ACTUAL_APP_VERSION;
 
+// Statut premium annoncé au handshake (gating "l'host débloque pour la table").
+// Mis à jour par premium.ts quand le statut change ; réévalué à chaque (re)connexion.
+// Défini ici (pas dans premium.ts) pour éviter un cycle d'import socket <-> premium.
+let announcedPremium = false;
+export const setAnnouncedPremium = (v: boolean): void => { announcedPremium = v; };
+
 // Socket typé avec les événements serveur→client et client→serveur
 const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(SERVER_URL, {
   autoConnect: true,
@@ -38,7 +44,7 @@ const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(SERVER_URL
   // Version du build annoncée au serveur : sert au gate de maj forcée
   // (backend/src/utils/versionGate.ts refuse les clients trop vieux).
   // Fonction => réévaluée à chaque (re)connexion (prend en compte l'override de test).
-  auth: (cb) => cb({ appVersion: announcedVersion() }),
+  auth: (cb) => cb({ appVersion: announcedVersion(), premium: announcedPremium }),
 });
 
 export default socket;

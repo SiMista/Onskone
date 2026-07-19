@@ -37,6 +37,15 @@ workflows:
         CAPACITOR_BUILD: "1"
         XCODE_PROJECT: "frontend/ios/App/App.xcodeproj"
         XCODE_SCHEME: "App"
+        # Monetisation (achats in-app via RevenueCat). Cle API PUBLIQUE Apple
+        # (prefixe "appl_"), consommee au build par le front (import.meta.env).
+        # A definir dans un groupe de variables Codemagic (ou en clair ici si non
+        # sensible - une cle publique RevenueCat peut etre exposee cote client).
+        # Prerequis Apple (a faire UNE fois, hors CI) : cocher la capability
+        # "In-App Purchase" sur l'App ID com.onskone.app dans le portail Apple.
+        # StoreKit ne demande PAS de cle dans App.entitlements (contrairement aux
+        # Associated Domains), il suffit que la capability soit active sur l'App ID.
+        VITE_RC_APPLE_KEY: $VITE_RC_APPLE_KEY
 
     scripts:
       - name: Installer pnpm

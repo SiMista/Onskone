@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import socket from '../utils/socket';
 import { isStudioFrame } from '../utils/studioStorage';
+import { setPremiumOverride } from '../utils/premium';
 import { IGame, IPlayer, RoundPhase, GameCard } from '@onskone/shared';
 
 // =====================================================================
@@ -80,6 +81,12 @@ export function useStudioBot({ game, currentPlayer, players, lobbyCode }: UseStu
           if (data.enabled) sessionStorage.setItem(BOT_KEY, '1');
           else sessionStorage.removeItem(BOT_KEY);
         } catch { /* silent */ }
+        return;
+      }
+
+      if (data.type === 'studio:setPremium') {
+        // Toggle live du statut premium depuis la Régie Studio (test sans achat).
+        setPremiumOverride(!!data.enabled);
         return;
       }
 

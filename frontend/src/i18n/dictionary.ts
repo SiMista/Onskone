@@ -143,6 +143,8 @@ export interface Dictionary {
       kicked: (name: string) => string;
       kickedAnon: string;
       closedInactive: string;
+      playerJoined: (name: string) => string;
+      playerLeft: (name: string) => string;
     };
     playerMenu: {
       trigger: string;
@@ -262,12 +264,43 @@ export interface Dictionary {
     hostHint: string;
     readOnlyHint: (hostName: string) => string;
     matureBadge: string;
+    premiumBadge: string;
     matureConfirm: {
       title: string;
       message: string;
       confirm: string;
       cancel: string;
     };
+  };
+
+  premium: {
+    title: string;
+    subtitle: string;
+    // Perks (liste d'avantages)
+    perkQuestions: string;
+    perkThemes: string;
+    perkFuture: string;
+    perkName: string;
+    perkNameSample: string;   // pseudo d'exemple affiché en doré
+    perkNamePreviewHint: string; // sous-texte de l'aperçu avatar/nom premium
+    perkAdsTitle: string;     // bloc "zéro pub" mis en avant
+    perkAdsDesc: string;
+    // Mode natif (achat possible)
+    unlock: string;
+    restore: string;
+    purchasing: string;
+    // Mode web (redirection store)
+    webOnly: string;
+    getOnAppStore: string;
+    getOnPlayStore: string;
+    close: string;
+  };
+
+  appBanner: {
+    message: string;
+    tagline: string;
+    cta: string;
+    close: string;
   };
 
   phases: {

@@ -26,4 +26,11 @@ export interface IPlayer {
 
   /** ID de l'avatar choisi par le joueur */
   avatarId: number;
+
+  /**
+   * Statut premium du joueur (déclaré au handshake socket). Diffusé aux clients
+   * pour afficher le pseudo doré + le cadre avatar premium à toute la table.
+   * Auto-déclaré côté client (falsifiable, enjeu cosmétique assumé).
+   */
+  isPremium?: boolean;
 }

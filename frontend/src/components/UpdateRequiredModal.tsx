@@ -1,3 +1,4 @@
+import { useLocation } from 'react-router-dom';
 import { useLocale } from '../i18n';
 import { useVersionBlock, openUpdate, isNativeUpdate } from '../utils/versionGate';
 import { getTestVersionOverride, setTestVersionOverride } from '../utils/socket';
@@ -23,8 +24,14 @@ const BRAND_BACKDROP: React.CSSProperties = {
 const UpdateRequiredModal = () => {
   const { t } = useLocale();
   const block = useVersionBlock();
+  const { pathname } = useLocation();
 
   if (!block) return null;
+
+  // Le back-office (et le studio dev) doivent rester accessibles MÊME quand le
+  // gate bloque le jeu : c'est depuis /admin qu'on lève la maj forcée. Sinon,
+  // poser un plancher trop haut se verrouillerait soi-même hors de l'admin.
+  if (pathname.startsWith('/admin') || pathname.startsWith('/studio')) return null;
 
   // Échappatoire DEV : si le blocage vient d'un override de TEST (cf. socket.ts),
   // l'écran couvre aussi /admin -> on offre un bouton pour le retirer et recharger.

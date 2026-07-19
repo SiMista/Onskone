@@ -1,7 +1,9 @@
 import { ReactNode, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { LuX } from 'react-icons/lu';
 import ScrollFade from './ScrollFade';
 import { useModalChrome } from '../hooks/useModalChrome';
+import { useModalTransition } from '../hooks/useModalTransition';
 import { useLocale } from '../i18n';
 
 export interface ModalShellProps {
@@ -65,10 +67,13 @@ const ModalShell = ({
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const { t } = useLocale();
 
-  // Scroll-lock du body + fermeture sur Escape, uniquement quand ouverte.
-  useModalChrome(isOpen, onClose);
+  // Animation de sortie (fondu) : requestClose joue l'anim puis démonte.
+  const { render, closing, requestClose } = useModalTransition(isOpen, onClose);
 
-  if (!isOpen) return null;
+  // Scroll-lock du body + fermeture sur Escape, tant que montée.
+  useModalChrome(render, requestClose);
+
+  if (!render) return null;
 
   const titleClass =
     titleFont === 'accent'
@@ -78,17 +83,21 @@ const ModalShell = ({
   // InfoModal a un header un peu plus haut (pt-7) à cause du washi tape.
   const headerPadTop = washiTape ? 'pt-7' : 'pt-6';
 
-  return (
+  // Portal vers <body> : sort la modale de tout stacking context parent (ex. le
+  // wrapper `z-10 pointer-events-none` du Footer) qui plafonnerait son z-index et
+  // capturerait ses clics. Sans ça, les modales du Footer passaient sous les
+  // boutons de la page et se comportaient différemment des modales montées à la racine.
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-modal-backdrop"
-      onClick={onClose}
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm ${closing ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop'}`}
+      onClick={requestClose}
       style={{
         paddingTop: 'max(1rem, env(safe-area-inset-top, 0px))',
         paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 0px))',
       }}
     >
       <div
-        className={`relative ${MAX_WIDTH_CLASS[maxWidth]} w-full animate-modal-content`}
+        className={`relative ${MAX_WIDTH_CLASS[maxWidth]} w-full ${closing ? 'animate-modal-content-out' : 'animate-modal-content'}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Bande adhésive (washi tape) - hors de la carte pour ne pas être coupée */}
@@ -114,7 +123,7 @@ const ModalShell = ({
 
             <button
               type="button"
-              onClick={onClose}
+              onClick={requestClose}
               aria-label={t.common.close}
               className="shrink-0 w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-900 active:scale-90 transition-all duration-200 cursor-pointer"
             >
@@ -147,7 +156,8 @@ const ModalShell = ({
           {footer && <div className="px-5 pb-5 pt-1">{footer}</div>}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 };
 

@@ -24,6 +24,7 @@ type ThemesMeta = Record<string, {
     category: string;
     emoji: string;
     mature?: boolean;
+    premium?: boolean;
     labels: Record<Locale, string>;
     descriptions: Record<Locale, string>;
 }>;
@@ -98,6 +99,7 @@ const loadOne = (locale: Locale): boolean => {
                 description: meta.descriptions[locale] ?? '',
                 emoji: meta.emoji,
                 ...(meta.mature ? { mature: true } : {}),
+                ...(meta.premium ? { premium: true } : {}),
             };
             p.catalog[cat].push(code);
             p.catalogWithMeta[cat].push(info);
@@ -140,7 +142,26 @@ const lobbyLocale = (lobby: ILobby): Locale => (SUPPORTED_LOCALES as readonly st
 export const getDecksCatalog = (locale: Locale = DEFAULT_LOCALE): DecksCatalog => pools[locale].catalog;
 export const getDecksCatalogWithMeta = (locale: Locale = DEFAULT_LOCALE): DecksCatalogWithMeta => pools[locale].catalogWithMeta;
 
-export const getDefaultSelectedDecks = (locale: Locale = DEFAULT_LOCALE): SelectedDecks => {
+// Codes des thèmes premium (langue-indépendants) - construits une fois depuis themes.json.
+// Servent au gating serveur : filtrés de la sélection si l'host n'est pas premium.
+const PREMIUM_CODES = new Set(
+    Object.entries(THEMES_META)
+        .filter(([, meta]) => meta.premium)
+        .map(([code]) => code)
+);
+
+/** Codes des thèmes premium (lecture seule) - exposé pour le gating/les tests. */
+export const getPremiumCodes = (): string[] => [...PREMIUM_CODES];
+
+/**
+ * Sélection par défaut d'un lobby. Les thèmes mature sont toujours exclus
+ * (avertissement 18+ à activer). Les thèmes premium sont inclus SI `allowPremium`
+ * (host premium ou promo) - il a payé, il en profite direct sans re-cocher.
+ */
+export const getDefaultSelectedDecks = (
+    locale: Locale = DEFAULT_LOCALE,
+    allowPremium = false,
+): SelectedDecks => {
     const selected: SelectedDecks = {};
     const matureCodes = new Set(
         Object.entries(THEMES_META)
@@ -148,9 +169,9 @@ export const getDefaultSelectedDecks = (locale: Locale = DEFAULT_LOCALE): Select
             .map(([code]) => code)
     );
     for (const [category, codes] of Object.entries(pools[locale].catalog)) {
-        // Les thèmes mature sont exclus par défaut, l'host doit les activer manuellement
-        // (avec confirmation explicite côté front).
-        selected[category] = codes.filter(code => !matureCodes.has(code));
+        selected[category] = codes.filter(
+            code => !matureCodes.has(code) && (allowPremium || !PREMIUM_CODES.has(code)),
+        );
     }
     return selected;
 };
@@ -158,8 +179,16 @@ export const getDefaultSelectedDecks = (locale: Locale = DEFAULT_LOCALE): Select
 /**
  * Filtre une sélection en supprimant les catégories/codes inconnus du catalogue.
  * Travaille en codes stables (indépendants de la langue).
+ *
+ * `allowPremium` (défaut false) : gating serveur-authoritatif. Si l'host du lobby
+ * n'est pas premium (et hors promo admin), les codes premium sont retirés de la
+ * sélection - un client trafiqué ne peut pas jouer un thème verrouillé.
  */
-export const sanitizeSelectedDecks = (selected: SelectedDecks, locale: Locale = DEFAULT_LOCALE): SelectedDecks => {
+export const sanitizeSelectedDecks = (
+    selected: SelectedDecks,
+    locale: Locale = DEFAULT_LOCALE,
+    allowPremium = false,
+): SelectedDecks => {
     const clean: SelectedDecks = {};
     for (const [category, codes] of Object.entries(pools[locale].catalog)) {
         const requested = selected[category];
@@ -168,7 +197,9 @@ export const sanitizeSelectedDecks = (selected: SelectedDecks, locale: Locale = 
             continue;
         }
         const codeSet = new Set(codes);
-        clean[category] = requested.filter(c => codeSet.has(c));
+        clean[category] = requested.filter(
+            c => codeSet.has(c) && (allowPremium || !PREMIUM_CODES.has(c)),
+        );
     }
     return clean;
 };

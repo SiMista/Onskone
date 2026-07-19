@@ -15,6 +15,12 @@ export class Lobby implements ILobby {
     guessMyAnswerMode: boolean;
     timeMultiplier: number;
     locale: Locale;
+    /**
+     * Statut premium de l'host (serveur-only, non diffusé dans ILobby).
+     * Déclaré par le client au handshake socket. Autorise la sélection des
+     * thèmes premium pour toute la table (gating "l'host débloque pour tous").
+     */
+    hostIsPremium: boolean;
 
     constructor(lobbyCode: string, locale: Locale = DEFAULT_LOCALE) {
         this.code = lobbyCode;
@@ -26,6 +32,7 @@ export class Lobby implements ILobby {
         this.gameMode = 'local';
         this.guessMyAnswerMode = false;
         this.timeMultiplier = GAME_CONSTANTS.TIME_MULTIPLIER_DEFAULT;
+        this.hostIsPremium = false;
     }
 
     updateActivity(): void {

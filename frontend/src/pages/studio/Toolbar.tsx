@@ -24,6 +24,8 @@ interface ToolbarProps {
   setTimeMultiplier: (m: number) => void;
   running: boolean;
   allBots: boolean;
+  premium: boolean;
+  onTogglePremium: () => void;
   burstCount: number;
   setBurstCount: (n: number) => void;
   limitBreaker: boolean;
@@ -41,7 +43,7 @@ export const Toolbar = ({
   slots, layout, setLayout, zoom, setZoom, debugTimers, setDebugTimers,
   gameMode, setGameMode,
   timeMultiplier, setTimeMultiplier,
-  running, allBots, burstCount, setBurstCount,
+  running, allBots, premium, onTogglePremium, burstCount, setBurstCount,
   limitBreaker, onToggleLimitBreaker,
   onAddSlot, onRemoveLastSlot, onToggleAllBots,
   onReloadAll, onStart, onReset,
@@ -159,6 +161,11 @@ export const Toolbar = ({
               className={`${COMPACT_ICON} ${allBots ? '!bg-violet-400/20 !border-violet-300/60 !text-violet-100 shadow-[0_0_10px_rgba(167,139,250,0.25)]' : ''}`}
               title={allBots ? 'Tous les slots sont des bots - clic pour tout désactiver' : 'Activer le mode bot sur tous les slots'}
             >🤖</button>
+            <button
+              onClick={onTogglePremium}
+              className={`${COMPACT_ICON} ${premium ? '!bg-amber-400/20 !border-amber-300/60 !text-amber-100 shadow-[0_0_10px_rgba(251,191,36,0.25)]' : ''}`}
+              title={premium ? 'Premium ACTIF (test) - thèmes premium débloqués sur tous les slots' : 'Simuler le premium sur tous les slots (test sans achat)'}
+            >👑</button>
           </div>
 
           <div

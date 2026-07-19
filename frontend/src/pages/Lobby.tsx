@@ -68,6 +68,9 @@ const Lobby = () => {
     }, [lobbyTab]);
     const initialPlayerIdsRef = useRef<Set<string> | null>(null);
     const prevHostIdRef = useRef<string | null>(null);
+    // Snapshot id -> nom des joueurs actifs au dernier update, pour toaster les
+    // arrivées/départs par diff (le serveur ne pousse pas d'event dédié).
+    const prevActivePlayersRef = useRef<Map<string, string> | null>(null);
 
     const { playerName, avatarId } = useLobbyIdentity(lobbyCode, searchParams);
 
@@ -200,6 +203,27 @@ const Lobby = () => {
             }
         }
         prevHostIdRef.current = newHostId;
+
+        // Toast arrivée/départ : diff sur les joueurs actifs vs le snapshot
+        // précédent. On saute le tout premier update (sinon "X a rejoint" pour
+        // toute la liste au chargement) et on ne se toaste jamais soi-même.
+        const activeNow = new Map(
+            data.players.filter(p => p.isActive).map(p => [p.id, p.name] as const),
+        );
+        const prevActive = prevActivePlayersRef.current;
+        if (prevActive !== null) {
+            for (const [id, name] of activeNow) {
+                if (id !== myId && !prevActive.has(id)) {
+                    showToast(t.lobby.toasts.playerJoined(name), 'join', 3000);
+                }
+            }
+            for (const [id, name] of prevActive) {
+                if (id !== myId && !activeNow.has(id)) {
+                    showToast(t.lobby.toasts.playerLeft(name), 'leave', 3000);
+                }
+            }
+        }
+        prevActivePlayersRef.current = activeNow;
 
         setPlayers(data.players);
         const potentialCurrentPlayer = myId ? data.players.find((p: IPlayer) => p.id === myId) : undefined;

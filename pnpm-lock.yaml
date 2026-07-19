@@ -99,6 +99,9 @@ importers:
       '@onskone/shared':
         specifier: workspace:*
         version: link:../shared
+      '@revenuecat/purchases-capacitor':
+        specifier: ^13.2.3
+        version: 13.2.3(@capacitor/core@8.4.0)
       '@tailwindcss/vite':
         specifier: ^4.1.16
         version: 4.1.16(vite@6.4.1(@types/node@22.18.13)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0))
@@ -1071,6 +1074,14 @@ packages:
 
   '@prettier/plugin-xml@2.2.0':
     resolution: {integrity: sha512-UWRmygBsyj4bVXvDiqSccwT1kmsorcwQwaIy30yVh8T+Gspx4OlC0shX1y+ZuwXZvgnafmpRYKks0bAu9urJew==}
+
+  '@revenuecat/purchases-capacitor@13.2.3':
+    resolution: {integrity: sha512-fW10KEjRnDev5G/KLBkMHyE8XRrDv4ivzV+Jv/2ACj9u28CXAcc39323rKaYsQiiTen40JEyeQXBsQUtTNyFBg==}
+    peerDependencies:
+      '@capacitor/core': '>=8.0.0'
+
+  '@revenuecat/purchases-typescript-internal-esm@18.21.0':
+    resolution: {integrity: sha512-6aOc/RaWiIL8w69DzGZX9eenQ+dATc0ZcLbQlusFT28+6ODukSYyy4xPbVo7uZO5wkeZ0nRO74Yoi00kTOdfhg==}
 
   '@rolldown/pluginutils@1.0.0-beta.27':
     resolution: {integrity: sha512-+d0F4MKMCbeVUJwG96uQ4SgAznZNSq93I3V+9NHA4OpvqG8mRCpGdKmK8l/dl02h2CCDHwW2FqilnTyDcAnqjA==}
@@ -5283,6 +5294,13 @@ snapshots:
     dependencies:
       '@xml-tools/parser': 1.0.11
       prettier: 2.8.8
+
+  '@revenuecat/purchases-capacitor@13.2.3(@capacitor/core@8.4.0)':
+    dependencies:
+      '@capacitor/core': 8.4.0
+      '@revenuecat/purchases-typescript-internal-esm': 18.21.0
+
+  '@revenuecat/purchases-typescript-internal-esm@18.21.0': {}
 
   '@rolldown/pluginutils@1.0.0-beta.27': {}
 

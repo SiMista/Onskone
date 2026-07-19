@@ -11,7 +11,9 @@ import { initSounds } from './utils/sounds';
 import { ToastProvider } from './components/Toast';
 import { LocaleProvider } from './i18n';
 import { extractLobbyCode } from './constants/game';
+import { initPremium } from './utils/premium';
 import UpdateRequiredModal from './components/UpdateRequiredModal';
+import AppDownloadBanner from './components/AppDownloadBanner';
 
 const Lobby = lazy(() => import('./pages/Lobby'));
 const Game = lazy(() => import('./pages/Game'));
@@ -51,9 +53,13 @@ const AppShell = ({ children }: { children: ReactNode }) => {
   // (studio/admin), display:contents le rend transparent au layout, sinon il
   // contraint l'app à la viewport. Évite un unmount complet de Routes au
   // changement d'allowGlobalScroll.
+  // Bannière "télécharge l'app" : web uniquement, jamais sur le back-office.
+  const showAppBanner = !allowGlobalScroll;
+
   return (
-    <div className={allowGlobalScroll ? 'contents' : 'h-dvh w-full flex flex-col overflow-hidden'}>
+    <div className={allowGlobalScroll ? 'contents' : 'relative h-dvh w-full flex flex-col overflow-hidden'}>
       {children}
+      {showAppBanner && <AppDownloadBanner />}
     </div>
   );
 };
@@ -105,6 +111,11 @@ const App = () => {
     if (Capacitor.isNativePlatform()) {
       SplashScreen.hide();
     }
+  }, []);
+
+  // Configure RevenueCat + rafraîchit le statut premium au boot (no-op sur web).
+  useEffect(() => {
+    initPremium();
   }, []);
 
   useEffect(() => {

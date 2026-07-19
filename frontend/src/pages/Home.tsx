@@ -10,6 +10,7 @@ import AvatarSelector from '../components/AvatarSelector';
 import InfoModal from '../components/InfoModal';
 import GameModeModal from '../components/GameModeModal';
 import JoinByCodeModal from '../components/JoinByCodeModal';
+import PremiumModal from '../components/PremiumModal';
 import HowToPlayCarousel from '../components/HowToPlayCarousel';
 import HowToPlayButton from '../components/HowToPlayButton';
 import LanguageSwitcher from '../components/LanguageSwitcher';
@@ -30,6 +31,9 @@ import {
   markAchievementsAsSeen,
 } from '../utils/playerStats';
 import { storeReconnectToken } from '../utils/playerHelpers';
+import { usePremium } from '../utils/premium';
+import { useAppBannerVisible } from '../utils/appBanner';
+import { studioStorage } from '../utils/studioStorage';
 
 const Home = () => {
   const { locale, setLocale, t } = useLocale();
@@ -47,6 +51,8 @@ const Home = () => {
   const [isStatsOpen, setIsStatsOpen] = useState(false);
   const [isGameModeOpen, setIsGameModeOpen] = useState(false);
   const [isJoinByCodeOpen, setIsJoinByCodeOpen] = useState(false);
+  const [isPremiumOpen, setIsPremiumOpen] = useState(false);
+  const isPremium = usePremium();
   // Code saisi dans la popup "Rejoindre" en cours de validation (getLobbyInfo).
   // Tant qu'il est posé, la réponse lobbyInfo concerne la popup (pas l'URL).
   const [pendingJoinCode, setPendingJoinCode] = useState<string | null>(null);
@@ -106,6 +112,27 @@ const Home = () => {
     autoFiredRef.current = true;
     socket.emit('checkPlayerName', { lobbyCode, playerName: name });
   }, [autoJoin, lobbyCode, lobbyExists, urlPlayerName, playerName]);
+
+  // Popup promo premium au chargement de l'accueil : une fois tous les
+  // PROMO_COOLDOWN_MS (7j), jamais si déjà premium ni dans un flux Studio/auto.
+  useEffect(() => {
+    if (isPremium) return;
+    if (lobbyCode || autoCreate || autoJoin) return;
+    const PROMO_KEY = 'onskone_premium_promo_seen';
+    const PROMO_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+    try {
+      const raw = studioStorage.getItem(PROMO_KEY);
+      const last = raw ? parseInt(raw, 10) : 0;
+      if (Number.isFinite(last) && Date.now() - last < PROMO_COOLDOWN_MS) return;
+    } catch { /* montre la promo si lecture impossible */ }
+    // Léger délai pour laisser l'accueil s'afficher avant le paywall.
+    const timer = setTimeout(() => {
+      setIsPremiumOpen(true);
+      try { studioStorage.setItem(PROMO_KEY, String(Date.now())); } catch { /* silent */ }
+    }, 1200);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const createLobby = useCallback(() => {
     if (!playerName.trim()) {
@@ -233,9 +260,28 @@ const Home = () => {
   useSocketEvent('playerNameValid', handlePlayerNameValid);
   useSocketEvent('error', handleError);
 
+  // Le bandeau app (overlay, web) occupe le haut : on descend juste les boutons
+  // du haut (Premium / langue) sous lui, sans pousser le reste du contenu.
+  const bannerVisible = useAppBannerVisible();
+  const topControlsClass = bannerVisible ? 'top-[4.5rem]' : 'top-3';
+
   return (
     <div className="relative h-full flex flex-col overflow-hidden">
-      <div className="absolute top-3 right-3 z-30 safe-pt">
+      {!isPremium && (
+        <div className={`absolute ${topControlsClass} left-3 z-30 safe-pt transition-[top] duration-200`}>
+          <button
+            type="button"
+            onClick={() => setIsPremiumOpen(true)}
+            aria-label={t.premium.title}
+            className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-full border-2 border-black font-display font-bold text-[11px] text-black/85 active:scale-95 transition-all cursor-pointer stack-shadow-sm"
+            style={{ background: 'linear-gradient(135deg, #FFE066 0%, #FF8A3D 100%)' }}
+          >
+            <Icon icon="fluent-emoji-flat:crown" width={14} height={14} style={{ filter: STICKER_FILTER }} aria-hidden />
+            Premium
+          </button>
+        </div>
+      )}
+      <div className={`absolute ${topControlsClass} right-3 z-30 safe-pt transition-[top] duration-200`}>
         <LanguageSwitcher />
       </div>
 
@@ -260,6 +306,8 @@ const Home = () => {
         onClose={() => { setIsJoinByCodeOpen(false); setPendingJoinCode(null); }}
         onSubmit={handleJoinByCode}
       />
+
+      <PremiumModal isOpen={isPremiumOpen} onClose={() => setIsPremiumOpen(false)} />
 
       <InfoModal
         isOpen={isStatsOpen}

@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Ticket, TicketStatus, TicketType } from '../../utils/ticketsApi';
 import { TYPE_META, STATUS_META, formatRelative } from './shared';
+import { PremiumPromoPanel } from './PremiumPromo';
 
 const SectionLabel = ({ children }: { children: React.ReactNode }) => (
   <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-white/55 font-bold mb-3">
@@ -78,6 +79,11 @@ export const OverviewPanel = ({
           <KpiCell label="7 jours" value={stats.last7d} hint="cadence hebdo" />
           <KpiCell label="Résolus" value={stats.byStatus.resolved || 0} hint={`${stats.byStatus.wont_fix || 0} sans suite`} onClick={() => onJumpToTickets('resolved')} />
         </div>
+      </div>
+
+      <div>
+        <SectionLabel>Pilotage</SectionLabel>
+        <PremiumPromoPanel />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">

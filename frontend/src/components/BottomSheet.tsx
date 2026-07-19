@@ -1,6 +1,8 @@
 import { ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { LuX } from 'react-icons/lu';
 import { useModalChrome } from '../hooks/useModalChrome';
+import { useModalTransition } from '../hooks/useModalTransition';
 import { useLocale } from '../i18n';
 
 export interface BottomSheetProps {
@@ -18,17 +20,19 @@ export interface BottomSheetProps {
 const BottomSheet = ({ isOpen, onClose, title, children }: BottomSheetProps) => {
   const { t } = useLocale();
 
-  useModalChrome(isOpen, onClose);
+  const { render, closing, requestClose } = useModalTransition(isOpen, onClose);
+  useModalChrome(render, requestClose);
 
-  if (!isOpen) return null;
+  if (!render) return null;
 
-  return (
+  // Portal vers <body> : échappe à tout stacking context parent (cf. ModalShell).
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm animate-modal-backdrop"
-      onClick={onClose}
+      className={`fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm ${closing ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop'}`}
+      onClick={requestClose}
     >
       <div
-        className="relative w-full max-w-md bg-white border-[3px] border-black border-b-0 rounded-t-[28px] texture-paper stack-shadow-lg animate-bottomsheet safe-pb"
+        className={`relative w-full max-w-md bg-white border-[3px] border-black border-b-0 rounded-t-[28px] texture-paper stack-shadow-lg safe-pb ${closing ? 'animate-bottomsheet-out' : 'animate-bottomsheet'}`}
         onClick={(e) => e.stopPropagation()}
         style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom, 0px))' }}
       >
@@ -39,7 +43,7 @@ const BottomSheet = ({ isOpen, onClose, title, children }: BottomSheetProps) => 
           </h2>
           <button
             type="button"
-            onClick={onClose}
+            onClick={requestClose}
             aria-label={t.common.close}
             className="shrink-0 w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-900 active:scale-90 transition-all duration-200 cursor-pointer"
           >
@@ -53,7 +57,8 @@ const BottomSheet = ({ isOpen, onClose, title, children }: BottomSheetProps) => 
         {/* Body */}
         <div className="relative px-5 pt-4 text-gray-800">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 };
 

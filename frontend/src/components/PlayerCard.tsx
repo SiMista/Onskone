@@ -2,6 +2,7 @@ import { FaCrown, FaEllipsisV, FaUserSlash } from "react-icons/fa";
 import { useState, useEffect, useRef, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
 import Avatar from "./Avatar";
+import PremiumName from "./PremiumName";
 import { useLocale } from "../i18n";
 
 const MENU_WIDTH = 184;
@@ -104,6 +105,7 @@ interface PlayerCardProps {
   currentPlayerIsHost: boolean;
   isActive?: boolean;
   isFirstPlayer?: boolean;
+  premium?: boolean;
   variant?: 'row' | 'square';
   onKick?: (id: string) => void;
   onPromote?: (id: string) => void;
@@ -118,6 +120,7 @@ const PlayerCard = ({
   currentPlayerIsHost,
   isActive = true,
   isFirstPlayer = false,
+  premium = false,
   variant = 'row',
   onKick,
   onPromote,
@@ -189,10 +192,12 @@ const PlayerCard = ({
         </div>
 
         <div className={`flex flex-col items-center gap-1.5 min-w-0 w-full ${!isActive ? 'opacity-50 grayscale' : ''}`}>
-          <Avatar avatarId={avatarId} name={name} size="lg" />
-          <span className={`text-sm text-center truncate w-full px-1 ${isCurrentPlayer ? "font-bold" : "font-normal"}`}>
-            {name}
-          </span>
+          <Avatar avatarId={avatarId} name={name} size="lg" premium={premium} />
+          <PremiumName
+            name={name}
+            premium={premium}
+            className={`text-sm text-center truncate w-full px-1 ${isCurrentPlayer ? "font-bold" : "font-normal"}`}
+          />
         </div>
       </div>
     );
@@ -206,10 +211,12 @@ const PlayerCard = ({
     }`}>
       {/* Partie gauche → Avatar + nom */}
       <div className={`flex items-center gap-3.5 ${!isActive ? 'opacity-50 grayscale' : ''}`}>
-        <Avatar avatarId={avatarId} name={name} size="md" />
-        <span className={`text-base md:text-lg ${isCurrentPlayer ? "font-bold" : "font-normal"}`}>
-          {name}
-        </span>
+        <Avatar avatarId={avatarId} name={name} size="md" premium={premium} />
+        <PremiumName
+          name={name}
+          premium={premium}
+          className={`text-base md:text-lg ${isCurrentPlayer ? "font-bold" : "font-normal"}`}
+        />
       </div>
 
       {/* Partie droite → couronne ou menu */}

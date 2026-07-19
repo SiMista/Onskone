@@ -1,6 +1,7 @@
 import * as LobbyManager from '../../managers/LobbyManager';
 import { createGame } from '../../managers/GameManager.js';
-import { sanitizeSelectedDecks } from '../../data/questionsRepository.js';
+import { sanitizeSelectedDecks, getDefaultSelectedDecks } from '../../data/questionsRepository.js';
+import { isPremiumPromoActive } from '../../utils/premiumPromo.js';
 import { Player } from '../../models/Player';
 import { Lobby } from '../../models/Lobby';
 import { GAME_CONSTANTS, GameStatus, DEFAULT_LOCALE, isLocale, ERROR_CODES } from '@onskone/shared';
@@ -70,7 +71,19 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
             const locale = isLocale(data.locale) ? data.locale : DEFAULT_LOCALE;
             const lobbyCode = LobbyManager.create(locale);
             const lobby = LobbyManager.getLobby(lobbyCode);
-            const hostPlayer = new Player(sanitizedName, socket.id, true, avatarId);
+            // Statut premium de l'host, déclaré au handshake (cf. front socket.ts).
+            // Gating "l'host débloque pour la table" : autorise les thèmes premium
+            // pour tout le lobby. Auto-déclaré (falsifiable, enjeu faible assumé).
+            const hostPremium = socket.handshake.auth?.premium === true || socket.handshake.auth?.premium === 'true';
+            if (lobby) {
+                lobby.hostIsPremium = hostPremium || isPremiumPromoActive();
+                // Host premium (ou promo) : les thèmes premium sont sélectionnés d'office
+                // (recalcul de la sélection par défaut, qui excluait les premium au constructeur).
+                if (lobby.hostIsPremium) {
+                    lobby.selectedDecks = getDefaultSelectedDecks(lobby.locale, true);
+                }
+            }
+            const hostPlayer = new Player(sanitizedName, socket.id, true, avatarId, hostPremium);
             lobby?.addPlayer(hostPlayer);
             if (lobby && (data.gameMode === 'local' || data.gameMode === 'remote')) {
                 lobby.gameMode = data.gameMode;
@@ -109,6 +122,10 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
             // Update lobby activity
             lobby.updateActivity();
 
+            // Statut premium déclaré au handshake (rafraîchi à chaque (re)connexion :
+            // achat ou override Studio peut avoir changé depuis le 1er join).
+            const joinerPremium = socket.handshake.auth?.premium === true || socket.handshake.auth?.premium === 'true';
+
             // Nettoyer les joueurs vraiment déconnectés (ceux qui ont quitté l'onglet)
             // IMPORTANT: Exclure le joueur qui se reconnecte pour ne pas le supprimer
             ctx.cleanupDisconnectedPlayers(lobby, sanitizedName);
@@ -128,6 +145,9 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
                 registry.cancelDisconnectTimeout(lobby.code, existingPlayerBySocket.name);
                 registry.cancelInactiveTimeout(lobby.code, existingPlayerBySocket.name);
                 existingPlayerBySocket.isActive = true; // Marquer comme actif (rejouer)
+                // Rafraîchir le statut premium depuis le handshake (peut avoir changé,
+                // ex. achat/override Studio en cours de session).
+                existingPlayerBySocket.isPremium = joinerPremium;
                 socket.join(lobby.code);
                 socket.emit('joinedLobby', { player: serializePlayer(existingPlayerBySocket), reconnectToken: existingPlayerBySocket.reconnectToken });
                 emitLobbyDecksState(io, socket, lobby);
@@ -201,6 +221,7 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
                     registry.cancelInactiveTimeout(lobby.code, sanitizedName);
                     existingPlayerByName.socketId = socket.id;
                     existingPlayerByName.isActive = true; // Marquer comme actif (rejouer)
+                    existingPlayerByName.isPremium = joinerPremium; // rafraîchir le premium
 
                     // Si c'est le pilier du round actuel, annuler le timeout de saut de round
                     if (lobby.game?.currentRound?.leader.id === existingPlayerByName.id) {
@@ -235,7 +256,7 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
 
             // Nouveau joueur
             const avatarId = validateAvatarId(data.avatarId);
-            const newPlayer = new Player(sanitizedName, socket.id, false, avatarId);
+            const newPlayer = new Player(sanitizedName, socket.id, false, avatarId, joinerPremium);
             LobbyManager.addPlayer(lobby, newPlayer);
 
             socket.join(lobby.code);
@@ -277,7 +298,8 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
     socket.on('updateSelectedDecks', (data) => {
         try {
             applyHostSetting(socket, data, 'modifier les decks', (lobby) => {
-                const sanitized = sanitizeSelectedDecks(data.selected || {}, lobby.locale);
+                const allowPremium = lobby.hostIsPremium || isPremiumPromoActive();
+                const sanitized = sanitizeSelectedDecks(data.selected || {}, lobby.locale, allowPremium);
                 const totalSelected = Object.values(sanitized).reduce((acc, arr) => acc + arr.length, 0);
                 if (totalSelected === 0) {
                     socket.emit('error', { message: 'Au moins un thème doit être sélectionné', code: ERROR_CODES.INVALID });

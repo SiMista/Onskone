@@ -48,6 +48,7 @@ const LobbyPlayersGrid = ({
               currentPlayerIsHost={!!currentPlayer?.isHost}
               isActive={player.isActive}
               isFirstPlayer={index < 3}
+              premium={player.isPremium}
               variant="square"
               onKick={onKick}
               onPromote={onPromote}

@@ -53,6 +53,18 @@ if (isStudioFrame && typeof window !== 'undefined') {
     if (bot === '1') sessionStorage.setItem('studioBot', '1');
     else if (bot === '0') sessionStorage.removeItem('studioBot');
   } catch { /* silent */ }
+
+  // Sync URL `?premium=1|0` into the slot's premium cache (même format que
+  // premium.ts : { version, premium }) pour tester le déblocage sans vrai achat.
+  try {
+    const premium = new URLSearchParams(window.location.search).get('premium');
+    if (premium === '1' || premium === '0') {
+      localStorage.setItem(
+        `studio${studioSlotIndex}_onskone_premium`,
+        JSON.stringify({ version: 1, premium: premium === '1' }),
+      );
+    }
+  } catch { /* silent */ }
 }
 
 export const studioStorage = {

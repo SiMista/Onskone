@@ -49,6 +49,8 @@ const Studio = () => {
   const [slotReloadKeys, setSlotReloadKeys] = useState<Record<string, number>>({});
   const [burstCount, setBurstCount] = useState<number>(10);
   const [limitBreaker, setLimitBreaker] = useState<boolean>(false);
+  // Test premium global (débloque les thèmes premium sans vrai achat).
+  const [premium, setPremium] = useState<boolean>(false);
 
   const iframeRefs = useRef<Record<string, HTMLIFrameElement | null>>({});
 
@@ -139,6 +141,19 @@ const Studio = () => {
     });
   };
 
+  const togglePremium = () => {
+    const next = !premium;
+    setPremium(next);
+    if (running) {
+      slots.forEach((slot) => {
+        const frame = iframeRefs.current[slot.id];
+        try {
+          frame?.contentWindow?.postMessage({ type: 'studio:setPremium', enabled: next }, '*');
+        } catch { /* silent */ }
+      });
+    }
+  };
+
   const start = () => {
     slots.forEach((_, i) => purgeStudioSlot(i));
     // Garantir l'unicité des pseudos & avatars : deux slots avec le même
@@ -223,6 +238,9 @@ const Studio = () => {
       // avoids the race with the lobby auto-start (which reads sessionStorage
       // before the parent's postMessage might arrive).
       params.set('bot', slot.bot ? '1' : '0');
+      // Test premium : encodé au boot (studioStorage lit ?premium au module-load)
+      // pour que l'iframe démarre déjà débloquée, sans race avec l'auto-start.
+      params.set('premium', premium ? '1' : '0');
       if (!isRunning) return `${base}/?${params.toString()}`;
       if (index === 0) {
         params.set('autoCreate', '1');
@@ -235,7 +253,7 @@ const Studio = () => {
       params.set('autoJoin', '1');
       return `${base}/?${params.toString()}`;
     },
-    [debugTimers, gameMode, timeMultiplier]
+    [debugTimers, gameMode, timeMultiplier, premium]
   );
 
   const cols = useMemo(() => {
@@ -286,6 +304,8 @@ const Studio = () => {
         setTimeMultiplier={setTimeMultiplier}
         running={running}
         allBots={allBots}
+        premium={premium}
+        onTogglePremium={togglePremium}
         burstCount={burstCount}
         setBurstCount={setBurstCount}
         limitBreaker={limitBreaker}

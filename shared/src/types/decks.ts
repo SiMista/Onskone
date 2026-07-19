@@ -15,6 +15,8 @@ export interface ThemeInfo {
   emoji: string;
   /** Contenu réservé aux adultes - désactivé par défaut, requiert confirmation à l'activation. */
   mature?: boolean;
+  /** Thème réservé aux comptes premium - verrouillé (grisé + cadenas) tant que l'host n'a pas débloqué. Indépendant de `mature`. */
+  premium?: boolean;
 }
 
 /**

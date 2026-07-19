@@ -14,21 +14,20 @@ interface ModeOption {
   mode: GameMode;
   icon: string;
   iconBg: string;
-  iconPattern?: string;
 }
 
+// Dégradé seul, sans motif superposé : les rayures (remote) / points (local)
+// alourdissaient la carte, le dégradé texturé papier suffit.
 const MODES: ModeOption[] = [
   {
     mode: 'local',
     icon: 'fluent-emoji-flat:busts-in-silhouette',
     iconBg: 'bg-gradient-to-br from-warning-300 to-warning-orange',
-    iconPattern: 'bg-pattern-dots',
   },
   {
     mode: 'remote',
     icon: 'fluent-emoji-flat:globe-showing-europe-africa',
     iconBg: 'bg-gradient-to-br from-brand-200 to-brand-400',
-    iconPattern: 'bg-pattern-diagonal',
   },
 ];
 
@@ -50,7 +49,7 @@ const GameModeModal = ({ isOpen, onClose, onSelect }: GameModeModalProps) => {
               onClick={() => onSelect(opt.mode)}
               className="group flex items-stretch w-full border-[2.5px] border-black rounded-2xl overflow-hidden stack-shadow-sm bg-white hover:scale-[1.02] active:scale-[0.98] transition-transform duration-150 cursor-pointer text-left"
             >
-              <EmojiCard icon={opt.icon} bgClassName={opt.iconBg} pattern={opt.iconPattern} />
+              <EmojiCard icon={opt.icon} bgClassName={opt.iconBg} />
               <div className="flex-1 min-w-0 px-3.5 py-3 md:px-4 md:py-3.5 flex flex-col justify-center gap-1">
                 <div className="font-display font-bold text-display-md text-gray-900 leading-tight">
                   {text.title}

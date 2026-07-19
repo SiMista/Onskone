@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Icon } from '@iconify/react';
-import { LuX, LuLock } from 'react-icons/lu';
+import { LuX, LuLock, LuCrown } from 'react-icons/lu';
 import type { DecksCatalogWithMeta, SelectedDecks, ThemeInfo } from '@onskone/shared';
 import { useLocale } from '../i18n';
 import { getCategoryColor, lightenHex, darkenHex } from '../constants/game';
 import { STICKER_FILTER } from '../constants/icons';
 import { useModalChrome } from '../hooks/useModalChrome';
+import { useModalTransition } from '../hooks/useModalTransition';
+import { usePremium } from '../utils/premium';
 import ConfirmModal from './ConfirmModal';
+import PremiumModal from './PremiumModal';
 import EmojiCard from './EmojiCard';
 
 interface ThemePickerModalProps {
@@ -50,6 +54,7 @@ const toggleTheme = (selected: SelectedDecks, category: string, code: string, ca
 
 const ThemePickerModal = ({ isOpen, onClose, catalog, selected, mode, hostName, onChange }: ThemePickerModalProps) => {
   const { t } = useLocale();
+  const isPremium = usePremium();
   const categories = useMemo(() => Object.keys(catalog), [catalog]);
   const [activeCategory, setActiveCategory] = useState<string>(categories[0] ?? '');
   const isEditable = mode === 'edit';
@@ -74,8 +79,10 @@ const ThemePickerModal = ({ isOpen, onClose, catalog, selected, mode, hostName, 
     return { total, sel };
   }, [catalog, localSelected]);
 
+  // Animation de sortie (fondu) : requestClose joue l'anim puis démonte.
+  const { render, closing, requestClose } = useModalTransition(isOpen, onClose);
   // Scroll-lock body + fermeture Escape, partagés avec ModalShell.
-  useModalChrome(isOpen, onClose);
+  useModalChrome(render, requestClose);
 
   // À l'ouverture : revenir sur la première catégorie.
   // Important : le reset de la catégorie ne doit se faire QU'À la transition fermé→ouvert,
@@ -108,6 +115,8 @@ const ThemePickerModal = ({ isOpen, onClose, catalog, selected, mode, hostName, 
 
   // Pending: thème mature dont l'activation est en attente de confirmation.
   const [pendingMature, setPendingMature] = useState<{ cat: string; code: string } | null>(null);
+  // Ouverture du paywall quand on tente d'activer un thème premium non débloqué.
+  const [showPaywall, setShowPaywall] = useState(false);
 
   const applyToggle = (cat: string, code: string) => {
     const next = toggleTheme(localRef.current, cat, code, catalog);
@@ -122,6 +131,12 @@ const ThemePickerModal = ({ isOpen, onClose, catalog, selected, mode, hostName, 
       return;
     }
     const alreadySelected = isThemeSelected(localRef.current, cat, code);
+    // Thème premium non débloqué : on ouvre le paywall au lieu de toggler.
+    // (La désactivation reste directe, et un thème déjà débloqué suit le flux normal.)
+    if (info.premium && !isPremium && !alreadySelected) {
+      setShowPaywall(true);
+      return;
+    }
     // Pour les thèmes mature : on confirme à chaque activation. La désactivation est directe.
     if (info.mature && !alreadySelected) {
       setPendingMature({ cat, code });
@@ -130,17 +145,18 @@ const ThemePickerModal = ({ isOpen, onClose, catalog, selected, mode, hostName, 
     applyToggle(cat, code);
   };
 
-  if (!isOpen) return null;
+  if (!render) return null;
 
   const activeColor = getCategoryColor(activeCategory);
   const activePattern = CATEGORY_PATTERNS[activeCategory];
   const activeDescription = t.decks.categoryDescriptions[activeCategory] ?? '';
   const activeThemes = catalog[activeCategory] ?? [];
 
-  return (
+  // Portal vers <body> : échappe à tout stacking context parent (cf. ModalShell).
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex flex-col items-center bg-black/70 backdrop-blur-md animate-modal-backdrop"
-      onClick={onClose}
+      className={`fixed inset-0 z-50 flex flex-col items-center bg-black/70 backdrop-blur-md ${closing ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop'}`}
+      onClick={requestClose}
       style={{
         paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1.5rem)',
         paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))',
@@ -172,7 +188,7 @@ const ThemePickerModal = ({ isOpen, onClose, catalog, selected, mode, hostName, 
             </p>
           </div>
           <button
-            onClick={onClose}
+            onClick={requestClose}
             aria-label={t.common.close}
             className="shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-white/15 hover:bg-white/25 text-white active:scale-90 transition-all duration-200 cursor-pointer border-2 border-white/30"
           >
@@ -244,12 +260,17 @@ const ThemePickerModal = ({ isOpen, onClose, catalog, selected, mode, hostName, 
               )}
               {activeThemes.map((info: ThemeInfo) => {
                 const active = isThemeSelected(localSelected, activeCategory, info.code);
+                // Verrouillé = premium ET pas débloqué. Reste toujours grisé + cadenas.
+                const locked = !!info.premium && !isPremium;
+                // Premium débloqué : cadre doré (rappelle que le thème fait partie du pack).
+                const goldFrame = !!info.premium && !locked;
                 return (
                   <button
                     key={info.code}
                     type="button"
                     onClick={() => handleToggle(activeCategory, info.code, info)}
-                    className={`group relative flex items-stretch w-full text-left border-[2.5px] border-black rounded-2xl overflow-hidden bg-white min-h-[96px] md:min-h-[112px] transition-all duration-200 ${isEditable ? 'cursor-pointer active:scale-[0.98]' : 'cursor-default'
+                    style={goldFrame ? { borderColor: '#d69a1e' } : undefined}
+                    className={`group relative flex items-stretch w-full text-left border-[2.5px] rounded-2xl overflow-hidden bg-white min-h-[96px] md:min-h-[112px] transition-all duration-200 ${goldFrame ? '' : 'border-black'} ${isEditable ? 'cursor-pointer active:scale-[0.98]' : 'cursor-default'
                       } ${active
                         ? 'stack-shadow-sm opacity-100'
                         : 'opacity-55 grayscale-[60%]'
@@ -278,6 +299,27 @@ const ThemePickerModal = ({ isOpen, onClose, catalog, selected, mode, hostName, 
                         </div>
                       )}
                     </div>
+                    {/* Indicateur premium en haut à droite - deux états :
+                        - verrouillé (non-premium) : pastille noire + cadenas ("faut payer")
+                        - débloqué (premium) : cadre doré (ci-dessus) + petite couronne
+                          d'angle (rappelle que le thème vient du pack, sans encombrer). */}
+                    {locked && (
+                      <span className="absolute top-2 right-2 inline-flex items-center gap-1 h-7 px-2 rounded-full bg-black/70 text-white border-2 border-white/70">
+                        <LuLock size={13} strokeWidth={2.75} aria-hidden />
+                        <span className="text-[11px] font-display font-bold leading-none tracking-wide">
+                          {t.themePicker.premiumBadge}
+                        </span>
+                      </span>
+                    )}
+                    {goldFrame && (
+                      <span
+                        aria-label={t.themePicker.premiumBadge}
+                        className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full border-2 border-black text-black stack-shadow-sm"
+                        style={{ background: 'linear-gradient(135deg, #fff1b8 0%, #ffd24a 45%, #e6a52a 100%)' }}
+                      >
+                        <LuCrown size={13} strokeWidth={2.75} aria-hidden />
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -301,7 +343,11 @@ const ThemePickerModal = ({ isOpen, onClose, catalog, selected, mode, hostName, 
         cancelText={t.themePicker.matureConfirm.cancel}
         confirmVariant="danger"
       />
-    </div>
+
+      {/* Paywall premium - ouvert au clic sur un thème verrouillé */}
+      <PremiumModal isOpen={showPaywall} onClose={() => setShowPaywall(false)} />
+    </div>,
+    document.body,
   );
 };
 

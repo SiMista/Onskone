@@ -1,11 +1,13 @@
 import { Catalog } from './gallery/Catalog';
 import { Simulators } from './gallery/Simulators';
+import { PremiumShowcase } from './gallery/PremiumShowcase';
 
 // =====================================================================
 // Galerie de composants (DEV only) - inspecteur live du design system.
-// Découpée en deux familles :
-//   - <Catalog>     composants statiques affichés tels quels (boutons, inputs…)
-//   - <Simulators>  démos pilotées par du state (toasts, modales, ShareCard…)
+// Découpée en trois familles :
+//   - <Catalog>         composants statiques affichés tels quels (boutons, inputs…)
+//   - <Simulators>      démos pilotées par du state (toasts, modales, ShareCard…)
+//   - <PremiumShowcase> composants de monétisation (badges store, paywall, verrous)
 // =====================================================================
 
 export const Gallery = () => (
@@ -21,5 +23,6 @@ export const Gallery = () => (
 
     <Catalog />
     <Simulators />
+    <PremiumShowcase />
   </div>
 );

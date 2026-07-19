@@ -9,6 +9,8 @@ export class Player implements ServerPlayer {
     isHost: boolean;
     isActive: boolean;
     avatarId: number;
+    /** Statut premium déclaré au handshake (cosmétique : pseudo doré + cadre avatar). */
+    isPremium: boolean;
     /**
      * Secret de reconnexion. SERVER-ONLY : jamais sérialisé vers les clients
      * (omis par serializePlayer) et émis UNIQUEMENT au propriétaire via
@@ -19,13 +21,14 @@ export class Player implements ServerPlayer {
     // Note: score est optionnel dans IPlayer et n'est pas utilisé ici
     // Les scores sont stockés dans Round.scores pour chaque round
 
-    constructor(name: string, socketId: string = "", isHost: boolean = false, avatarId: number = 0) {
+    constructor(name: string, socketId: string = "", isHost: boolean = false, avatarId: number = 0, isPremium: boolean = false) {
         this.id = uuidv4();
         this.socketId = socketId;
         this.name = name;
         this.isHost = isHost;
         this.isActive = true; // Nouveau joueur est actif par défaut
         this.avatarId = avatarId;
+        this.isPremium = isPremium;
         this.reconnectToken = randomUUID();
     }
 }

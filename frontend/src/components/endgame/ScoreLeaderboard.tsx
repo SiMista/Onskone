@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
 import type { IPlayer, IRound, LeaderboardEntry } from '@onskone/shared';
 import Avatar from '../Avatar';
+import PremiumName from '../PremiumName';
 import { useLocale } from '../../i18n';
 
 interface ScoreLeaderboardProps {
@@ -113,11 +114,13 @@ const ScoreLeaderboard: React.FC<ScoreLeaderboardProps> = ({
                 >
                   {index + 1}
                 </span>
-                <Avatar avatarId={entry.player.avatarId} name={entry.player.name} size="sm" className="flex-shrink-0 md:hidden" />
-                <Avatar avatarId={entry.player.avatarId} name={entry.player.name} size="md" className="flex-shrink-0 hidden md:block" />
-                <span className="text-sm md:text-lg font-semibold truncate text-gray-900">
-                  {entry.player.name}
-                </span>
+                <Avatar avatarId={entry.player.avatarId} name={entry.player.name} size="sm" premium={entry.player.isPremium} className="flex-shrink-0 md:hidden" />
+                <Avatar avatarId={entry.player.avatarId} name={entry.player.name} size="md" premium={entry.player.isPremium} className="flex-shrink-0 hidden md:block" />
+                <PremiumName
+                  name={entry.player.name}
+                  premium={entry.player.isPremium}
+                  className="text-sm md:text-lg font-semibold truncate text-gray-900"
+                />
               </div>
               <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                 <span className="text-base md:text-xl font-display font-bold tabular-nums text-gray-900">

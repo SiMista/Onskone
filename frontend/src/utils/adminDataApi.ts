@@ -37,3 +37,23 @@ export async function setVersionGate(action: 'force_latest' | 'disable'): Promis
   if (!res.ok) throw new Error('Erreur de mise à jour de la maj forcée.');
   return (await res.json()) as VersionGateState;
 }
+
+// --- Promo premium (premium offert à tous) ---
+export interface PremiumPromoState {
+  active: boolean;
+}
+
+export async function fetchPremiumPromo(): Promise<PremiumPromoState> {
+  const res = await adminFetch('/admin/premium-promo');
+  if (!res.ok) throw new Error('Erreur de chargement de la promo premium.');
+  return (await res.json()) as PremiumPromoState;
+}
+
+export async function setPremiumPromo(action: 'enable' | 'disable'): Promise<PremiumPromoState> {
+  const res = await adminFetch('/admin/premium-promo', {
+    method: 'POST',
+    body: JSON.stringify({ action }),
+  });
+  if (!res.ok) throw new Error('Erreur de mise à jour de la promo premium.');
+  return (await res.json()) as PremiumPromoState;
+}

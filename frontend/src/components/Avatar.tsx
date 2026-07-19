@@ -6,6 +6,8 @@ interface AvatarProps {
   name?: string;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
+  /** Cadre doré brillant autour de l'avatar pour les joueurs premium. */
+  premium?: boolean;
 }
 
 const sizeClasses = {
@@ -15,7 +17,7 @@ const sizeClasses = {
   xl: 'w-20 h-20 text-3xl',
 };
 
-const Avatar = ({ avatarId, name = '', size = 'md', className = '' }: AvatarProps) => {
+const Avatar = ({ avatarId, name = '', size = 'md', className = '', premium = false }: AvatarProps) => {
   const sizeClass = sizeClasses[size];
 
   // Fallback: initiales si l'image ne charge pas
@@ -32,9 +34,9 @@ const Avatar = ({ avatarId, name = '', size = 'md', className = '' }: AvatarProp
   useEffect(() => { setImageError(false); }, [avatarId]);
   const avatarUrl = getAvatarUrl(avatarId);
 
-  return (
+  const inner = (
     <div
-      className={`rounded-full bg-white border-1 border-black flex items-center justify-center overflow-hidden shadow-md ${sizeClass} ${className}`}
+      className={`rounded-full bg-white border-1 border-black flex items-center justify-center overflow-hidden shadow-md ${sizeClass} ${premium ? '' : className}`}
     >
       {!imageError ? (
         <img
@@ -46,6 +48,18 @@ const Avatar = ({ avatarId, name = '', size = 'md', className = '' }: AvatarProp
       ) : (
         <span className="font-bold text-black">{getInitials(name)}</span>
       )}
+    </div>
+  );
+
+  if (!premium) return inner;
+
+  // Cadre doré brillant premium : anneau dégradé + halo doux (respecte reduced-motion).
+  return (
+    <div
+      className={`premium-glow rounded-full p-[2.5px] flex items-center justify-center ${className}`}
+      style={{ background: 'linear-gradient(135deg, #fff1b8 0%, #ffd24a 45%, #e6a52a 100%)' }}
+    >
+      {inner}
     </div>
   );
 };

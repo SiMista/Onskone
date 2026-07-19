@@ -35,6 +35,7 @@ export function serializePlayer(p: IPlayer): IPlayer {
         score: p.score,
         isActive: p.isActive,
         avatarId: p.avatarId,
+        isPremium: p.isPremium,
     };
 }
 

@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { Capacitor } from '@capacitor/core';
 import socket from './socket';
+import { ANDROID_APP_ID, IOS_APP_ID, PLAY_WEB, APP_STORE_WEB } from './storeLinks';
 
 // Détecte un refus de connexion "version trop vieille" émis par le backend
 // (versionGate). Quand ça arrive, on coupe le retry infini et on bascule l'UI
@@ -33,11 +34,9 @@ export const useVersionBlock = (): VersionBlock | null =>
   useSyncExternalStore(subscribe, () => blocked, () => blocked);
 
 // --- Liens magasins ---------------------------------------------------------
-const ANDROID_APP_ID = 'com.onskone.app';
-// App Store ID (Apple ID numérique de la fiche App Store Connect), préfixé "id".
-const IOS_APP_ID = 'id6782334531';
-const PLAY_WEB = `https://play.google.com/store/apps/details?id=${ANDROID_APP_ID}`;
-const APP_STORE_WEB = `https://apps.apple.com/app/${IOS_APP_ID}`;
+// Constantes et schemes centralisés dans ./storeLinks (partagés avec la
+// monétisation premium). Ici on garde une logique propre au version-gate :
+// sur web, on RECHARGE (pas de redirection store) car le web sert le dernier build.
 
 // Ouvre la mise à jour : store natif sur mobile, simple reload sur web (le web
 // sert toujours le dernier build une fois rechargé).
