@@ -575,7 +575,7 @@ export const fr: Dictionary = {
 
   appBanner: {
     message: 'Onskoné, l\'appli',
-    tagline: 'encore mieux sur ton tel',
+    tagline: 'encore mieux sur ton tel !',
     cta: 'Obtenir',
     close: 'Fermer',
   },
