@@ -82,7 +82,7 @@ const ThemePickerModal = ({ isOpen, onClose, catalog, selected, mode, hostName, 
   // Animation de sortie (fondu) : requestClose joue l'anim puis démonte.
   const { render, closing, requestClose } = useModalTransition(isOpen, onClose);
   // Scroll-lock body + fermeture Escape, partagés avec ModalShell.
-  useModalChrome(render, requestClose);
+  const { onBackdropClick } = useModalChrome(render, requestClose);
 
   // À l'ouverture : revenir sur la première catégorie.
   // Important : le reset de la catégorie ne doit se faire QU'À la transition fermé→ouvert,
@@ -156,7 +156,7 @@ const ThemePickerModal = ({ isOpen, onClose, catalog, selected, mode, hostName, 
   return createPortal(
     <div
       className={`fixed inset-0 z-50 flex flex-col items-center bg-black/70 backdrop-blur-md ${closing ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop'}`}
-      onClick={requestClose}
+      onClick={onBackdropClick}
       style={{
         paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1.5rem)',
         paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))',

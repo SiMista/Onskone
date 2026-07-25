@@ -4,6 +4,7 @@ import { LuX, LuCrown, LuBellOff, LuMessagesSquare, LuLayers, LuInfinity } from 
 import StoreBadge from './StoreBadge';
 import Avatar from './Avatar';
 import { useLocale } from '../i18n';
+import { useToast } from './Toast';
 import { useModalChrome } from '../hooks/useModalChrome';
 import { useModalTransition } from '../hooks/useModalTransition';
 import { canPurchase, purchasePremium, restorePurchases } from '../utils/premium';
@@ -28,12 +29,13 @@ const DISMISS_THRESHOLD = 110;
  */
 const PremiumModal = ({ isOpen, onClose }: PremiumModalProps) => {
   const { t } = useLocale();
+  const showToast = useToast();
   const [busy, setBusy] = useState(false);
   const native = canPurchase();
 
   // Animation de sortie : requestClose lance le fondu puis démonte via onClose.
   const { render, closing, requestClose } = useModalTransition(isOpen, onClose);
-  useModalChrome(render, requestClose);
+  const { onBackdropClick } = useModalChrome(render, requestClose);
 
   // Drag-to-dismiss : on suit le doigt en translateY sur la feuille.
   // dragY vit en ref (pas de re-render à chaque frame + lecture fiable à la fin).
@@ -79,8 +81,13 @@ const PremiumModal = ({ isOpen, onClose }: PremiumModalProps) => {
   const handlePurchase = async () => {
     setBusy(true);
     try {
-      const ok = await purchasePremium();
-      if (ok) requestClose();
+      const res = await purchasePremium();
+      if (res.ok) {
+        requestClose();
+      } else if (res.failure !== 'cancelled') {
+        // Échec réel (réseau, offering absente…) : on prévient au lieu de rester muet.
+        showToast(t.premium.purchaseError, 'error');
+      }
     } finally {
       setBusy(false);
     }
@@ -89,8 +96,16 @@ const PremiumModal = ({ isOpen, onClose }: PremiumModalProps) => {
   const handleRestore = async () => {
     setBusy(true);
     try {
-      const ok = await restorePurchases();
-      if (ok) requestClose();
+      const res = await restorePurchases();
+      if (res.ok) {
+        requestClose();
+      } else if (res.failure === 'empty') {
+        // Le SDK a répondu : ce compte n'a rien acheté. Cas normal, ton neutre.
+        showToast(t.premium.restoreEmpty, 'info');
+      } else if (res.failure !== 'cancelled') {
+        // Échec réel : surtout PAS "aucun achat", l'user a peut-être payé.
+        showToast(t.premium.restoreError, 'error');
+      }
     } finally {
       setBusy(false);
     }
@@ -113,12 +128,15 @@ const PremiumModal = ({ isOpen, onClose }: PremiumModalProps) => {
   // context. Cf. ModalShell.
   return createPortal(
     <div
-      className={`fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm ${closing ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop'}`}
-      onClick={(e) => { if (e.target === e.currentTarget) requestClose(); }}
+      className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-6 bg-black/60 backdrop-blur-sm ${closing ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop'}`}
+      onClick={onBackdropClick}
     >
+      {/* Téléphone : bottom sheet plein largeur ancré en bas. Tablette+ : la feuille
+          grandit (max-w-lg), se centre et ferme ses 4 coins (vraie modale) au lieu
+          de rester une petite languette perdue en bas de l'iPad. */}
       <div
         ref={sheetRef}
-        className={`relative w-full max-w-md flex flex-col max-h-[92dvh] select-none border-[3px] border-b-0 border-black rounded-t-[30px] overflow-hidden stack-shadow-lg safe-pb texture-paper ${closing ? 'animate-bottomsheet-out' : dragging ? '' : 'animate-bottomsheet'}`}
+        className={`relative w-full max-w-md sm:max-w-2xl flex flex-col max-h-[92dvh] sm:max-h-[85dvh] select-none border-[3px] border-b-0 sm:border-b-[3px] border-black rounded-t-[30px] sm:rounded-[30px] overflow-hidden stack-shadow-lg safe-pb sm:pb-0 texture-paper ${closing ? 'animate-bottomsheet-out' : dragging ? '' : 'animate-bottomsheet'}`}
         style={{
           background: GOLD_BG,
           transform: !closing && dragY ? `translateY(${dragY}px)` : undefined,
@@ -156,15 +174,16 @@ const PremiumModal = ({ isOpen, onClose }: PremiumModalProps) => {
             <span aria-hidden className="block mx-auto w-11 h-1.5 rounded-full bg-black/25" />
           </div>
 
-          {/* HERO : couronne + titre */}
-          <div className="flex flex-col items-center text-center px-5 pt-1 pb-2.5">
-            <span className="premium-halo w-14 h-14 flex items-center justify-center rounded-2xl bg-black border-[3px] border-black stack-shadow">
-              <LuCrown size={28} strokeWidth={2.25} className="text-warning-orange" />
+          {/* HERO : couronne + titre (agrandis sur tablette pour remplir l'espace) */}
+          <div className="flex flex-col items-center text-center px-5 pt-1 pb-2.5 sm:pt-3 sm:pb-4">
+            <span className="premium-halo w-14 h-14 sm:w-20 sm:h-20 flex items-center justify-center rounded-2xl sm:rounded-3xl bg-black border-[3px] border-black stack-shadow">
+              <LuCrown size={28} strokeWidth={2.25} className="text-warning-orange sm:hidden" />
+              <LuCrown size={40} strokeWidth={2.25} className="text-warning-orange hidden sm:block" />
             </span>
-            <h2 className="relative mt-2 mb-0 font-display font-extrabold text-[26px] leading-none text-black tracking-tight">
+            <h2 className="relative mt-2 sm:mt-3.5 mb-0 font-display font-extrabold text-[26px] sm:text-[34px] leading-none text-black tracking-tight">
               {t.premium.title}
             </h2>
-            <p className="relative mt-1.5 mb-0 font-display font-bold text-[13px] text-black/70">
+            <p className="relative mt-1.5 sm:mt-2 mb-0 font-display font-bold text-[13px] sm:text-base text-black/70">
               {t.premium.subtitle}
             </p>
           </div>
@@ -172,7 +191,7 @@ const PremiumModal = ({ isOpen, onClose }: PremiumModalProps) => {
 
         {/* Corps : tient d'un bloc sur écran normal ; scroll de secours uniquement
             si l'écran est vraiment trop court (évite le débordement). */}
-        <div className="relative flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-2 flex flex-col gap-2">
+        <div className="relative flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 sm:px-8 pb-2 sm:pb-4 flex flex-col gap-2 sm:gap-3">
           {/* Aperçu joueur premium (avatar cadré or + pseudo doré) - mis en avant */}
           <div className="flex items-center gap-3 rounded-xl border-2 border-black bg-black px-3 py-2">
             <Avatar avatarId={previewAvatarId} name={previewName} size="md" premium />
@@ -211,23 +230,25 @@ const PremiumModal = ({ isOpen, onClose }: PremiumModalProps) => {
         </div>
 
         {/* Pied : CTA */}
-        <div className="relative shrink-0 px-4 pt-2 pb-2 border-t-2 border-black/20">
+        <div className="relative shrink-0 px-4 sm:px-8 pt-2 sm:pt-3 pb-2 sm:pb-4 border-t-2 border-black/20">
           {native ? (
-            <div className="flex flex-col items-center gap-1.5">
+            <div className="flex flex-col items-center gap-2.5">
               <button
                 type="button"
                 onClick={handlePurchase}
                 disabled={busy}
-                className="relative w-full h-13 flex items-center justify-center gap-2 rounded-2xl border-[3px] border-black bg-black font-display font-extrabold text-base text-warning-orange stack-shadow active:scale-[0.98] transition-transform disabled:opacity-60 cursor-pointer"
+                className="relative w-full h-13 sm:h-15 flex items-center justify-center gap-2 rounded-2xl border-[3px] border-black bg-black font-display font-extrabold text-base sm:text-lg text-warning-orange stack-shadow active:scale-[0.98] transition-transform disabled:opacity-60 cursor-pointer"
               >
                 <LuCrown size={20} strokeWidth={2.5} />
                 <span>{busy ? t.premium.purchasing : t.premium.unlock}</span>
               </button>
+              {/* Zone tactile propre (py-1.5 px-3) pour ne pas coller au bouton
+                  au-dessus : sinon le doigt touche les deux cibles à la fois. */}
               <button
                 type="button"
                 onClick={handleRestore}
                 disabled={busy}
-                className="font-sans text-xs text-black/55 underline underline-offset-2 hover:text-black disabled:opacity-50 cursor-pointer"
+                className="py-1.5 px-3 font-sans text-xs text-black/55 underline underline-offset-2 hover:text-black disabled:opacity-50 cursor-pointer"
               >
                 {t.premium.restore}
               </button>

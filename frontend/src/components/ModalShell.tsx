@@ -70,8 +70,8 @@ const ModalShell = ({
   // Animation de sortie (fondu) : requestClose joue l'anim puis démonte.
   const { render, closing, requestClose } = useModalTransition(isOpen, onClose);
 
-  // Scroll-lock du body + fermeture sur Escape, tant que montée.
-  useModalChrome(render, requestClose);
+  // Scroll-lock du body + fermeture sur Escape / clic backdrop, tant que montée.
+  const { onBackdropClick } = useModalChrome(render, requestClose);
 
   if (!render) return null;
 
@@ -90,7 +90,7 @@ const ModalShell = ({
   return createPortal(
     <div
       className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm ${closing ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop'}`}
-      onClick={requestClose}
+      onClick={onBackdropClick}
       style={{
         paddingTop: 'max(1rem, env(safe-area-inset-top, 0px))',
         paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 0px))',

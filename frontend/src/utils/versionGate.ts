@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { Capacitor } from '@capacitor/core';
 import socket from './socket';
-import { ANDROID_APP_ID, IOS_APP_ID, PLAY_WEB, APP_STORE_WEB } from './storeLinks';
+import { PLAY_NATIVE, APP_STORE_NATIVE, PLAY_WEB, APP_STORE_WEB } from './storeLinks';
 
 // Détecte un refus de connexion "version trop vieille" émis par le backend
 // (versionGate). Quand ça arrive, on coupe le retry infini et on bascule l'UI
@@ -44,13 +44,13 @@ export const openUpdate = (): void => {
   const platform = Capacitor.getPlatform();
   if (platform === 'android') {
     // market:// ouvre directement l'app Play Store ; fallback web si absente.
-    window.location.href = `market://details?id=${ANDROID_APP_ID}`;
+    window.location.href = PLAY_NATIVE;
     setTimeout(() => { window.location.href = PLAY_WEB; }, 800);
     return;
   }
   if (platform === 'ios') {
     // itms-apps:// ouvre directement l'app App Store ; fallback web si absente.
-    window.location.href = `itms-apps://apps.apple.com/app/${IOS_APP_ID}`;
+    window.location.href = APP_STORE_NATIVE;
     setTimeout(() => { window.location.href = APP_STORE_WEB; }, 800);
     return;
   }

@@ -1,6 +1,7 @@
-import { LuDownload, LuX } from 'react-icons/lu';
+import { LuX } from 'react-icons/lu';
+import StoreBadge from './StoreBadge';
 import { useLocale } from '../i18n';
-import { openStore } from '../utils/storeLinks';
+import { detectMobileOS, APP_STORE_WEB, PLAY_WEB } from '../utils/storeLinks';
 import { useAppBannerVisible, hideAppBanner } from '../utils/appBanner';
 
 // Bandeau "télécharge l'app" : WEB uniquement (jamais dans l'app native).
@@ -12,6 +13,12 @@ const AppDownloadBanner = () => {
   const { t } = useLocale();
   const visible = useAppBannerVisible();
 
+  // Toujours des badges store officiels (jamais un bouton maison) : ils disent
+  // "appli" bien plus vite qu'un CTA générique. On affiche celui de l'OS
+  // détecté, et les deux sur desktop où le user-agent ne tranche pas.
+  // Pas de state : le user-agent ne change pas en cours de session.
+  const os = detectMobileOS();
+
   if (!visible) return null;
 
   return (
@@ -21,8 +28,10 @@ const AppDownloadBanner = () => {
       className="absolute top-0 inset-x-0 z-40 flex justify-center px-3 pointer-events-none"
       style={{ paddingTop: 'max(0.75rem, calc(env(safe-area-inset-top, 0px) + 0.25rem))' }}
     >
-      {/* Étiquette kraft "scotchée" - carte papier de la DA Onskoné, légèrement de travers */}
-      <div className="relative w-full max-w-sm pointer-events-auto">
+      {/* Étiquette kraft "scotchée" - carte papier de la DA Onskoné, légèrement de travers.
+          Plus large quand on affiche les DEUX badges (desktop) : sinon ils mangent
+          la place du titre, qui se tronque. */}
+      <div className={`relative w-full pointer-events-auto ${os === 'other' ? 'max-w-lg' : 'max-w-sm'}`}>
         {/* Ruban de scotch (washi tape) qui colle l'étiquette */}
         <span
           aria-hidden
@@ -51,14 +60,18 @@ const AppDownloadBanner = () => {
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => openStore()}
-            className="shrink-0 inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl bg-success-500 border-[2.5px] border-black font-display font-bold text-xs text-black active:scale-95 transition-all cursor-pointer stack-shadow-sm"
-          >
-            <LuDownload size={15} strokeWidth={2.75} />
-            {t.appBanner.cta}
-          </button>
+          {os === 'other' ? (
+            // Desktop : on ne peut pas deviner le téléphone de l'user, donc les
+            // deux fiches côte à côte (la largeur ne manque pas sur PC).
+            <div className="shrink-0 flex items-center gap-1.5">
+              <StoreBadge store="apple" href={APP_STORE_WEB} ariaLabel={t.premium.getOnAppStore} className="w-[96px]" />
+              <StoreBadge store="google" href={PLAY_WEB} ariaLabel={t.premium.getOnPlayStore} className="w-[108px]" />
+            </div>
+          ) : os === 'ios' ? (
+            <StoreBadge store="apple" href={APP_STORE_WEB} ariaLabel={t.premium.getOnAppStore} className="shrink-0 w-[112px]" />
+          ) : (
+            <StoreBadge store="google" href={PLAY_WEB} ariaLabel={t.premium.getOnPlayStore} className="shrink-0 w-[112px]" />
+          )}
 
           <button
             type="button"

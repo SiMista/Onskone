@@ -21,7 +21,7 @@ const BottomSheet = ({ isOpen, onClose, title, children }: BottomSheetProps) => 
   const { t } = useLocale();
 
   const { render, closing, requestClose } = useModalTransition(isOpen, onClose);
-  useModalChrome(render, requestClose);
+  const { onBackdropClick } = useModalChrome(render, requestClose);
 
   if (!render) return null;
 
@@ -29,7 +29,7 @@ const BottomSheet = ({ isOpen, onClose, title, children }: BottomSheetProps) => 
   return createPortal(
     <div
       className={`fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm ${closing ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop'}`}
-      onClick={requestClose}
+      onClick={onBackdropClick}
     >
       <div
         className={`relative w-full max-w-md bg-white border-[3px] border-black border-b-0 rounded-t-[28px] texture-paper stack-shadow-lg safe-pb ${closing ? 'animate-bottomsheet-out' : 'animate-bottomsheet'}`}

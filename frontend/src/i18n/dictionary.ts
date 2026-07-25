@@ -302,6 +302,9 @@ export interface Dictionary {
     unlock: string;
     restore: string;
     purchasing: string;
+    purchaseError: string;
+    restoreError: string;
+    restoreEmpty: string;
     // Mode web (redirection store)
     webOnly: string;
     getOnAppStore: string;

@@ -104,6 +104,17 @@ workflows:
             puts "CODE_SIGN_ENTITLEMENTS=App/App.entitlements applique au target App"
           '
 
+      - name: Declarer l'export compliance (chiffrement exempte)
+        # L'app n'utilise que du chiffrement standard (HTTPS/WSS) => exempte des
+        # regles d'export US. Sans cette cle, TestFlight refuse le build avec
+        # "The build is missing export compliance". Le projet iOS etant regenere
+        # a chaque build, on (re)ecrit la cle dans l'Info.plist ici.
+        script: |
+          set -e
+          PLIST="frontend/ios/App/App/Info.plist"
+          plutil -replace ITSAppUsesNonExemptEncryption -bool false "$PLIST"
+          echo "ITSAppUsesNonExemptEncryption=false injecte dans $PLIST"
+
       - name: Injecter la version (source unique = scripts/app-version.mjs)
         script: |
           VNAME=$(node scripts/app-version.mjs)

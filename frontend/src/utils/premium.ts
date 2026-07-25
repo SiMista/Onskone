@@ -159,38 +159,82 @@ export const refreshPremiumStatus = async (): Promise<boolean> => {
 };
 
 /**
- * Lance l'achat premium (feuille native Play/StoreKit). Ne DOIT être appelé
- * qu'en natif (cf. canPurchase). Renvoie true si l'utilisateur est premium après.
+ * Pourquoi une tentative n'a pas abouti, quand `ok` est false :
+ * - `cancelled` : l'utilisateur a fermé la feuille native → ne RIEN afficher ;
+ * - `empty`     : le SDK a répondu, mais aucun achat/entitlement à la clé. Sur une
+ *                 restauration c'est le cas NORMAL du "je n'ai jamais acheté" ;
+ * - `error`     : échec réel (réseau, SDK absent, offering non configurée…).
+ *
+ * `empty` et `error` doivent rester distincts : dire "aucun achat à restaurer" à
+ * quelqu'un qui est juste hors-ligne revient à lui affirmer qu'il n'a pas payé.
  */
-export const purchasePremium = async (): Promise<boolean> => {
-  if (!Capacitor.isNativePlatform()) return false;
+export type PurchaseFailure = 'cancelled' | 'empty' | 'error';
+
+/**
+ * Résultat d'une tentative d'achat/restauration. Permet à l'UI de distinguer :
+ * - `ok`      : premium actif après l'opération → fermer la modale ;
+ * - `failure` : pourquoi ça n'a pas marché (cf. PurchaseFailure) → message adapté.
+ * Sans ça, un bouton qui "ne fait rien" en cas d'échec ressemble au bug 2.1(b) d'Apple.
+ */
+export interface PurchaseResult {
+  ok: boolean;
+  failure?: PurchaseFailure;
+}
+
+/** true si l'erreur RevenueCat correspond à une annulation utilisateur (pas un échec). */
+const isUserCancelled = (err: unknown): boolean => {
+  const e = err as { userCancelled?: boolean; code?: string | number; message?: string } | null;
+  if (!e) return false;
+  return (
+    e.userCancelled === true ||
+    e.code === 'PURCHASE_CANCELLED' ||
+    e.code === 1 || // PurchasesErrorCode.PurchaseCancelledError
+    /cancel/i.test(e.message ?? '')
+  );
+};
+
+/**
+ * Lance l'achat premium (feuille native Play/StoreKit). Ne DOIT être appelé
+ * qu'en natif (cf. canPurchase). L'UI utilise le résultat pour afficher un toast
+ * en cas d'échec réel (mais pas si l'utilisateur a simplement annulé).
+ */
+export const purchasePremium = async (): Promise<PurchaseResult> => {
+  // Web : le bouton d'achat n'est même pas rendu (cf. canPurchase), donc y
+  // arriver signale un appel qui n'aurait pas dû se produire → 'error'.
+  if (!Capacitor.isNativePlatform()) return { ok: false, failure: 'error' };
   const mod = await loadPurchases();
-  if (!mod) return false;
+  if (!mod) return { ok: false, failure: 'error' }; // plugin absent du build
   try {
     const offerings = await mod.Purchases.getOfferings();
     const pkg = offerings.current?.availablePackages?.[0];
-    if (!pkg) return false;
+    if (!pkg) return { ok: false, failure: 'error' }; // aucune offering configurée
     const { customerInfo } = await mod.Purchases.purchasePackage({ aPackage: pkg });
     const active = readEntitlement(customerInfo);
     setPremium(active);
-    return active;
-  } catch {
-    // Achat annulé ou échoué : on ne change rien.
-    return isPremium;
+    // Achat "réussi" sans entitlement actif : anormal (config RevenueCat), on le
+    // signale plutôt que de laisser l'user devant une modale qui ne se ferme pas.
+    return active ? { ok: true } : { ok: false, failure: 'error' };
+  } catch (err) {
+    // Annulation utilisateur : pas une erreur à signaler.
+    if (isUserCancelled(err)) return { ok: isPremium, failure: 'cancelled' };
+    return { ok: false, failure: 'error' };
   }
 };
 
-/** Restaure les achats (obligatoire Apple). Renvoie le statut premium après. */
-export const restorePurchases = async (): Promise<boolean> => {
-  if (!Capacitor.isNativePlatform()) return false;
+/** Restaure les achats (obligatoire Apple). Même contrat de résultat que purchasePremium. */
+export const restorePurchases = async (): Promise<PurchaseResult> => {
+  if (!Capacitor.isNativePlatform()) return { ok: false, failure: 'error' };
   const mod = await loadPurchases();
-  if (!mod) return false;
+  if (!mod) return { ok: false, failure: 'error' };
   try {
     const { customerInfo } = await mod.Purchases.restorePurchases();
     const active = readEntitlement(customerInfo);
     setPremium(active);
-    return active;
-  } catch {
-    return isPremium;
+    // Le SDK a bien répondu : pas d'entitlement = ce compte n'a rien acheté.
+    // Cas NORMAL, à ne surtout pas confondre avec un échec réseau ('error').
+    return active ? { ok: true } : { ok: false, failure: 'empty' };
+  } catch (err) {
+    if (isUserCancelled(err)) return { ok: isPremium, failure: 'cancelled' };
+    return { ok: false, failure: 'error' };
   }
 };
