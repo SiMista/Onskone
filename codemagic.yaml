@@ -176,11 +176,14 @@ workflows:
   #      Le compte de service doit etre invite dans la Play Console avec les
   #      droits "Publier sur les canaux de test" + "Afficher les informations".
   #
-  # Pas de Mac ici : Android build sur Linux (moins cher, plus rapide).
+  # instance_type mac_mini_m2 : c'est la SEULE machine accessible sans facturation
+  # activee (500 min/mois offertes). linux_x2 serait moins cher/plus rapide pour de
+  # l'Android mais exige un plan payant -> "instance type is not available with the
+  # current billing plan". Un Mac build tres bien de l'Android (Gradle + JDK).
   # Contrairement a iOS, frontend/android EST commite : pas de `cap add android`.
   android-play:
     name: Android - Play Store (internal)
-    instance_type: linux_x2
+    instance_type: mac_mini_m2
     max_build_duration: 60
 
     environment:
