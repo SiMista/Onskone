@@ -263,6 +263,16 @@ workflows:
           # Ceinture : le bit +x est versionne (100755) mais un `cap sync` ou un
           # checkout depuis Windows peut le perdre -> "./gradlew: Permission denied".
           chmod +x gradlew
+          # Garde-fou : sans CM_KEYSTORE_PATH, build.gradle signe en DEBUG et
+          # l'AAB n'est rejete qu'a la publication, 10 min plus tard
+          # ("The Android App Bundle was signed with the wrong key").
+          # Mieux vaut echouer ici, avant de compiler.
+          if [ -z "$CM_KEYSTORE_PATH" ]; then
+            echo "ERREUR: CM_KEYSTORE_PATH vide."
+            echo "Le keystore 'onskone_upload' n'est pas attache au workflow"
+            echo "(cf environment.android_signing et Code signing identities)."
+            exit 1
+          fi
           ./gradlew bundleRelease \
             -PappVersionName="$VNAME" \
             -PappVersionCode="$VCODE"

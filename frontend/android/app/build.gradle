@@ -26,20 +26,36 @@ def gitVersionCode = { ->
     }
 }
 
-// Signature de release : lue depuis android/keystore.properties (gitignore, jamais commite).
-// Absent -> on retombe sur la signature debug (les builds non-release ne cassent pas).
+// Signature de release, deux sources possibles :
+//   1. CI (Codemagic) : variables CM_* exposees par le bloc `android_signing` du
+//      codemagic.yaml. keystore.properties n'est PAS dans le clone (gitignore),
+//      donc sans cette branche Gradle retombait en signature DEBUG et le Play
+//      Store rejetait l'AAB ("signed with the wrong key").
+//   2. Local : android/keystore.properties (gitignore, jamais commite).
+// Aucune des deux -> signature debug (les builds locaux non-release ne cassent pas).
+def cmKeystorePath = System.getenv("CM_KEYSTORE_PATH")
+def hasCmSigning = cmKeystorePath != null && !cmKeystorePath.isEmpty()
+
 def keystorePropertiesFile = rootProject.file("keystore.properties")
 def keystoreProperties = new Properties()
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
 
+def hasReleaseSigning = hasCmSigning || keystorePropertiesFile.exists()
+
 android {
     namespace = "com.onskone.app"
     compileSdk = rootProject.ext.compileSdkVersion
     signingConfigs {
         release {
-            if (keystorePropertiesFile.exists()) {
+            if (hasCmSigning) {
+                // CI : chemin ABSOLU fourni par Codemagic, pas relatif au projet.
+                storeFile file(cmKeystorePath)
+                storePassword System.getenv("CM_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("CM_KEY_ALIAS")
+                keyPassword System.getenv("CM_KEY_PASSWORD")
+            } else if (keystorePropertiesFile.exists()) {
                 storeFile rootProject.file(keystoreProperties['storeFile'])
                 storePassword keystoreProperties['storePassword']
                 keyAlias keystoreProperties['keyAlias']
@@ -66,7 +82,7 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-            signingConfig keystorePropertiesFile.exists() ? signingConfigs.release : signingConfigs.debug
+            signingConfig hasReleaseSigning ? signingConfigs.release : signingConfigs.debug
         }
     }
 }
