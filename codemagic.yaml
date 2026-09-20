@@ -162,3 +162,103 @@ workflows:
         auth: integration
         # Envoie automatiquement le build sur TestFlight apres compilation.
         submit_to_testflight: true
+
+  # ---------------------------------------------------------------------------
+  # Build + publication Android sur la piste "internal" du Play Store.
+  #
+  # Prerequis a configurer UNE fois dans l'interface Codemagic (pas ici) :
+  #   1. Code signing identities > Android keystores : uploader upload-keystore.jks
+  #      avec le reference name "onskone_upload" (= la valeur sous android_signing).
+  #      Alias de la cle : "upload".
+  #   2. Environment variables : GOOGLE_PLAY_SERVICE_ACCOUNT_CREDENTIALS
+  #      = le contenu ENTIER du JSON du compte de service Google Cloud,
+  #      dans le groupe "ios_signing", coche Secure.
+  #      Le compte de service doit etre invite dans la Play Console avec les
+  #      droits "Publier sur les canaux de test" + "Afficher les informations".
+  #
+  # Pas de Mac ici : Android build sur Linux (moins cher, plus rapide).
+  # Contrairement a iOS, frontend/android EST commite : pas de `cap add android`.
+  android-play:
+    name: Android - Play Store (internal)
+    instance_type: linux_x2
+    max_build_duration: 60
+
+    environment:
+      node: 22
+      java: 21
+      android_signing:
+        # Reference name du keystore uploade dans Codemagic (cf prerequis 1).
+        - onskone_upload
+      groups:
+        # Contient GOOGLE_PLAY_SERVICE_ACCOUNT_CREDENTIALS (cf prerequis 2).
+        # Le nom dit "ios" mais l'interface Codemagic impose de choisir un groupe
+        # existant : on reutilise celui-la faute de pouvoir en creer un "google_play".
+        # Effet de bord inoffensif : CERTIFICATE_PRIVATE_KEY (cle iOS) est aussi
+        # injectee ici, inutilisee par le build Android.
+        - ios_signing
+      vars:
+        # URL ABSOLUE du backend de prod : l'app native ne peut pas la deduire
+        # de window.location (origine = https://localhost). Cf getServerUrl().
+        VITE_SERVER_URL: "https://onskone.fr"
+        # Build natif : base d'assets relative './' (cf vite.config.ts).
+        CAPACITOR_BUILD: "1"
+        # Cle API PUBLIQUE RevenueCat Google (prefixe "goog_"), pendant Android de
+        # VITE_RC_APPLE_KEY. Lue par frontend/src/utils/premium.ts selon la plateforme.
+        # Absente => les achats in-app sont inertes (pas de crash, cf premium.ts).
+        VITE_RC_GOOGLE_KEY: $VITE_RC_GOOGLE_KEY
+
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+
+    scripts:
+      - name: Installer pnpm
+        # --force : l'image Codemagic a deja pnpm/pnpx, sans ca npm plante (EEXIST).
+        script: npm install -g pnpm@9 --force
+
+      - name: Installer les dependances
+        script: pnpm install
+
+      - name: Build shared (types) puis frontend
+        script: |
+          pnpm build:shared
+          pnpm build:frontend
+
+      - name: Synchroniser la plateforme Android
+        script: |
+          cd frontend
+          # frontend/android est commite : on ne fait QUE copier le build web dedans.
+          # Les icones/splash sont deja generees et versionnees (contrairement a iOS
+          # qui est recree a neuf a chaque build).
+          pnpm exec cap sync android
+
+      - name: Construire l'AAB signe
+        # Meme mecanique que scripts/release-aab.sh, mais la signature vient du
+        # keystore Codemagic (pas de keystore.properties ici) : Codemagic ecrit
+        # /tmp/keystore.properties et expose les valeurs, on les passe en -P.
+        # versionName/versionCode = source unique scripts/app-version.mjs.
+        script: |
+          set -e
+          VNAME=$(node scripts/app-version.mjs)
+          VCODE=$(node scripts/app-version.mjs --code)
+          echo "Version $VNAME (build $VCODE)"
+          cd frontend/android
+          ./gradlew bundleRelease \
+            -PappVersionName="$VNAME" \
+            -PappVersionCode="$VCODE"
+
+    artifacts:
+      - frontend/android/app/build/outputs/bundle/**/*.aab
+      - frontend/android/app/build/outputs/**/mapping.txt
+
+    publishing:
+      google_play:
+        credentials: $GOOGLE_PLAY_SERVICE_ACCOUNT_CREDENTIALS
+        # Piste "Test interne" : invisible du public, dispo en quelques minutes.
+        # Passer a "production" quand le flux est rode.
+        track: internal
+        # false = la version est publiee sur la piste, pas laissee en brouillon.
+        submit_as_draft: false
