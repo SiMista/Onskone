@@ -117,6 +117,12 @@ workflows:
 
       - name: Injecter la version (source unique = scripts/app-version.mjs)
         script: |
+          set -e
+          # Codemagic clone en superficiel (--depth) : `git rev-list --count HEAD`
+          # ne voit qu'une fraction de l'historique (57 au lieu de 166) et le
+          # versionCode peut RECULER d'un build a l'autre. Google/Apple refusent
+          # definitivement un numero deja utilise -> on restaure l'historique complet.
+          git fetch --unshallow 2>/dev/null || git fetch --depth=100000 || true
           VNAME=$(node scripts/app-version.mjs)
           VCODE=$(node scripts/app-version.mjs --code)
           echo "Version $VNAME (build $VCODE)"
@@ -245,10 +251,18 @@ workflows:
         # versionName/versionCode = source unique scripts/app-version.mjs.
         script: |
           set -e
+          # Codemagic clone en superficiel (--depth) : `git rev-list --count HEAD`
+          # ne voit qu'une fraction de l'historique (57 au lieu de 166) et le
+          # versionCode peut RECULER d'un build a l'autre. Google/Apple refusent
+          # definitivement un numero deja utilise -> on restaure l'historique complet.
+          git fetch --unshallow 2>/dev/null || git fetch --depth=100000 || true
           VNAME=$(node scripts/app-version.mjs)
           VCODE=$(node scripts/app-version.mjs --code)
           echo "Version $VNAME (build $VCODE)"
           cd frontend/android
+          # Ceinture : le bit +x est versionne (100755) mais un `cap sync` ou un
+          # checkout depuis Windows peut le perdre -> "./gradlew: Permission denied".
+          chmod +x gradlew
           ./gradlew bundleRelease \
             -PappVersionName="$VNAME" \
             -PappVersionCode="$VCODE"
