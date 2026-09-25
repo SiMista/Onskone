@@ -52,6 +52,19 @@ const AnswerPhase = ({
     new Set(initialAnsweredPlayerIds || [])
   );
   const stageTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  // Miroir de `answer` lisible depuis un cleanup/callback sans le capturer en
+  // closure : le state serait figé à sa valeur au moment de l'abonnement.
+  const answerRef = useRef(answer);
+  answerRef.current = answer;
+  const submittedRef = useRef(submitted);
+  submittedRef.current = submitted;
+  // Retrait VOLONTAIRE de la réponse (bouton « modifier »). Le champ garde
+  // l'ancien texte pour l'édition, donc sans ce drapeau le filet de démontage
+  // le renverrait tel quel : le `withdrawAnswer` serait annulé et la réponse
+  // effacée réapparaîtrait sous les yeux du joueur (la fenêtre de grâce serveur
+  // l'accepte, le placeholder NO_RESPONSE étant en place). Remis à false dès
+  // que le joueur retape quelque chose.
+  const withdrawnRef = useRef(false);
 
   useEffect(() => {
     playSound('answering');
@@ -80,6 +93,7 @@ const AnswerPhase = ({
     };
   }, []);
 
+
   const respondingPlayers = players.filter(p => p.id !== leaderId);
   const expectedAnswers = respondingPlayers.filter(p => p.isActive).length;
   const answersCount = answeredPlayerIds.size;
@@ -98,6 +112,24 @@ const AnswerPhase = ({
   const handleSubmit = () => {
     if (!answer.trim() || submitted || isLeader || stage !== 'idle') return;
 
+    // Verrouiller TOUT DE SUITE : `setSubmitted` n'est appliqué qu'au bout des
+    // 400ms d'animation, or le démontage peut tomber pendant ce délai (dernière
+    // réponse d'un autre joueur, ou timer serveur). Le filet de démontage lirait
+    // alors `submittedRef === false` et renverrait la même réponse une 2e fois.
+    submittedRef.current = true;
+    withdrawnRef.current = false;
+
+    // Émettre TOUT DE SUITE. L'emit vivait dans le setTimeout d'animation, que le
+    // démontage cleare : un clic dans les ~400 ms avant la bascule de phase (le
+    // moment où tout le monde clique) partait à la poubelle, et le filet de
+    // démontage ne le rattrapait pas, le verrou ci-dessus l'en empêchant. Seule
+    // l'animation reste différée.
+    socket.emit('submitAnswer', {
+      lobbyCode,
+      playerId: currentPlayerId,
+      answer: answer.trim()
+    });
+
     // Déclenche la séquence d'animation
     setStage('shaking');
     if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
@@ -105,31 +137,46 @@ const AnswerPhase = ({
     }
 
     const t = setTimeout(() => {
-      socket.emit('submitAnswer', {
-        lobbyCode,
-        playerId: currentPlayerId,
-        answer: answer.trim()
-      });
       setSubmitted(true);
       setStage('done');
     }, 400);
     stageTimeoutsRef.current.push(t);
   };
 
+  // Envoie le brouillon en cours, une seule fois. Utilisé par l'expiration du
+  // timer ET par le filet de démontage : le serveur tranche de toute façon
+  // (garde de phase + fenêtre de grâce), donc un doublon est sans risque.
+  // En ref : le cleanup de démontage ci-dessous ne doit capturer aucune closure
+  // (sinon il figerait la réponse à sa valeur du premier render).
+  const flushDraftRef = useRef<() => void>(() => { });
+  flushDraftRef.current = (): void => {
+    if (isLeader || submittedRef.current || withdrawnRef.current) return;
+    const draft = answerRef.current.trim();
+    if (!draft) return;
+    submittedRef.current = true;
+    socket.emit('submitAnswer', { lobbyCode, playerId: currentPlayerId, answer: draft });
+  };
+
+  // Filet de sécurité : la `key` de Game.tsx inclut la phase, donc AnswerPhase
+  // est DÉMONTÉ dès que le serveur avance. Le timer client (tick 1s) perd
+  // quasi systématiquement la course contre le setTimeout serveur : sans ce
+  // cleanup, une réponse en cours de frappe était purement perdue.
+  //
+  // ⚠️ Deps `[]` OBLIGATOIRE : sans elles, React rejoue le cleanup à CHAQUE
+  // render, donc à chaque frappe -> un submit par lettre (rate limit côté
+  // serveur, et le pilier voyait la réponse arriver pendant la saisie).
+  useEffect(() => () => { flushDraftRef.current(); }, []);
+
   const handleTimerExpire = () => {
-    if (!isLeader && !submitted && answer.trim()) {
-      socket.emit('submitAnswer', {
-        lobbyCode,
-        playerId: currentPlayerId,
-        answer: answer.trim()
-      });
+    if (!isLeader && !submittedRef.current && answerRef.current.trim()) {
+      flushDraftRef.current();
       setSubmitted(true);
       setStage('done');
     }
 
     if (isLeader) {
       const t = setTimeout(() => {
-        socket.emit('timerExpired', { lobbyCode });
+        socket.emit('timerExpired', { lobbyCode, phase: RoundPhase.ANSWERING });
       }, 500);
       stageTimeoutsRef.current.push(t);
     }

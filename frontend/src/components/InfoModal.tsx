@@ -11,9 +11,11 @@ interface InfoModalProps {
    * carousel ou autre composant qui gère lui-même son débord).
    */
   disableScrollFade?: boolean;
+  /** Ne pas refermer automatiquement au retour de l'app (cf. ModalShell). */
+  keepOnResume?: boolean;
 }
 
-const InfoModal = ({ isOpen, onClose, title, children, disableScrollFade = false }: InfoModalProps) => (
+const InfoModal = ({ isOpen, onClose, title, children, disableScrollFade = false, keepOnResume = false }: InfoModalProps) => (
   <ModalShell
     isOpen={isOpen}
     onClose={onClose}
@@ -22,6 +24,7 @@ const InfoModal = ({ isOpen, onClose, title, children, disableScrollFade = false
     titleFont="accent"
     washiTape
     disableScrollFade={disableScrollFade}
+    keepOnResume={keepOnResume}
   >
     {children}
   </ModalShell>

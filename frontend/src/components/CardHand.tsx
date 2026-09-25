@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
 import { GameCard } from '@onskone/shared';
 import { getCategoryColor } from '../constants/game';
@@ -44,6 +45,9 @@ interface CardHandProps {
  * de swipe-hint) reste dans QuestionSelection. Les seuils de swipe vivent dans
  * `useSwipe` côté parent.
  */
+/** Durée du fondu de sortie du rappel de swipe (doit matcher `.animate-fade-out`). */
+const HINT_FADE_OUT_MS = 260;
+
 const CardHand = ({
   cards,
   currentCardIndex,
@@ -61,6 +65,30 @@ const CardHand = ({
 }: CardHandProps) => {
   const { t } = useLocale();
   const navDisabled = locked || cards.length < 2;
+
+  // Sortie en fondu du rappel de swipe : on garde le bloc monté le temps de
+  // l'animation plutôt que de le retirer d'un coup (il disparaissait sèchement).
+  const hintVisible = showSwipeHint && !locked;
+  const [hintRender, setHintRender] = useState(hintVisible);
+  const [hintClosing, setHintClosing] = useState(false);
+  const hintExitRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (hintExitRef.current) clearTimeout(hintExitRef.current);
+    if (hintVisible) {
+      setHintClosing(false);
+      setHintRender(true);
+      return;
+    }
+    if (!hintRender) return;
+    setHintClosing(true);
+    hintExitRef.current = setTimeout(() => {
+      setHintRender(false);
+      setHintClosing(false);
+    }, HINT_FADE_OUT_MS);
+    return () => { if (hintExitRef.current) clearTimeout(hintExitRef.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hintVisible]);
 
   // Swipe dédié à l'overlay de hint : mêmes seuils, MAIS sans onInteract — le
   // hint ne doit se fermer qu'à la FIN du geste (touchend) ou au tap, jamais au
@@ -82,9 +110,9 @@ const CardHand = ({
         {...swipeHandlers.mouseHandlers}
       >
         {/* Indice de swipe (mobile uniquement) */}
-        {showSwipeHint && !locked && (
+        {hintRender && (
           <div
-            className="md:hidden absolute inset-0 z-50 flex flex-col items-center justify-center rounded-2xl bg-black/50 backdrop-blur-sm animate-fade-in pointer-events-auto"
+            className={`md:hidden absolute inset-0 z-50 flex flex-col items-center justify-center ${hintClosing ? 'animate-fade-out pointer-events-none' : 'animate-fade-in pointer-events-auto'}`}
             onClick={(e) => { e.stopPropagation(); onDismissSwipeHint(); }}
             onTouchStart={(e) => {
               e.stopPropagation();
@@ -98,17 +126,26 @@ const CardHand = ({
             }}
             aria-hidden
           >
-            <Icon
-              icon="ph:hand-swipe-left-duotone"
-              className="text-8xl text-white animate-swipe-hint drop-shadow-lg"
-              aria-hidden
-            />
-            <p className="mt-4 text-white text-xl font-display tracking-tight uppercase drop-shadow">
-              {t.phases.questionSelection.swipeOverlayTitle}
-            </p>
-            <p className="mt-1 text-white/85 text-sm italic px-6 text-center">
-              {t.phases.questionSelection.swipeOverlaySub}
-            </p>
+            {/* Bloc de rappel aux bords FLOUS : pas de bordure ni d'arrondi net,
+                le fond s'estompe vers ses extrémités (cf. .swipe-hint-block). Un
+                bloc rectangulaire à bords francs laissait deviner ses côtés, d'où
+                l'impression de carré posé sur la carte. La zone qui capte le swipe
+                reste plein écran (le parent). */}
+            <div className="swipe-hint-block flex flex-col items-center px-20 py-16">
+              <Icon
+                icon="ph:hand-swipe-left-duotone"
+                className="text-[8.5rem] text-white animate-swipe-hint drop-shadow-lg"
+                aria-hidden
+              />
+              <p className="mt-6 mb-0 text-white text-3xl font-display tracking-tight uppercase drop-shadow">
+                {t.phases.questionSelection.swipeOverlayTitle}
+              </p>
+              {/* `whitespace-nowrap` : la ligne doit tenir d'un bloc — coupée en deux
+                  elle se lit mal et déséquilibre le rappel. */}
+              <p className="mt-5 mb-0 text-white/85 text-sm italic text-center whitespace-nowrap">
+                {t.phases.questionSelection.swipeOverlaySub}
+              </p>
+            </div>
           </div>
         )}
 

@@ -25,7 +25,7 @@ import { useLobbyState } from '../hooks/useLobbyState';
 import { useLobbyExitEvents } from '../hooks/useLobbyExitEvents';
 import { useToast } from '../components/Toast';
 import { useLocale } from '../i18n';
-import { GAME_CONFIG } from '../constants/game';
+import { GAME_CONFIG, DEBUG_TIME_MULTIPLIER } from '../constants/game';
 import { STICKER_FILTER } from '../constants/icons';
 import { studioStorage, isStudioFrame } from '../utils/studioStorage';
 import { getCurrentPlayerFromStorage, storeReconnectToken, getReconnectToken } from '../utils/playerHelpers';
@@ -183,6 +183,23 @@ const Lobby = () => {
         }, 1200);
         return () => clearTimeout(timer);
     }, [currentPlayer?.isHost, players, selectedDecks, decksCatalog, lobbyCode]);
+
+    // Mode debug (DEV + `?debug=1`) : l'hôte pousse UNE fois le multiplicateur de
+    // debug au lobby, pour que toutes les phases soient longues pendant qu'on
+    // bosse sur un écran. On passe par le réglage de lobby plutôt que par un
+    // court-circuit local de la durée : c'est ce qui rend l'allongement RÉEL (la
+    // durée fait autorité côté serveur) et partagé par toute la table, au lieu
+    // d'un sablier qui affiche 1h pendant que le serveur coupe à 2 minutes.
+    // Le serveur refuse ce niveau hors développement.
+    const debugSpeedPushedRef = useRef(false);
+    useEffect(() => {
+        if (DEBUG_TIME_MULTIPLIER === null || debugSpeedPushedRef.current) return;
+        if (!lobbyCode || !currentPlayer?.isHost) return;
+        debugSpeedPushedRef.current = true;
+        if (timeMultiplier !== DEBUG_TIME_MULTIPLIER) {
+            onTimeMultiplierChange(DEBUG_TIME_MULTIPLIER);
+        }
+    }, [lobbyCode, currentPlayer?.isHost, timeMultiplier, onTimeMultiplierChange]);
 
     const handleUpdatePlayersList = useCallback((data: { players: IPlayer[] }) => {
         if (initialPlayerIdsRef.current === null && data.players.length > 0) {
@@ -432,6 +449,10 @@ const Lobby = () => {
                     navigate('/');
                 }}
                 title={t.lobby.modals.alreadyStarted.title}
+                // Sa fermeture renvoie à l'accueil : la refermer toute seule au
+                // retour de l'app éjecterait le joueur du lobby sans qu'il l'ait
+                // demandé. Il la ferme lui-même.
+                keepOnResume
             >
                 <div className="text-center space-y-4">
                     <Icon icon="fluent-emoji-flat:crying-face" className="mx-auto" width="4rem" height="4rem" aria-hidden style={{ filter: STICKER_FILTER }} />

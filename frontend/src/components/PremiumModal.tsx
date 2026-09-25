@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { LuX, LuCrown, LuBellOff, LuMessagesSquare, LuLayers, LuInfinity } from 'react-icons/lu';
 import StoreBadge from './StoreBadge';
@@ -14,10 +14,28 @@ import { APP_STORE_WEB, PLAY_WEB } from '../utils/storeLinks';
 interface PremiumModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /**
+   * Verrouille la fermeture pendant la première seconde. À n'activer QUE pour une
+   * ouverture non sollicitée (paywall promo automatique) : la feuille surgit alors
+   * sous le doigt de l'utilisateur, et un tap déjà engagé la refermait aussitôt.
+   * Une ouverture demandée (bouton Premium) ne doit jamais être verrouillée : il
+   * sait ce qu'il a ouvert, l'empêcher de sortir serait juste pénible.
+   */
+  lockOnOpen?: boolean;
+  /**
+   * Pseudo à afficher dans l'aperçu doré. Fourni par l'écran appelant quand il
+   * en tient un plus frais que le stockage (l'input d'accueil, typiquement) :
+   * l'identité n'est persistée qu'à la création/jointure d'un salon, donc lire
+   * le stockage ici affichait l'ANCIEN pseudo pendant toute la saisie.
+   */
+  previewName?: string;
 }
 
 // Dégradé doré du bouton Premium (fond de la feuille).
 const GOLD_BG = 'linear-gradient(160deg, #FFE066 0%, #FFC23D 45%, #FF8A3D 100%)';
+// Délai pendant lequel la feuille ignore toute demande de fermeture après son
+// ouverture : évite qu'un tap déjà en cours la referme aussitôt apparue.
+const OPEN_LOCK_MS = 1000;
 // Distance de glissement (px) au-delà de laquelle on referme la feuille.
 const DISMISS_THRESHOLD = 110;
 
@@ -27,7 +45,7 @@ const DISMISS_THRESHOLD = 110;
  * bouton Premium, DA carton conservée (bordure noire, rondeurs, stack-shadow).
  * Glissable vers le bas au doigt pour fermer. Aucun scroll interne : tient d'un bloc.
  */
-const PremiumModal = ({ isOpen, onClose }: PremiumModalProps) => {
+const PremiumModal = ({ isOpen, onClose, lockOnOpen = false, previewName: previewNameProp }: PremiumModalProps) => {
   const { t } = useLocale();
   const showToast = useToast();
   const [busy, setBusy] = useState(false);
@@ -35,7 +53,26 @@ const PremiumModal = ({ isOpen, onClose }: PremiumModalProps) => {
 
   // Animation de sortie : requestClose lance le fondu puis démonte via onClose.
   const { render, closing, requestClose } = useModalTransition(isOpen, onClose);
-  const { onBackdropClick } = useModalChrome(render, requestClose);
+
+  // Verrou d'ouverture, uniquement quand la feuille s'ouvre d'elle-même (cf.
+  // `lockOnOpen`) : elle surgit sous le doigt, et un tap déjà engagé la refermait
+  // instantanément — l'utilisateur voyait une fenêtre apparaître et disparaître.
+  const [locked, setLocked] = useState(false);
+  useEffect(() => {
+    if (!render || !lockOnOpen) { setLocked(false); return; }
+    setLocked(true);
+    const timer = setTimeout(() => setLocked(false), OPEN_LOCK_MS);
+    return () => clearTimeout(timer);
+  }, [render, lockOnOpen]);
+
+  // Point de passage UNIQUE de toutes les fermetures (croix, backdrop, Escape,
+  // glissement) : le verrou ne peut pas être contourné par l'une d'elles.
+  const tryClose = useCallback(() => {
+    if (locked) return;
+    requestClose();
+  }, [locked, requestClose]);
+
+  const { onBackdropClick } = useModalChrome(render, tryClose);
 
   // Drag-to-dismiss : on suit le doigt en translateY sur la feuille.
   // dragY vit en ref (pas de re-render à chaque frame + lecture fiable à la fin).
@@ -67,7 +104,7 @@ const PremiumModal = ({ isOpen, onClose }: PremiumModalProps) => {
     dragYRef.current = 0;
     setDragging(false);
     if (finalY > DISMISS_THRESHOLD) {
-      requestClose(); // fondu de sortie propre
+      tryClose(); // fondu de sortie propre (ignoré pendant le verrou d'ouverture)
     } else {
       setDragY(0); // rebond en place
     }
@@ -75,7 +112,7 @@ const PremiumModal = ({ isOpen, onClose }: PremiumModalProps) => {
 
   // Aperçu "nom brillant" : avatar + pseudo réels du joueur (fallback exemple).
   const stats = (() => { try { return getStats(); } catch { return null; } })();
-  const previewName = stats?.lastPseudo?.trim() || t.premium.perkNameSample;
+  const previewName = previewNameProp?.trim() || stats?.lastPseudo?.trim() || t.premium.perkNameSample;
   const previewAvatarId = stats?.lastAvatarId ?? 0;
 
   const handlePurchase = async () => {
@@ -84,8 +121,12 @@ const PremiumModal = ({ isOpen, onClose }: PremiumModalProps) => {
       const res = await purchasePremium();
       if (res.ok) {
         requestClose();
+      } else if (res.failure === 'unavailable') {
+        // Produit pas encore servi par le store (validation Apple/Google en cours) :
+        // ce n'est pas une panne, ton achat n'a pas "raté" — ton de l'attente.
+        showToast(t.premium.purchaseUnavailable, 'info');
       } else if (res.failure !== 'cancelled') {
-        // Échec réel (réseau, offering absente…) : on prévient au lieu de rester muet.
+        // Échec réel (réseau, SDK non configuré…) : on prévient au lieu de rester muet.
         showToast(t.premium.purchaseError, 'error');
       }
     } finally {
@@ -151,7 +192,7 @@ const PremiumModal = ({ isOpen, onClose }: PremiumModalProps) => {
             drag avale son click et la croix ne ferme plus). */}
         <button
           type="button"
-          onClick={requestClose}
+          onClick={tryClose}
           onPointerDown={(e) => e.stopPropagation()}
           aria-label={t.common.close}
           className="absolute top-2 right-3 z-10 w-9 h-9 flex items-center justify-center rounded-full text-black/60 hover:text-black active:scale-90 transition-all cursor-pointer"

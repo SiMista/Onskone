@@ -128,6 +128,9 @@ const Home = () => {
   const [isGameModeOpen, setIsGameModeOpen] = useState(false);
   const [isJoinByCodeOpen, setIsJoinByCodeOpen] = useState(false);
   const [isPremiumOpen, setIsPremiumOpen] = useState(false);
+  // Vrai seulement si le paywall s'est ouvert de lui-même (promo) : dans ce cas
+  // seul, sa fermeture est verrouillée une seconde (cf. PremiumModal.lockOnOpen).
+  const [premiumAutoOpened, setPremiumAutoOpened] = useState(false);
   const isPremium = usePremium();
   // Code saisi dans la popup "Rejoindre" en cours de validation (getLobbyInfo).
   // Tant qu'il est posé, la réponse lobbyInfo concerne la popup (pas l'URL).
@@ -203,6 +206,7 @@ const Home = () => {
     } catch { /* montre la promo si lecture impossible */ }
     // Léger délai pour laisser l'accueil s'afficher avant le paywall.
     const timer = setTimeout(() => {
+      setPremiumAutoOpened(true);
       setIsPremiumOpen(true);
       try { studioStorage.setItem(PROMO_KEY, String(Date.now())); } catch { /* silent */ }
     }, 1200);
@@ -386,7 +390,12 @@ const Home = () => {
         onSubmit={handleJoinByCode}
       />
 
-      <PremiumModal isOpen={isPremiumOpen} onClose={() => setIsPremiumOpen(false)} />
+      <PremiumModal
+        isOpen={isPremiumOpen}
+        onClose={() => { setIsPremiumOpen(false); setPremiumAutoOpened(false); }}
+        lockOnOpen={premiumAutoOpened}
+        previewName={playerName}
+      />
 
       <InfoModal
         isOpen={isStatsOpen}

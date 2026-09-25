@@ -31,6 +31,12 @@ export interface ModalShellProps {
   disableScrollFade?: boolean;
   /** Pied de carte optionnel (boutons d'action), hors du body. */
   footer?: ReactNode;
+  /**
+   * Empêche la fermeture automatique au retour de l'app au premier plan. Pour les
+   * modales dont la fermeture a un effet de bord (navigation) ou qui verrouillent
+   * volontairement l'écran. Cf. useModalChrome.
+   */
+  keepOnResume?: boolean;
 }
 
 const MAX_WIDTH_CLASS: Record<NonNullable<ModalShellProps['maxWidth']>, string> = {
@@ -63,6 +69,7 @@ const ModalShell = ({
   scrollable = true,
   disableScrollFade = false,
   footer,
+  keepOnResume = false,
 }: ModalShellProps) => {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const { t } = useLocale();
@@ -71,7 +78,7 @@ const ModalShell = ({
   const { render, closing, requestClose } = useModalTransition(isOpen, onClose);
 
   // Scroll-lock du body + fermeture sur Escape / clic backdrop, tant que montée.
-  const { onBackdropClick } = useModalChrome(render, requestClose);
+  const { onBackdropClick } = useModalChrome(render, requestClose, { keepOnResume });
 
   if (!render) return null;
 

@@ -138,7 +138,6 @@ export const en: Dictionary = {
   game: {
     loading: 'Loading game...',
     leaderDisconnected: (name) => `${name} disconnected - round skipped`,
-    newCards: (n) => `New cards (${n})`,
   },
 
   seo: {
@@ -159,6 +158,7 @@ export const en: Dictionary = {
     points: (n) => `${n} pt${n > 1 ? 's' : ''}`,
     receivedQuestion: 'Question received',
     correctAnswersCount: (n) => `${n} Correct answer${n > 1 ? 's' : ''}`,
+    respondentsLabel: 'Answered',
     noPlayers: 'No players',
     aria: {
       seeReceivedQuestion: 'See the received question',
@@ -475,7 +475,7 @@ export const en: Dictionary = {
     },
     'loyal-10': {
       title: 'Loyal',
-      description: '10 games on the counter.',
+      description: '5 games on the counter.',
     },
     'veteran-50': {
       title: 'Veteran',
@@ -486,16 +486,16 @@ export const en: Dictionary = {
       description: 'Guess 20 answers correctly as leader.',
     },
     marathon: {
-      title: 'Marathon',
+      title: 'Marathon runner',
       description: 'Finish a game of 10 rounds or more.',
     },
     'top-1-thrice': {
-      title: 'On the podium',
+      title: 'Top 1 regular',
       description: 'Finish 1st in a game, 3 times.',
     },
     'zero-percent': {
-      title: 'Industrial disaster',
-      description: 'Reach 0% as a team. Congrats (?).',
+      title: 'Unanimously useless',
+      description: 'Reach 0% as a team. Congrats…',
     },
     'perfect-score': {
       title: 'Perfect score',
@@ -564,6 +564,7 @@ export const en: Dictionary = {
     restore: 'Restore purchases',
     purchasing: 'Purchasing…',
     purchaseError: 'The purchase could not be completed. Please try again.',
+    purchaseUnavailable: 'Premium isn\'t available for purchase yet. Check back soon!',
     restoreError: 'We couldn\'t restore your purchases right now.',
     restoreEmpty: 'No purchase to restore on this account.',
     webOnly: 'Premium is unlocked in the mobile app. Download it to enjoy it!',
@@ -681,8 +682,8 @@ export const en: Dictionary = {
   shareCard: {
     eyebrow: 'YOU KNOW EACH OTHER',
     top3Label: 'TOP 3',
-    ctaLine1: 'Come play on',
-    ctaLine2: 'onskone.fr!',
+    ctaLine1: 'Download the',
+    ctaLine2: 'Onskoné app!',
     shareTitle: 'Onskoné',
   },
 

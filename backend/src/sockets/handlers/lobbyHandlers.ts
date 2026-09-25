@@ -329,9 +329,16 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
             // Snap à l'un des 3 niveaux autorisés (le plus proche), fallback DEFAULT si NaN.
             const raw = Number(data.timeMultiplier);
             const levels = GAME_CONSTANTS.TIME_MULTIPLIER_LEVELS;
-            lobby.timeMultiplier = Number.isFinite(raw)
-                ? levels.reduce((best, lvl) => (Math.abs(lvl - raw) < Math.abs(best - raw) ? lvl : best), levels[0])
-                : GAME_CONSTANTS.TIME_MULTIPLIER_DEFAULT;
+            // Niveau de debug : accepté tel quel, mais UNIQUEMENT si le backend tourne
+            // en développement. En production il retombe dans le snap normal — sans quoi
+            // n'importe quel client pourrait imposer des phases interminables à la table.
+            const isDebugLevel = raw === GAME_CONSTANTS.TIME_MULTIPLIER_DEBUG
+                && process.env.NODE_ENV !== 'production';
+            lobby.timeMultiplier = isDebugLevel
+                ? GAME_CONSTANTS.TIME_MULTIPLIER_DEBUG
+                : Number.isFinite(raw)
+                    ? levels.reduce((best, lvl) => (Math.abs(lvl - raw) < Math.abs(best - raw) ? lvl : best), levels[0])
+                    : GAME_CONSTANTS.TIME_MULTIPLIER_DEFAULT;
             lobby.updateActivity();
 
             emitLobbyDecksState(io, null, lobby);

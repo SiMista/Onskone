@@ -69,7 +69,9 @@ const ReportModal = ({ isOpen, onClose, extraContext, defaultType }: ReportModal
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title={t.report.title}>
+    // keepOnResume : handleClose vide le brouillon, et l'user alt-tab souvent
+    // pendant qu'il rédige un signalement (vérifier un truc, copier un log).
+    <Modal isOpen={isOpen} onClose={handleClose} title={t.report.title} keepOnResume>
       <div className="space-y-4 min-w-0">
         <div>
           <label className="block text-sm font-bold text-gray-800 mb-1">

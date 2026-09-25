@@ -1,14 +1,13 @@
 import { useEffect, useState, useRef } from 'react';
 import socket from '../utils/socket';
 import Timer from './Timer';
-import { GameCard, IPlayer, RoundPhase, GAME_CONSTANTS } from '@onskone/shared';
+import { GameCard, IPlayer, RoundPhase } from '@onskone/shared';
 import { getPhaseDuration } from '../constants/game';
 import { getRandomFunFact, getNextFunFact } from '../constants/funFacts';
 import { playSound } from '../utils/sounds';
 import PlayerBadge from './PlayerBadge';
 import ReportTrigger from './ReportTrigger';
 import CardHand from './CardHand';
-import Button from './Button';
 import { useSwipe } from '../hooks/useSwipe';
 import { useSocketEvent } from '../hooks';
 import { useLocale } from '../i18n';
@@ -24,12 +23,6 @@ const QuestionSelection = ({ lobbyCode, isLeader, leader, timeMultiplier }: {
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [selectedQuestion, setSelectedQuestion] = useState<string | null>(null);
   const [loading, setLoading] = useState(isLeader);
-  // Relances restantes pour cette manche. Source de vérité = serveur : chaque
-  // payload `questionsReceived` porte `relancesLeft` (DEFAULT_CARD_RELANCES -
-  // round.relancesUsed, borné ≥0). On part du maximum comme valeur gracieuse
-  // avant la 1re réception, puis on se recale sur le serveur — ce qui évite
-  // qu'un compteur local sur-offre après une reconnexion mid-manche.
-  const [relancesLeft, setRelancesLeft] = useState<number>(GAME_CONSTANTS.DEFAULT_CARD_RELANCES);
   const [funFact, setFunFact] = useState<string>(() => getRandomFunFact(t.funFacts));
   const [factFading, setFactFading] = useState(false);
   const factFadeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -88,13 +81,12 @@ const QuestionSelection = ({ lobbyCode, isLeader, leader, timeMultiplier }: {
     return () => clearTimeout(startTimerTimeout);
   }, [isLeader, lobbyCode, phaseDuration]);
 
-  useSocketEvent('questionsReceived', (data: { questions: GameCard[]; relancesLeft: number }) => {
+  useSocketEvent('questionsReceived', (data: { questions: GameCard[] }) => {
     if (data.questions.length > 0) {
       setCards(data.questions);
       setCurrentCardIndex(0);
     }
     // Se recaler sur l'autorité serveur (corrige un éventuel décrément optimiste).
-    setRelancesLeft(Math.max(0, data.relancesLeft));
     setLoading(false);
   });
 
@@ -127,16 +119,6 @@ const QuestionSelection = ({ lobbyCode, isLeader, leader, timeMultiplier }: {
     socket.emit('selectQuestion', { lobbyCode, selectedQuestion: question });
   };
 
-  const handleRelance = () => {
-    if (!isLeader || locked || relancesLeft <= 0) return;
-    // Décrément optimiste (UX immédiate) ; le prochain `questionsReceived` recalera
-    // la valeur sur l'autorité serveur.
-    setRelancesLeft(n => Math.max(0, n - 1));
-    // Repasser en "loading" jusqu'à réception des nouvelles cartes (feedback).
-    setLoading(true);
-    socket.emit('requestQuestions', { lobbyCode, count: 3, isRelance: true });
-  };
-
   const handleTimerExpire = () => {
     if (!isLeader) return;
     // Si pas de sélection, choisir une question au hasard dans la carte active
@@ -147,7 +129,7 @@ const QuestionSelection = ({ lobbyCode, isLeader, leader, timeMultiplier }: {
       socket.emit('selectQuestion', { lobbyCode, selectedQuestion: q });
       return;
     }
-    socket.emit('timerExpired', { lobbyCode });
+    socket.emit('timerExpired', { lobbyCode, phase: RoundPhase.QUESTION_SELECTION });
   };
 
   const goToCard = (idx: number) => {
@@ -161,13 +143,15 @@ const QuestionSelection = ({ lobbyCode, isLeader, leader, timeMultiplier }: {
   const goPrev = () => goToCard(currentCardIndex - 1);
   const goNext = () => goToCard(currentCardIndex + 1);
 
-  // Affiche un indice de swipe si le pilier ne swipe pas dans les 3 premières secondes (mobile)
+  // Affiche un indice de swipe si le pilier ne swipe pas dans les 5 premières
+  // secondes (mobile). Laisser le temps de LIRE la carte avant de couvrir l'écran :
+  // à 3s le rappel tombait alors que le pilier était encore en train de lire.
   useEffect(() => {
     if (!isLeader || loading || locked || cards.length < 2) return;
     if (hasInteractedRef.current) return;
     const t = setTimeout(() => {
       if (!hasInteractedRef.current) setShowSwipeHint(true);
-    }, 3000);
+    }, 5000);
     return () => clearTimeout(t);
   }, [isLeader, loading, locked, cards.length]);
 
@@ -260,19 +244,6 @@ const QuestionSelection = ({ lobbyCode, isLeader, leader, timeMultiplier }: {
             onGoToCard={goToCard}
           />
 
-          {/* Relancer : repioche 3 cartes inédites (limité à DEFAULT_CARD_RELANCES
-              par manche, borne appliquée côté serveur). Masqué une fois verrouillé
-              ou les relances épuisées. */}
-          {!locked && relancesLeft > 0 && (
-            <div className="text-center mt-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={handleRelance}
-                text={t.game.newCards(relancesLeft)}
-              />
-            </div>
-          )}
 
           {/* Signaler une question pourrie (pilier uniquement, tant que pas verrouillé) */}
           {!locked && currentCard && (

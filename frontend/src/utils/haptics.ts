@@ -20,11 +20,14 @@ export const hapticLight = () => {
   }
 };
 
-// Retour marqué : une réponse vient d'être attribuée au joueur.
+// Retour marqué : une réponse vient d'être attribuée au joueur, ou le pilier
+// vient d'en recevoir une. `notification(Success)` était trop discret pour être
+// senti téléphone posé sur la table — on double d'un impact Heavy.
 export const hapticAssigned = () => {
   if (isNative) {
+    Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => { /* haptics best-effort */ });
     Haptics.notification({ type: NotificationType.Success }).catch(() => { /* haptics best-effort */ });
   } else {
-    webVibrate([120, 60, 120]);
+    webVibrate([160, 70, 160]);
   }
 };

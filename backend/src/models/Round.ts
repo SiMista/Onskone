@@ -27,11 +27,16 @@ export class Round implements IRound {
     guesses: Record<string, string>; // Attributions finales du pilier
     scores: Record<string, number>;
     timerEnd: Date | null;
+    /**
+     * Horodatage de la dernière sortie de la phase ANSWERING. Sert la fenêtre de
+     * grâce de `submitAnswer` (cf. roundHandlers) : un joueur qui écrivait encore
+     * au moment de la bascule ne doit pas perdre sa réponse.
+     */
+    phaseEndedAt?: number;
     timerStartedAt: number | undefined; // Timestamp de démarrage du timer
     timerDuration: number | undefined; // Durée du timer en secondes
     timerProcessedForPhase: RoundPhase | null | undefined; // Empêche le double traitement du timer
     timerPhase: RoundPhase | undefined; // Phase pour laquelle le timer a été démarré
-    relancesUsed: number; // Nombre de relances utilisées par le pilier
     revealedIndices: number[]; // Indices des réponses révélées en phase REVEAL
     similarityCorrections: number[]; // Indices corrigés par similarité
     proposedCards: GameCard[]; // Les 3 cartes proposées au pilier pour la sélection
@@ -59,7 +64,6 @@ export class Round implements IRound {
         this.timerDuration = undefined;
         this.timerProcessedForPhase = null;
         this.timerPhase = undefined;
-        this.relancesUsed = 0;
         this.revealedIndices = [];
         this.similarityCorrections = [];
         this.proposedCards = [];
@@ -68,6 +72,7 @@ export class Round implements IRound {
         this.guessMyAnswerMode = guessMyAnswerMode;
         this.substitutePlayerId = null;
         this.substituteAnswer = null;
+        this.phaseEndedAt = undefined; // explicite : aucune fenêtre de grâce ouverte
         this.serverTimerHandle = null;
     }
 
@@ -84,6 +89,26 @@ export class Round implements IRound {
 
     addAnswer(playerId: string, answer: string): void {
         this.answers[playerId] = answer;
+    }
+
+    /**
+     * Met à jour le TEXTE du slot déjà attribué à un auteur, sans toucher au slotId
+     * ni à l'ordre du pool.
+     *
+     * Sert au seul cas d'une réponse acceptée en fenêtre de grâce : le pool de
+     * devinette a déjà été construit et diffusé (avec le placeholder « n'a pas
+     * répondu à temps »). Reconstruire le pool régénérerait tous les slotId et
+     * invaliderait les attributions déjà posées par le pilier ; on se contente
+     * donc de corriger le texte en place.
+     *
+     * @returns true si un slot a été mis à jour (false = pool pas encore construit,
+     *          l'appelant n'a rien à rediffuser).
+     */
+    patchAnswerSlotText(authorId: string, text: string): boolean {
+        const slot = this.answerSlots.find(s => s.authorId === authorId);
+        if (!slot) return false;
+        slot.text = text;
+        return true;
     }
 
     removeAnswer(playerId: string): void {
@@ -124,6 +149,14 @@ export class Round implements IRound {
             ];
         const currentIndex = phases.indexOf(this.phase);
         if (currentIndex < phases.length - 1) {
+            // Sortie d'une phase de SAISIE : on horodate pour la fenêtre de grâce
+            // (un brouillon envoyé au moment de la bascule reste accepté quelques
+            // secondes, cf. roundHandlers). Vaut pour ANSWERING (`submitAnswer`) et
+            // pour SUBSTITUTE_ANSWERING (`submitSubstituteAnswer`) : dans les deux cas
+            // le client peut poster juste après que le timer serveur a tranché.
+            if (this.phase === RoundPhase.ANSWERING || this.phase === RoundPhase.SUBSTITUTE_ANSWERING) {
+                this.phaseEndedAt = Date.now();
+            }
             this.phase = phases[currentIndex + 1];
             // Réinitialiser le timer au changement de phase : sans ça, un client qui
             // reconnecte recevrait le compte à rebours périmé de la phase précédente.

@@ -42,6 +42,14 @@ const SubstituteAnsweringPhase = ({
   const [answer, setAnswer] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const expireTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Miroirs lisibles depuis le cleanup de démontage sans capturer de closure
+  // (le state y serait figé à sa valeur du premier render).
+  const answerRef = useRef(answer);
+  answerRef.current = answer;
+  const submittedRef = useRef(submitted);
+  submittedRef.current = submitted;
+  const isSubstituteRef = useRef(isSubstitute);
+  isSubstituteRef.current = isSubstitute;
 
   const phaseDuration = getPhaseDuration(RoundPhase.SUBSTITUTE_ANSWERING, timeMultiplier);
   useStartTimerDelayed(isPilier, lobbyCode, phaseDuration);
@@ -60,18 +68,40 @@ const SubstituteAnsweringPhase = ({
 
   const handleSubmit = () => {
     if (!isSubstitute || !answer.trim() || submitted) return;
+    submittedRef.current = true; // synchrone : le démontage peut tomber avant le re-render
     setSubmitted(true);
     socket.emit('submitSubstituteAnswer', { lobbyCode, answer: answer.trim() });
   };
 
+  // Envoie le brouillon du substitut, une seule fois.
+  // Même filet que dans AnswerPhase : la `key` de Game.tsx inclut la phase, donc
+  // ce composant est DÉMONTÉ dès que le serveur passe à GUESSING. Le timer client
+  // (tick 1s) perd quasi systématiquement la course contre le setTimeout serveur —
+  // sans ce cleanup, la réponse que le substitut était en train de taper était
+  // purement perdue, et le pilier héritait d'un « n'a pas répondu à temps » à la
+  // place de SA propre réponse. Le serveur tranche (garde de phase + fenêtre de
+  // grâce), donc un doublon est sans risque.
+  const flushDraftRef = useRef<() => void>(() => { });
+  flushDraftRef.current = (): void => {
+    if (!isSubstituteRef.current || submittedRef.current) return;
+    const draft = answerRef.current.trim();
+    if (!draft) return;
+    submittedRef.current = true;
+    socket.emit('submitSubstituteAnswer', { lobbyCode, answer: draft });
+  };
+
+  // ⚠️ Deps `[]` OBLIGATOIRE (cf. AnswerPhase) : sans elles React rejoue le
+  // cleanup à chaque render, donc un envoi par frappe.
+  useEffect(() => () => { flushDraftRef.current(); }, []);
+
   const handleTimerExpire = () => {
-    if (isSubstitute && !submitted && answer.trim()) {
+    if (isSubstitute && !submittedRef.current && answer.trim()) {
+      flushDraftRef.current();
       setSubmitted(true);
-      socket.emit('submitSubstituteAnswer', { lobbyCode, answer: answer.trim() });
     }
     if (isPilier) {
       if (expireTimeoutRef.current) clearTimeout(expireTimeoutRef.current);
-      expireTimeoutRef.current = setTimeout(() => socket.emit('timerExpired', { lobbyCode }), 500);
+      expireTimeoutRef.current = setTimeout(() => socket.emit('timerExpired', { lobbyCode, phase: RoundPhase.SUBSTITUTE_ANSWERING }), 500);
     }
   };
 

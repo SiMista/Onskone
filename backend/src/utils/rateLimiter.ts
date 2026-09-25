@@ -123,7 +123,7 @@ export const rateLimiters = {
   // Question selection: 10 per minute
   selectQuestion: new RateLimiter({ windowMs: 60000, maxRequests: 10 }),
 
-  // Request questions (relances): 20 per minute
+  // Request questions (tirage initial + resync de reconnexion): 20 per minute
   requestQuestions: new RateLimiter({ windowMs: 60000, maxRequests: 20 }),
 
   // Kick player: 10 per minute

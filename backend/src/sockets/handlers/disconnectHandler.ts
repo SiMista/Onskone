@@ -28,6 +28,8 @@ function scheduleInactiveTimeout(
     lobbyCode: string,
     playerName: string,
     playerId: string,
+    /** socketId au moment de la déconnexion : sert à détecter une reconnexion. */
+    disconnectedSocketId: string,
 ): void {
     const inactiveTimeout = setTimeout(() => {
         try {
@@ -39,11 +41,16 @@ function scheduleInactiveTimeout(
             const player = currentLobby.players.find(p => p.id === playerId);
             if (!player) return;
 
-            // Si le joueur s'est reconnecté entre temps, ne rien faire.
-            if (player.isActive) {
+            // Si le joueur s'est reconnecté entre temps, son socket a changé : la
+            // reconnexion (reconnectPlayerSlot / joinLobby) a réassocié un NOUVEAU
+            // socketId et remis isActive à true. On compare donc au socketId capturé
+            // au moment de la déconnexion — tester `isActive` ne sert à rien ici, le
+            // marquage inactif étant justement le rôle de ce timeout.
+            if (player.socketId !== disconnectedSocketId) {
                 logger.debug(`Player ${playerName} s'est reconnecté, timeout inactivité ignoré`);
                 return;
             }
+            if (!player.isActive) return; // déjà marqué (leaveLobby, fin de partie)
 
             player.isActive = false;
             logger.info(`Player ${playerName} marqué inactif après ${INACTIVE_DELAY}ms`);
@@ -78,6 +85,16 @@ export function scheduleLeaderSkipTimeout(
             const currentGame = currentLobby?.game;
             if (!currentLobby || !currentGame || !currentGame.currentRound) {
                 logger.debug(`Lobby/jeu n'existe plus, timeout pilier ignoré`);
+                return;
+            }
+
+            // La partie a pu se terminer pendant les 15s d'attente (dernier round
+            // conclu, ou plus assez de joueurs). `endGame` force isActive=false pour
+            // TOUT LE MONDE, donc sans cette garde le pilier passe pour « toujours
+            // déconnecté » : on diffusait un `roundSkipped` fantôme par-dessus l'écran
+            // de fin, puis un SECOND `gameEnded` (activePlayers.length valant 0).
+            if (currentGame.status === GameStatus.FINISHED) {
+                logger.debug(`Partie déjà terminée, timeout pilier ignoré`, { lobbyCode });
                 return;
             }
 
@@ -210,7 +227,7 @@ export function registerDisconnectHandler(socket: AppSocket, ctx: HandlerContext
 
             // 1) Marquage inactif différé (remplace tout timeout d'inactivité existant).
             registry.cancelInactiveTimeout(lobbyCode, playerName);
-            scheduleInactiveTimeout(io, registry, lobbyCode, playerName, playerId);
+            scheduleInactiveTimeout(io, registry, lobbyCode, playerName, playerId, socket.id);
 
             // 2) Si le déconnecté est le pilier en cours, armer le saut de round différé.
             //    Les autres rôles (joueurs qui doivent répondre) sont couverts par le

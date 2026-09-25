@@ -151,14 +151,8 @@ export interface ServerToClientEvents {
     reason: 'leader_disconnected';
   }) => void;
 
-  /**
-   * Réception des 3 questions pour le pilier.
-   * `relancesLeft` = nombre de relances encore disponibles pour cette manche
-   * (autorité serveur = DEFAULT_CARD_RELANCES - round.relancesUsed, borné ≥0).
-   * Le client s'en sert comme source de vérité pour le bouton « nouvelles cartes »,
-   * ce qui évite qu'un compteur local optimiste sur-offre après une reconnexion.
-   */
-  questionsReceived: (data: { questions: GameCard[]; relancesLeft: number }) => void;
+  /** Réception des 3 questions pour le pilier (tirage unique par manche). */
+  questionsReceived: (data: { questions: GameCard[] }) => void;
 
   /** Une question a été sélectionnée par le pilier */
   questionSelected: (data: {
@@ -423,7 +417,6 @@ export interface ClientToServerEvents {
   requestQuestions: (data: {
     lobbyCode: string;
     count?: number;
-    isRelance?: boolean;
   }) => void;
 
   /** Sélectionner une question parmi les 3 (réservé au pilier) */
@@ -472,6 +465,16 @@ export interface ClientToServerEvents {
   /** Notifier que le timer a expiré */
   timerExpired: (data: {
     lobbyCode: string;
+    /**
+     * Phase pour laquelle le timer client a expiré. OBLIGATOIRE : cet event est
+     * une simple optimisation de réactivité (le timeout serveur fait autorité),
+     * mais il peut arriver TRÈS en retard — un pilier mobile throttlé en
+     * arrière-plan le poste au réveil, alors que la phase a déjà changé. Sans
+     * cette phase, le serveur l'appliquait à la phase COURANTE et concluait par
+     * exemple ANSWERING à la seconde où elle démarrait (tout le monde en
+     * « n'a pas répondu à temps »).
+     */
+    phase: RoundPhase;
   }) => void;
 
   /** Demander l'état actuel du timer (utile pour les navigateurs lents) */

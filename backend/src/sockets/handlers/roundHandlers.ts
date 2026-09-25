@@ -4,7 +4,7 @@ import {
 } from '../../data/questionsRepository.js';
 import { Round } from '../../models/Round';
 import type { ReconnectionData } from '@onskone/shared';
-import { GAME_CONSTANTS, RoundPhase, ERROR_CODES } from '@onskone/shared';
+import { RoundPhase, ERROR_CODES, isNoResponse } from '@onskone/shared';
 import { validateAnswer, validatePlayerId, sanitizeInput } from '../../utils/validation.js';
 import { rateLimiters } from '../../utils/rateLimiter.js';
 import { errMessage } from '../../utils/helpers.js';
@@ -29,6 +29,30 @@ import {
     withLeaderGuards,
 } from './context.js';
 import { reconnectPlayerSlot } from './reconnection.js';
+
+/**
+ * Tolérance pour un `submitAnswer` arrivé juste après la bascule de phase. Couvre
+ * l'écart entre le timer serveur (exact) et celui du client (tick 1s) + la latence.
+ */
+const ANSWER_GRACE_PERIOD = 3000;
+
+/**
+ * IDs des joueurs ayant déjà répondu, pour restaurer les pastilles « a répondu »
+ * de la phase ANSWERING à la reconnexion.
+ *
+ * Restreint à ANSWERING (et à sa jumelle SUBSTITUTE_ANSWERING) À DESSEIN : ces clés
+ * sont les IDs des AUTEURS. Pendant ANSWERING l'info est publique — elle est déjà
+ * diffusée en direct par `playerAnswered`. Mais à partir de GUESSING, le pool est
+ * anonymisé derrière des slots opaques (cf. `prepareGuessing`) : continuer à
+ * envoyer la liste des auteurs à un client qui reconnecte contredisait tout
+ * l'anti-fuite du reste du round.
+ */
+function answeredIdsFor(round: { phase: RoundPhase; answers: Record<string, string> } | null): string[] {
+    if (!round) return [];
+    const isAnsweringStage = round.phase === RoundPhase.ANSWERING
+        || round.phase === RoundPhase.SUBSTITUTE_ANSWERING;
+    return isAnsweringStage ? Object.keys(round.answers) : [];
+}
 
 export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): void {
     const { io, registry } = ctx;
@@ -59,24 +83,11 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
             limiter: rateLimiters.requestQuestions,
             requireLeaderAction: 'demander des questions',
         }, ({ game, round: currentRound }, data) => {
-            // Si c'est une relance explicite (isRelance: true), vérifier la limite et incrémenter
-            if (data.isRelance === true) {
-                const currentRelances = currentRound.relancesUsed || 0;
-                if (currentRelances >= GAME_CONSTANTS.DEFAULT_CARD_RELANCES) {
-                    socket.emit('error', { message: `Nombre maximum de relances atteint (${GAME_CONSTANTS.DEFAULT_CARD_RELANCES})`, code: ERROR_CODES.FORBIDDEN });
-                    return;
-                }
-                currentRound.relancesUsed = currentRelances + 1;
-            }
-
-            // Relances restantes (autorité serveur) : renvoyées à chaque payload pour
-            // que le client n'ait pas à maintenir un compteur optimiste (qui sur-offre
-            // après une reconnexion mid-manche). Recalculé après l'éventuel incrément ci-dessus.
-            const relancesLeft = Math.max(0, GAME_CONSTANTS.DEFAULT_CARD_RELANCES - (currentRound.relancesUsed || 0));
-
-            // Si des cartes existent déjà et ce n'est pas une relance, c'est une reconnexion → renvoyer les cartes existantes
-            if ((currentRound.proposedCards?.length ?? 0) > 0 && data.isRelance !== true) {
-                socket.emit('questionsReceived', { questions: currentRound.proposedCards!, relancesLeft });
+            // Des cartes existent déjà → c'est une reconnexion : renvoyer les mêmes.
+            // (Le tirage n'a lieu qu'une fois par manche : le pilier ne peut plus
+            // repiocher, la relance ayant été retirée du jeu.)
+            if ((currentRound.proposedCards?.length ?? 0) > 0) {
+                socket.emit('questionsReceived', { questions: currentRound.proposedCards! });
                 logger.debug(`Cartes existantes renvoyées au leader (reconnexion)`, { lobbyCode: data.lobbyCode });
                 return;
             }
@@ -84,7 +95,7 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
             // Toujours envoyer 3 cartes au pilier
             const count = 3;
 
-            // Exclure les cartes déjà montrées pour éviter les doublons lors des relances
+            // Exclure les cartes déjà montrées (manches précédentes) pour éviter les doublons
             const excludeCards = currentRound.shownGameCards || [];
             const questions = getRandomQuestions(count, excludeCards, game.cards);
 
@@ -99,7 +110,7 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
                 currentRound.shownGameCards.push(...questions);
             }
 
-            socket.emit('questionsReceived', { questions, relancesLeft });
+            socket.emit('questionsReceived', { questions });
             logger.debug(`${questions.length} carte(s) envoyée(s) au leader (${excludeCards.length} exclues)`, { lobbyCode: data.lobbyCode });
         });
     });
@@ -250,6 +261,9 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
             if (data.playerId) {
                 const player = lobby.players.find(p => p.id === data.playerId);
                 if (player) {
+                    // Ancien socket encore vivant à évincer une fois le slot repris (cf. plus bas).
+                    let staleSocket: AppSocket | null = null;
+
                     // Sécurité anti-prise de contrôle (réassociation du socketId).
                     // On ne contrôle que si le socket courant n'est PAS déjà celui du
                     // joueur (sinon c'est un no-op idempotent : rafraîchissement de l'état).
@@ -277,19 +291,21 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
                             return;
                         }
 
-                        // Défense secondaire (garde de liveness conservée) : même avec un
-                        // token valide, ne pas arracher un socket encore bien vivant
-                        // (double-onglet du même joueur).
+                        // Ancien socket encore vu comme vivant. Deux cas se ressemblent :
+                        // un vrai double-onglet, et un mobile revenu au premier plan dont
+                        // l'ancien socket n'a pas encore expiré côté serveur (pingInterval +
+                        // pingTimeout, jusqu'à 45 s). Le token prouve que c'est le
+                        // propriétaire : on REPREND le slot et on évince l'ancien socket
+                        // (après la réassociation, cf. plus bas). Lui renvoyer l'état « en
+                        // lecture seule » sans le joindre à la room laissait un fantôme :
+                        // snapshot figé, plus aucun broadcast, actions refusées (socketId ≠),
+                        // puis marqué inactif à la mort de l'ancien socket. Double-onglet :
+                        // l'onglet visible reprend le slot à chaque `visibilitychange`, et
+                        // l'onglet évincé ne se reconnecte pas tout seul (« io server
+                        // disconnect » n'est pas retenté par socket.io-client).
                         const existingSocket = io.sockets.sockets.get(player.socketId);
                         if (existingSocket && existingSocket.connected) {
-                            logger.warn(`Reconnexion refusée (joueur encore connecté malgré token valide)`, {
-                                lobbyCode: data.lobbyCode,
-                                targetPlayerId: data.playerId,
-                                attackerSocketId: socket.id,
-                                victimSocketId: player.socketId,
-                            });
-                            socket.emit('error', { message: 'Action non autorisée', code: ERROR_CODES.FORBIDDEN });
-                            return;
+                            staleSocket = existingSocket;
                         }
                     }
 
@@ -312,6 +328,23 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
                                 newSocketId: socket.id
                             });
 
+                            // Éviction de l'ancien socket APRÈS la réassociation : son handler
+                            // `disconnect` (synchrone) ne retrouve plus son id dans l'index
+                            // socket -> lobby (reassignSocket l'a retiré) et n'arme donc aucun
+                            // timeout d'inactivité/suppression sur le joueur fraîchement repris.
+                            // `disconnect()` sans `close` : déconnexion de namespace, que le
+                            // client ne retente pas automatiquement (pas de ping-pong entre
+                            // deux onglets).
+                            if (staleSocket) {
+                                logger.info('Ancien socket évincé (slot repris avec token valide)', {
+                                    lobbyCode: data.lobbyCode,
+                                    playerId: player.id,
+                                    evictedSocketId: staleSocket.id,
+                                    newSocketId: socket.id,
+                                });
+                                staleSocket.disconnect();
+                            }
+
                             // Notifier les autres joueurs
                             io.to(lobby.code).emit('updatePlayersList', { players: serializePlayers(lobby.players) });
                         } finally {
@@ -324,7 +357,7 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
 
             // Données de reconnexion pour restaurer l'état du joueur
             const reconnectionData: ReconnectionData = {
-                answeredPlayerIds: game.currentRound ? Object.keys(game.currentRound.answers) : []
+                answeredPlayerIds: answeredIdsFor(game.currentRound)
             };
 
             // Si le joueur a fourni son ID, envoyer sa réponse s'il en a soumis une
@@ -404,9 +437,23 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
 
             // Guard de phase : un client malveillant pourrait essayer de spammer submitAnswer
             // hors de la phase ANSWERING. Refuser silencieusement.
-            if (game.currentRound.phase !== RoundPhase.ANSWERING) {
-                logger.debug('submitAnswer ignoré : phase incorrecte', { lobbyCode: data.lobbyCode, phase: game.currentRound.phase });
-                return;
+            //
+            // FENÊTRE DE GRÂCE : le client soumet son brouillon au moment où sa phase
+            // bascule, mais le serveur a déjà avancé (son timer est exact, celui du
+            // client tick à la seconde). Sans tolérance, une réponse écrite à temps
+            // était remplacée par « n'a pas répondu à temps » sous les yeux du joueur.
+            // On n'accepte le retardataire que s'il vient écraser CE placeholder : une
+            // vraie réponse déjà soumise n'est jamais modifiée hors ANSWERING.
+            const isLateSubmission = game.currentRound.phase !== RoundPhase.ANSWERING;
+            if (isLateSubmission) {
+                const existing = game.currentRound.answers[data.playerId];
+                const withinGrace = game.currentRound.phaseEndedAt !== undefined
+                    && Date.now() - game.currentRound.phaseEndedAt <= ANSWER_GRACE_PERIOD;
+                if (!withinGrace || existing === undefined || !isNoResponse(existing)) {
+                    logger.debug('submitAnswer ignoré : phase incorrecte', { lobbyCode: data.lobbyCode, phase: game.currentRound.phase });
+                    return;
+                }
+                logger.debug('submitAnswer accepté en fenêtre de grâce', { lobbyCode: data.lobbyCode, playerId: data.playerId });
             }
 
             // Réponse déjà présente = édition (overwrite). Autorisé tant que la phase
@@ -421,6 +468,46 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
             // Ajouter la réponse
             const round = game.currentRound as Round;
             round.addAnswer(data.playerId, sanitizedAnswer);
+
+            // --- Réponse tardive (fenêtre de grâce) ---------------------------------
+            // La phase ANSWERING est close. `addAnswer` ci-dessus a déjà remplacé le
+            // placeholder « n'a pas répondu à temps » dans `answers` : c'est ce qui
+            // compte, le pool de devinette étant dérivé de `answers`.
+            //
+            // Reste à savoir si ce pool est DÉJÀ construit et diffusé :
+            //  - mode Classique : oui (ANSWERING -> GUESSING direct). On corrige le
+            //    texte du slot en place — en gardant slotId et ordre, sinon les
+            //    attributions déjà posées par le pilier deviendraient invalides — puis
+            //    on rediffuse.
+            //  - mode « Devine ma réponse » : NON. On est en SUBSTITUTE_ANSWERING, le
+            //    pool ne sera construit qu'à `transitionToGuessing`, donc il n'y a
+            //    aucun slot à patcher ni rien à rediffuser : il prendra la réponse
+            //    corrigée au moment de sa construction. `patchAnswerSlotText` renvoie
+            //    false et c'est le comportement attendu, pas un échec.
+            //
+            // Surtout : on SORT ici. Poursuivre exécuterait la conclusion de phase
+            // ci-dessous alors qu'elle a déjà eu lieu — ce qui faisait avancer le round
+            // une seconde fois et sautait une phase (en mode « Devine ma réponse », le
+            // substitut ne voyait jamais son écran de saisie).
+            if (isLateSubmission) {
+                const patched = round.patchAnswerSlotText(data.playerId, sanitizedAnswer);
+                if (patched) {
+                    io.to(data.lobbyCode).emit('shuffledAnswersReceived', {
+                        answers: round.getOrderedGuessingAnswers(),
+                        players: round.getGuessTargets(lobby.players),
+                        roundNumber: round.roundNumber,
+                    });
+                }
+                logger.info('Réponse tardive acceptée (fenêtre de grâce)', {
+                    lobbyCode: data.lobbyCode,
+                    playerId: data.playerId,
+                    phase: round.phase,
+                    // false = pool pas encore construit (mode « Devine ma réponse ») :
+                    // la réponse est dans `answers`, le pool la prendra à sa création.
+                    poolPatched: patched,
+                });
+                return;
+            }
 
             // Joueurs actifs qui doivent répondre (tous sauf le pilier)
             const respondingPlayers = round.getRespondingPlayers(lobby.players);
@@ -563,9 +650,23 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
                 socket.emit('error', { message: 'Mode "Devine ma réponse" inactif', code: ERROR_CODES.WRONG_PHASE });
                 return;
             }
-            if (currentRound.phase !== RoundPhase.SUBSTITUTE_ANSWERING) {
-                socket.emit('error', { message: 'Phase incorrecte pour cette action', code: ERROR_CODES.WRONG_PHASE });
-                return;
+            // Fenêtre de grâce, symétrique à celle de `submitAnswer` : le substitut
+            // soumet son brouillon au moment où sa phase bascule (filet de démontage
+            // de SubstituteAnsweringPhase), mais le serveur a déjà avancé — son timer
+            // est exact, celui du client tick à la seconde. Sans tolérance, la réponse
+            // écrite à temps était perdue et le PILIER héritait d'un « n'a pas répondu
+            // à temps » à la place de sa propre réponse. On n'accepte le retardataire
+            // que si rien de valable n'a encore été enregistré (aucune réponse, ou le
+            // seul placeholder auto) : une vraie réponse n'est jamais écrasée.
+            const isLateSubstitute = currentRound.phase !== RoundPhase.SUBSTITUTE_ANSWERING;
+            if (isLateSubstitute) {
+                const existing = currentRound.substituteAnswer;
+                const withinGrace = currentRound.phaseEndedAt !== undefined
+                    && Date.now() - currentRound.phaseEndedAt <= ANSWER_GRACE_PERIOD;
+                if (!withinGrace || (existing != null && !isNoResponse(existing))) {
+                    socket.emit('error', { message: 'Phase incorrecte pour cette action', code: ERROR_CODES.WRONG_PHASE });
+                    return;
+                }
             }
             if (!currentRound.substitutePlayerId) {
                 socket.emit('error', { message: 'Aucun substitut désigné', code: ERROR_CODES.WRONG_PHASE });
@@ -577,12 +678,38 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
                 socket.emit('error', { message: 'Seul le substitut peut soumettre cette réponse', code: ERROR_CODES.FORBIDDEN });
                 return;
             }
-            if (currentRound.substituteAnswer != null) {
+            // Une vraie réponse déjà enregistrée n'est jamais écrasée. En fenêtre de
+            // grâce, seul le placeholder auto (« n'a pas répondu à temps ») peut l'être :
+            // c'est précisément ce qu'on vient corriger.
+            if (currentRound.substituteAnswer != null && !isNoResponse(currentRound.substituteAnswer)) {
                 socket.emit('error', { message: 'Réponse déjà soumise', code: ERROR_CODES.CONFLICT });
                 return;
             }
 
             currentRound.setSubstituteAnswer(sanitizedAnswer);
+
+            // --- Réponse tardive (fenêtre de grâce) -------------------------------
+            // La phase a déjà basculé vers GUESSING : la transition a eu lieu et le
+            // pool a été construit avec le placeholder. On corrige le texte du slot du
+            // PILIER (c'est en son nom que le substitut écrit) en gardant slotId et
+            // ordre, puis on rediffuse. Surtout : on SORT ici — rappeler
+            // `transitionToGuessing` ferait avancer le round une 2e fois (GUESSING ->
+            // REVEAL) et le pilier n'attribuerait jamais rien.
+            if (isLateSubstitute) {
+                if (currentRound.patchAnswerSlotText(currentRound.leader.id, sanitizedAnswer)) {
+                    io.to(data.lobbyCode).emit('shuffledAnswersReceived', {
+                        answers: currentRound.getOrderedGuessingAnswers(),
+                        players: currentRound.getGuessTargets(lobby.players),
+                        roundNumber: currentRound.roundNumber,
+                    });
+                }
+                logger.info('Réponse tardive du substitut acceptée (fenêtre de grâce)', {
+                    lobbyCode: data.lobbyCode,
+                    phase: currentRound.phase,
+                });
+                return;
+            }
+
             io.to(data.lobbyCode).emit('substituteAnswerSubmitted', {
                 phase: RoundPhase.GUESSING,
             });

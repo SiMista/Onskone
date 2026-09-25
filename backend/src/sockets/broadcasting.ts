@@ -229,6 +229,18 @@ export function transitionToGuessing(io: IoServer, lobbyCode: string, lobby: Lob
  * enchaîne directement sur GUESSING.
  */
 export function finishAnsweringPhase(io: IoServer, lobbyCode: string, lobby: Lobby, currentRound: Round, forced: boolean): void {
+    // Garde de phase : `nextPhase()` avance depuis la phase COURANTE, quelle qu'elle
+    // soit. Un second appel après la sortie d'ANSWERING ferait donc sauter la phase
+    // suivante (GUESSING -> REVEAL : le pilier n'attribue jamais rien). On ne conclut
+    // ANSWERING que depuis ANSWERING.
+    if (currentRound.phase !== RoundPhase.ANSWERING) {
+        logger.warn('finishAnsweringPhase ignoré : la phase ANSWERING est déjà terminée', {
+            lobbyCode,
+            phase: currentRound.phase,
+        });
+        return;
+    }
+
     if (currentRound.guessMyAnswerMode) {
         // Passe à SUBSTITUTE_ANSWERING (le substitut écrit maintenant la réponse du pilier)
         currentRound.nextPhase();
@@ -384,7 +396,7 @@ export function finishGuessing(io: IoServer, lobbyCode: string, lobby: Lobby, ga
  * `startTimer`. Sert à ré-armer un timeout serveur autoritatif après une auto-transition.
  * REVEAL (ou toute phase sans timer) renvoie 0.
  */
-function getServerPhaseDuration(phase: RoundPhase, lobby: Lobby): number {
+export function getServerPhaseDuration(phase: RoundPhase, lobby: Lobby): number {
     // REVEAL (et toute phase sans timer) : pas de timeout serveur à armer.
     // La fonction partagée renvoie un plancher de 1s pour ces phases (côté front,
     // getPhaseDuration ne descend jamais sous 1) ; ici on veut explicitement 0.

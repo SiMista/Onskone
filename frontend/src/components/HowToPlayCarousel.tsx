@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, ReactNode, useMemo } from 'react';
+import { useState, useRef, useEffect, useCallback, ReactNode, useMemo } from 'react';
 import step1Img from '../assets/images/home/1-question_selection.png';
 import step2Img from '../assets/images/home/2-answering.png';
 import step3Img from '../assets/images/home/3-guessing.png';
@@ -140,14 +140,31 @@ const HowToPlayCarousel = () => {
   }, [index, autoTick, isPaused]);
 
   // Snap silencieux quand on atteint un ghost (displayIndex hors [0, STEPS.length))
+  const snapIfNeeded = useCallback(() => {
+    setDisplayIndex((d) => {
+      if (d >= 0 && d < STEPS.length) return d;
+      setAnimate(false);
+      // Réactiver l'animation pour les transitions suivantes après que le snap soit peint
+      requestAnimationFrame(() => requestAnimationFrame(() => setAnimate(true)));
+      return ((d % STEPS.length) + STEPS.length) % STEPS.length;
+    });
+  }, []);
+
   const onTrackTransitionEnd = (e: React.TransitionEvent<HTMLDivElement>) => {
     if (e.propertyName !== 'transform') return;
-    if (displayIndex >= 0 && displayIndex < STEPS.length) return;
-    setAnimate(false);
-    setDisplayIndex(((displayIndex % STEPS.length) + STEPS.length) % STEPS.length);
-    // Réactiver l'animation pour les transitions suivantes après que le snap soit peint
-    requestAnimationFrame(() => requestAnimationFrame(() => setAnimate(true)));
+    snapIfNeeded();
   };
+
+  // Filet de sécurité : `transitionend` n'est PAS émis si la transition est
+  // annulée en cours — ce que fait tout nouveau `touchstart` (setAnimate(false)).
+  // Sans ce recadrage différé, des swipes rapides successifs faisaient dériver
+  // displayIndex hors du track : le viewport pointait au-delà du dernier slot et
+  // le carrousel s'affichait vide (les dots, eux, restaient corrects).
+  useEffect(() => {
+    if (displayIndex >= 0 && displayIndex < STEPS.length) return;
+    const t = setTimeout(snapIfNeeded, SLIDE_ANIM_MS + 120);
+    return () => clearTimeout(t);
+  }, [displayIndex, snapIfNeeded]);
 
   // Décision de swipe (gauche/droite) + suivi 1:1 du doigt (dragX) factorisés via
   // useSwipe — mêmes seuils (abs(dx) >= 40 ; abs(dx) < abs(dy) = intention
@@ -157,12 +174,15 @@ const HowToPlayCarousel = () => {
     threshold: 40,
     onMove: setDragX,
     // Le track continue dans la direction du swipe ; pas de double animation.
+    // Bornage : on ne s'autorise qu'UN ghost de part et d'autre (positions -1 et
+    // STEPS.length), ce que le track sait afficher. Au-delà, le snap n'a pas encore
+    // eu lieu et on resterait bloqué hors des slots -> écran vide.
     onPrev: () => {
-      setDisplayIndex((d) => d - 1);
+      setDisplayIndex((d) => (d <= -1 ? d : d - 1));
       setAutoTick((t) => t + 1);
     },
     onNext: () => {
-      setDisplayIndex((d) => d + 1);
+      setDisplayIndex((d) => (d >= STEPS.length ? d : d + 1));
       setAutoTick((t) => t + 1);
     },
   });

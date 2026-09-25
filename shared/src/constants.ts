@@ -20,7 +20,6 @@ export const GAME_CONSTANTS = {
   AVATAR_COUNT: 18, // 0-17 inclusive
 
   // Game settings
-  DEFAULT_CARD_RELANCES: 3,
 
   // Timer durations (in seconds)
   TIMERS: {
@@ -39,6 +38,14 @@ export const GAME_CONSTANTS = {
   // durées de phase d'un coup. 3 niveaux discrets (rapide / normal / tranquille).
   TIME_MULTIPLIER_LEVELS: [0.7, 1, 1.3] as readonly number[],
   TIME_MULTIPLIER_DEFAULT: 1,
+
+  // Niveau de DEV uniquement : allonge massivement toutes les phases pour
+  // travailler sur un écran sans se faire couper. Accepté par le serveur
+  // SEULEMENT si le backend tourne en développement (cf. lobbyHandlers), et
+  // appliqué comme n'importe quel multiplicateur — donc partagé par toute la
+  // table, timer serveur inclus. Remplace l'ancien DEBUG_TIMER purement client,
+  // qui permettait à un seul joueur d'imposer 1h à tout le monde.
+  TIME_MULTIPLIER_DEBUG: 30,
 
   // Lobby code format
   LOBBY_CODE_LENGTH: 6,
@@ -74,6 +81,9 @@ export const formatNoResponse = (playerName: string, suffix: string): string =>
 /** Borne le multiplicateur dans la plage des niveaux autorisés (fallback DEFAULT si NaN). */
 export const clampTimeMultiplier = (m: number): number => {
   if (!Number.isFinite(m)) return GAME_CONSTANTS.TIME_MULTIPLIER_DEFAULT;
+  // Le niveau de debug est une valeur exacte, hors de la plage des niveaux de jeu :
+  // le borner l'écraserait à 1.3 et le mode DEV ne servirait plus à rien.
+  if (m === GAME_CONSTANTS.TIME_MULTIPLIER_DEBUG) return m;
   const levels = GAME_CONSTANTS.TIME_MULTIPLIER_LEVELS;
   return Math.min(Math.max(m, levels[0]), levels[levels.length - 1]);
 };

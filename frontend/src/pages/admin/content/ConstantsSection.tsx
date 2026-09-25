@@ -147,7 +147,6 @@ export const ConstantsSection = () => {
               { label: 'Longueur du pseudo', value: `${GAME_CONSTANTS.MIN_NAME_LENGTH} à ${GAME_CONSTANTS.MAX_NAME_LENGTH} caractères` },
               { label: 'Longueur d\'une réponse', value: `${GAME_CONSTANTS.MAX_ANSWER_LENGTH} caractères max` },
               { label: 'Avatars disponibles', value: `${GAME_CONSTANTS.AVATAR_COUNT}` },
-              { label: 'Relances par carte', value: `${GAME_CONSTANTS.DEFAULT_CARD_RELANCES}` },
               { label: 'Longueur du code de salon', value: `${GAME_CONSTANTS.LOBBY_CODE_LENGTH} caractères` },
             ].map((row) => (
               <div

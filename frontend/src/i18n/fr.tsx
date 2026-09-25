@@ -138,7 +138,6 @@ export const fr: Dictionary = {
   game: {
     loading: 'Chargement du jeu...',
     leaderDisconnected: (name) => `${name} s'est déconnecté - round passé`,
-    newCards: (n) => `Nouvelles cartes (${n})`,
   },
 
   seo: {
@@ -159,6 +158,7 @@ export const fr: Dictionary = {
     points: (n) => `${n} pt${n > 1 ? 's' : ''}`,
     receivedQuestion: 'Question reçue',
     correctAnswersCount: (n) => `${n} Bonne${n > 1 ? 's' : ''} réponse${n > 1 ? 's' : ''}`,
+    respondentsLabel: 'Ont répondu',
     noPlayers: 'Aucun joueur',
     aria: {
       seeReceivedQuestion: 'Voir la question reçue',
@@ -475,7 +475,7 @@ export const fr: Dictionary = {
     },
     'loyal-10': {
       title: 'Fidèle',
-      description: '10 parties au compteur.',
+      description: '5 parties au compteur.',
     },
     'veteran-50': {
       title: 'Vétéran',
@@ -486,16 +486,16 @@ export const fr: Dictionary = {
       description: 'Trouver 20 réponses en tant que pilier.',
     },
     marathon: {
-      title: 'Marathon',
+      title: 'Marathonien',
       description: 'Terminer une partie de 10 manches ou plus.',
     },
     'top-1-thrice': {
-      title: 'Sur le podium',
+      title: 'Habitué du Top 1',
       description: "Finir 1er d'une partie, 3 fois.",
     },
     'zero-percent': {
-      title: 'Catastrophe industrielle',
-      description: 'Atteindre 0% en équipe. Bravo (?).',
+      title: "Nuls à l'unanimité",
+      description: 'Atteindre 0% en équipe. Bravo…',
     },
     'perfect-score': {
       title: 'Score parfait',
@@ -565,6 +565,7 @@ export const fr: Dictionary = {
     restore: 'Restaurer mes achats',
     purchasing: 'Achat en cours…',
     purchaseError: 'L\'achat n\'a pas pu aboutir. Réessaie dans un instant.',
+    purchaseUnavailable: 'Le Premium n\'est pas encore disponible à l\'achat. Reviens bientôt !',
     restoreError: 'Impossible de restaurer tes achats pour le moment.',
     restoreEmpty: 'Aucun achat à restaurer sur ce compte.',
     webOnly: 'Le Premium se débloque dans l\'appli mobile. Télécharge-la pour en profiter !',
@@ -682,8 +683,8 @@ export const fr: Dictionary = {
   shareCard: {
     eyebrow: 'VOUS VOUS CONNAISSEZ À',
     top3Label: 'TOP 3',
-    ctaLine1: 'Viens jouer sur',
-    ctaLine2: 'onskone.fr !',
+    ctaLine1: "Télécharge l'appli",
+    ctaLine2: 'Onskoné !',
     shareTitle: 'Onskoné',
   },
 

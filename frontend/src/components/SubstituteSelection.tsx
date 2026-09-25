@@ -79,7 +79,7 @@ const SubstituteSelection = ({
       return;
     }
     if (expireTimeoutRef.current) clearTimeout(expireTimeoutRef.current);
-    expireTimeoutRef.current = setTimeout(() => socket.emit('timerExpired', { lobbyCode }), 300);
+    expireTimeoutRef.current = setTimeout(() => socket.emit('timerExpired', { lobbyCode, phase: RoundPhase.SUBSTITUTE_SELECTION }), 300);
   };
 
   const subtitle = isLeader ? getQuestionSubtitle(t.phases, RoundPhase.SUBSTITUTE_SELECTION, isLeader) : '';

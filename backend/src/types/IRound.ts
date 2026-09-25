@@ -16,6 +16,8 @@ export interface IRound extends IRoundData {
 
   /** Date de fin du timer pour la phase actuelle (bookkeeping serveur) */
   timerEnd: Date | null;
+  /** Sortie de la phase ANSWERING (ms epoch). Fenêtre de grâce de `submitAnswer`. */
+  phaseEndedAt?: number;
 
   /** Phase pour laquelle le timer a été traité (protection contre les doubles appels) */
   timerProcessedForPhase?: RoundPhase | null;
@@ -29,8 +31,6 @@ export interface IRound extends IRoundData {
   /** Phase pour laquelle le timer a été démarré (évite les conflits entre phases) */
   timerPhase?: RoundPhase;
 
-  /** Nombre de relances utilisées par le pilier en phase QUESTION_SELECTION */
-  relancesUsed: number;
 
   /** Les 3 cartes proposées au pilier pour la sélection */
   proposedCards: GameCard[];
@@ -42,6 +42,9 @@ export interface IRound extends IRoundData {
   similarityCorrections: number[];
 
   // ===== Méthodes métier =====
+
+  /** Désarme le timeout serveur autoritatif de la phase courante, s'il est armé. */
+  clearServerTimer(): void;
 
   calculateScores(): void;
   addAnswer(playerId: string, answer: string): void;

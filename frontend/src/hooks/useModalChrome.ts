@@ -8,8 +8,40 @@ import { useCallback, useEffect, useRef, type MouseEvent as ReactMouseEvent } fr
  * Escape ferme toutes les modales empilées et que chaque modale réinitialise
  * `overflow` de son côté).
  */
-const modalStack: object[] = [];
+interface ModalEntry {
+  /** Identité par référence (le jeton de l'instance). */
+  token: object;
+  /** Fermeture de CETTE modale, à jour (lue via ref). */
+  close: () => void;
+  /** Exclue de la fermeture groupée au retour de l'app. */
+  keepOnResume: boolean;
+}
+
+const modalStack: ModalEntry[] = [];
 let savedBodyOverflow = '';
+
+/**
+ * Referme toutes les modales ouvertes, sauf celles qui s'en excluent
+ * (`keepOnResume`). Appelé au retour de l'app au premier plan : revenir d'un
+ * scan de QR code sur un jeu couvert de fenêtres à fermer une par une est
+ * pénible, et pendant ce temps la partie avance.
+ *
+ * On itère sur une COPIE, du sommet vers la base : chaque `close()` déclenche un
+ * démontage qui retire son entrée de la pile pendant le parcours.
+ */
+const closeAllOnResume = (): void => {
+  for (const entry of [...modalStack].reverse()) {
+    if (entry.keepOnResume) continue;
+    entry.close();
+  }
+};
+
+// Un seul écouteur pour toute l'app, quel que soit le nombre de modales montées.
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') closeAllOnResume();
+  });
+}
 
 export interface ModalChrome {
   /**
@@ -39,7 +71,24 @@ export interface ModalChrome {
  * Mutualisé entre ModalShell (modales papier) et ThemePickerModal (layout
  * plein-écran sombre distinct, qui n'adopte que ce comportement chrome).
  */
-export function useModalChrome(isOpen: boolean, onClose: () => void): ModalChrome {
+/**
+ * Options de `useModalChrome`.
+ */
+export interface ModalChromeOptions {
+  /**
+   * Laisse la modale ouverte quand l'app revient au premier plan. À réserver aux
+   * modales BLOQUANTES par nature (mise à jour obligatoire, partie déjà lancée) :
+   * les refermer automatiquement laisserait passer ce qu'elles verrouillent.
+   */
+  keepOnResume?: boolean;
+}
+
+export function useModalChrome(
+  isOpen: boolean,
+  onClose: () => void,
+  options: ModalChromeOptions = {},
+): ModalChrome {
+  const keepOnResume = options.keepOnResume === true;
   // Jeton stable et unique par instance de modale (identité par référence dans
   // la pile). `useRef({}).current` reste le même objet à travers les renders.
   const token = useRef({}).current;
@@ -59,11 +108,13 @@ export function useModalChrome(isOpen: boolean, onClose: () => void): ModalChrom
       savedBodyOverflow = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
     }
-    modalStack.push(token);
+    // `close` passe par la ref : l'entrée reste valide même si le handler change,
+    // sans avoir à dépiler/rempiler (ce qui casserait l'ordre du stack).
+    modalStack.push({ token, close: () => onCloseRef.current(), keepOnResume });
 
     const onKeyDown = (e: KeyboardEvent) => {
       // Seule la modale au sommet de la pile réagit à Escape.
-      if (e.key === 'Escape' && modalStack[modalStack.length - 1] === token) {
+      if (e.key === 'Escape' && modalStack[modalStack.length - 1]?.token === token) {
         onCloseRef.current();
       }
     };
@@ -71,7 +122,7 @@ export function useModalChrome(isOpen: boolean, onClose: () => void): ModalChrom
 
     return () => {
       document.removeEventListener('keydown', onKeyDown);
-      const idx = modalStack.indexOf(token);
+      const idx = modalStack.findIndex(e => e.token === token);
       if (idx !== -1) modalStack.splice(idx, 1);
       // Restaurer le scroll seulement au démontage de la dernière modale.
       if (modalStack.length === 0) {
@@ -81,14 +132,14 @@ export function useModalChrome(isOpen: boolean, onClose: () => void): ModalChrom
     };
     // `token` est stable (useRef().current) : l'inclure satisfait exhaustive-deps
     // sans changer le comportement — l'effet ne se re-exécute qu'au changement d'`isOpen`.
-  }, [isOpen, token]);
+  }, [isOpen, token, keepOnResume]);
 
   const onBackdropClick = useCallback(
     (e: ReactMouseEvent) => {
       // Clic sur un enfant (la carte, ou le backdrop d'une modale empilée
       // au-dessus) : ce n'est pas un clic "en dehors" pour nous.
       if (e.target !== e.currentTarget) return;
-      if (modalStack[modalStack.length - 1] !== token) return;
+      if (modalStack[modalStack.length - 1]?.token !== token) return;
       onCloseRef.current();
     },
     [token],

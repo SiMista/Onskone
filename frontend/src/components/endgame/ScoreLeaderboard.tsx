@@ -4,6 +4,7 @@ import type { IPlayer, IRound, LeaderboardEntry } from '@onskone/shared';
 import Avatar from '../Avatar';
 import PremiumName from '../PremiumName';
 import { useLocale } from '../../i18n';
+import ScrollFade from '../ScrollFade';
 
 interface ScoreLeaderboardProps {
   leaderboard: LeaderboardEntry[];
@@ -40,6 +41,7 @@ const ScoreLeaderboard: React.FC<ScoreLeaderboardProps> = ({
   const [renderedPopoverFor, setRenderedPopoverFor] = useState<string | null>(null);
   const [popoverVisible, setPopoverVisible] = useState(false);
   const popoverRef = useRef<HTMLDivElement | null>(null);
+  const listRef = useRef<HTMLDivElement | null>(null);
 
   // Gestion mount/unmount différé pour permettre l'animation de fermeture
   useEffect(() => {
@@ -84,7 +86,15 @@ const ScoreLeaderboard: React.FC<ScoreLeaderboardProps> = ({
       <h2 className="text-base md:text-xl font-display font-bold text-gray-900 mb-2 md:mb-3 text-center uppercase tracking-wider m-0">
         {t.endGame.individualScores}
       </h2>
-      <div className="space-y-1.5 md:space-y-2">
+      {/* La liste scrolle DANS la carte, avec le fondu blanc des modales en bas :
+          sans lui, la dernière ligne était tranchée net par le bord de la carte et
+          rien n'indiquait que le classement continuait. `pr-1` réserve la place du
+          fondu, `pb-4` évite qu'il mange la dernière ligne une fois en bas. */}
+      <div className="relative">
+        <div
+          ref={listRef}
+          className="space-y-1.5 md:space-y-2 max-h-[38dvh] md:max-h-[44dvh] overflow-y-auto overscroll-contain pr-1 pb-4 pt-1"
+        >
         {leaderboard.map((entry, index) => {
           const isCurrentPlayer = entry.player.id === currentPlayer?.id;
           const isPodium = index < 3;
@@ -98,6 +108,12 @@ const ScoreLeaderboard: React.FC<ScoreLeaderboardProps> = ({
               .map(id => playerNameById.get(id))
               .filter((n): n is string => !!n)
             : [];
+          // Bonnes réponses RÉELLES du pilier sur son round : le score qu'il y a
+          // marqué (1 point par attribution juste, bonus de similarité inclus).
+          // À ne pas confondre avec `respondentNames`, qui liste TOUS les joueurs
+          // ayant répondu — ce nombre-là était affiché ici, et surévaluait
+          // systématiquement le résultat (un pilier qui rate tout voyait « 4 »).
+          const correctCount = round?.scores?.[entry.player.id] ?? 0;
           return (
             <div
               key={entry.player.id}
@@ -144,7 +160,7 @@ const ScoreLeaderboard: React.FC<ScoreLeaderboardProps> = ({
                       <div
                         ref={isOpen ? popoverRef : undefined}
                         data-state={isOpen && popoverVisible ? 'open' : 'closed'}
-                        className="absolute right-0 bottom-full mb-2 w-60 md:w-72 z-30 bg-white border-[2.5px] border-black rounded-xl stack-shadow p-3 md:p-3.5 popover-anim text-left"
+                        className="absolute right-0 top-full mt-2 w-60 md:w-72 z-30 bg-white border-[2.5px] border-black rounded-xl stack-shadow p-3 md:p-3.5 popover-anim text-left"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <p className="text-xs font-display font-bold uppercase tracking-wider text-gray-500 leading-tight">
@@ -154,7 +170,10 @@ const ScoreLeaderboard: React.FC<ScoreLeaderboardProps> = ({
                           « {round.selectedQuestion} »
                         </p>
                         <p className="text-xs font-display font-bold uppercase tracking-wider text-gray-500 leading-tight">
-                          {t.endGame.correctAnswersCount(respondentNames.length)}
+                          {t.endGame.correctAnswersCount(correctCount)}
+                        </p>
+                        <p className="mt-2 text-xs font-display font-bold uppercase tracking-wider text-gray-500 leading-tight">
+                          {t.endGame.respondentsLabel}
                         </p>
                         {respondentNames.length > 0 ? (
                           <p className="text-sm text-gray-900 leading-snug">
@@ -172,6 +191,8 @@ const ScoreLeaderboard: React.FC<ScoreLeaderboardProps> = ({
             </div>
           );
         })}
+        </div>
+        <ScrollFade scrollRef={listRef} />
       </div>
     </div>
   );

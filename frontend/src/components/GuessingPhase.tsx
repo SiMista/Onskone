@@ -44,6 +44,10 @@ const GuessingPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, question,
   const [highlightedAnswerId, setHighlightedAnswerId] = useState<string | null>(null);
   // Cartes qui viennent d'être attribuées : déclenche snap-bounce
   const [justAssignedAnswerId, setJustAssignedAnswerId] = useState<string | null>(null);
+  // Slots auto-attribués (placeholders « n'a pas répondu à temps »). Sert à
+  // distinguer ces attributions de celles posées par le pilier, pour ne retirer
+  // que les premières si le pool est re-diffusé avec une vraie réponse.
+  const autoAssignedRef = useRef<Set<string>>(new Set());
   const justAssignedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -98,22 +102,46 @@ const GuessingPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, question,
     setAnswers(data.answers);
     setPlayers(data.players);
 
-    // Auto-assigner les réponses NO_RESPONSE aux joueurs correspondants
+    // Auto-assigner les réponses NO_RESPONSE aux joueurs correspondants.
+    //
+    // Ce pool peut être RE-diffusé : une réponse écrite juste avant la fin du temps
+    // arrive en léger retard et remplace alors son placeholder « n'a pas répondu à
+    // temps ». Le slot cesse d'être un NO_RESPONSE, donc son auto-attribution
+    // devient caduque — il faut la RETIRER, sinon le pilier découvre une carte déjà
+    // placée pour lui alors que rien ne doit l'être par défaut.
     const autoGuesses: Record<string, string> = {};
+    const staleAutoSlots: string[] = [];
     data.answers.forEach(answer => {
       if (isNoResponse(answer.text)) {
         // answer.id = slot opaque ; ownerId (fourni pour les NO_RESPONSE) = l'auteur réel
         autoGuesses[answer.id] = answer.ownerId ?? answer.id;
+      } else {
+        staleAutoSlots.push(answer.id);
       }
     });
-    if (Object.keys(autoGuesses).length > 0) {
-      setGuesses(prev => ({ ...prev, ...autoGuesses }));
-    }
+    setGuesses(prev => {
+      const next = { ...prev };
+      // Ne retirer que les attributions AUTOMATIQUES, jamais un placement fait à la
+      // main par le pilier. On s'appuie sur la trace locale des slots auto-assignés :
+      // une fois le placeholder remplacé, le serveur cesse (à raison) d'exposer
+      // `ownerId`, donc le payload seul ne permet plus de les distinguer.
+      for (const slotId of staleAutoSlots) {
+        if (autoAssignedRef.current.has(slotId)) {
+          delete next[slotId];
+          autoAssignedRef.current.delete(slotId);
+        }
+      }
+      for (const slotId of Object.keys(autoGuesses)) autoAssignedRef.current.add(slotId);
+      return { ...next, ...autoGuesses };
+    });
 
     setLoading(false);
   });
 
   useSocketEvent('guessUpdated', (data) => {
+    // Le pilier a touché ce slot : l'attribution n'est plus automatique, elle lui
+    // appartient. On la sort de la trace pour ne jamais la retirer d'office.
+    autoAssignedRef.current.delete(data.answerId);
     setGuesses(prev => {
       const updated = { ...prev };
       if (data.playerId === null) {
@@ -166,7 +194,7 @@ const GuessingPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, question,
 
   const handleTimerExpire = () => {
     if (isLeader) {
-      socket.emit('timerExpired', { lobbyCode });
+      socket.emit('timerExpired', { lobbyCode, phase: RoundPhase.GUESSING });
     }
   };
 

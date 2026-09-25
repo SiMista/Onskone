@@ -58,7 +58,19 @@ const resolveDebugMode = (): boolean => {
 };
 const DEBUG_MODE = resolveDebugMode();
 
-const DEBUG_TIMER = 3600; // 1 heure
+/**
+ * Multiplicateur de temps à appliquer au lobby quand le mode debug est actif.
+ * `null` hors DEV : le mode debug n'existe pas en production.
+ *
+ * Remplace l'ancien `DEBUG_TIMER` (1h renvoyée localement par getPhaseDuration).
+ * Celui-ci ne trompait que l'affichage : la durée fait autorité côté serveur, qui
+ * coupait la phase à l'heure réelle. Et surtout, le pilier l'envoyait via
+ * `startTimer`, imposant 1h à TOUTE la table — joueurs en prod compris.
+ * Passer par le multiplicateur du lobby rend le réglage explicite, partagé et
+ * refusé par le serveur hors développement.
+ */
+export const DEBUG_TIME_MULTIPLIER: number | null =
+  DEBUG_MODE ? GAME_CONSTANTS.TIME_MULTIPLIER_DEBUG : null;
 
 // Configuration des avatars DiceBear - Caractéristiques exactes (pas de seed/probabilité)
 // Documentation: https://www.dicebear.com/styles/micah/
@@ -133,7 +145,12 @@ export const getPhaseDuration = (
   timeMultiplier: number = GAME_CONSTANTS.TIME_MULTIPLIER_DEFAULT,
   playerCount = 3,
 ): number => {
-  if (DEBUG_MODE) return DEBUG_TIMER;
+  // NB : plus de court-circuit DEBUG ici. La durée fait désormais autorité côté
+  // SERVEUR (il ignore celle envoyée par le client), donc un allongement purement
+  // local ne ferait qu'afficher un sablier qui ment : le serveur couperait la phase
+  // à la durée réelle. Pour rallonger les phases en DEV, l'hôte règle le
+  // multiplicateur de debug du lobby (TIME_MULTIPLIER_DEBUG), appliqué par le
+  // serveur et donc partagé par toute la table.
   return getSharedPhaseDuration(phase, timeMultiplier, playerCount);
 };
 

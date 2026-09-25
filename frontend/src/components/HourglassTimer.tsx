@@ -62,10 +62,17 @@ const HourglassTimer = ({ duration, onExpire, phase, lobbyCode, size = 'md', hid
 
   if (hidden) return null;
 
+  // Le sablier reste immobile : seul le compteur s'agite en zone critique (cf.
+  // `animate-timer-critical`). Agiter tout le bloc rendait le chiffre difficile
+  // à lire au moment précis où il compte le plus.
   return (
-    <div className={`inline-flex flex-row items-center gap-1.5 md:gap-2 ${isCritical ? 'animate-hourglass-nudge' : ''}`}>
+    <div className="inline-flex flex-row items-center gap-1.5 md:gap-2">
+      {/* Dès l'orange (≤35 % du temps), le compteur grossit et pulse : à 10px sur
+          mobile il passait inaperçu, et c'est précisément le moment où il doit
+          attirer l'œil. Le grossissement est porté par `animate-timer-urgent`
+          (scale) plutôt que par un saut de classe, pour éviter un à-coup. */}
       <span
-        className={`font-display font-bold leading-none tabular-nums ${sizeClass.text} ${isCritical ? 'text-red-600' : isWarning ? 'text-orange-500' : 'text-gray-700'
+        className={`font-display font-bold leading-none tabular-nums origin-center ${sizeClass.text} ${isCritical ? 'animate-timer-critical' : isWarning ? 'animate-timer-urgent' : ''} ${isCritical ? 'text-red-600' : isWarning ? 'text-orange-500' : 'text-gray-700'
           }`}
       >
         {Math.max(0, remainingSec)}s

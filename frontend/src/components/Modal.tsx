@@ -13,10 +13,17 @@ interface ModalProps {
    * (ce qui laisserait toujours un gap avec le padding du scroll body).
    */
   subHeader?: ReactNode;
+  /**
+   * Laisse la modale ouverte au retour de l'app au premier plan (cf.
+   * useModalChrome / closeAllOnResume). À poser sur toute modale qui porte une
+   * SAISIE utilisateur : un simple alt-tab ou changement d'app déclenche
+   * `visibilitychange`, et refermer la modale jetterait le brouillon.
+   */
+  keepOnResume?: boolean;
 }
 
-const Modal = ({ isOpen, onClose, title, children, subHeader }: ModalProps) => (
-  <ModalShell isOpen={isOpen} onClose={onClose} title={title} subHeader={subHeader}>
+const Modal = ({ isOpen, onClose, title, children, subHeader, keepOnResume }: ModalProps) => (
+  <ModalShell isOpen={isOpen} onClose={onClose} title={title} subHeader={subHeader} keepOnResume={keepOnResume}>
     {children}
   </ModalShell>
 );

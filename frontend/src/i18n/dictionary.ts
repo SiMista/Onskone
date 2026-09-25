@@ -159,8 +159,6 @@ export interface Dictionary {
   game: {
     loading: string;
     leaderDisconnected: (name: string) => string;
-    /** Bouton "relancer" en sélection de question : n = relances restantes. */
-    newCards: (n: number) => string;
   };
 
   /** Chaînes SEO / méta de l'accueil (titre onglet, description, h1, alt logo). */
@@ -181,6 +179,7 @@ export interface Dictionary {
     points: (n: number) => string;
     receivedQuestion: string;
     correctAnswersCount: (n: number) => string;
+    respondentsLabel: string;
     noPlayers: string;
     aria: {
       seeReceivedQuestion: string;
@@ -303,6 +302,7 @@ export interface Dictionary {
     restore: string;
     purchasing: string;
     purchaseError: string;
+    purchaseUnavailable: string;
     restoreError: string;
     restoreEmpty: string;
     // Mode web (redirection store)

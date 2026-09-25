@@ -8,6 +8,25 @@ import type { ErrorCode } from '@onskone/shared';
 import { useToast } from '../components/Toast';
 import { useLocale } from '../i18n';
 
+/**
+ * Ordre canonique des phases, pour comparer la fraîcheur d'un `gameState` reçu.
+ * SUBSTITUTE_* sont intercalées : elles n'existent qu'en mode « Devine ma réponse »,
+ * et leur absence d'un round ne fausse pas la comparaison (on ne compare que des
+ * phases d'un même round).
+ */
+const PHASE_ORDER: RoundPhase[] = [
+  RoundPhase.QUESTION_SELECTION,
+  RoundPhase.SUBSTITUTE_SELECTION,
+  RoundPhase.ANSWERING,
+  RoundPhase.SUBSTITUTE_ANSWERING,
+  RoundPhase.GUESSING,
+  RoundPhase.REVEAL,
+];
+
+/** Relances d'une resync refusée : délais croissants, puis on abandonne. */
+const RESYNC_RETRY_DELAYS = [600, 1500, 3000] as const;
+const RESYNC_MAX_RETRIES = RESYNC_RETRY_DELAYS.length;
+
 interface UseGameStateResult {
   game: IGame | null;
   players: IPlayer[];
@@ -71,8 +90,25 @@ export function useGameState(lobbyCode: string | undefined): UseGameStateResult 
 
   // ===== Handlers socket =====
   const handleGameState = useCallback((data: { game: IGame; players: IPlayer[]; reconnectionData?: ReconnectionData }) => {
-    setGame(data.game);
+    // Garde de fraîcheur : un `gameState` est sérialisé au moment de la requête,
+    // mais peut arriver APRÈS un event de phase déjà appliqué (questionSelected…).
+    // Sans garde, l'écrasement intégral ramenait le client à la phase précédente :
+    // le joueur se retrouvait sans question ni zone de saisie, définitivement (aucun
+    // event n'étant rediffusé). On ignore donc un état plus ancien que l'actuel.
+    setGame(prev => {
+      const incoming = data.game;
+      const prevRound = prev?.currentRound;
+      const nextRound = incoming?.currentRound;
+      if (prevRound && nextRound && prevRound.roundNumber === nextRound.roundNumber) {
+        const order = PHASE_ORDER.indexOf(nextRound.phase);
+        const prevOrder = PHASE_ORDER.indexOf(prevRound.phase);
+        if (order !== -1 && prevOrder !== -1 && order < prevOrder) return prev;
+      }
+      if (prevRound && nextRound && nextRound.roundNumber < prevRound.roundNumber) return prev;
+      return incoming;
+    });
     setPlayers(data.players);
+    resyncRetryRef.current = 0;
     if (data.reconnectionData) {
       setReconnectionData(data.reconnectionData);
       if (data.reconnectionData.revealResults) {
@@ -169,9 +205,33 @@ export function useGameState(lobbyCode: string | undefined): UseGameStateResult 
   // `code` reste informatif ici : toutes les erreurs en jeu sont remontées
   // via le même toast ; le routing par code spécifique (kick/fermeture) passe par
   // des events dédiés gérés dans useLobbyExitEvents.
+  // Un refus de `getGameState` laissait le client sur l'écran de chargement, sans
+  // aucune relance : il fallait quitter et revenir. On réessaie quelques fois, en
+  // espaçant — puis, budget épuisé, on AFFICHE l'erreur : un refus définitif
+  // (token perdu, non-membre) doit se voir, pas se taire.
+  const resyncRetryRef = useRef(0);
+  const resyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /** @returns true si une relance a été planifiée (false = budget épuisé). */
+  const scheduleResync = useCallback((): boolean => {
+    if (resyncRetryRef.current >= RESYNC_MAX_RETRIES) return false;
+    const attempt = resyncRetryRef.current++;
+    if (resyncTimerRef.current) clearTimeout(resyncTimerRef.current);
+    resyncTimerRef.current = setTimeout(fetchGameState, RESYNC_RETRY_DELAYS[attempt]);
+    return true;
+  }, [fetchGameState]);
+
+  useEffect(() => () => { if (resyncTimerRef.current) clearTimeout(resyncTimerRef.current); }, []);
+
   const handleSocketError = useCallback((data: { message: string; code?: ErrorCode }) => {
+    // Refus de resync pendant le chargement : on relance silencieusement tant
+    // qu'il reste du budget (lock de reconnexion tenu, état transitoire). Une fois
+    // les relances épuisées, le toast passe : sinon le joueur restait sur
+    // « chargement » à vie sans le moindre message.
+    const isResyncRefusal = data.code === 'CONFLICT' || data.code === 'FORBIDDEN';
+    if (isResyncRefusal && !game && scheduleResync()) return;
     showToast(data.message, 'error', 5000);
-  }, [showToast]);
+  }, [showToast, game, scheduleResync]);
 
   useSocketEvent('gameState', handleGameState);
   useSocketEvent('gameStarted', handleGameStarted);

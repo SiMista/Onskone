@@ -52,6 +52,13 @@ export class Game implements IGame {
 
         const gameCard = this.getRandomGameCard();
 
+        // Désarmer le timeout serveur du round sortant AVANT de le remplacer : sans ça
+        // son setTimeout vit jusqu'à son échéance naturelle (jusqu'à plusieurs minutes
+        // sur GUESSING). Le callback est inoffensif (il revérifie l'identité du round),
+        // mais il retient le round par closure et retarde le graceful shutdown. Le
+        // chemin `nextPhase()` clear déjà ; celui-ci (skip pilier) ne passait pas par là.
+        this.currentRound?.clearServerTimer();
+
         this.currentRound = new Round(roundNumber, leader, gameCard, this.lobby.guessMyAnswerMode === true);
         this.rounds.push(this.currentRound);
     }

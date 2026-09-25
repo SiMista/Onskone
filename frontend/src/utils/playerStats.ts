@@ -186,7 +186,10 @@ export function recordGameEnd(payload: GameEndPayload): Achievement[] {
   };
 
   if (stats.gamesPlayed >= 1) unlock('first-game');
-  if (stats.gamesPlayed >= 10) unlock('loyal-10');
+  // L'id reste 'loyal-10' bien que le seuil soit passé à 5 : il est persisté dans
+  // `unlockedAchievements` côté joueur, le renommer ferait perdre le succès à ceux
+  // qui l'ont déjà débloqué.
+  if (stats.gamesPlayed >= 5) unlock('loyal-10');
   if (stats.gamesPlayed >= 25) unlock('veteran-50');
   if (stats.correctGuessesAsLeader >= 20) unlock('mind-reader-20');
   if (payload.teamPct >= 100) unlock('perfect-score');

@@ -1,6 +1,6 @@
 import { rateLimiters } from '../../utils/rateLimiter.js';
 import logger from '../../utils/logger.js';
-import { armServerTimer, processTimerExpiration } from '../broadcasting.js';
+import { armServerTimer, processTimerExpiration, getServerPhaseDuration } from '../broadcasting.js';
 import {
     type HandlerContext,
     type AppSocket,
@@ -16,7 +16,7 @@ export function registerTimerHandlers(socket: AppSocket, ctx: HandlerContext): v
         withLeaderGuards(socket, data, {
             limiter: rateLimiters.gameAction,
             requireLeaderAction: 'démarrer le timer',
-        }, ({ round: currentRound }, data) => {
+        }, ({ lobby, round: currentRound }, data) => {
             // Vérifier si un timer est déjà en cours pour CETTE phase (évite reset sur refresh)
             // Chaque phase a son propre timer, on vérifie aussi la phase
             const requestedPhase = currentRound.phase;
@@ -35,9 +35,18 @@ export function registerTimerHandlers(socket: AppSocket, ctx: HandlerContext): v
                 }
             }
 
-            // Calculer la fin du timer (en secondes) - validation: 1s minimum, 1h maximum
-            const rawDuration = typeof data.duration === 'number' ? data.duration : 60;
-            const timerDuration = Math.max(1, Math.min(3600, Math.floor(rawDuration)));
+            // Durée calculée par le SERVEUR pour la phase courante, pas celle envoyée
+            // par le client. `data.duration` n'est plus qu'indicatif : un client en mode
+            // DEBUG (DEBUG_TIMER = 3600) imposait sinon un timer d'une heure à toute la
+            // table, et un `startTimer` parti juste avant une transition armait la durée
+            // de l'ANCIENNE phase sur la nouvelle. Le serveur connaît déjà la bonne
+            // valeur (même source partagée que le front) : il n'a aucune raison de faire
+            // confiance au client ici.
+            const timerDuration = getServerPhaseDuration(requestedPhase, lobby);
+            if (timerDuration <= 0) {
+                logger.debug('startTimer ignoré : phase sans timer', { lobbyCode: data.lobbyCode, phase: requestedPhase });
+                return;
+            }
 
             // Armer un timeout SERVEUR autoritatif (bookkeeping + setTimeout + broadcast
             // `timerStarted`), mutualisé avec le ré-armement après auto-transition.
@@ -105,6 +114,21 @@ export function registerTimerHandlers(socket: AppSocket, ctx: HandlerContext): v
         }, ({ lobby, game, round: currentRound }, data) => {
             // Le timerExpired du pilier reste une optimisation de réactivité :
             // la logique (et ses gardes anti-double-traitement) est centralisée.
+            //
+            // Mais il faut d'abord vérifier qu'il parle bien de la phase EN COURS.
+            // Un pilier mobile throttlé en arrière-plan poste son `timerExpired` au
+            // réveil, potentiellement plusieurs phases plus tard ; `timerPhase` ayant
+            // pu être réécrit entre-temps par un ré-armement, il ne suffisait pas à
+            // l'écarter. On concluait alors la phase courante à l'instant où elle
+            // démarrait (ANSWERING annulée, tout le monde en « n'a pas répondu »).
+            if (data.phase !== currentRound.phase) {
+                logger.debug('timerExpired ignoré : phase obsolète', {
+                    lobbyCode: data.lobbyCode,
+                    reported: data.phase,
+                    current: currentRound.phase,
+                });
+                return;
+            }
             processTimerExpiration(io, data.lobbyCode, lobby, game, currentRound);
         });
     });

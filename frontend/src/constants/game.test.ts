@@ -21,9 +21,11 @@ describe('getCategoryColor', () => {
 });
 
 describe('getPhaseDuration', () => {
-  // NB: DEBUG_MODE is resolved at module load. In `vitest run` there is no
-  // `?debug=1` in the jsdom URL and no VITE_DEBUG_MODE, so DEBUG_MODE is false
-  // and these durations reflect the real (non-debug) timers.
+  // NB: getPhaseDuration ne court-circuite plus rien en mode debug — la durée fait
+  // autorité côté serveur, donc un allongement purement client ne ferait qu'afficher
+  // un sablier qui ment. Le mode debug passe désormais par le multiplicateur de temps
+  // du lobby (DEBUG_TIME_MULTIPLIER -> updateTimeMultiplier), appliqué par le serveur.
+  // Ces durées sont donc toujours les durées réelles.
 
   it('returns the base timer for a fixed phase at the default multiplier', () => {
     expect(getPhaseDuration(RoundPhase.QUESTION_SELECTION)).toBe(

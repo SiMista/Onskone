@@ -100,7 +100,12 @@ interface RCCustomerInfo {
 }
 interface RCPackage { identifier: string }
 interface RCPurchasesApi {
-  configure(opts: { apiKey: string }): Promise<void>;
+  // configure()/setLogLevel() sont déclarés RETURN_NONE côté natif : le proxy
+  // Capacitor renvoie alors un callbackId (string) de façon SYNCHRONE, pas une
+  // Promise, malgré ce qu'annoncent les .d.ts du plugin. Ne jamais `.then` /
+  // `.catch` dessus ni les passer à withTimeout.
+  configure(opts: { apiKey: string }): void | Promise<void>;
+  setLogLevel?(opts: { level: string }): void | Promise<void>;
   getCustomerInfo(): Promise<{ customerInfo: RCCustomerInfo }>;
   getOfferings(): Promise<{ current?: { availablePackages?: RCPackage[] } }>;
   purchasePackage(opts: { aPackage: RCPackage }): Promise<{ customerInfo: RCCustomerInfo }>;
@@ -108,13 +113,50 @@ interface RCPurchasesApi {
 }
 type PurchasesModule = { Purchases: RCPurchasesApi };
 
+// Toute erreur du SDK est tracée : muettes, elles rendent le paywall
+// indiagnosticable sur device (cf. `chrome://inspect` / logcat / Console.app).
+const rcLog = (msg: string, err?: unknown): void => {
+  console.error(`[premium] ${msg}`, err ?? '');
+};
+
+// Délai au-delà duquel on considère qu'un appel RÉSEAU du SDK (getOfferings,
+// getCustomerInfo) ne répondra pas : sans plafond, l'UI reste bloquée sur son
+// état "achat en cours". Réservé à ces appels : purchasePackage et
+// restorePurchases sont pilotés par l'utilisateur (feuille Play / Apple, mot de
+// passe, ajout de CB, 3-D Secure…) et dépassent légitimement n'importe quel
+// délai. Les plafonner rejetait un achat encore en cours puis jetait son
+// résultat : payé, pas premium.
+const SDK_TIMEOUT_MS = 15_000;
+
+const withTimeout = <T>(promise: Promise<T>, label: string): Promise<T> =>
+  new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`[premium] ${label} n'a pas répondu en ${SDK_TIMEOUT_MS}ms`));
+    }, SDK_TIMEOUT_MS);
+    // Promise.resolve : une valeur non-promesse (méthode RETURN_NONE du pont) ne
+    // doit pas faire exploser l'executor en TypeError.
+    Promise.resolve(promise).then(
+      (v) => { clearTimeout(timer); resolve(v); },
+      (e) => { clearTimeout(timer); reject(e); },
+    );
+  });
+
+// Vrai une fois configure() abouti. Les appels d'achat le vérifient : le SDK
+// rejette toute requête émise avant sa configuration.
+let configured = false;
+// Promesse d'initPremium(), mémorisée pour être attendue par les achats.
+let configurePromise: Promise<void> | null = null;
+
 let purchasesPromise: Promise<PurchasesModule | null> | null = null;
 const loadPurchases = (): Promise<PurchasesModule | null> => {
   if (!purchasesPromise) {
     // @vite-ignore + cast : le paquet est résolu au runtime natif uniquement.
     purchasesPromise = import(/* @vite-ignore */ '@revenuecat/purchases-capacitor')
       .then((m) => m as unknown as PurchasesModule)
-      .catch(() => null);
+      .catch((err) => {
+        rcLog('import du plugin impossible', err);
+        return null;
+      });
   }
   return purchasesPromise;
 };
@@ -122,25 +164,67 @@ const loadPurchases = (): Promise<PurchasesModule | null> => {
 const readEntitlement = (customerInfo: { entitlements: { active: Record<string, unknown> } }): boolean =>
   Boolean(customerInfo?.entitlements?.active?.[ENTITLEMENT_ID]);
 
-/** Configure le SDK et rafraîchit le statut. À appeler une fois au boot (App.tsx). */
-export const initPremium = async (): Promise<void> => {
+/**
+ * Configure le SDK et rafraîchit le statut. À appeler une fois au boot (App.tsx).
+ * La promesse est mémorisée (`configurePromise`) : purchasePremium/restorePurchases
+ * l'attendent avant de parler au SDK. Sans ça, un clic rapide sur le paywall
+ * appelle getOfferings() sur un SDK non configuré, que le natif rejette
+ * ("Purchases must be configured before calling this function").
+ */
+export const initPremium = (): Promise<void> => {
+  // Idempotent : App.tsx l'appelle sans await, les achats réutilisent la promesse.
+  if (!configurePromise) configurePromise = runInit();
+  return configurePromise;
+};
+
+const runInit = async (): Promise<void> => {
   // Web/Studio : pas de SDK. On garde le cache/override en place.
   if (!Capacitor.isNativePlatform()) {
     setAnnouncedPremium(isPremium);
+    configured = false;
     return;
   }
   const platform = Capacitor.getPlatform();
   const apiKey = platform === 'ios' ? RC_APPLE_KEY : RC_GOOGLE_KEY;
-  if (!apiKey) return;
+  if (!apiKey) {
+    // Clé absente du build (variable Vite non injectée par la CI) : les achats
+    // sont inertes. Muet, ce cas est indiscernable d'un vrai échec d'achat.
+    rcLog(`clé API ${platform} absente du build → achats désactivés`);
+    return;
+  }
 
   const mod = await loadPurchases();
   if (!mod) return;
   try {
-    await mod.Purchases.configure({ apiKey });
+    // configure()/setLogLevel() sont RETURN_NONE côté natif : le proxy Capacitor
+    // poste l'appel et renvoie un callbackId (string) de façon SYNCHRONE. Il n'y
+    // a aucune promesse à attendre ni à plafonner. Les enrober (`.catch`,
+    // withTimeout) levait un TypeError, `configured` restait false à vie, et
+    // achats comme restauration étaient morts pour tout le monde.
+    // Logs natifs du SDK (visibles dans logcat / Console.app), dev uniquement.
+    if (import.meta.env.DEV && mod.Purchases.setLogLevel) {
+      try { void mod.Purchases.setLogLevel({ level: 'DEBUG' }); } catch { /* best-effort */ }
+    }
+    void mod.Purchases.configure({ apiKey });
+    configured = true;
     await refreshPremiumStatus();
-  } catch {
-    /* silent : on garde le dernier statut connu (cache) */
+  } catch (err) {
+    // On garde le dernier statut connu (cache), mais on trace : sans ça, une clé
+    // invalide ressemble à un achat qui échoue pour une raison mystérieuse.
+    rcLog('configure a échoué → achats indisponibles', err);
   }
+};
+
+/** Attend la configuration lancée au boot. true si le SDK est utilisable. */
+const ensureConfigured = async (): Promise<boolean> => {
+  if (configurePromise) {
+    try {
+      await configurePromise;
+    } catch {
+      /* initPremium trace déjà l'échec */
+    }
+  }
+  return configured;
 };
 
 /** Relit le statut depuis le SDK et met à jour le store. */
@@ -149,11 +233,12 @@ export const refreshPremiumStatus = async (): Promise<boolean> => {
   const mod = await loadPurchases();
   if (!mod) return isPremium;
   try {
-    const { customerInfo } = await mod.Purchases.getCustomerInfo();
+    const { customerInfo } = await withTimeout(mod.Purchases.getCustomerInfo(), 'getCustomerInfo');
     const active = readEntitlement(customerInfo);
     setPremium(active);
     return active;
-  } catch {
+  } catch (err) {
+    rcLog('getCustomerInfo a échoué → statut inchangé', err);
     return isPremium;
   }
 };
@@ -163,12 +248,17 @@ export const refreshPremiumStatus = async (): Promise<boolean> => {
  * - `cancelled` : l'utilisateur a fermé la feuille native → ne RIEN afficher ;
  * - `empty`     : le SDK a répondu, mais aucun achat/entitlement à la clé. Sur une
  *                 restauration c'est le cas NORMAL du "je n'ai jamais acheté" ;
- * - `error`     : échec réel (réseau, SDK absent, offering non configurée…).
+ * - `unavailable`: le SDK répond mais le store ne sert aucun produit achetable
+ *                 (produit pas encore approuvé par Apple/Google, contrat Paid
+ *                 Applications non signé, app hors piste de test…). Rien à
+ *                 corriger côté app : c'est une config store en attente ;
+ * - `error`     : échec réel (réseau, SDK absent, SDK non configuré…).
  *
  * `empty` et `error` doivent rester distincts : dire "aucun achat à restaurer" à
  * quelqu'un qui est juste hors-ligne revient à lui affirmer qu'il n'a pas payé.
+ * `unavailable` de même : ce n'est ni une panne ni une faute de l'utilisateur.
  */
-export type PurchaseFailure = 'cancelled' | 'empty' | 'error';
+export type PurchaseFailure = 'cancelled' | 'empty' | 'error' | 'unavailable';
 
 /**
  * Résultat d'une tentative d'achat/restauration. Permet à l'UI de distinguer :
@@ -204,19 +294,35 @@ export const purchasePremium = async (): Promise<PurchaseResult> => {
   if (!Capacitor.isNativePlatform()) return { ok: false, failure: 'error' };
   const mod = await loadPurchases();
   if (!mod) return { ok: false, failure: 'error' }; // plugin absent du build
+  // Le SDK rejette tout appel émis avant sa configuration.
+  if (!(await ensureConfigured())) {
+    rcLog('achat impossible : SDK non configuré');
+    return { ok: false, failure: 'error' };
+  }
   try {
-    const offerings = await mod.Purchases.getOfferings();
+    const offerings = await withTimeout(mod.Purchases.getOfferings(), 'getOfferings');
     const pkg = offerings.current?.availablePackages?.[0];
-    if (!pkg) return { ok: false, failure: 'error' }; // aucune offering configurée
+    if (!pkg) {
+      // L'offering existe côté RevenueCat mais le store ne résout aucun produit :
+      // typiquement un achat in-app pas encore approuvé, ou une app pas publiée
+      // sur une piste. Distinct d'une panne — l'utilisateur ne peut rien y faire.
+      rcLog('offering sans package achetable → produit indisponible sur le store');
+      return { ok: false, failure: 'unavailable' };
+    }
+    // Pas de withTimeout : c'est l'utilisateur qui pilote la feuille native, et le
+    // natif règle toujours la promesse quand elle se ferme (achat, annulation,
+    // erreur). Cf. SDK_TIMEOUT_MS.
     const { customerInfo } = await mod.Purchases.purchasePackage({ aPackage: pkg });
     const active = readEntitlement(customerInfo);
     setPremium(active);
     // Achat "réussi" sans entitlement actif : anormal (config RevenueCat), on le
     // signale plutôt que de laisser l'user devant une modale qui ne se ferme pas.
+    if (!active) rcLog('achat abouti mais entitlement inactif (config RevenueCat ?)');
     return active ? { ok: true } : { ok: false, failure: 'error' };
   } catch (err) {
     // Annulation utilisateur : pas une erreur à signaler.
     if (isUserCancelled(err)) return { ok: isPremium, failure: 'cancelled' };
+    rcLog('achat échoué', err);
     return { ok: false, failure: 'error' };
   }
 };
@@ -226,7 +332,12 @@ export const restorePurchases = async (): Promise<PurchaseResult> => {
   if (!Capacitor.isNativePlatform()) return { ok: false, failure: 'error' };
   const mod = await loadPurchases();
   if (!mod) return { ok: false, failure: 'error' };
+  if (!(await ensureConfigured())) {
+    rcLog('restauration impossible : SDK non configuré');
+    return { ok: false, failure: 'error' };
+  }
   try {
+    // Pas de withTimeout : prompt Apple ID / Play possible, piloté par l'utilisateur.
     const { customerInfo } = await mod.Purchases.restorePurchases();
     const active = readEntitlement(customerInfo);
     setPremium(active);
@@ -235,6 +346,7 @@ export const restorePurchases = async (): Promise<PurchaseResult> => {
     return active ? { ok: true } : { ok: false, failure: 'empty' };
   } catch (err) {
     if (isUserCancelled(err)) return { ok: isPremium, failure: 'cancelled' };
+    rcLog('restauration échouée', err);
     return { ok: false, failure: 'error' };
   }
 };
