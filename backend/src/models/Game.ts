@@ -146,6 +146,7 @@ export class Game implements IGame {
                 score: player.score,
                 isActive: player.isActive,
                 avatarId: player.avatarId,
+                isPremium: player.isPremium,
             },
             score: playerScores[player.id] || 0
         }));

@@ -10,6 +10,7 @@ import { useModalTransition } from '../hooks/useModalTransition';
 import { canPurchase, purchasePremium, restorePurchases } from '../utils/premium';
 import { getStats } from '../utils/playerStats';
 import { APP_STORE_WEB, PLAY_WEB } from '../utils/storeLinks';
+import { hapticSuccess } from '../utils/haptics';
 
 interface PremiumModalProps {
   isOpen: boolean;
@@ -29,6 +30,11 @@ interface PremiumModalProps {
    * le stockage ici affichait l'ANCIEN pseudo pendant toute la saisie.
    */
   previewName?: string;
+  /**
+   * Studio uniquement : ouvre directement sur l'écran de victoire (achat ou
+   * restauration), impossible à atteindre sur web où l'achat n'existe pas.
+   */
+  previewCelebration?: 'purchase' | 'restore';
 }
 
 // Dégradé doré du bouton Premium (fond de la feuille).
@@ -45,14 +51,24 @@ const DISMISS_THRESHOLD = 110;
  * bouton Premium, DA carton conservée (bordure noire, rondeurs, stack-shadow).
  * Glissable vers le bas au doigt pour fermer. Aucun scroll interne : tient d'un bloc.
  */
-const PremiumModal = ({ isOpen, onClose, lockOnOpen = false, previewName: previewNameProp }: PremiumModalProps) => {
+const PremiumModal = ({ isOpen, onClose, lockOnOpen = false, previewName: previewNameProp, previewCelebration }: PremiumModalProps) => {
   const { t } = useLocale();
   const showToast = useToast();
   const [busy, setBusy] = useState(false);
   const native = canPurchase();
+  // Écran de victoire après un achat / une restauration réussis : la feuille
+  // reste ouverte et bascule dessus au lieu de se fermer sans un mot (sur iOS,
+  // la popup Apple « achat effectué » s'affiche par-dessus, on le voit après).
+  const [celebration, setCelebration] = useState<'purchase' | 'restore' | null>(null);
 
   // Animation de sortie : requestClose lance le fondu puis démonte via onClose.
   const { render, closing, requestClose } = useModalTransition(isOpen, onClose);
+
+  // Réouverture = paywall normal : la célébration ne survit pas à la fermeture
+  // (sauf preview Studio, qui ouvre directement dessus).
+  useEffect(() => {
+    setCelebration(render ? previewCelebration ?? null : null);
+  }, [render, previewCelebration]);
 
   // Verrou d'ouverture, uniquement quand la feuille s'ouvre d'elle-même (cf.
   // `lockOnOpen`) : elle surgit sous le doigt, et un tap déjà engagé la refermait
@@ -120,7 +136,8 @@ const PremiumModal = ({ isOpen, onClose, lockOnOpen = false, previewName: previe
     try {
       const res = await purchasePremium();
       if (res.ok) {
-        requestClose();
+        hapticSuccess();
+        setCelebration('purchase');
       } else if (res.failure === 'unavailable') {
         // Produit pas encore servi par le store (validation Apple/Google en cours) :
         // ce n'est pas une panne, ton achat n'a pas "raté" — ton de l'attente.
@@ -139,7 +156,8 @@ const PremiumModal = ({ isOpen, onClose, lockOnOpen = false, previewName: previe
     try {
       const res = await restorePurchases();
       if (res.ok) {
-        requestClose();
+        hapticSuccess();
+        setCelebration('restore');
       } else if (res.failure === 'empty') {
         // Le SDK a répondu : ce compte n'a rien acheté. Cas normal, ton neutre.
         showToast(t.premium.restoreEmpty, 'info');
@@ -200,6 +218,48 @@ const PremiumModal = ({ isOpen, onClose, lockOnOpen = false, previewName: previe
           <LuX size={20} strokeWidth={2.75} />
         </button>
 
+        {celebration ? (
+          // Écran de victoire. Glissable comme le paywall (poignée incluse) ;
+          // un seul accent idle : le pseudo doré (la couronne pop une fois).
+          <div
+            className="relative flex flex-col items-center text-center px-6 pb-5 sm:pb-8 gap-3 sm:gap-4 cursor-grab active:cursor-grabbing touch-none"
+            onPointerDown={onDragStart}
+            onPointerMove={onDragMove}
+            onPointerUp={onDragEnd}
+            onPointerCancel={onDragEnd}
+          >
+            <div className="self-stretch pt-2.5 pb-3 sm:pb-5">
+              <span aria-hidden className="block mx-auto w-11 h-1.5 rounded-full bg-black/25" />
+            </div>
+            <span className="animate-player-pop w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center rounded-3xl bg-black border-[3px] border-black stack-shadow">
+              <LuCrown size={44} strokeWidth={2.25} className="text-warning-orange" />
+            </span>
+            <h2 className="relative mt-1 mb-0 font-display font-extrabold text-[28px] sm:text-[36px] leading-none text-black tracking-tight">
+              {celebration === 'restore' ? t.premium.welcomeRestoredTitle : t.premium.welcomeTitle}
+            </h2>
+            <div
+              className="animate-player-pop flex items-center gap-3 max-w-full rounded-xl border-2 border-black bg-black px-4 py-2.5"
+              style={{ animationDelay: '150ms' }}
+            >
+              <Avatar avatarId={previewAvatarId} name={previewName} size="md" premium />
+              <span className="font-display font-extrabold text-xl text-gold-shine truncate">
+                {previewName}
+              </span>
+            </div>
+            <p className="relative m-0 max-w-xs whitespace-pre-line font-display font-bold text-[13px] sm:text-base text-black/70">
+              {t.premium.welcomeDesc}
+            </p>
+            <button
+              type="button"
+              onClick={tryClose}
+              onPointerDown={(e) => e.stopPropagation()}
+              className="relative mt-1 w-full h-13 sm:h-15 flex items-center justify-center rounded-2xl border-[3px] border-black bg-black font-display font-extrabold text-base sm:text-lg text-warning-orange stack-shadow active:scale-[0.98] transition-transform cursor-pointer"
+            >
+              {t.premium.welcomeCta}
+            </button>
+          </div>
+        ) : (
+        <>
         {/* Zone de drag = tout le haut figé (poignée + hero). On peut agripper la
             feuille depuis la couronne / le titre, pas seulement le petit trait.
             Le corps scrollable en dessous garde son scroll normal. */}
@@ -217,7 +277,7 @@ const PremiumModal = ({ isOpen, onClose, lockOnOpen = false, previewName: previe
 
           {/* HERO : couronne + titre (agrandis sur tablette pour remplir l'espace) */}
           <div className="flex flex-col items-center text-center px-5 pt-1 pb-2.5 sm:pt-3 sm:pb-4">
-            <span className="premium-halo w-14 h-14 sm:w-20 sm:h-20 flex items-center justify-center rounded-2xl sm:rounded-3xl bg-black border-[3px] border-black stack-shadow">
+            <span className="w-14 h-14 sm:w-20 sm:h-20 flex items-center justify-center rounded-2xl sm:rounded-3xl bg-black border-[3px] border-black stack-shadow">
               <LuCrown size={28} strokeWidth={2.25} className="text-warning-orange sm:hidden" />
               <LuCrown size={40} strokeWidth={2.25} className="text-warning-orange hidden sm:block" />
             </span>
@@ -244,16 +304,18 @@ const PremiumModal = ({ isOpen, onClose, lockOnOpen = false, previewName: previe
             </div>
           </div>
 
-          {/* ZÉRO PUB : bloc sombre contrasté - mis en avant */}
-          <div className="flex items-center gap-3 rounded-xl border-2 border-black bg-black px-3.5 py-2.5">
-            <span className="shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-warning-orange border-2 border-black">
-              <LuBellOff size={18} strokeWidth={2.75} className="text-black" />
+          {/* ZÉRO PUB : mis en avant mais CLAIR. Le noir est réservé à l'aperçu
+              pseudo (le doré a besoin d'un fond sombre) et au CTA, qui doit rester
+              le pavé le plus lourd de la feuille. */}
+          <div className="flex items-center gap-3 rounded-xl border-2 border-black bg-white/75 px-3.5 py-2.5">
+            <span className="shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-black border-2 border-black">
+              <LuBellOff size={18} strokeWidth={2.75} className="text-warning-orange" />
             </span>
             <div className="flex flex-col leading-tight">
-              <span className="font-display font-extrabold text-base text-warning-orange tracking-tight">
+              <span className="font-display font-extrabold text-base text-black tracking-tight">
                 {t.premium.perkAdsTitle}
               </span>
-              <span className="font-sans text-[11px] text-white/70">{t.premium.perkAdsDesc}</span>
+              <span className="font-sans text-[11px] text-black/60">{t.premium.perkAdsDesc}</span>
             </div>
           </div>
 
@@ -306,6 +368,8 @@ const PremiumModal = ({ isOpen, onClose, lockOnOpen = false, previewName: previe
             </div>
           )}
         </div>
+        </>
+        )}
       </div>
     </div>,
     document.body,

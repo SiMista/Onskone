@@ -14,6 +14,8 @@ import { Section, Tile } from './layout';
 export const PremiumShowcase = () => {
   const isPremium = usePremium();
   const [paywallOpen, setPaywallOpen] = useState(false);
+  // Écran de victoire post-achat, prévisualisé sans achat (inatteignable sur web).
+  const [celebration, setCelebration] = useState<'purchase' | 'restore' | null>(null);
   const t = fr.premium;
 
   return (
@@ -62,6 +64,8 @@ export const PremiumShowcase = () => {
         <div className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center gap-2">
             <Button text="Ouvrir le paywall" variant="warning" size="sm" onClick={() => setPaywallOpen(true)} />
+            <Button text="Célébration achat" variant="warning" size="sm" onClick={() => setCelebration('purchase')} />
+            <Button text="Célébration restauration" variant="warning" size="sm" onClick={() => setCelebration('restore')} />
             <button
               type="button"
               onClick={() => setPremiumOverride(!isPremium)}
@@ -77,11 +81,17 @@ export const PremiumShowcase = () => {
           <p className="font-mono text-[10px] text-white/30 leading-relaxed">
             Sur le web, le paywall s'affiche en mode "va sur le store" (badges) : l'achat in-app n'existe qu'en natif.
             Le toggle écrit le vrai cache premium (studioStorage) - même effet que le 👑 de la régie.
+            Les boutons « Célébration » ouvrent directement l'écran de victoire affiché après un achat / une restauration réussis.
           </p>
         </div>
       </Section>
 
       <PremiumModal isOpen={paywallOpen} onClose={() => setPaywallOpen(false)} />
+      <PremiumModal
+        isOpen={celebration !== null}
+        onClose={() => setCelebration(null)}
+        previewCelebration={celebration ?? undefined}
+      />
     </>
   );
 };

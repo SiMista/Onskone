@@ -571,6 +571,11 @@ export const fr: Dictionary = {
     getOnAppStore: 'Télécharger sur l\'App Store',
     getOnPlayStore: 'Télécharger sur Google Play',
     close: 'Plus tard',
+    welcomeTitle: 'Bienvenue dans le Premium !',
+    welcomeRestoredTitle: 'Premium restauré !',
+    welcomeDesc: 'Merci ÉNORMÉMENT pour ton soutien <3\nDésormais, tu as accès à tous les thèmes premium (et ceux à venir), ton pseudo doré et zéro pub !',
+    welcomeCta: 'Trop bien !',
+    activeToast: 'Tu es Premium ! Merci pour ton soutien <3',
   },
 
   appBanner: {

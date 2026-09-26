@@ -37,12 +37,13 @@ cd android
 call gradlew.bat bundleRelease -PappVersionName=%APP_VNAME% -PappVersionCode=%APP_VCODE% || exit /b 1
 
 :: Chemin absolu (on est dans frontend\android) pour copier-coller direct.
-set AAB_PATH=%CD%\app\build\outputs\bundle\release\app-release.aab
+set AAB_DIR=%CD%\app\build\outputs\bundle\release
+set AAB_PATH=%AAB_DIR%\app-release.aab
 
 echo.
 echo ============================================================
-echo  .aab pret a uploader sur la Play Console (v%APP_VNAME%, code %APP_VCODE%) :
-echo  %AAB_PATH%
+echo  .aab pret a uploader sur la Play Console (v%APP_VNAME%, code %APP_VCODE%), dans le dossier :
+echo  %AAB_DIR%
 echo ============================================================
 if exist "%AAB_PATH%" (
   echo  ^(fichier OK^)

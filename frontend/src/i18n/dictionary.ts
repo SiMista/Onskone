@@ -310,6 +310,13 @@ export interface Dictionary {
     getOnAppStore: string;
     getOnPlayStore: string;
     close: string;
+    // Écran de célébration après achat/restauration réussi
+    welcomeTitle: string;
+    welcomeRestoredTitle: string;
+    welcomeDesc: string;
+    welcomeCta: string;
+    // Toast du badge Premium de l'accueil (joueur déjà premium)
+    activeToast: string;
   };
 
   appBanner: {

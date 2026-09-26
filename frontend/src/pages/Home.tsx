@@ -350,8 +350,20 @@ const Home = () => {
       {/* Titre principal de la page pour les moteurs/lecteurs d'écran : le logo
           visible est une image, ce h1 porte donc l'intitulé réel de l'accueil. */}
       <h1 className="sr-only">{t.seo.homeH1}</h1>
-      {!isPremium && (
-        <div className={`absolute ${topControlsClass} left-3 z-30 safe-pt transition-[top] duration-200`}>
+      <div className={`absolute ${topControlsClass} left-3 z-30 safe-pt transition-[top] duration-200`}>
+        {isPremium ? (
+          // Déjà premium : badge noir & or STATIQUE (l'accueil a déjà son accent
+          // animé) à la place du bouton d'achat. Tap = petit merci, pas de paywall.
+          <button
+            type="button"
+            onClick={() => showToast(t.premium.activeToast, 'achievement')}
+            aria-label={t.premium.title}
+            className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-full border-2 border-black bg-black font-display font-bold text-[11px] text-warning-orange active:scale-95 transition-all cursor-pointer stack-shadow-sm"
+          >
+            <Icon icon="fluent-emoji-flat:crown" width={14} height={14} style={{ filter: STICKER_FILTER }} aria-hidden />
+            Premium
+          </button>
+        ) : (
           <button
             type="button"
             onClick={() => setIsPremiumOpen(true)}
@@ -362,8 +374,8 @@ const Home = () => {
             <Icon icon="fluent-emoji-flat:crown" width={14} height={14} style={{ filter: STICKER_FILTER }} aria-hidden />
             Premium
           </button>
-        </div>
-      )}
+        )}
+      </div>
       <div className={`absolute ${topControlsClass} right-3 z-30 safe-pt transition-[top] duration-200`}>
         <LanguageSwitcher />
       </div>

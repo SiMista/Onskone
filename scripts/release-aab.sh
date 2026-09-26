@@ -35,6 +35,6 @@ echo "[mobile]   gradlew bundleRelease..."
 
 echo ""
 echo "============================================================"
-echo " .aab pret a uploader :"
-echo " frontend/android/app/build/outputs/bundle/release/app-release.aab"
+echo " .aab pret a uploader, dans le dossier :"
+echo " $ROOT/frontend/android/app/build/outputs/bundle/release"
 echo "============================================================"

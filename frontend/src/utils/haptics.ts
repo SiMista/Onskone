@@ -31,3 +31,13 @@ export const hapticAssigned = () => {
     webVibrate([160, 70, 160]);
   }
 };
+
+// Réussite ponctuelle, téléphone en main (ex. achat Premium abouti) : la
+// notification Success seule suffit, pas besoin de l'impact Heavy d'hapticAssigned.
+export const hapticSuccess = () => {
+  if (isNative) {
+    Haptics.notification({ type: NotificationType.Success }).catch(() => { /* haptics best-effort */ });
+  } else {
+    webVibrate([60, 40, 60]);
+  }
+};
