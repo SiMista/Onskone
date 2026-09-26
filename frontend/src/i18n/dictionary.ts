@@ -179,8 +179,8 @@ export interface Dictionary {
     points: (n: number) => string;
     receivedQuestion: string;
     correctAnswersCount: (n: number) => string;
-    respondentsLabel: string;
-    noPlayers: string;
+    /** Suffixe de l'entrée écrite par le substitut au nom du pilier : « (par Alice) ». */
+    byPlayer: (name: string) => string;
     aria: {
       seeReceivedQuestion: string;
     };

@@ -11,6 +11,7 @@ import { useStartTimerDelayed } from '../hooks';
 import socket from '../utils/socket';
 import { getQuestionSubtitle } from '../utils/questionHelpers';
 import { useLocale } from '../i18n';
+import PremiumName from './PremiumName';
 
 const SubstituteSelection = ({
   lobbyCode,
@@ -86,7 +87,7 @@ const SubstituteSelection = ({
 
   const dropdownOptions = candidates.map(p => ({
     value: p.id,
-    label: p.name,
+    label: <PremiumName name={p.name} premium={!!p.isPremium} />,
     prefix: <Avatar avatarId={p.avatarId} name={p.name} size="sm" />,
   }));
 

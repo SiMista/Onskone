@@ -164,7 +164,7 @@ export const Toolbar = ({
             <button
               onClick={onTogglePremium}
               className={`${COMPACT_ICON} ${premium ? '!bg-amber-400/20 !border-amber-300/60 !text-amber-100 shadow-[0_0_10px_rgba(251,191,36,0.25)]' : ''}`}
-              title={premium ? 'Premium ACTIF (test) - thèmes premium débloqués sur tous les slots' : 'Simuler le premium sur tous les slots (test sans achat)'}
+              title={premium ? 'Tous les slots sont premium (test) - clic pour tout retirer' : 'Rendre tous les slots premium (test sans achat) - réglable aussi slot par slot'}
             >👑</button>
           </div>
 

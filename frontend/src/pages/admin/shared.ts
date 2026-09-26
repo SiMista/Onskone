@@ -110,7 +110,7 @@ export const formatRelative = (ms: number): string => {
 };
 
 // ---------- Navigation ----------
-export type AdminTab = 'overview' | 'tickets' | 'lobbies' | 'decks' | 'content' | 'stats';
+export type AdminTab = 'overview' | 'tickets' | 'logs' | 'lobbies' | 'decks' | 'content' | 'stats';
 export type TabGroup = 'pilotage' | 'inbox' | 'catalogue' | 'analytics';
 
 export interface TabDef {
@@ -127,6 +127,7 @@ export const TABS: TabDef[] = [
   { id: 'overview', icon: 'mdi:home', ariaLabel: 'Accueil', hint: 'accueil', enabled: true, group: 'pilotage' },
   { id: 'lobbies', label: 'Salons live', hint: 'temps réel', enabled: true, group: 'pilotage' },
   { id: 'tickets', icon: 'mdi:ticket-outline', label: 'Tickets', ariaLabel: 'Tickets', hint: 'retours joueurs', enabled: true, group: 'inbox' },
+  { id: 'logs', icon: 'mdi:bug-outline', label: 'Logs', ariaLabel: 'Logs d\'erreurs de l\'app', hint: 'erreurs appareils', enabled: true, group: 'inbox' },
   { id: 'decks', icon: 'mdi:cards-outline', label: 'Decks', ariaLabel: 'Decks de questions', hint: 'catalogue', enabled: true, group: 'catalogue' },
   { id: 'content', icon: 'mdi:file-document-outline', label: 'Contenu', ariaLabel: 'Contenu du site', hint: 'données fixes', enabled: true, group: 'catalogue' },
   { id: 'stats', icon: 'mdi:chart-line', label: 'Stats', ariaLabel: 'Stats', hint: 'analytics', enabled: true, group: 'analytics' },
@@ -138,9 +139,10 @@ export const MOBILE_TAB_META: Record<AdminTab, { icon: string; label: string }> 
   overview: { icon: 'mdi:home-variant-outline', label: 'Accueil' },
   lobbies: { icon: 'mdi:broadcast', label: 'Live' },
   tickets: { icon: 'mdi:ticket-outline', label: 'Tickets' },
+  logs: { icon: 'mdi:bug-outline', label: 'Logs' },
   decks: { icon: 'mdi:cards-outline', label: 'Decks' },
   content: { icon: 'mdi:file-document-outline', label: 'Contenu' },
   stats: { icon: 'mdi:chart-line', label: 'Stats' },
 };
 
-export const MOBILE_TAB_ORDER: AdminTab[] = ['overview', 'lobbies', 'tickets', 'decks', 'content', 'stats'];
+export const MOBILE_TAB_ORDER: AdminTab[] = ['overview', 'lobbies', 'tickets', 'logs', 'decks', 'content', 'stats'];

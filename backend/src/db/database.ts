@@ -34,6 +34,25 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_tickets_type ON tickets(type);
   CREATE INDEX IF NOT EXISTS idx_tickets_created_at ON tickets(created_at);
 
+  -- Erreurs remontées par l'app (natif iOS/Android + web) : diagnostic à distance
+  -- sans accès aux logs de l'appareil (pas de Mac pour l'inspecteur Safari).
+  -- Volume borné par le rate-limit et une purge à l'insertion (cf clientLogs.ts).
+  CREATE TABLE IF NOT EXISTS client_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    level TEXT NOT NULL DEFAULT 'error' CHECK(level IN ('error', 'warn', 'info')),
+    source TEXT NOT NULL,
+    message TEXT NOT NULL,
+    context TEXT,
+    platform TEXT,
+    app_version TEXT,
+    user_agent TEXT,
+    ip_hash TEXT,
+    created_at INTEGER NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_client_logs_created_at ON client_logs(created_at);
+  CREATE INDEX IF NOT EXISTS idx_client_logs_source ON client_logs(source);
+
   -- Config runtime modifiable depuis l'admin (ex: plancher de maj forcée).
   -- Survit aux restarts ET aux redéploiements git (le .db vit hors du repo).
   CREATE TABLE IF NOT EXISTS app_config (

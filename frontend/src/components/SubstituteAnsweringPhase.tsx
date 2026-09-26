@@ -11,6 +11,7 @@ import { useStartTimerDelayed } from '../hooks';
 import socket from '../utils/socket';
 import { useLocale } from '../i18n';
 import { hapticAssigned } from '../utils/haptics';
+import PremiumName from './PremiumName';
 
 const SubstituteAnsweringPhase = ({
   lobbyCode,
@@ -126,7 +127,11 @@ const SubstituteAnsweringPhase = ({
           <div className="flex items-center justify-center flex-wrap gap-x-2 gap-y-3 mt-7 md:mt-9 mb-7 md:mb-9 text-sm md:text-base text-gray-800">
             <span>{t.phases.substituteAnswering.writePrefix}</span>
             <Avatar avatarId={leader?.avatarId ?? 0} name={leader?.name} size="sm" />
-            <span className="font-semibold text-gray-900">{leader?.name ?? t.phases.substituteAnswering.leaderFallback}</span>
+            <PremiumName
+              name={leader?.name ?? t.phases.substituteAnswering.leaderFallback}
+              premium={!!leader?.isPremium}
+              className="font-semibold text-gray-900"
+            />
             <span>{t.phases.substituteAnswering.writeSuffix}</span>
           </div>
 

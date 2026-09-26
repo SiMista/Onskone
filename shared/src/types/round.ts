@@ -94,4 +94,12 @@ export interface IRound {
 
   /** Réponse écrite par le substitut au nom du pilier (mode "Devine ma réponse") */
   substituteAnswer?: string | null;
+
+  /**
+   * Auteurs des réponses que le pilier a correctement attribuées (bonus de
+   * similarité inclus) : exactement les réponses qui composent son score du round.
+   * En mode "Devine ma réponse", l'entrée du pilier (réponse du substitut) apparaît
+   * sous l'id du PILIER. Exposé uniquement en phase REVEAL (vide avant, anti-fuite).
+   */
+  correctPlayerIds?: string[];
 }

@@ -37,6 +37,8 @@ export interface SlotConfig {
   viewportId: string;
   orientation: Orientation;
   bot: boolean;
+  /** Test premium de CE joueur (thèmes débloqués, badge, etc.) sans vrai achat. */
+  premium: boolean;
 }
 
 export interface SlotRuntimeState {
@@ -59,6 +61,7 @@ export const makeSlot = (i: number): SlotConfig => ({
   viewportId: 'iphone-17',
   orientation: 'portrait',
   bot: false,
+  premium: false,
 });
 
 export interface SavedConfig {
@@ -80,6 +83,7 @@ export const loadSavedConfig = (): SavedConfig | null => {
       ...makeSlot(0),
       ...s,
       bot: !!s.bot,
+      premium: !!s.premium,
       viewportId: s.viewportId && VIEWPORT_PRESETS.some((p) => p.id === s.viewportId)
         ? s.viewportId
         : 'iphone-17',

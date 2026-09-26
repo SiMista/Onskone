@@ -19,6 +19,9 @@ for /f "delims=" %%i in ('node "%~dp0app-version.mjs"') do set APP_VNAME=%%i
 for /f "delims=" %%i in ('node "%~dp0app-version.mjs" --code') do set APP_VCODE=%%i
 echo Version %APP_VNAME% (code %APP_VCODE%)
 
+:: Cle RevenueCat Google : sans elle les achats sont morts dans l'AAB (cf check-rc-key).
+node "%~dp0check-rc-key.mjs" android || exit /b 1
+
 echo Building shared package...
 call pnpm build:shared || exit /b 1
 

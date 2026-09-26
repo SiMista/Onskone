@@ -6,6 +6,19 @@ import {
   PILL_ICON, SELECT_CLS,
 } from './shared';
 
+/** URL sans les paramètres pilotés en live (postMessage) : sert à décider s'il faut recharger. */
+const withoutLiveParams = (u: string | null): string | null => {
+  if (!u) return u;
+  try {
+    const x = new URL(u);
+    x.searchParams.delete('bot');
+    x.searchParams.delete('premium');
+    return x.toString();
+  } catch {
+    return u;
+  }
+};
+
 interface SlotCardProps {
   slot: SlotConfig;
   index: number;
@@ -20,6 +33,7 @@ interface SlotCardProps {
   onCycleAvatar: (id: string, dir: 1 | -1) => void;
   onUpdateSlot: (id: string, patch: Partial<SlotConfig>) => void;
   onToggleBot: (id: string) => void;
+  onTogglePremium: (id: string) => void;
   onReloadSlot: (id: string) => void;
   onRemoveSlot: (id: string) => void;
 }
@@ -27,10 +41,22 @@ interface SlotCardProps {
 export const SlotCard = ({
   slot, index, zoom, url, state, running, lobbyCode,
   reloadKey, slotReloadKey, iframeRef,
-  onCycleAvatar, onUpdateSlot, onToggleBot, onReloadSlot, onRemoveSlot,
+  onCycleAvatar, onUpdateSlot, onToggleBot, onTogglePremium, onReloadSlot, onRemoveSlot,
 }: SlotCardProps) => {
   const dims = viewportDims(slot);
   const slotKey = `${slot.id}-${reloadKey}-${slotReloadKey}`;
+
+  // `src` STABLE : `bot` et `premium` font partie de l'URL (état de démarrage du
+  // slot), mais les basculer en cours de partie passe par postMessage. Sans ce
+  // gel, changer `src` rechargeait l'iframe au milieu de la partie : le slot 0
+  // (autoCreate=1) recréait un salon, les autres rejoignaient sous un nom encore
+  // connecté (« nom déjà utilisé ») -> partie cassée en coupant le mode bot.
+  // On ne suit l'URL que si autre chose change (salon, démarrage) ou au rechargement.
+  const srcRef = useRef<{ key: string; src: string | null }>({ key: slotKey, src: url });
+  if (srcRef.current.key !== slotKey || withoutLiveParams(srcRef.current.src) !== withoutLiveParams(url)) {
+    srcRef.current = { key: slotKey, src: url };
+  }
+  const src = srcRef.current.src;
   const isPilier = !!state?.isLeader;
   const isSubstitute = !!state?.isSubstitute && !isPilier;
   const preset = presetById(slot.viewportId);
@@ -140,6 +166,15 @@ export const SlotCard = ({
         >🤖</button>
 
         <button
+          onClick={() => onTogglePremium(slot.id)}
+          className={`w-7 h-7 rounded-md border flex items-center justify-center text-[13px] transition-all ${slot.premium
+            ? 'bg-amber-400/20 border-amber-300/60 text-amber-100 shadow-[0_0_10px_rgba(251,191,36,0.25)]'
+            : 'bg-white/[0.04] border-white/10 text-white/50 hover:text-white/80 hover:border-white/20'
+            }`}
+          title={slot.premium ? 'Premium ACTIF (test) - clic pour retirer' : 'Rendre ce joueur premium (test sans achat)'}
+        >👑</button>
+
+        <button
           onClick={() => onReloadSlot(slot.id)}
           className={PILL_ICON}
           title="Recharger ce slot"
@@ -203,14 +238,14 @@ export const SlotCard = ({
               key={slotKey}
               ref={iframeRef}
               name={`studio-slot-${index}`}
-              src={url}
+              src={src ?? undefined}
               title={`Studio slot ${index + 1} - ${slot.name}`}
               onLoad={(e) => {
                 try {
-                  (e.target as HTMLIFrameElement).contentWindow?.postMessage(
-                    { type: 'studio:setBot', enabled: slot.bot },
-                    '*'
-                  );
+                  const win = (e.target as HTMLIFrameElement).contentWindow;
+                  win?.postMessage({ type: 'studio:setBot', enabled: slot.bot }, '*');
+                  // L'URL gelée peut porter un `premium` périmé : on resynchronise.
+                  win?.postMessage({ type: 'studio:setPremium', enabled: slot.premium }, '*');
                 } catch { /* silent */ }
               }}
               style={{
@@ -255,6 +290,12 @@ export const SlotCard = ({
           <>
             <span className="text-white/15">·</span>
             <span className="text-violet-300">🤖 bot</span>
+          </>
+        )}
+        {slot.premium && (
+          <>
+            <span className="text-white/15">·</span>
+            <span className="text-amber-300">👑 premium</span>
           </>
         )}
       </div>

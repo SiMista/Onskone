@@ -3,6 +3,7 @@ import Button from '../Button';
 import SimilarityPopover from '../SimilarityPopover';
 import { useLocale } from '../../i18n';
 import type { RevealCursorState } from '../../hooks/useRevealCursor';
+import PremiumName from '../PremiumName';
 
 /**
  * Vue pilier en mode local : une seule carte à la fois (avatar du joueur ciblé),
@@ -77,9 +78,11 @@ const RevealPilierLocalView = ({
                       name={currentResult.guessedPlayerName}
                       size="xl"
                     />
-                    <span className="text-base md:text-lg font-bold text-black">
-                      {currentResult.guessedPlayerName}
-                    </span>
+                    <PremiumName
+                      name={currentResult.guessedPlayerName}
+                      premium={!!currentResult.guessedPlayerIsPremium}
+                      className="text-base md:text-lg font-bold text-black"
+                    />
                   </div>
                 </div>
 

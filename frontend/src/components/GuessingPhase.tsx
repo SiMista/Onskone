@@ -6,13 +6,14 @@ import QuestionCard from './QuestionCard';
 import RevealedAnswerCard from './RevealedAnswerCard';
 import AnswerText from './AnswerText';
 import Avatar from './Avatar';
-import Dropdown from './Dropdown';
+import Dropdown, { type DropdownOption } from './Dropdown';
 import { IPlayer, RoundPhase, GameCard, GameMode, RevealResult, isNoResponse } from '@onskone/shared';
 import { getPhaseDuration } from '../constants/game';
 import { useStartTimerDelayed, useSocketEvent } from '../hooks';
 import socket from '../utils/socket';
 import { useLocale } from '../i18n';
 import { hapticLight, hapticAssigned } from '../utils/haptics';
+import PremiumName from './PremiumName';
 
 interface Answer {
   id: string; // slot opaque (non corrélé à l'auteur)
@@ -271,6 +272,12 @@ const GuessingPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, question,
           showBubble={false}
           cardClassName={myAssignedAnswer ? 'animate-card-receive' : ''}
           waitingFor={myAssignedAnswer ? undefined : { name: leader?.name ?? t.phases.guessing.leaderFallback, avatarId: leader?.avatarId ?? 0 }}
+          footer={
+            <p className="landscape:hidden flex items-center gap-1.5 text-xs text-gray-500/80 mt-1">
+              <Icon icon="mdi:phone-rotate-landscape" width={14} height={14} aria-hidden />
+              {t.phases.guessing.rotateForLandscape}
+            </p>
+          }
         />
       </>
     );
@@ -290,7 +297,7 @@ const GuessingPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, question,
         ) : (
           <div className="flex items-center justify-center flex-wrap gap-x-2 gap-y-1 my-4 text-sm leading-none">
             <Avatar avatarId={leader?.avatarId ?? 0} name={leader?.name ?? ''} size="sm" />
-            {leader?.name && <span className="font-semibold text-gray-900">{leader.name}</span>}
+            {leader?.name && <PremiumName name={leader.name} premium={!!leader.isPremium} className="font-semibold text-gray-900" />}
             <span className="italic text-gray-500">{t.phases.guessing.assignWaiting}</span>
           </div>
         )}
@@ -312,11 +319,11 @@ const GuessingPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, question,
           const isJustAssigned = justAssignedAnswerId === answer.id;
 
           // Options : joueurs restants + le joueur actuel de cette réponse, puis "Retirer".
-          const options = players
+          const options: DropdownOption[] = players
             .filter(p => !assignedPlayerIds.has(p.id) || p.id === currentId)
             .map(p => ({
               value: p.id,
-              label: p.name,
+              label: <PremiumName name={p.name} premium={!!p.isPremium} />,
               prefix: <Avatar avatarId={p.avatarId} name={p.name} size="sm" />,
             }));
           if (currentId) {

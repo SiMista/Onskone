@@ -158,8 +158,7 @@ export const en: Dictionary = {
     points: (n) => `${n} pt${n > 1 ? 's' : ''}`,
     receivedQuestion: 'Question received',
     correctAnswersCount: (n) => `${n} Correct answer${n > 1 ? 's' : ''}`,
-    respondentsLabel: 'Answered',
-    noPlayers: 'No players',
+    byPlayer: (name) => `(by ${name})`,
     aria: {
       seeReceivedQuestion: 'See the received question',
     },

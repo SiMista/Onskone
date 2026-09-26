@@ -1,7 +1,8 @@
 import { useSyncExternalStore } from 'react';
 import { Capacitor } from '@capacitor/core';
-import { studioStorage } from './studioStorage';
+import { studioStorage, isStudioFrame } from './studioStorage';
 import socket, { setAnnouncedPremium } from './socket';
+import { reportClientLog, describeError } from './clientLog';
 
 // Statut premium de l'utilisateur (achat unique à vie "premium").
 //
@@ -88,6 +89,17 @@ export const canPurchase = (): boolean => Capacitor.isNativePlatform();
 // Permet de tester le déblocage sans vrai achat (pas de SDK sur web).
 export const setPremiumOverride = (v: boolean): void => setPremium(v);
 
+// Studio : bascule live du premium de test depuis la Régie. Écoutée au niveau
+// module (toute la vie de l'iframe) : le lobby, où le premium de l'hôte compte
+// (thèmes), n'a pas de useStudioBot monté, et le 👑 y était sans effet.
+if (isStudioFrame && typeof window !== 'undefined') {
+  window.addEventListener('message', (e: MessageEvent) => {
+    if (e.origin !== window.location.origin) return;
+    const data = e.data as { type?: unknown; enabled?: unknown } | null;
+    if (data && data.type === 'studio:setPremium') setPremium(!!data.enabled);
+  });
+}
+
 // --- SDK RevenueCat ----------------------------------------------------------
 // Import dynamique : le module premium.ts reste chargeable même si le plugin
 // n'est pas (encore) installé, et le web ne touche jamais au SDK natif.
@@ -100,12 +112,11 @@ interface RCCustomerInfo {
 }
 interface RCPackage { identifier: string }
 interface RCPurchasesApi {
-  // configure()/setLogLevel() sont déclarés RETURN_NONE côté natif : le proxy
-  // Capacitor renvoie alors un callbackId (string) de façon SYNCHRONE, pas une
-  // Promise, malgré ce qu'annoncent les .d.ts du plugin. Ne jamais `.then` /
-  // `.catch` dessus ni les passer à withTimeout.
-  configure(opts: { apiKey: string }): void | Promise<void>;
-  setLogLevel?(opts: { level: string }): void | Promise<void>;
+  // configure()/setLogLevel() sont RETURN_NONE côté natif, mais le wrapper de
+  // @capacitor/core est async : ils renvoient une Promise, résolue dès que l'appel
+  // est posté au natif (ou rejetée si le plugin n'est pas lié : UNIMPLEMENTED).
+  configure(opts: { apiKey: string }): Promise<unknown>;
+  setLogLevel?(opts: { level: string }): Promise<unknown>;
   getCustomerInfo(): Promise<{ customerInfo: RCCustomerInfo }>;
   getOfferings(): Promise<{ current?: { availablePackages?: RCPackage[] } }>;
   purchasePackage(opts: { aPackage: RCPackage }): Promise<{ customerInfo: RCCustomerInfo }>;
@@ -115,8 +126,26 @@ type PurchasesModule = { Purchases: RCPurchasesApi };
 
 // Toute erreur du SDK est tracée : muettes, elles rendent le paywall
 // indiagnosticable sur device (cf. `chrome://inspect` / logcat / Console.app).
-const rcLog = (msg: string, err?: unknown): void => {
+// Toute erreur part AUSSI au backend (onglet « Logs » de l'admin) : sur iPhone
+// sans Mac, la console de la WebView est inaccessible.
+const rcLog = (msg: string, err?: unknown, extra?: Record<string, unknown>): void => {
   console.error(`[premium] ${msg}`, err ?? '');
+  reportClientLog('premium', msg, {
+    ...(err !== undefined ? describeError(err) : {}),
+    ...extra,
+    key: describeApiKey(),
+  });
+};
+
+/**
+ * Empreinte de la clé RevenueCat embarquée, SANS la clé complète : préfixe,
+ * longueur et 4 derniers caractères. Suffit à repérer une clé absente, tronquée,
+ * de la mauvaise plateforme ou d'un autre projet (à comparer avec le dashboard).
+ */
+const describeApiKey = (): string => {
+  const key = Capacitor.getPlatform() === 'ios' ? RC_APPLE_KEY : RC_GOOGLE_KEY;
+  if (!key) return 'absente';
+  return `${key.slice(0, 5)}…${key.slice(-4)} (${key.length} car.)`;
 };
 
 // Délai au-delà duquel on considère qu'un appel RÉSEAU du SDK (getOfferings,
@@ -196,16 +225,15 @@ const runInit = async (): Promise<void> => {
   const mod = await loadPurchases();
   if (!mod) return;
   try {
-    // configure()/setLogLevel() sont RETURN_NONE côté natif : le proxy Capacitor
-    // poste l'appel et renvoie un callbackId (string) de façon SYNCHRONE. Il n'y
-    // a aucune promesse à attendre ni à plafonner. Les enrober (`.catch`,
-    // withTimeout) levait un TypeError, `configured` restait false à vie, et
-    // achats comme restauration étaient morts pour tout le monde.
     // Logs natifs du SDK (visibles dans logcat / Console.app), dev uniquement.
     if (import.meta.env.DEV && mod.Purchases.setLogLevel) {
-      try { void mod.Purchases.setLogLevel({ level: 'DEBUG' }); } catch { /* best-effort */ }
+      await mod.Purchases.setLogLevel({ level: 'DEBUG' }).catch(() => undefined);
     }
-    void mod.Purchases.configure({ apiKey });
+    // RETURN_NONE côté natif : la Promise se résout dès que l'appel est posté.
+    // On l'attend quand même : un rejet (plugin natif non lié -> UNIMPLEMENTED)
+    // doit laisser `configured` à false et passer par le catch ci-dessous, au lieu
+    // d'annoncer un SDK prêt qui échouera sur chaque bouton.
+    await withTimeout(mod.Purchases.configure({ apiKey }), 'configure');
     configured = true;
     await refreshPremiumStatus();
   } catch (err) {
@@ -299,6 +327,8 @@ export const purchasePremium = async (): Promise<PurchaseResult> => {
     rcLog('achat impossible : SDK non configuré');
     return { ok: false, failure: 'error' };
   }
+  // Étape en cours, jointe au log d'échec (getOfferings vs feuille d'achat).
+  let stage = 'getOfferings';
   try {
     const offerings = await withTimeout(mod.Purchases.getOfferings(), 'getOfferings');
     const pkg = offerings.current?.availablePackages?.[0];
@@ -306,23 +336,31 @@ export const purchasePremium = async (): Promise<PurchaseResult> => {
       // L'offering existe côté RevenueCat mais le store ne résout aucun produit :
       // typiquement un achat in-app pas encore approuvé, ou une app pas publiée
       // sur une piste. Distinct d'une panne — l'utilisateur ne peut rien y faire.
-      rcLog('offering sans package achetable → produit indisponible sur le store');
+      rcLog('offering sans package achetable → produit indisponible sur le store', undefined, {
+        offeringCurrent: offerings.current ? 'présent' : 'absent',
+      });
       return { ok: false, failure: 'unavailable' };
     }
     // Pas de withTimeout : c'est l'utilisateur qui pilote la feuille native, et le
     // natif règle toujours la promesse quand elle se ferme (achat, annulation,
     // erreur). Cf. SDK_TIMEOUT_MS.
+    stage = `purchasePackage(${pkg.identifier})`;
     const { customerInfo } = await mod.Purchases.purchasePackage({ aPackage: pkg });
     const active = readEntitlement(customerInfo);
     setPremium(active);
     // Achat "réussi" sans entitlement actif : anormal (config RevenueCat), on le
     // signale plutôt que de laisser l'user devant une modale qui ne se ferme pas.
-    if (!active) rcLog('achat abouti mais entitlement inactif (config RevenueCat ?)');
+    if (!active) {
+      rcLog('achat abouti mais entitlement inactif (config RevenueCat ?)', undefined, {
+        expected: ENTITLEMENT_ID,
+        activeEntitlements: Object.keys(customerInfo?.entitlements?.active ?? {}),
+      });
+    }
     return active ? { ok: true } : { ok: false, failure: 'error' };
   } catch (err) {
     // Annulation utilisateur : pas une erreur à signaler.
     if (isUserCancelled(err)) return { ok: isPremium, failure: 'cancelled' };
-    rcLog('achat échoué', err);
+    rcLog('achat échoué', err, { stage });
     return { ok: false, failure: 'error' };
   }
 };

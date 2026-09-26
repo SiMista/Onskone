@@ -51,10 +51,12 @@ export interface RevealResult {
     playerId: string;
     playerName: string;
     playerAvatarId: number;
+    playerIsPremium: boolean;
     answer: string;
     guessedPlayerId: string;
     guessedPlayerName: string;
     guessedPlayerAvatarId: number;
+    guessedPlayerIsPremium: boolean;
     correct: boolean;
 }
 
@@ -84,10 +86,12 @@ export function buildRevealResults(
             playerId,
             playerName: player?.name || 'Unknown',
             playerAvatarId: player?.avatarId ?? 0,
+            playerIsPremium: !!player?.isPremium,
             answer,
             guessedPlayerId: guessedPlayerId || '',
             guessedPlayerName: guessedPlayer?.name || 'Aucun',
             guessedPlayerAvatarId: guessedPlayer?.avatarId ?? 0,
+            guessedPlayerIsPremium: !!guessedPlayer?.isPremium,
             correct: guessedPlayerId === playerId || corrections.includes(index),
         };
     });
@@ -106,7 +110,10 @@ export function serializeRound(round: IGame['currentRound'] | null): IRound | nu
     if (!round) return null;
     return {
         roundNumber: round.roundNumber,
-        leader: round.leader,
+        // Anti-fuite : `round.leader` est l'instance serveur du joueur, avec
+        // socketId ET reconnectToken. La diffuser brute exposait le secret de
+        // reconnexion du pilier à toute la room (roundStarted, gameState, gameEnded).
+        leader: serializePlayer(round.leader),
         gameCard: round.gameCard,
         phase: round.phase,
         selectedQuestion: round.selectedQuestion,
@@ -122,6 +129,10 @@ export function serializeRound(round: IGame['currentRound'] | null): IRound | nu
         guessMyAnswerMode: round.guessMyAnswerMode,
         substitutePlayerId: round.substitutePlayerId,
         substituteAnswer: round.phase === RoundPhase.REVEAL ? round.substituteAnswer : null,
+        // Anti-fuite : dérivé des attributions du pilier, donc REVEAL uniquement.
+        correctPlayerIds: round.phase === RoundPhase.REVEAL && round instanceof Round
+            ? round.getCorrectAuthorIds()
+            : [],
     };
 }
 

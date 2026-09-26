@@ -11,7 +11,7 @@ interface ScoreLeaderboardProps {
   currentPlayer: IPlayer | null;
   /** Round où chaque joueur a été pilier (pour afficher sa question reçue). */
   roundByLeaderId: Map<string, IRound>;
-  /** Map id joueur -> nom (pour résoudre les répondants d'un round). */
+  /** Map id joueur -> nom (pour résoudre les joueurs bien devinés d'un round). */
   playerNameById: Map<string, string>;
   /** Pilote l'apparition (fade/translate + stagger des lignes). */
   showLeaderboard: boolean;
@@ -25,7 +25,8 @@ const PODIUM_COLORS = [
 
 /**
  * Carte des scores individuels (classement final) avec, pour chaque joueur
- * ayant été pilier, un popover montrant sa question reçue et les répondants.
+ * ayant été pilier, un popover montrant sa question reçue, son nombre de bonnes
+ * réponses et les joueurs qu'il a bien devinés.
  * L'état d'ouverture/animation du popover est local à ce composant.
  */
 const ScoreLeaderboard: React.FC<ScoreLeaderboardProps> = ({
@@ -63,6 +64,19 @@ const ScoreLeaderboard: React.FC<ScoreLeaderboardProps> = ({
       return () => clearTimeout(timeout);
     }
   }, [openPopoverFor, renderedPopoverFor]);
+
+  // Le popover s'ouvre SOUS la ligne, à l'intérieur de la liste scrollable : sans
+  // défilement il sortait en partie de la zone visible (bas coupé). On défile une
+  // fois l'animation d'ouverture TERMINÉE (transition de 220 ms dans EndGame) :
+  // mesuré plus tôt, il est encore réduit à scale(0.7) et le défilement « nearest »
+  // s'arrêtait 30 % trop court, laissant le bas de la bulle sous le bord.
+  useEffect(() => {
+    if (!openPopoverFor || !popoverVisible) return;
+    const timeout = setTimeout(() => {
+      popoverRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }, 240);
+    return () => clearTimeout(timeout);
+  }, [openPopoverFor, popoverVisible]);
 
   // Fermeture sur clic en dehors
   useEffect(() => {
@@ -102,22 +116,37 @@ const ScoreLeaderboard: React.FC<ScoreLeaderboardProps> = ({
           const hasQuestion = !!(round && round.selectedQuestion);
           const isOpen = openPopoverFor === entry.player.id;
           const isRendered = renderedPopoverFor === entry.player.id;
-          const respondentNames = round
-            ? Object.keys(round.answers || {})
-              .filter(id => id !== entry.player.id)
-              .map(id => playerNameById.get(id))
-              .filter((n): n is string => !!n)
-            : [];
+          // Joueurs que ce pilier a bien devinés (liste calculée par le serveur,
+          // cohérente avec son score). En mode "Devine ma réponse", l'entrée
+          // portant l'id du PILIER est la réponse que le substitut a écrite à sa
+          // place : le pilier a bien reconnu « sa » réponse, on affiche donc son
+          // nom suivi de l'auteur réel, ex. « Bob (par Alice) ». Sans ça, le
+          // substitut apparaissait deux fois (sa réponse + celle du pilier).
+          const substituteName = round?.substitutePlayerId
+            ? playerNameById.get(round.substitutePlayerId)
+            : undefined;
+          const correctNames = (round?.correctPlayerIds ?? [])
+            .map(id => {
+              const name = playerNameById.get(id);
+              if (!name) return undefined;
+              return id === entry.player.id && substituteName
+                ? `${name} ${t.endGame.byPlayer(substituteName)}`
+                : name;
+            })
+            .filter((n): n is string => !!n);
           // Bonnes réponses RÉELLES du pilier sur son round : le score qu'il y a
           // marqué (1 point par attribution juste, bonus de similarité inclus).
-          // À ne pas confondre avec `respondentNames`, qui liste TOUS les joueurs
-          // ayant répondu — ce nombre-là était affiché ici, et surévaluait
-          // systématiquement le résultat (un pilier qui rate tout voyait « 4 »).
           const correctCount = round?.scores?.[entry.player.id] ?? 0;
           return (
             <div
               key={entry.player.id}
-              className={`flex items-center justify-between p-2 md:p-3 rounded-xl border-[2.5px] border-black animate-player-pop ${isCurrentPlayer ? 'bg-warning-100 stack-shadow-sm' : 'bg-cream-player'}`}
+              // `relative z-20` sur la ligne qui porte le popover : l'animation
+              // `animate-player-pop` (fill-mode both) laisse un transform sur chaque
+              // ligne, donc chacune est un contexte d'empilement et le `z-30` du
+              // popover reste enfermé dans la sienne. Ouvert vers le BAS, il passait
+              // derrière les lignes suivantes (peintes après). Remonter la ligne
+              // entière au-dessus de ses sœurs le fait repasser devant.
+              className={`flex items-center justify-between p-2 md:p-3 rounded-xl border-[2.5px] border-black animate-player-pop ${isRendered ? 'relative z-20' : ''} ${isCurrentPlayer ? 'bg-warning-100 stack-shadow-sm' : 'bg-cream-player'}`}
               style={{ animationDelay: `${(showLeaderboard ? 0 : 99999) + index * 80}ms` }}
             >
               <div className="flex items-center gap-2 md:gap-3 min-w-0">
@@ -160,7 +189,7 @@ const ScoreLeaderboard: React.FC<ScoreLeaderboardProps> = ({
                       <div
                         ref={isOpen ? popoverRef : undefined}
                         data-state={isOpen && popoverVisible ? 'open' : 'closed'}
-                        className="absolute right-0 top-full mt-2 w-60 md:w-72 z-30 bg-white border-[2.5px] border-black rounded-xl stack-shadow p-3 md:p-3.5 popover-anim text-left"
+                        className="absolute right-0 top-full mt-2 scroll-mb-3 w-60 md:w-72 z-30 bg-white border-[2.5px] border-black rounded-xl stack-shadow p-3 md:p-3.5 popover-anim text-left"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <p className="text-xs font-display font-bold uppercase tracking-wider text-gray-500 leading-tight">
@@ -172,15 +201,10 @@ const ScoreLeaderboard: React.FC<ScoreLeaderboardProps> = ({
                         <p className="text-xs font-display font-bold uppercase tracking-wider text-gray-500 leading-tight">
                           {t.endGame.correctAnswersCount(correctCount)}
                         </p>
-                        <p className="mt-2 text-xs font-display font-bold uppercase tracking-wider text-gray-500 leading-tight">
-                          {t.endGame.respondentsLabel}
-                        </p>
-                        {respondentNames.length > 0 ? (
-                          <p className="text-sm text-gray-900 leading-snug">
-                            {respondentNames.join(', ')}
+                        {correctNames.length > 0 && (
+                          <p className="mt-1 text-sm text-gray-900 leading-snug">
+                            {correctNames.join(', ')}
                           </p>
-                        ) : (
-                          <p className="text-sm text-gray-500 italic">{t.endGame.noPlayers}</p>
                         )}
                         <span className="popover-notch" aria-hidden />
                       </div>

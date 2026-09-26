@@ -7,6 +7,7 @@ import { AdminTab, TABS, GROUP_ORDER } from './shared';
 import { MobileBottomNav } from './MobileNav';
 import { OverviewPanel } from './Overview';
 import { TicketsPanel } from './Tickets';
+import { LogsPanel } from './Logs';
 import { LobbiesPanel } from './Lobbies';
 import { DecksPanel } from './Decks';
 import { ContentPanel } from './Content';
@@ -210,6 +211,9 @@ export const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
             initialStatusFilter={jumpFilter.status}
             initialTypeFilter={jumpFilter.type}
           />
+        )}
+        {activeTab === 'logs' && (
+          <LogsPanel active={activeTab === 'logs'} refreshKey={refreshKey} />
         )}
         {activeTab === 'lobbies' && (
           <LobbiesPanel active={activeTab === 'lobbies'} refreshKey={refreshKey} />

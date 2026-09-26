@@ -57,3 +57,32 @@ export async function setPremiumPromo(action: 'enable' | 'disable'): Promise<Pre
   if (!res.ok) throw new Error('Erreur de mise à jour de la promo premium.');
   return (await res.json()) as PremiumPromoState;
 }
+
+/** Log d'erreur remonté par l'app (table `client_logs`, cf backend/src/routes/clientLogs.ts). */
+export interface ClientLog {
+  id: number;
+  level: 'error' | 'warn' | 'info';
+  source: string;
+  message: string;
+  /** JSON sérialisé (détail de l'erreur, étape, empreinte de clé…), ou null. */
+  context: string | null;
+  platform: string | null;
+  app_version: string | null;
+  user_agent: string | null;
+  ip_hash: string | null;
+  created_at: number;
+}
+
+export async function fetchClientLogs(): Promise<ClientLog[]> {
+  const res = await adminFetch('/admin/client-logs');
+  if (!res.ok) throw new Error('Erreur de chargement des logs.');
+  const data = await res.json();
+  return data.logs as ClientLog[];
+}
+
+export async function clearClientLogs(): Promise<number> {
+  const res = await adminFetch('/admin/client-logs', { method: 'DELETE' });
+  if (!res.ok) throw new Error('Erreur de suppression des logs.');
+  const data = await res.json();
+  return Number(data.deleted) || 0;
+}

@@ -5,6 +5,7 @@ import RevealedAnswerCard from '../RevealedAnswerCard';
 import { IPlayer, RevealResult } from '@onskone/shared';
 import { useLocale } from '../../i18n';
 import type { RevealCursorState } from '../../hooks/useRevealCursor';
+import PremiumName from '../PremiumName';
 
 /**
  * Vue REVEAL d'un joueur non-pilier en mode local : carte unique de la réponse
@@ -20,7 +21,7 @@ const RevealPlayerLocalView = ({
   results,
 }: {
   reveal: RevealCursorState;
-  leader: Pick<IPlayer, 'id' | 'name' | 'avatarId'>;
+  leader: Pick<IPlayer, 'id' | 'name' | 'avatarId' | 'isPremium'>;
   currentPlayerId: string;
   isGameOver: boolean;
   results: RevealResult[];
@@ -78,7 +79,7 @@ const RevealPlayerLocalView = ({
     <div className="flex items-center justify-center flex-wrap gap-x-2 gap-y-1 leading-none text-gray-900 text-base tablet:text-lg phone-landscape:text-xs">
       <span>{t.phases.reveal.waitingPrefix}</span>
       <Avatar avatarId={leader?.avatarId ?? 0} name={leader?.name} size="sm" />
-      <span>{leader?.name}</span>
+      <PremiumName name={leader?.name ?? ''} premium={!!leader?.isPremium} />
       <span>{isGameOver ? t.phases.reveal.waitingLeaderFinal : t.phases.reveal.waitingLeaderNext}</span>
     </div>
   ) : undefined;

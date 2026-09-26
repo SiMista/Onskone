@@ -11,6 +11,7 @@ import { ToastProvider } from './components/Toast';
 import { LocaleProvider } from './i18n';
 import { extractLobbyCode } from './constants/game';
 import { initPremium } from './utils/premium';
+import { installGlobalErrorLogging } from './utils/clientLog';
 import UpdateRequiredModal from './components/UpdateRequiredModal';
 import AppDownloadBanner from './components/AppDownloadBanner';
 
@@ -113,8 +114,10 @@ const App = () => {
     }
   }, []);
 
-  // Configure RevenueCat + rafraîchit le statut premium au boot (no-op sur web).
+  // Remontée des erreurs JS non gérées vers l'admin (onglet « Logs »), puis
+  // configuration RevenueCat + statut premium au boot (no-op sur web).
   useEffect(() => {
+    installGlobalErrorLogging();
     initPremium();
   }, []);
 

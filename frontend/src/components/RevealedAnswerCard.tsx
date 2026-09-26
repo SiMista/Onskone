@@ -5,6 +5,7 @@ import stickmanShowPhone from '../assets/images/game/stickman-show-phone-cropped
 import { RevealResult, isNoResponse } from '@onskone/shared';
 import { getDisplayText, answerCardBg } from '../utils/answerHelpers';
 import { useLocale } from '../i18n';
+import PremiumName from './PremiumName';
 
 interface RevealedAnswerCardProps {
   /** Résultat à afficher (l'auteur réel est dévoilé via `revealed`). */
@@ -87,11 +88,11 @@ const RevealedAnswerCard = ({
                   name={result.playerName}
                   revealed={revealed}
                 />
-                <span
+                <PremiumName
+                  name={result.playerName}
+                  premium={!!result.playerIsPremium}
                   className={`text-xs tablet:text-sm font-semibold text-black transition-opacity duration-500 phone-landscape:text-[11px] truncate max-w-[6rem] tablet:max-w-[7rem] ${revealed ? 'opacity-100' : 'opacity-0'}`}
-                >
-                  {result.playerName}
-                </span>
+                />
               </div>
             </div>
           )}

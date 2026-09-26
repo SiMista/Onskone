@@ -6,6 +6,7 @@ import SimilarityPopover from '../SimilarityPopover';
 import { IPlayer } from '@onskone/shared';
 import { useLocale } from '../../i18n';
 import type { RevealCursorState } from '../../hooks/useRevealCursor';
+import PremiumName from '../PremiumName';
 
 /**
  * Vue REVEAL en mode remote (à distance) : une carte à la fois pour tous les
@@ -20,7 +21,7 @@ const RevealRemoteView = ({
   isGameOver,
 }: {
   reveal: RevealCursorState;
-  leader: Pick<IPlayer, 'id' | 'name' | 'avatarId'>;
+  leader: Pick<IPlayer, 'id' | 'name' | 'avatarId' | 'isPremium'>;
   isLeader: boolean;
   isGameOver: boolean;
 }) => {
@@ -56,7 +57,7 @@ const RevealRemoteView = ({
             <div className="flex items-center justify-center flex-wrap gap-x-2 gap-y-1 leading-none text-base md:text-lg">
               <span>{t.phases.reveal.waitingPrefix}</span>
               <Avatar avatarId={leader?.avatarId ?? 0} name={leader?.name} size="sm" />
-              <span>{leader?.name}</span>
+              <PremiumName name={leader?.name ?? ''} premium={!!leader?.isPremium} />
               <span>{t.phases.reveal.waitingLeaderNext}</span>
             </div>
           )}
@@ -95,7 +96,12 @@ const RevealRemoteView = ({
           </div>
         ) : (
           <p className="text-gray-900 text-sm md:text-base font-semibold text-center">
-            {t.phases.reveal.remoteAttributedTo} <span className="text-brand-500">{currentResult.guessedPlayerName}</span>
+            {t.phases.reveal.remoteAttributedTo}{' '}
+            <PremiumName
+              name={currentResult.guessedPlayerName}
+              premium={!!currentResult.guessedPlayerIsPremium}
+              className={currentResult.guessedPlayerIsPremium ? '' : 'text-brand-500'}
+            />
           </p>
         )
       }

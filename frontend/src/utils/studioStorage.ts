@@ -44,15 +44,41 @@ export const studioSlotIndex = detectSlotIndex();
 export const isStudioFrame = studioSlotIndex !== null;
 const PREFIX = isStudioFrame ? `studio${studioSlotIndex}_` : '';
 
+// Flag « bot » du slot, NAMESPACÉ : sessionStorage est partagé par toutes les
+// iframes same-origin de l'onglet. Une clé commune faisait que couper le bot d'un
+// slot le coupait pour tous, et qu'un slot lancé sans bot jouait quand même en bot.
+const STUDIO_BOT_KEY = `studio${studioSlotIndex}_studioBot`;
+
+/** Mode bot actif pour CE slot Studio (false hors Studio). */
+export const getStudioBotFlag = (): boolean => {
+  if (!isStudioFrame) return false;
+  try { return sessionStorage.getItem(STUDIO_BOT_KEY) === '1'; } catch { return false; }
+};
+
+export const setStudioBotFlag = (enabled: boolean): void => {
+  if (!isStudioFrame) return;
+  try {
+    if (enabled) sessionStorage.setItem(STUDIO_BOT_KEY, '1');
+    else sessionStorage.removeItem(STUDIO_BOT_KEY);
+  } catch { /* silent */ }
+};
+
 // Sync URL `?bot=1|0` to sessionStorage at module boot so that downstream
 // readers (Lobby auto-start, useStudioBot) see the flag immediately - even
 // before the parent's postMessage handshake or before Game.tsx mounts.
 if (isStudioFrame && typeof window !== 'undefined') {
-  try {
-    const bot = new URLSearchParams(window.location.search).get('bot');
-    if (bot === '1') sessionStorage.setItem('studioBot', '1');
-    else if (bot === '0') sessionStorage.removeItem('studioBot');
-  } catch { /* silent */ }
+  const bot = new URLSearchParams(window.location.search).get('bot');
+  if (bot === '1') setStudioBotFlag(true);
+  else if (bot === '0') setStudioBotFlag(false);
+
+  // Bascule live du bot depuis la Régie, écoutée ICI (niveau module, toute la vie
+  // de l'iframe) et pas seulement par useStudioBot, monté sur /game uniquement :
+  // sinon un 🤖 cliqué pendant que le slot est sur l'accueil ou le lobby était perdu.
+  window.addEventListener('message', (e: MessageEvent) => {
+    if (e.origin !== window.location.origin) return;
+    const data = e.data as { type?: unknown; enabled?: unknown } | null;
+    if (data && data.type === 'studio:setBot') setStudioBotFlag(!!data.enabled);
+  });
 
   // Sync URL `?premium=1|0` into the slot's premium cache (même format que
   // premium.ts : { version, premium }) pour tester le déblocage sans vrai achat.

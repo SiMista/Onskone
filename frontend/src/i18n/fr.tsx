@@ -158,8 +158,7 @@ export const fr: Dictionary = {
     points: (n) => `${n} pt${n > 1 ? 's' : ''}`,
     receivedQuestion: 'Question reçue',
     correctAnswersCount: (n) => `${n} Bonne${n > 1 ? 's' : ''} réponse${n > 1 ? 's' : ''}`,
-    respondentsLabel: 'Ont répondu',
-    noPlayers: 'Aucun joueur',
+    byPlayer: (name) => `(par ${name})`,
     aria: {
       seeReceivedQuestion: 'Voir la question reçue',
     },

@@ -15,7 +15,7 @@ import { useLocale } from '../i18n';
 const QuestionSelection = ({ lobbyCode, isLeader, leader, timeMultiplier }: {
   lobbyCode: string;
   isLeader: boolean;
-  leader: Pick<IPlayer, 'id' | 'name' | 'avatarId'>;
+  leader: Pick<IPlayer, 'id' | 'name' | 'avatarId' | 'isPremium'>;
   timeMultiplier: number;
 }) => {
   const { t } = useLocale();

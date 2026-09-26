@@ -40,6 +40,9 @@ export interface RevealResult {
   /** ID de l'avatar du joueur qui a écrit la réponse */
   playerAvatarId?: number;
 
+  /** Auteur premium (nom doré) */
+  playerIsPremium?: boolean;
+
   /** Texte de la réponse */
   answer: string;
 
@@ -51,6 +54,9 @@ export interface RevealResult {
 
   /** ID de l'avatar du joueur deviné par le pilier */
   guessedPlayerAvatarId?: number;
+
+  /** Joueur deviné premium (nom doré) */
+  guessedPlayerIsPremium?: boolean;
 
   /** Si le pilier a correctement deviné */
   correct: boolean;

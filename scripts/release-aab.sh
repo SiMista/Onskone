@@ -18,6 +18,9 @@ VNAME="$(node "$ROOT/scripts/app-version.mjs")"
 VCODE="$(node "$ROOT/scripts/app-version.mjs" --code)"
 echo "[version]  $VNAME (code $VCODE)"
 
+# Clé RevenueCat Google : sans elle les achats sont morts dans l'AAB (cf check-rc-key).
+node "$ROOT/scripts/check-rc-key.mjs" android
+
 echo "[shared]   build..."
 (cd "$ROOT/shared" && pnpm run build)
 

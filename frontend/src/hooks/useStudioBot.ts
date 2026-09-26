@@ -1,7 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import socket from '../utils/socket';
-import { isStudioFrame } from '../utils/studioStorage';
-import { setPremiumOverride } from '../utils/premium';
+import { isStudioFrame, getStudioBotFlag, setStudioBotFlag } from '../utils/studioStorage';
 import { IGame, IPlayer, RoundPhase, GameCard } from '@onskone/shared';
 
 // =====================================================================
@@ -12,8 +11,6 @@ import { IGame, IPlayer, RoundPhase, GameCard } from '@onskone/shared';
 // the parent. State is persisted in sessionStorage so it survives navigations
 // (Home -> Lobby -> Game) and reloads inside the iframe.
 // =====================================================================
-
-const BOT_KEY = 'studioBot';
 
 const RANDOM_ANSWERS = [
   'oui', 'non', 'peut-être', '42', 'haha', 'chocolat',
@@ -26,17 +23,10 @@ const randomAnswer = () => {
   return `${base} ${Math.floor(Math.random() * 1000)}`;
 };
 
-const readInitialBotFlag = (): boolean => {
-  if (!isStudioFrame || typeof window === 'undefined') return false;
-  try {
-    const fromUrl = new URLSearchParams(window.location.search).get('bot');
-    if (fromUrl === '1') { sessionStorage.setItem(BOT_KEY, '1'); return true; }
-    if (fromUrl === '0') { sessionStorage.removeItem(BOT_KEY); return false; }
-    return sessionStorage.getItem(BOT_KEY) === '1';
-  } catch {
-    return false;
-  }
-};
+// Le flag vit dans un sessionStorage namespacé par slot (cf studioStorage), déjà
+// synchronisé depuis l'URL `?bot=` au boot du module et tenu à jour par l'écoute
+// module-level de `studio:setBot` (y compris hors /game).
+const readInitialBotFlag = (): boolean => getStudioBotFlag();
 
 interface UseStudioBotArgs {
   game: IGame | null;
@@ -53,6 +43,11 @@ export function useStudioBot({ game, currentPlayer, players, lobbyCode }: UseStu
   // Tracks which phase-actions have already been emitted, keyed by
   // `${roundNumber}:${phase}`. Reset on round change.
   const firedRef = useRef<Set<string>>(new Set());
+  // Incrémenté à chaque RÉactivation du bot : relance l'effet principal sur la
+  // phase COURANTE. Sans ça, un bot réactivé en pleine phase restait inerte
+  // jusqu'à la transition suivante (enabledRef n'est pas une dépendance), et
+  // pouvait bloquer la table (pilier bot qui ne choisit jamais sa question).
+  const [botWakeTick, setBotWakeTick] = useState(0);
 
   // Refs miroir pour que les listeners et timers (qui survivent au-delà du
   // cycle de l'effect) puissent lire l'état courant sans dépendances React.
@@ -76,19 +71,23 @@ export function useStudioBot({ game, currentPlayer, players, lobbyCode }: UseStu
       if (!data || typeof data !== 'object') return;
 
       if (data.type === 'studio:setBot') {
-        enabledRef.current = !!data.enabled;
-        try {
-          if (data.enabled) sessionStorage.setItem(BOT_KEY, '1');
-          else sessionStorage.removeItem(BOT_KEY);
-        } catch { /* silent */ }
+        const next = !!data.enabled;
+        const wasEnabled = enabledRef.current;
+        enabledRef.current = next;
+        setStudioBotFlag(next); // idempotent (l'écoute module-level l'a déjà fait)
+        if (next && !wasEnabled) {
+          // Oublier les actions « déjà planifiées » : celles armées avant la coupure
+          // ont avorté (garde enabledRef dans leur timer) mais leur clé bloquait
+          // toute nouvelle tentative dans ce round. Le serveur protège déjà contre
+          // un doublon (gardes de phase, réponse = édition).
+          firedRef.current.clear();
+          setBotWakeTick((t) => t + 1);
+        }
         return;
       }
 
-      if (data.type === 'studio:setPremium') {
-        // Toggle live du statut premium depuis la Régie Studio (test sans achat).
-        setPremiumOverride(!!data.enabled);
-        return;
-      }
+      // `studio:setPremium` est écouté au niveau module dans utils/premium.ts
+      // (actif sur toutes les pages, pas seulement /game).
 
       if (data.type === 'studio:setLimitBreaker') {
         limitBreakerRef.current = {
@@ -385,5 +384,5 @@ export function useStudioBot({ game, currentPlayer, players, lobbyCode }: UseStu
     }
     // NB: pas de `players` ici - on lit playersRef pour éviter qu'un update
     // serveur (très fréquent) ne re-déclenche l'effect en milieu de phase.
-  }, [mainRoundNumber, mainPhase, mainLeaderId, mainSubstituteId, mainPlayerId, lobbyCode]);
+  }, [mainRoundNumber, mainPhase, mainLeaderId, mainSubstituteId, mainPlayerId, lobbyCode, botWakeTick]);
 }

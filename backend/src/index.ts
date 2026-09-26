@@ -10,6 +10,7 @@ import * as LobbyManager from './managers/LobbyManager.js';
 import { stopAllRateLimiters } from './utils/rateLimiter.js';
 import { versionGate, getMinSupportedVersion } from './utils/versionGate.js';
 import ticketsRouter from './routes/tickets.js';
+import clientLogsRouter from './routes/clientLogs.js';
 import adminDataRouter from './routes/adminData.js';
 import { printBanner } from './utils/banner.js';
 
@@ -131,6 +132,7 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '128kb' }));
 
 app.use('/api', ticketsRouter);
+app.use('/api', clientLogsRouter);
 app.use('/api', adminDataRouter);
 
 // En production, servir le frontend statique. Le dossier est resolu via

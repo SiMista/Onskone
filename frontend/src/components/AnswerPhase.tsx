@@ -13,6 +13,7 @@ import { useStartTimerDelayed, useSocketEvent } from '../hooks';
 import socket from '../utils/socket';
 import { getQuestionSubtitle } from '../utils/questionHelpers';
 import { useLocale } from '../i18n';
+import PremiumName from './PremiumName';
 
 type SubmitStage = 'idle' | 'shaking' | 'done';
 
@@ -262,7 +263,8 @@ const AnswerPhase = ({
                   <Avatar avatarId={player.avatarId} name={player.name} size="sm" />
                   {!isDisconnected && hasAnswered && <LuCheck className="inline" aria-hidden />}
                   <span className="max-w-[80px] md:max-w-none truncate">
-                    {player.name}{isDisconnected && t.common.disconnectedSuffix}
+                    <PremiumName name={player.name} premium={!!player.isPremium} />
+                    {isDisconnected && t.common.disconnectedSuffix}
                   </span>
                 </span>
               </div>
@@ -359,7 +361,7 @@ const AnswerPhase = ({
                   <span className="flex items-center gap-1.5">
                     <Avatar avatarId={player.avatarId} name={player.name} size="sm" />
                     {!isDisconnected && hasAnswered && <LuCheck className="inline" aria-hidden />}
-                    <span className="max-w-[80px] md:max-w-none truncate">{player.name}</span>
+                    <PremiumName name={player.name} premium={!!player.isPremium} className="max-w-[80px] md:max-w-none truncate" />
                   </span>
                 </div>
               );

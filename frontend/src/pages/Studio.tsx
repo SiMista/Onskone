@@ -46,8 +46,6 @@ const Studio = () => {
   const [slotReloadKeys, setSlotReloadKeys] = useState<Record<string, number>>({});
   const [burstCount, setBurstCount] = useState<number>(10);
   const [limitBreaker, setLimitBreaker] = useState<boolean>(false);
-  // Test premium global (débloque les thèmes premium sans vrai achat).
-  const [premium, setPremium] = useState<boolean>(false);
 
   const iframeRefs = useRef<Record<string, HTMLIFrameElement | null>>({});
 
@@ -138,17 +136,26 @@ const Studio = () => {
     });
   };
 
-  const togglePremium = () => {
-    const next = !premium;
-    setPremium(next);
-    if (running) {
-      slots.forEach((slot) => {
-        const frame = iframeRefs.current[slot.id];
-        try {
-          frame?.contentWindow?.postMessage({ type: 'studio:setPremium', enabled: next }, '*');
-        } catch { /* silent */ }
-      });
-    }
+  // Premium de test PAR SLOT. Le changement passe par postMessage (live, sans
+  // recharger l'iframe) ; l'URL ne sert qu'à l'état de démarrage d'un slot.
+  const sendPremium = (id: string, enabled: boolean) => {
+    if (!running) return;
+    try {
+      iframeRefs.current[id]?.contentWindow?.postMessage({ type: 'studio:setPremium', enabled }, '*');
+    } catch { /* silent */ }
+  };
+  const toggleSlotPremium = (id: string) => {
+    const target = slots.find((x) => x.id === id);
+    if (!target) return;
+    const next = !target.premium;
+    setSlots((s) => s.map((x) => (x.id === id ? { ...x, premium: next } : x)));
+    sendPremium(id, next);
+  };
+  const allPremium = slots.length > 0 && slots.every((s) => s.premium);
+  const toggleAllPremium = () => {
+    const next = !allPremium;
+    setSlots((s) => s.map((x) => ({ ...x, premium: next })));
+    slots.forEach((slot) => sendPremium(slot.id, next));
   };
 
   const start = () => {
@@ -237,7 +244,9 @@ const Studio = () => {
       params.set('bot', slot.bot ? '1' : '0');
       // Test premium : encodé au boot (studioStorage lit ?premium au module-load)
       // pour que l'iframe démarre déjà débloquée, sans race avec l'auto-start.
-      params.set('premium', premium ? '1' : '0');
+      // Les bascules en cours de partie passent par postMessage : SlotCard ne
+      // recharge PAS l'iframe quand seuls `bot`/`premium` changent dans l'URL.
+      params.set('premium', slot.premium ? '1' : '0');
       if (!isRunning) return `${base}/?${params.toString()}`;
       if (index === 0) {
         params.set('autoCreate', '1');
@@ -250,7 +259,7 @@ const Studio = () => {
       params.set('autoJoin', '1');
       return `${base}/?${params.toString()}`;
     },
-    [debugTimers, gameMode, timeMultiplier, premium]
+    [debugTimers, gameMode, timeMultiplier]
   );
 
   const cols = useMemo(() => {
@@ -301,8 +310,8 @@ const Studio = () => {
         setTimeMultiplier={setTimeMultiplier}
         running={running}
         allBots={allBots}
-        premium={premium}
-        onTogglePremium={togglePremium}
+        premium={allPremium}
+        onTogglePremium={toggleAllPremium}
         burstCount={burstCount}
         setBurstCount={setBurstCount}
         limitBreaker={limitBreaker}
@@ -338,6 +347,7 @@ const Studio = () => {
               onCycleAvatar={cycleAvatar}
               onUpdateSlot={updateSlot}
               onToggleBot={toggleBot}
+              onTogglePremium={toggleSlotPremium}
               onReloadSlot={reloadSlot}
               onRemoveSlot={removeSlot}
             />

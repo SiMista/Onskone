@@ -27,7 +27,7 @@ import { useToast } from '../components/Toast';
 import { useLocale } from '../i18n';
 import { GAME_CONFIG, DEBUG_TIME_MULTIPLIER } from '../constants/game';
 import { STICKER_FILTER } from '../constants/icons';
-import { studioStorage, isStudioFrame } from '../utils/studioStorage';
+import { studioStorage, isStudioFrame, getStudioBotFlag } from '../utils/studioStorage';
 import { getCurrentPlayerFromStorage, storeReconnectToken, getReconnectToken } from '../utils/playerHelpers';
 
 const RECOMMENDED_PLAYERS = 4;
@@ -157,9 +157,7 @@ const Lobby = () => {
     useEffect(() => {
         if (!isStudioFrame) return;
         if (studioAutoStartedRef.current) return;
-        try {
-            if (sessionStorage.getItem('studioBot') !== '1') return;
-        } catch { return; }
+        if (!getStudioBotFlag()) return;
         if (!currentPlayer?.isHost) return;
         const activeCount = players.filter(p => p.isActive).length;
         if (activeCount < GAME_CONFIG.MIN_PLAYERS) return;

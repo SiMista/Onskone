@@ -299,6 +299,20 @@ export class Round implements IRound {
         this.substituteAnswer = answer;
     }
 
+    /**
+     * Auteurs des réponses correctement attribuées par le pilier, bonus de
+     * similarité inclus. Même règle que `calculateScores` + `similarityCorrections`
+     * (et que `buildRevealResults.correct`) : la liste explique le score du pilier.
+     * Clé = id de l'auteur dans le pool (le pilier lui-même pour la réponse du
+     * substitut en mode "Devine ma réponse").
+     */
+    getCorrectAuthorIds(): string[] {
+        const corrections = this.similarityCorrections || [];
+        return Object.keys(this.getGuessingAnswers()).filter(
+            (authorId, index) => this.guesses[authorId] === authorId || corrections.includes(index),
+        );
+    }
+
     calculateScores(): void {
         // Seul le pilier gagne des points : +1 par bonne attribution
         let chiefScore = 0;

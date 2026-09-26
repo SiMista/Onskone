@@ -37,15 +37,18 @@ workflows:
         CAPACITOR_BUILD: "1"
         XCODE_PROJECT: "frontend/ios/App/App.xcodeproj"
         XCODE_SCHEME: "App"
-        # Monetisation (achats in-app via RevenueCat). Cle API PUBLIQUE Apple
-        # (prefixe "appl_"), consommee au build par le front (import.meta.env).
-        # A definir dans un groupe de variables Codemagic (ou en clair ici si non
-        # sensible - une cle publique RevenueCat peut etre exposee cote client).
+        # Monetisation (achats in-app via RevenueCat) : VITE_RC_APPLE_KEY (cle API
+        # PUBLIQUE Apple, prefixe "appl_") vient du groupe `ios_signing` importe
+        # ci-dessus, deja exporte dans l'environnement du build (Vite lit
+        # process.env.VITE_*). NE PAS la redeclarer ici sous la forme
+        # `VITE_RC_APPLE_KEY: $VITE_RC_APPLE_KEY` : Codemagic ne documente pas
+        # l'expansion d'une auto-reference dans `vars`, qui peut ecraser la vraie
+        # valeur par du vide ou par le texte litteral (achats morts dans l'IPA).
+        # L'etape "Verifier la cle RevenueCat Apple" controle la valeur recue.
         # Prerequis Apple (a faire UNE fois, hors CI) : cocher la capability
         # "In-App Purchase" sur l'App ID com.onskone.app dans le portail Apple.
         # StoreKit ne demande PAS de cle dans App.entitlements (contrairement aux
         # Associated Domains), il suffit que la capability soit active sur l'App ID.
-        VITE_RC_APPLE_KEY: $VITE_RC_APPLE_KEY
 
     scripts:
       - name: Installer pnpm
@@ -54,6 +57,11 @@ workflows:
 
       - name: Installer les dependances
         script: pnpm install
+
+      - name: Verifier la cle RevenueCat Apple
+        # Echoue si VITE_RC_APPLE_KEY est vide ou mal formee : sinon l'IPA part
+        # sur TestFlight avec des achats morts (erreur sur chaque bouton du paywall).
+        script: node scripts/check-rc-key.mjs ios
 
       - name: Build shared (types) puis frontend
         script: |
@@ -211,10 +219,10 @@ workflows:
         VITE_SERVER_URL: "https://onskone.fr"
         # Build natif : base d'assets relative './' (cf vite.config.ts).
         CAPACITOR_BUILD: "1"
-        # Cle API PUBLIQUE RevenueCat Google (prefixe "goog_"), pendant Android de
-        # VITE_RC_APPLE_KEY. Lue par frontend/src/utils/premium.ts selon la plateforme.
-        # Absente => les achats in-app sont inertes (pas de crash, cf premium.ts).
-        VITE_RC_GOOGLE_KEY: $VITE_RC_GOOGLE_KEY
+        # VITE_RC_GOOGLE_KEY (cle API PUBLIQUE RevenueCat Google, prefixe "goog_")
+        # vient du groupe importe ci-dessus : ne pas la redeclarer ici en
+        # auto-reference (cf commentaire du workflow iOS). Controlee par l'etape
+        # "Verifier la cle RevenueCat Google".
 
     triggering:
       events:
@@ -230,6 +238,9 @@ workflows:
 
       - name: Installer les dependances
         script: pnpm install
+
+      - name: Verifier la cle RevenueCat Google
+        script: node scripts/check-rc-key.mjs android
 
       - name: Build shared (types) puis frontend
         script: |

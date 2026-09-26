@@ -20,7 +20,7 @@ import RevealPilierLocalView from './reveal/RevealPilierLocalView';
 const RevealPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, isGameOver, results, initialRevealedIndices, gameMode }: {
   lobbyCode: string;
   isLeader: boolean;
-  leader: Pick<IPlayer, 'id' | 'name' | 'avatarId'>;
+  leader: Pick<IPlayer, 'id' | 'name' | 'avatarId' | 'isPremium'>;
   currentPlayerId: string;
   isGameOver: boolean;
   results: RevealResult[];

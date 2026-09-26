@@ -1,8 +1,9 @@
 import Avatar from './Avatar';
 import { IPlayer } from '@onskone/shared';
+import PremiumName from './PremiumName';
 
 interface PlayerBadgeProps {
-  player: Pick<IPlayer, 'avatarId' | 'name'> | undefined | null;
+  player: Pick<IPlayer, 'avatarId' | 'name' | 'isPremium'> | undefined | null;
   size?: 'sm' | 'md';
   className?: string;
   fallbackName?: string;
@@ -24,9 +25,11 @@ const PlayerBadge = ({
       className={`inline-flex flex-col items-center gap-1 min-w-[60px] max-w-[90px] ${className}`}
     >
       <Avatar avatarId={player?.avatarId ?? 0} name={name} size={size} />
-      <span className="text-[11px] md:text-xs font-semibold text-gray-800 text-center truncate max-w-full">
-        {display}
-      </span>
+      <PremiumName
+        name={display}
+        premium={!!player?.isPremium}
+        className="text-[11px] md:text-xs font-semibold text-gray-800 text-center truncate max-w-full"
+      />
     </div>
   );
 };

@@ -178,6 +178,31 @@ describe('phaseEndedAt — fenêtre de grâce des phases de saisie', () => {
   });
 });
 
+describe('getCorrectAuthorIds (joueurs bien devinés, écran de fin)', () => {
+  it('liste les attributions justes et les corrections de similarité, pas les erreurs', () => {
+    const round = new Round(1, leader, card, false);
+    round.addAnswer('p1', 'a');
+    round.addAnswer('p2', 'b');
+    round.addAnswer('p3', 'c');
+    // p1 juste, p2 attribué à p3 (faux), p3 attribué à p2 (faux)
+    round.submitGuesses({ p1: 'p1', p2: 'p3', p3: 'p2' });
+    expect(round.getCorrectAuthorIds()).toEqual(['p1']);
+
+    // Correction de similarité sur l'index de p3 dans le pool
+    round.similarityCorrections = [2];
+    expect(round.getCorrectAuthorIds()).toEqual(['p1', 'p3']);
+  });
+
+  it("inclut l'entrée du pilier (réponse du substitut) en mode « Devine ma réponse »", () => {
+    const round = new Round(1, leader, card, true);
+    round.addAnswer('p1', 'a');
+    round.setSubstitutePlayer('p1');
+    round.setSubstituteAnswer('réponse pour le pilier');
+    round.submitGuesses({ p1: 'p1', [leader.id]: leader.id });
+    expect(round.getCorrectAuthorIds().sort()).toEqual(['p1', leader.id].sort());
+  });
+});
+
 describe('patchAnswerSlotText — réponse tardive du substitut', () => {
   it("corrige le slot du PILIER (c'est en son nom que le substitut écrit)", () => {
     const round = new Round(1, leader, card, true);
