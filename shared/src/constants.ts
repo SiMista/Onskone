@@ -53,8 +53,12 @@ export const GAME_CONSTANTS = {
   // Délais de gestion des déconnexions (millisecondes).
   // Source de vérité : frontend + backend pointent ici pour rester en phase.
   RECONNECT_GRACE_PERIOD_MS: 30_000,
-  LEADER_DISCONNECT_DELAY_MS: 15_000,
-  INACTIVE_DELAY_MS: 5_000,
+  // Tolérance arrière-plan mobile : un joueur qui verrouille son tel ou répond à un
+  // SMS ne doit être ni exclu du décompte des réponses, ni voir sa manche sautée.
+  // Le serveur peut mettre jusqu'à ~45 s à détecter un socket mort (ping socket.io
+  // par défaut) : ces délais ne doivent pas redescendre en dessous.
+  LEADER_DISCONNECT_DELAY_MS: 60_000,
+  INACTIVE_DELAY_MS: 60_000,
   KICK_BLOCK_DURATION_MS: 5 * 60 * 1000,
 } as const;
 

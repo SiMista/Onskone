@@ -231,6 +231,10 @@ export function transitionToGuessing(io: IoServer, lobbyCode: string, lobby: Lob
         players: currentRound.getGuessTargets(lobby.players),
         roundNumber: currentRound.roundNumber,
     });
+    // Timer serveur autoritatif pour GUESSING : sans ça, seul le `startTimer` du
+    // pilier (émis une fois au montage de son écran) armait un timeout, et la phase
+    // figeait pour toute la table si le pilier était en arrière-plan à cet instant.
+    armServerTimerForPhase(io, lobbyCode, lobby, currentRound);
 }
 
 /**
@@ -260,6 +264,7 @@ export function finishAnsweringPhase(io: IoServer, lobbyCode: string, lobby: Lob
             answersCount: Object.keys(currentRound.answers).length,
             forced,
         });
+        armServerTimerForPhase(io, lobbyCode, lobby, currentRound);
         return;
     }
 
@@ -426,11 +431,22 @@ export function getServerPhaseDuration(phase: RoundPhase, lobby: Lobby): number 
  * reste idempotent : un `startTimer` ultérieur du pilier pour la même phase voit le timer
  * encore actif et ne le réinitialise pas.
  */
-function armServerTimerForPhase(io: IoServer, lobbyCode: string, lobby: Lobby, currentRound: Round): void {
+export function armServerTimerForPhase(io: IoServer, lobbyCode: string, lobby: Lobby, currentRound: Round): void {
+    // Idempotent : un timer déjà armé pour la phase courante est conservé. Permet
+    // d'appeler cette fonction à CHAQUE transition (interactive ou auto) sans
+    // se soucier d'un double armement.
+    if (
+        currentRound.serverTimerHandle
+        && currentRound.timerPhase === currentRound.phase
+        && currentRound.timerEnd
+        && currentRound.timerEnd.getTime() > Date.now()
+    ) {
+        return;
+    }
     const duration = getServerPhaseDuration(currentRound.phase, lobby);
     if (duration <= 0) return; // REVEAL : rien à armer
     armServerTimer(io, lobbyCode, currentRound, duration);
-    logger.debug(`Timer serveur ré-armé après auto-transition: ${duration}s`, { lobbyCode, phase: currentRound.phase });
+    logger.debug(`Timer serveur armé pour la phase: ${duration}s`, { lobbyCode, phase: currentRound.phase });
 }
 
 /**

@@ -95,3 +95,67 @@ export function getReconnectToken(lobbyCode: string | undefined): string | undef
     return undefined;
   }
 }
+
+// --- Partie en cours (reprise après fermeture de l'app) ------------------------
+// Quand l'OS tue l'app en arrière-plan, la WebView redémarre sur `/` et la route
+// `/game/:code` est perdue. On mémorise donc la partie en cours pour proposer d'y
+// revenir depuis l'accueil (cf. Home). Effacée en fin de partie, à l'expulsion ou
+// à la fermeture du salon, et périmée après LAST_GAME_TTL_MS sans rafraîchissement
+// (le serveur ne garde de toute façon pas un salon plus de 2 h sans activité).
+const LAST_GAME_KEY = 'onskone_last_game';
+const LAST_GAME_TTL_MS = 2 * 60 * 60 * 1000;
+
+export interface LastGame {
+  lobbyCode: string;
+  playerId: string;
+  /** Date du dernier rafraîchissement (ms epoch). */
+  at: number;
+}
+
+export function storeLastGame(lobbyCode: string, playerId: string): void {
+  try {
+    const entry: LastGame = { lobbyCode, playerId, at: Date.now() };
+    studioStorage.setItem(LAST_GAME_KEY, JSON.stringify(entry));
+  } catch {
+    /* silent */
+  }
+}
+
+/** Partie mémorisée encore fraîche, ou null (une entrée périmée est purgée). */
+export function getLastGame(): LastGame | null {
+  try {
+    const raw = studioStorage.getItem(LAST_GAME_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<LastGame>;
+    if (
+      typeof parsed.lobbyCode !== 'string'
+      || typeof parsed.playerId !== 'string'
+      || typeof parsed.at !== 'number'
+    ) {
+      return null;
+    }
+    if (Date.now() - parsed.at > LAST_GAME_TTL_MS) {
+      studioStorage.removeItem(LAST_GAME_KEY);
+      return null;
+    }
+    return parsed as LastGame;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Oublie la partie mémorisée. Avec `lobbyCode`, n'efface que si c'est bien celle-là :
+ * un écran de fin d'un ANCIEN salon ne doit pas effacer la mémoire d'un autre.
+ */
+export function clearLastGame(lobbyCode?: string): void {
+  try {
+    if (lobbyCode) {
+      const current = getLastGame();
+      if (current && current.lobbyCode !== lobbyCode) return;
+    }
+    studioStorage.removeItem(LAST_GAME_KEY);
+  } catch {
+    /* silent */
+  }
+}

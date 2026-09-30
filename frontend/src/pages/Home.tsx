@@ -11,6 +11,7 @@ import InfoModal from '../components/InfoModal';
 import GameModeModal from '../components/GameModeModal';
 import JoinByCodeModal from '../components/JoinByCodeModal';
 import PremiumModal from '../components/PremiumModal';
+import ConfirmModal from '../components/ConfirmModal';
 import HowToPlayCarousel from '../components/HowToPlayCarousel';
 import HowToPlayButton from '../components/HowToPlayButton';
 import LanguageSwitcher from '../components/LanguageSwitcher';
@@ -21,7 +22,7 @@ import BackButton from '../components/BackButton';
 import { Icon } from '@iconify/react';
 import { useSocketEvent } from '../hooks';
 import { useDocumentMeta } from '../hooks/useDocumentMeta';
-import { GameMode } from '@onskone/shared';
+import { GameMode, GameStatus } from '@onskone/shared';
 import { GAME_CONFIG, AVATARS } from '../constants/game';
 import { STICKER_FILTER } from '../constants/icons';
 import {
@@ -31,7 +32,7 @@ import {
   getUnseenAchievementIds,
   markAchievementsAsSeen,
 } from '../utils/playerStats';
-import { storeReconnectToken } from '../utils/playerHelpers';
+import { storeReconnectToken, getLastGame, clearLastGame } from '../utils/playerHelpers';
 import { usePremium } from '../utils/premium';
 import { useAppBannerVisible } from '../utils/appBanner';
 
@@ -128,6 +129,8 @@ const Home = () => {
   const [isJoinByCodeOpen, setIsJoinByCodeOpen] = useState(false);
   const [isPremiumOpen, setIsPremiumOpen] = useState(false);
   const isPremium = usePremium();
+  // Partie en cours mémorisée et confirmée par le serveur : on propose d'y revenir.
+  const [resumeGame, setResumeGame] = useState<{ lobbyCode: string } | null>(null);
   // Code saisi dans la popup "Rejoindre" en cours de validation (getLobbyInfo).
   // Tant qu'il est posé, la réponse lobbyInfo concerne la popup (pas l'URL).
   const [pendingJoinCode, setPendingJoinCode] = useState<string | null>(null);
@@ -190,6 +193,17 @@ const Home = () => {
 
   // Pas de paywall promo automatique à l'ouverture : le premium ne s'ouvre que
   // sur action du joueur (bouton Premium, thème verrouillé).
+
+  // Reprise de partie : si l'app a été tuée en pleine partie (route perdue), on
+  // demande au serveur si le salon mémorisé tourne encore avant de proposer d'y
+  // revenir (cf. handleLobbyInfo). Jamais dans un flux d'invitation / Studio.
+  useEffect(() => {
+    if (lobbyCode || autoCreate || autoJoin) return;
+    const last = getLastGame();
+    if (!last) return;
+    socket.emit('getLobbyInfo', { lobbyCode: last.lobbyCode });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const createLobby = useCallback(() => {
     if (!playerName.trim()) {
@@ -281,7 +295,26 @@ const Home = () => {
     showToast(data.message, 'error');
   }, [showToast]);
 
-  const handleLobbyInfo = useCallback((data: { exists: boolean; hostName?: string | null; locale?: Locale }) => {
+  const handleLobbyInfo = useCallback((data: {
+    exists: boolean;
+    hostName?: string | null;
+    locale?: Locale;
+    lobbyCode?: string;
+    gameStatus?: GameStatus;
+  }) => {
+    // Réponse à la vérification de reprise (salon mémorisé) : elle ne concerne ni
+    // la popup « Rejoindre » ni l'URL. Le serveur fait écho du code demandé.
+    const target = pendingJoinCode ?? lobbyCode;
+    const last = getLastGame();
+    if (data.lobbyCode && data.lobbyCode !== target && last?.lobbyCode === data.lobbyCode) {
+      if (data.exists && data.gameStatus === GameStatus.IN_PROGRESS) {
+        setResumeGame({ lobbyCode: data.lobbyCode });
+      } else {
+        clearLastGame(data.lobbyCode); // partie finie ou salon disparu : on oublie
+      }
+      return;
+    }
+
     // Flow popup "Rejoindre" : la réponse concerne le code saisi à la main.
     if (pendingJoinCode !== null) {
       const code = pendingJoinCode;
@@ -309,7 +342,7 @@ const Home = () => {
       // utilisateur explicite ici).
       navigate('/', { replace: true });
     }
-  }, [navigate, locale, setLocale, showToast, t, pendingJoinCode]);
+  }, [navigate, locale, setLocale, showToast, t, pendingJoinCode, lobbyCode]);
 
   useSocketEvent('lobbyInfo', handleLobbyInfo);
   useSocketEvent('lobbyCreated', handleLobbyCreated);
@@ -377,6 +410,20 @@ const Home = () => {
         isOpen={isJoinByCodeOpen}
         onClose={() => { setIsJoinByCodeOpen(false); setPendingJoinCode(null); }}
         onSubmit={handleJoinByCode}
+      />
+
+      {/* Reprise d'une partie en cours (app tuée en arrière-plan). Fermer ne
+          l'oublie PAS : un retour au premier plan referme toutes les modales, et
+          l'offre doit survivre à ce cas. La mémoire s'efface en fin de partie. */}
+      <ConfirmModal
+        isOpen={resumeGame !== null}
+        onClose={() => setResumeGame(null)}
+        onConfirm={() => { if (resumeGame) navigate(`/game/${resumeGame.lobbyCode}`); }}
+        title={t.home.resume.title}
+        message={t.home.resume.message}
+        confirmText={t.home.resume.confirm}
+        cancelText={t.home.resume.cancel}
+        confirmVariant="success"
       />
 
       <PremiumModal

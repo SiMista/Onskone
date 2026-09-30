@@ -22,6 +22,12 @@ export const en: Dictionary = {
 
   home: {
     playNow: 'Play now!',
+    resume: {
+      title: 'Game in progress!',
+      message: 'You left a game in progress. Want to jump back in?',
+      confirm: 'Back to the game',
+      cancel: 'No thanks',
+    },
     invite: (hostName) => (
       <>
         <b className="font-bold">{hostName}</b> invites you to join their lobby!

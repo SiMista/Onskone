@@ -9,8 +9,9 @@ import { validatePlayerName, validateAvatarId, sanitizeInput } from '../../utils
 import { rateLimiters } from '../../utils/rateLimiter.js';
 import { errMessage } from '../../utils/helpers.js';
 import logger from '../../utils/logger.js';
-import { serializeGame, serializeRound, serializePlayer, serializePlayers, emitLobbyDecksState } from '../broadcasting.js';
-import { scheduleLeaderSkipTimeout } from './disconnectHandler.js';
+import { serializeGame, serializeRound, serializePlayer, serializePlayers, emitLobbyDecksState, armServerTimerForPhase } from '../broadcasting.js';
+import { scheduleLeaderSkipTimeout, armLeaderSkipIfDisconnected } from './disconnectHandler.js';
+import type { Round } from '../../models/Round.js';
 import { reconnectPlayerSlot } from './reconnection.js';
 import {
     type HandlerContext,
@@ -264,26 +265,29 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
     // Get lobby info (for invite links)
     socket.on('getLobbyInfo', (data: { lobbyCode: string }) => {
         try {
-            // Rate limiting
+            // Rate limiting. Toujours faire écho du code, même ici : Home route la
+            // réponse dessus (URL / popup « Rejoindre » / reprise de partie).
             if (!rateLimiters.general.isAllowed(socket.id)) {
-                socket.emit('lobbyInfo', { exists: false });
+                socket.emit('lobbyInfo', { exists: false, lobbyCode: data?.lobbyCode });
                 return;
             }
 
             const lobby = LobbyManager.getLobby(data.lobbyCode);
             if (!lobby) {
-                socket.emit('lobbyInfo', { exists: false });
+                socket.emit('lobbyInfo', { exists: false, lobbyCode: data.lobbyCode });
                 return;
             }
             const host = lobby.getHost();
             socket.emit('lobbyInfo', {
                 exists: true,
+                lobbyCode: data.lobbyCode,
                 hostName: host?.name || null,
-                locale: lobby.locale
+                locale: lobby.locale,
+                gameStatus: lobby.game?.status ?? GameStatus.WAITING,
             });
         } catch (error) {
             logger.error('Error getting lobby info', { error: errMessage(error) });
-            socket.emit('lobbyInfo', { exists: false });
+            socket.emit('lobbyInfo', { exists: false, lobbyCode: data?.lobbyCode });
         }
     });
 
@@ -572,6 +576,8 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
             io.to(data.lobbyCode).emit('gameStarted', { game: serializeGame(lobby) });
             if (game.currentRound) {
                 io.to(data.lobbyCode).emit('roundStarted', { round: serializeRound(game.currentRound)! });
+                armServerTimerForPhase(io, data.lobbyCode, lobby, game.currentRound as Round);
+                armLeaderSkipIfDisconnected(io, registry, data.lobbyCode, game.currentRound as Round);
             }
             logger.game.started(data.lobbyCode, activePlayers.length);
         });

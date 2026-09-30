@@ -78,6 +78,8 @@ export interface Dictionary {
     howToPlayHeading: string;
     achievementsTitle: string;
     stats: { gamesPlayed: string; pointsScored: string };
+    // Popup de reprise d'une partie en cours (app tuée en arrière-plan)
+    resume: { title: string; message: string; confirm: string; cancel: string };
     aria: {
       seeAchievements: string;
       seeAchievementsWithNew: (count: number) => string;

@@ -20,7 +20,9 @@ import {
     finishAnsweringPhase,
     finishGuessing,
     endGame,
+    armServerTimerForPhase,
 } from '../broadcasting.js';
+import { armLeaderSkipIfDisconnected } from './disconnectHandler.js';
 import {
     type HandlerContext,
     type AppSocket,
@@ -123,7 +125,7 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
             // Guard de phase (silent-return) : ignore les double-soumissions hors
             // QUESTION_SELECTION (client malveillant ou double-tap).
             requirePhase: RoundPhase.QUESTION_SELECTION,
-        }, ({ round: currentRound }, data) => {
+        }, ({ lobby, round: currentRound }, data) => {
             // Valider que la question sélectionnée est bien une des questions proposées
             const validQuestion = typeof data.selectedQuestion === 'string'
                 && data.selectedQuestion.length > 0
@@ -160,6 +162,8 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
                 card: selectedCard
             });
             logger.debug(`Question sélectionnée`, { lobbyCode: data.lobbyCode });
+            // Le serveur arme lui-même le timer de la nouvelle phase (cf. armServerTimerForPhase).
+            armServerTimerForPhase(io, data.lobbyCode, lobby, currentRound);
         });
     });
 
@@ -196,6 +200,10 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
             if (game.currentRound) {
                 io.to(data.lobbyCode).emit('roundStarted', { round: serializeRound(game.currentRound)! });
                 logger.game.roundStarted(data.lobbyCode, game.currentRound.roundNumber, game.currentRound.leader.name);
+                armServerTimerForPhase(io, data.lobbyCode, lobby, game.currentRound as Round);
+                // Pilier tiré alors que son socket est déjà tombé (pas encore marqué
+                // inactif) : sans ça, aucun saut n'est jamais armé pour lui.
+                armLeaderSkipIfDisconnected(io, registry, data.lobbyCode, game.currentRound as Round);
             }
         });
     });
@@ -624,6 +632,7 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
                 phase: currentRound.phase,
             });
             logger.info('Substitut sélectionné', { lobbyCode: data.lobbyCode, substitutePlayerId: substitute.id });
+            armServerTimerForPhase(io, data.lobbyCode, lobby, currentRound);
         });
     });
 

@@ -97,6 +97,11 @@ export class ConnectionRegistry {
         this.inactiveTimeouts.delete(this.getDisconnectKey(lobbyCode, playerName));
     }
 
+    /** Vrai tant que le joueur est déconnecté sans être encore marqué inactif. */
+    hasInactiveTimeout(lobbyCode: string, playerName: string): boolean {
+        return this.inactiveTimeouts.has(this.getDisconnectKey(lobbyCode, playerName));
+    }
+
     cancelInactiveTimeout(lobbyCode: string, playerName: string): void {
         const key = this.getDisconnectKey(lobbyCode, playerName);
         const timeout = this.inactiveTimeouts.get(key);

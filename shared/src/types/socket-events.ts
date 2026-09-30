@@ -1,5 +1,5 @@
 import { IPlayer } from './player.js';
-import { IGame, LeaderboardEntry } from './game.js';
+import { IGame, LeaderboardEntry, GameStatus } from './game.js';
 import { IRound, GameCard, RoundPhase } from './round.js';
 import { DecksCatalog, DecksCatalogWithMeta, SelectedDecks } from './decks.js';
 import { GameMode } from './lobby.js';
@@ -100,7 +100,15 @@ export interface ServerToClientEvents {
 
   /** Informations sur un lobby (pour les liens d'invitation).
    *  `locale` = langue du salon (fixée par l'hôte) : le joiner s'aligne dessus. */
-  lobbyInfo: (data: { exists: boolean; hostName?: string | null; locale?: Locale }) => void;
+  lobbyInfo: (data: {
+    exists: boolean;
+    hostName?: string | null;
+    locale?: Locale;
+    /** Écho du code demandé : plusieurs demandes peuvent être en vol (URL, popup, reprise). */
+    lobbyCode?: string;
+    /** Statut de la partie (WAITING si aucune) : sert à proposer la reprise d'une partie en cours. */
+    gameStatus?: GameStatus;
+  }) => void;
 
   /** Notification que la partie a déjà commencé (nouveau joueur refusé) */
   gameAlreadyStarted: (data: { message: string }) => void;

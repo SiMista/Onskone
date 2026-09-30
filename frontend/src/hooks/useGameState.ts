@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import socket from '../utils/socket';
 import { useReconnectOnVisible, useSocketEvent } from './index';
-import { getCurrentPlayerFromStorage, getReconnectToken } from '../utils/playerHelpers';
+import { getCurrentPlayerFromStorage, getReconnectToken, clearLastGame } from '../utils/playerHelpers';
 import { IPlayer, IRound, IGame, RoundPhase, GameStatus, RevealResult, GameCard, ReconnectionData } from '@onskone/shared';
 import type { ErrorCode } from '@onskone/shared';
 import { useToast } from '../components/Toast';
@@ -195,6 +195,8 @@ export function useGameState(lobbyCode: string | undefined): UseGameStateResult 
   }, [lobbyCode, locale]);
 
   const handleGameEnded = useCallback(() => {
+    // Partie finie : plus rien à reprendre depuis l'accueil.
+    clearLastGame(lobbyCode);
     navigate(`/endgame/${lobbyCode}`);
   }, [navigate, lobbyCode]);
 
@@ -231,7 +233,14 @@ export function useGameState(lobbyCode: string | undefined): UseGameStateResult 
     const isResyncRefusal = data.code === 'CONFLICT' || data.code === 'FORBIDDEN';
     if (isResyncRefusal && !game && scheduleResync()) return;
     showToast(data.message, 'error', 5000);
-  }, [showToast, game, scheduleResync]);
+    // Refus définitif AVANT tout état (relances épuisées, ou partie introuvable) :
+    // rester sur « chargement » n'a plus de sens. Cas typique : retour via la popup
+    // de reprise de l'accueil vers un salon disparu ou un slot expulsé.
+    if (!game && (isResyncRefusal || data.code === 'NOT_FOUND')) {
+      clearLastGame(lobbyCode);
+      navigate('/', { replace: true });
+    }
+  }, [showToast, game, scheduleResync, navigate, lobbyCode]);
 
   useSocketEvent('gameState', handleGameState);
   useSocketEvent('gameStarted', handleGameStarted);

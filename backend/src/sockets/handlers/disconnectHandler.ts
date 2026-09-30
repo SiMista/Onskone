@@ -1,10 +1,11 @@
 import * as LobbyManager from '../../managers/LobbyManager';
 import { getLobbyCodeForSocket } from '../../managers/socketLobbyIndex.js';
 import { Game } from '../../models/Game';
-import { GAME_CONSTANTS, GameStatus } from '@onskone/shared';
+import type { Round } from '../../models/Round.js';
+import { GAME_CONSTANTS, GameStatus, RoundPhase } from '@onskone/shared';
 import { errMessage } from '../../utils/helpers.js';
 import logger from '../../utils/logger.js';
-import { serializeRound, serializePlayers, endGame } from '../broadcasting.js';
+import { serializeRound, serializePlayers, endGame, armServerTimerForPhase } from '../broadcasting.js';
 import { ConnectionRegistry } from '../ConnectionRegistry.js';
 import {
     type HandlerContext,
@@ -104,14 +105,29 @@ export function scheduleLeaderSkipTimeout(
                 return;
             }
 
-            // Vérifier que le pilier est toujours inactif (n'a pas reconnecté)
+            // Vérifier que le pilier est toujours déconnecté. « Revenu » = actif ET sans
+            // timeout d'inactivité en attente : tester `isActive` seul couplait ce saut à
+            // INACTIVE_DELAY_MS (socket mort mais pas encore marqué → pris pour une
+            // reconnexion, et le saut n'était jamais ré-armé).
             const leader = currentLobby.players.find(p => p.id === playerId);
-            if (leader?.isActive) {
+            if (leader?.isActive && !registry.hasInactiveTimeout(lobbyCode, playerName)) {
                 logger.debug(`Pilier ${playerName} s'est reconnecté, timeout ignoré`);
                 return;
             }
 
-            logger.info(`Pilier ${playerName} toujours déconnecté, round sauté`, { lobbyCode });
+            // Le saut n'a de sens que là où le pilier est indispensable ET qu'aucun
+            // timer serveur ne fera avancer : GUESSING (ses attributions) et REVEAL
+            // (pas de timer). Ailleurs, le timer de phase fait le travail (question ou
+            // substitut auto, réponses « pas à temps »), et sauter couperait une phase
+            // où les autres jouent sans lui. On revérifie au prochain délai.
+            const phase = currentGame.currentRound.phase;
+            if (phase !== RoundPhase.GUESSING && phase !== RoundPhase.REVEAL) {
+                logger.debug(`Pilier ${playerName} absent en ${phase} : le timer de phase gère, revérification plus tard`, { lobbyCode });
+                scheduleLeaderSkipTimeout(io, registry, lobbyCode, playerId, playerName);
+                return;
+            }
+
+            logger.info(`Pilier ${playerName} toujours déconnecté en ${phase}, round sauté`, { lobbyCode });
 
             io.to(lobbyCode).emit('roundSkipped', {
                 skippedLeaderName: playerName,
@@ -132,6 +148,8 @@ export function scheduleLeaderSkipTimeout(
                     io.to(lobbyCode).emit('roundStarted', {
                         round: serializeRound(currentGame.currentRound!)!
                     });
+                    armServerTimerForPhase(io, lobbyCode, currentLobby, currentGame.currentRound as Round);
+                    armLeaderSkipIfDisconnected(io, registry, lobbyCode, currentGame.currentRound as Round);
                     logger.info(`Nouveau round démarré après déconnexion du pilier`, {
                         lobbyCode,
                         newLeader: currentGame.currentRound!.leader.name
@@ -151,14 +169,39 @@ export function scheduleLeaderSkipTimeout(
 }
 
 /**
+ * À appeler à chaque début de round : si le pilier tiré est déjà déconnecté (socket
+ * tombé, pas encore marqué inactif donc encore éligible), arme le saut de round.
+ * Sans ça, son handler de déconnexion a tourné alors qu'il n'était PAS pilier, et
+ * aucun saut n'est jamais armé : la table attendrait REVEAL indéfiniment.
+ */
+export function armLeaderSkipIfDisconnected(
+    io: IoServer,
+    registry: ConnectionRegistry,
+    lobbyCode: string,
+    round: Round,
+): void {
+    const leader = round.leader;
+    if (leader.isActive && !registry.hasInactiveTimeout(lobbyCode, leader.name)) return;
+    registry.cancelLeaderDisconnectTimeout(lobbyCode);
+    scheduleLeaderSkipTimeout(io, registry, lobbyCode, leader.id, leader.name);
+    logger.info(`Pilier ${leader.name} tiré alors qu'il est déconnecté : saut de round armé`, { lobbyCode });
+}
+
+/**
  * Passé la période de grâce, supprime le joueur toujours déconnecté — sauf si une
  * partie est en cours (on conserve alors ses scores pour le leaderboard final).
+ * « Toujours déconnecté » = même socketId qu'au moment de la chute (une reconnexion
+ * le remplace), comme pour le marquage inactif. Ne PAS tester `isActive` ici : ce
+ * marquage n'arrive qu'après INACTIVE_DELAY_MS, qui peut dépasser la grâce.
  */
 function scheduleGracePeriodRemoval(
     io: IoServer,
     registry: ConnectionRegistry,
     lobbyCode: string,
     playerName: string,
+    playerId: string,
+    /** socketId au moment de la déconnexion : sert à détecter une reconnexion. */
+    disconnectedSocketId: string,
 ): void {
     const timeout = setTimeout(() => {
         try {
@@ -171,7 +214,9 @@ function scheduleGracePeriodRemoval(
                 return;
             }
 
-            const playerToRemove = currentLobby.players.find(p => p.name === playerName && !p.isActive);
+            const playerToRemove = currentLobby.players.find(
+                p => p.id === playerId && p.socketId === disconnectedSocketId,
+            );
             if (playerToRemove) {
                 // En pleine partie, on NE supprime PAS le joueur déconnecté :
                 // ses réponses/scores sont déjà dans le round, et `getLeaderboard`
@@ -185,6 +230,8 @@ function scheduleGracePeriodRemoval(
 
                 logger.info(`Période de grâce expirée, suppression de ${playerToRemove.name}`);
 
+                // Le marquage inactif n'a plus d'objet pour un joueur retiré.
+                registry.cancelInactiveTimeout(lobbyCode, playerName);
                 const isLobbyRemoved = LobbyManager.removePlayer(currentLobby, playerToRemove);
 
                 if (isLobbyRemoved) {
@@ -242,7 +289,7 @@ export function registerDisconnectHandler(socket: AppSocket, ctx: HandlerContext
 
             // 3) Suppression après la période de grâce (remplace tout timeout existant).
             registry.cancelDisconnectTimeout(lobbyCode, playerName);
-            scheduleGracePeriodRemoval(io, registry, lobbyCode, playerName);
+            scheduleGracePeriodRemoval(io, registry, lobbyCode, playerName, playerId, socket.id);
         }
     });
 }

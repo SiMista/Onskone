@@ -17,6 +17,7 @@ import { RoundPhase, GameStatus } from '@onskone/shared';
 import { isStudioFrame, studioSlotIndex } from '../utils/studioStorage';
 import { useStudioBot } from '../hooks/useStudioBot';
 import { useLocale } from '../i18n';
+import { storeLastGame } from '../utils/playerHelpers';
 
 const GamePage: React.FC = () => {
   const { lobbyCode } = useParams<{ lobbyCode: string }>();
@@ -36,6 +37,13 @@ const GamePage: React.FC = () => {
 
   // Confirmation avant de quitter pendant une partie en cours
   useLeavePrompt(game?.status === GameStatus.IN_PROGRESS);
+
+  // Mémorise la partie en cours pour proposer d'y revenir si l'OS tue l'app
+  // (route perdue au redémarrage, cf. Home). Rafraîchie à chaque manche.
+  useEffect(() => {
+    if (!lobbyCode || !currentPlayer?.id || game?.status !== GameStatus.IN_PROGRESS) return;
+    storeLastGame(lobbyCode, currentPlayer.id);
+  }, [lobbyCode, currentPlayer?.id, game?.status, game?.currentRound?.roundNumber]);
 
   // Studio : automatisation des bots + postMessage d'état pour surligner le pilier dans le parent.
   useStudioBot({ game, currentPlayer, players, lobbyCode: lobbyCode ?? null });

@@ -3,6 +3,7 @@ import type { NavigateFunction } from 'react-router-dom';
 import type { Dictionary } from '../i18n/dictionary';
 import { useToast } from '../components/Toast';
 import { useSocketEvent } from './useSocketEvent';
+import { clearLastGame } from '../utils/playerHelpers';
 
 /**
  * Gère les deux events serveur qui éjectent le joueur vers l'accueil :
@@ -19,11 +20,13 @@ export function useLobbyExitEvents(navigate: NavigateFunction, t: Dictionary): v
       ? t.lobby.toasts.kicked(data.hostName)
       : t.lobby.toasts.kickedAnon;
     showToast(message, 'error', 4500);
+    clearLastGame(); // expulsé : ne pas proposer de revenir dans cette partie
     navigate('/');
   }, [navigate, showToast, t]);
 
   const handleLobbyClosed = useCallback(() => {
     showToast(t.lobby.toasts.closedInactive, 'error', 4500);
+    clearLastGame();
     navigate('/');
   }, [navigate, showToast, t]);
 
