@@ -34,7 +34,6 @@ import {
 import { storeReconnectToken } from '../utils/playerHelpers';
 import { usePremium } from '../utils/premium';
 import { useAppBannerVisible } from '../utils/appBanner';
-import { studioStorage } from '../utils/studioStorage';
 
 // Contenu de la modale "Mes succès". Extrait en composant enfant pour que sa
 // lecture localStorage (getStats) + le map sur ACHIEVEMENTS ne s'exécutent que
@@ -128,9 +127,6 @@ const Home = () => {
   const [isGameModeOpen, setIsGameModeOpen] = useState(false);
   const [isJoinByCodeOpen, setIsJoinByCodeOpen] = useState(false);
   const [isPremiumOpen, setIsPremiumOpen] = useState(false);
-  // Vrai seulement si le paywall s'est ouvert de lui-même (promo) : dans ce cas
-  // seul, sa fermeture est verrouillée une seconde (cf. PremiumModal.lockOnOpen).
-  const [premiumAutoOpened, setPremiumAutoOpened] = useState(false);
   const isPremium = usePremium();
   // Code saisi dans la popup "Rejoindre" en cours de validation (getLobbyInfo).
   // Tant qu'il est posé, la réponse lobbyInfo concerne la popup (pas l'URL).
@@ -192,27 +188,8 @@ const Home = () => {
     socket.emit('checkPlayerName', { lobbyCode, playerName: name });
   }, [autoJoin, lobbyCode, lobbyExists, urlPlayerName, playerName]);
 
-  // Popup promo premium au chargement de l'accueil : une fois tous les
-  // PROMO_COOLDOWN_MS (7j), jamais si déjà premium ni dans un flux Studio/auto.
-  useEffect(() => {
-    if (isPremium) return;
-    if (lobbyCode || autoCreate || autoJoin) return;
-    const PROMO_KEY = 'onskone_premium_promo_seen';
-    const PROMO_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
-    try {
-      const raw = studioStorage.getItem(PROMO_KEY);
-      const last = raw ? parseInt(raw, 10) : 0;
-      if (Number.isFinite(last) && Date.now() - last < PROMO_COOLDOWN_MS) return;
-    } catch { /* montre la promo si lecture impossible */ }
-    // Léger délai pour laisser l'accueil s'afficher avant le paywall.
-    const timer = setTimeout(() => {
-      setPremiumAutoOpened(true);
-      setIsPremiumOpen(true);
-      try { studioStorage.setItem(PROMO_KEY, String(Date.now())); } catch { /* silent */ }
-    }, 1200);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Pas de paywall promo automatique à l'ouverture : le premium ne s'ouvre que
+  // sur action du joueur (bouton Premium, thème verrouillé).
 
   const createLobby = useCallback(() => {
     if (!playerName.trim()) {
@@ -404,8 +381,7 @@ const Home = () => {
 
       <PremiumModal
         isOpen={isPremiumOpen}
-        onClose={() => { setIsPremiumOpen(false); setPremiumAutoOpened(false); }}
-        lockOnOpen={premiumAutoOpened}
+        onClose={() => setIsPremiumOpen(false)}
         previewName={playerName}
       />
 

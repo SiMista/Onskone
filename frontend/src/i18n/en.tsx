@@ -249,6 +249,7 @@ export const en: Dictionary = {
   howToPlay: {
     button: 'How to play?',
     ariaButton: 'How to play',
+    firstTimeHint: 'New player? All the rules here!',
     goToStep: (n) => `Go to step ${n}`,
     steps: [
       ({ Pilier }) => (
@@ -431,19 +432,29 @@ export const en: Dictionary = {
           content: `Some decks flagged +18 contain content reserved for adults. The user is solely responsible for how they use the content in their social context and undertakes not to use the App in a way that could harm others. Onskoné cannot be held liable for a minor accessing such content or for any inappropriate use of the App.`,
         },
         {
-          title: 'Article 5 - Personal data',
+          title: 'Article 5 - Premium purchase',
+          content: `The Application offers an in-app purchase called "Onskoné Premium". It is a one-time, non-consumable purchase, with no subscription and no automatic renewal: once paid, it grants lifetime access, on the Apple or Google account used for the purchase, to the following benefits:`,
+          list: [
+            'Premium themes and questions',
+            'The golden name',
+            'Premium content added later, with no commitment as to its amount or schedule',
+          ],
+          extra: `The price is displayed in the Application before any payment, in the user's currency. Payment, billing and any refunds are handled exclusively by Apple (App Store) or Google (Google Play), under their own terms. The purchase can be restored at any time with the "Restore purchases" button, on any device signed in to the same account. It cannot be transferred between platforms: a purchase on the App Store does not unlock Premium on Android, and vice versa.`,
+        },
+        {
+          title: 'Article 6 - Personal data',
           content: `Onskoné processes personal data in accordance with the GDPR (EU 2016/679) and French data protection law, collecting only the data strictly necessary to run the game. Details are set out in the <a href="/privacy" class="text-primary underline">Privacy Policy</a>.`,
         },
         {
-          title: 'Article 6 - Availability & liability',
+          title: 'Article 7 - Availability & liability',
           content: `Onskoné strives to keep the App available but does not guarantee uninterrupted availability. Onskoné cannot be held liable for any direct or indirect damage resulting from a service interruption, a content error or inappropriate use.`,
         },
         {
-          title: 'Article 7 - Changes to the Terms',
+          title: 'Article 8 - Changes to the Terms',
           content: `Onskoné reserves the right to amend these Terms at any time. The version in force is the one available in the App and at onskone.fr. Continued use of the App after a change constitutes acceptance of the new version.`,
         },
         {
-          title: 'Article 8 - Governing law & jurisdiction',
+          title: 'Article 9 - Governing law & jurisdiction',
           content: `These Terms are governed by French law. In the event of a dispute, the parties undertake to seek an amicable solution before any legal action. Failing agreement, the French courts shall have jurisdiction.`,
         },
       ],
@@ -550,7 +561,8 @@ export const en: Dictionary = {
 
   premium: {
     title: 'Onskoné Premium',
-    subtitle: 'Unlock everything, once and for all.',
+    // « for life » explicite : App Review a pris le Premium pour un abonnement (3.1.2).
+    subtitle: 'One-time payment · one purchase, unlocked for life',
     perkQuestions: '+50 extra questions',
     perkThemes: 'All premium themes',
     perkFuture: 'All future content included',
@@ -561,6 +573,10 @@ export const en: Dictionary = {
     perkAdsDesc: 'Never a single interruption again.',
     unlock: 'Unlock Premium',
     restore: 'Restore purchases',
+    kebab: "It's cheaper than a cheeseburger…",
+    lifetimeSticker: "Lifetime!",
+    termsLink: "Terms of Use",
+    privacyLink: "Privacy Policy",
     purchasing: 'Purchasing…',
     purchaseError: 'The purchase could not be completed. Please try again.',
     purchaseUnavailable: 'Premium isn\'t available for purchase yet. Check back soon!',
@@ -572,8 +588,9 @@ export const en: Dictionary = {
     close: 'Later',
     welcomeTitle: 'Welcome to Premium!',
     welcomeRestoredTitle: 'Premium restored!',
-    welcomeDesc: 'Thank you SO MUCH for your support <3\nYou now have access to every premium theme (and those to come), your golden name and zero ads!',
-    welcomeCta: 'Awesome!',
+    // « and zero ads » retiré tant qu'il n'y a pas de pub (cf. PremiumModal).
+    welcomeDesc: 'Thank you SO MUCH for your support <3\nYou now have access to every premium theme (and those to come) and your golden name!',
+    welcomeCta: "Let's go!",
     activeToast: 'You\'re Premium! Thanks for your support <3',
   },
 

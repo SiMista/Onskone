@@ -1,13 +1,15 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { LuX, LuCrown, LuBellOff, LuMessagesSquare, LuLayers, LuInfinity } from 'react-icons/lu';
+// LuBellOff : à réimporter avec le bloc ZÉRO PUB (commenté plus bas).
+import { LuX, LuCrown, LuMessagesSquare, LuLayers, LuInfinity } from 'react-icons/lu';
 import StoreBadge from './StoreBadge';
 import Avatar from './Avatar';
 import { useLocale } from '../i18n';
 import { useToast } from './Toast';
 import { useModalChrome } from '../hooks/useModalChrome';
 import { useModalTransition } from '../hooks/useModalTransition';
-import { canPurchase, purchasePremium, restorePurchases } from '../utils/premium';
+import MentionsModal from './Footer/MentionsModal';
+import { canPurchase, getPremiumPrice, purchasePremium, restorePurchases } from '../utils/premium';
 import { getStats } from '../utils/playerStats';
 import { APP_STORE_WEB, PLAY_WEB } from '../utils/storeLinks';
 import { hapticSuccess } from '../utils/haptics';
@@ -44,6 +46,9 @@ const GOLD_BG = 'linear-gradient(160deg, #FFE066 0%, #FFC23D 45%, #FF8A3D 100%)'
 const OPEN_LOCK_MS = 1000;
 // Distance de glissement (px) au-delà de laquelle on referme la feuille.
 const DISMISS_THRESHOLD = 110;
+// Liens discrets du pied (restaurer, CGU, confidentialité). py-2.5 : zone
+// tactile ~36px sans grossir le texte (les liens serrés se touchaient au doigt).
+const FOOTER_LINK = 'py-2.5 px-2 underline underline-offset-2 hover:text-black disabled:opacity-50 cursor-pointer';
 
 /**
  * Paywall premium - bottom sheet doré, composant DÉDIÉ (pas de ModalShell).
@@ -60,6 +65,12 @@ const PremiumModal = ({ isOpen, onClose, lockOnOpen = false, previewName: previe
   // reste ouverte et bascule dessus au lieu de se fermer sans un mot (sur iOS,
   // la popup Apple « achat effectué » s'affiche par-dessus, on le voit après).
   const [celebration, setCelebration] = useState<'purchase' | 'restore' | null>(null);
+  // Prix localisé servi par le store (devise du compte). null = pas encore lu ou
+  // indisponible : le CTA garde alors son libellé sans prix.
+  const [price, setPrice] = useState<string | null>(null);
+  // Onglet légal ouvert par-dessus le paywall (Apple veut CGU + confidentialité
+  // accessibles depuis le parcours d'achat, cf. guideline 3.1.2).
+  const [legalTab, setLegalTab] = useState<'cgu' | 'privacy' | null>(null);
 
   // Animation de sortie : requestClose lance le fondu puis démonte via onClose.
   const { render, closing, requestClose } = useModalTransition(isOpen, onClose);
@@ -69,6 +80,23 @@ const PremiumModal = ({ isOpen, onClose, lockOnOpen = false, previewName: previe
   useEffect(() => {
     setCelebration(render ? previewCelebration ?? null : null);
   }, [render, previewCelebration]);
+
+  // Lecture du prix à l'ouverture (natif uniquement, mis en cache par premium.ts).
+  useEffect(() => {
+    if (!render || !native) return;
+    let cancelled = false;
+    getPremiumPrice().then((p) => { if (!cancelled) setPrice(p); });
+    return () => { cancelled = true; };
+  }, [render, native]);
+
+  // Fermer le paywall referme aussi la page légale ouverte par-dessus, et remet
+  // le glissement à zéro (dragY est conservé pendant la sortie, cf. --sheet-drag).
+  useEffect(() => {
+    if (!render) {
+      setLegalTab(null);
+      setDragY(0);
+    }
+  }, [render]);
 
   // Verrou d'ouverture, uniquement quand la feuille s'ouvre d'elle-même (cf.
   // `lockOnOpen`) : elle surgit sous le doigt, et un tap déjà engagé la refermait
@@ -119,8 +147,10 @@ const PremiumModal = ({ isOpen, onClose, lockOnOpen = false, previewName: previe
     dragStartY.current = null;
     dragYRef.current = 0;
     setDragging(false);
-    if (finalY > DISMISS_THRESHOLD) {
-      tryClose(); // fondu de sortie propre (ignoré pendant le verrou d'ouverture)
+    // Pendant le verrou d'ouverture, tryClose est ignoré : on rebondit en place
+    // au lieu de laisser la feuille figée à mi-hauteur.
+    if (finalY > DISMISS_THRESHOLD && !locked) {
+      tryClose(); // sortie depuis la position du doigt (cf. --sheet-drag)
     } else {
       setDragY(0); // rebond en place
     }
@@ -185,7 +215,12 @@ const PremiumModal = ({ isOpen, onClose, lockOnOpen = false, previewName: previe
   // Portal vers <body> : la modale est ouverte DEPUIS le ThemePickerModal
   // (lui-même en z-50) ; sans portal elle resterait piégée dans son stacking
   // context. Cf. ModalShell.
-  return createPortal(
+  // MentionsModal est SŒUR du portal (pas dans la feuille) : elle n'hérite ni du
+  // drag ni du stopPropagation. La pile de useModalChrome garantit qu'Escape et
+  // le backdrop ne ferment que la modale du dessus.
+  return (
+    <>
+    {createPortal(
     <div
       className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-6 bg-black/60 backdrop-blur-sm ${closing ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop'}`}
       onClick={onBackdropClick}
@@ -199,8 +234,13 @@ const PremiumModal = ({ isOpen, onClose, lockOnOpen = false, previewName: previe
         style={{
           background: GOLD_BG,
           transform: !closing && dragY ? `translateY(${dragY}px)` : undefined,
-          transition: dragging ? 'none' : 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)',
-        }}
+          // Fermeture après glissement : l'animation de sortie part de la position
+          // du doigt (--sheet-drag, cf. bottomsheet-out). Pas de transition pendant
+          // la sortie : une transition prime sur une animation CSS, et le retrait
+          // du transform faisait remonter la feuille avant qu'elle ne descende.
+          ['--sheet-drag' as string]: `${dragY}px`,
+          transition: dragging || closing ? 'none' : 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)',
+        } as React.CSSProperties}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Effet brillant qui balaie la feuille une fois */}
@@ -304,9 +344,12 @@ const PremiumModal = ({ isOpen, onClose, lockOnOpen = false, previewName: previe
             </div>
           </div>
 
-          {/* ZÉRO PUB : mis en avant mais CLAIR. Le noir est réservé à l'aperçu
+          {/* ZÉRO PUB : désactivé tant que l'app n'affiche aucune pub (promettre
+              un avantage inexistant = rejet App Review). À décommenter (+ l'import
+              LuBellOff et la mention dans welcomeDesc) quand AdMob sera branché.
+              Mis en avant mais CLAIR. Le noir est réservé à l'aperçu
               pseudo (le doré a besoin d'un fond sombre) et au CTA, qui doit rester
-              le pavé le plus lourd de la feuille. */}
+              le pavé le plus lourd de la feuille.
           <div className="flex items-center gap-3 rounded-xl border-2 border-black bg-white/75 px-3.5 py-2.5">
             <span className="shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-black border-2 border-black">
               <LuBellOff size={18} strokeWidth={2.75} className="text-warning-orange" />
@@ -318,6 +361,7 @@ const PremiumModal = ({ isOpen, onClose, lockOnOpen = false, previewName: previe
               <span className="font-sans text-[11px] text-black/60">{t.premium.perkAdsDesc}</span>
             </div>
           </div>
+          */}
 
           <ul className="flex flex-col gap-2 m-0 p-0 list-none">
             <Perk icon={<LuMessagesSquare size={16} strokeWidth={2.5} className="text-warning-orange" />}>
@@ -336,25 +380,35 @@ const PremiumModal = ({ isOpen, onClose, lockOnOpen = false, previewName: previe
         <div className="relative shrink-0 px-4 sm:px-8 pt-2 sm:pt-3 pb-2 sm:pb-4 border-t-2 border-black/20">
           {native ? (
             <div className="flex flex-col items-center gap-2.5">
-              <button
-                type="button"
-                onClick={handlePurchase}
-                disabled={busy}
-                className="relative w-full h-13 sm:h-15 flex items-center justify-center gap-2 rounded-2xl border-[3px] border-black bg-black font-display font-extrabold text-base sm:text-lg text-warning-orange stack-shadow active:scale-[0.98] transition-transform disabled:opacity-60 cursor-pointer"
-              >
-                <LuCrown size={20} strokeWidth={2.5} />
-                <span>{busy ? t.premium.purchasing : t.premium.unlock}</span>
-              </button>
-              {/* Zone tactile propre (py-1.5 px-3) pour ne pas coller au bouton
-                  au-dessus : sinon le doigt touche les deux cibles à la fois. */}
-              <button
-                type="button"
-                onClick={handleRestore}
-                disabled={busy}
-                className="py-1.5 px-3 font-sans text-xs text-black/55 underline underline-offset-2 hover:text-black disabled:opacity-50 cursor-pointer"
-              >
-                {t.premium.restore}
-              </button>
+              <div className="relative w-full">
+                <button
+                  type="button"
+                  onClick={handlePurchase}
+                  disabled={busy}
+                  className="relative w-full h-13 sm:h-15 flex items-center justify-center gap-2 rounded-2xl border-[3px] border-black bg-black font-display font-extrabold text-base sm:text-lg text-warning-orange stack-shadow active:scale-[0.98] transition-transform disabled:opacity-60 cursor-pointer"
+                >
+                  <LuCrown size={20} strokeWidth={2.5} />
+                  <span>{busy ? t.premium.purchasing : price ? `${t.premium.unlock} · ${price}` : t.premium.unlock}</span>
+                </button>
+                {/* Sticker « À vie ! » collé sur le coin du CTA. Deux spans : la
+                    rotation sur l'externe, le pop (qui anime transform) sur
+                    l'interne, sinon l'animation écrasait la rotation. One-shot :
+                    l'idle de l'écran reste le reflet doré. */}
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute -top-3 -right-1.5 rotate-[8deg]"
+                >
+                  <span
+                    className="animate-player-pop block px-2 py-0.5 rounded-md border-2 border-black bg-warning-100 stack-shadow-sm font-display font-extrabold text-[11px] sm:text-xs uppercase tracking-wide text-black whitespace-nowrap"
+                    style={{ animationDelay: '350ms' }}
+                  >
+                    {t.premium.lifetimeSticker}
+                  </span>
+                </span>
+              </div>
+              <p className="m-0 -mt-1 font-sans font-semibold text-[11px] text-black/60 text-center">
+                {t.premium.kebab}
+              </p>
             </div>
           ) : (
             <div className="flex flex-col gap-1.5">
@@ -367,12 +421,41 @@ const PremiumModal = ({ isOpen, onClose, lockOnOpen = false, previewName: previe
               </div>
             </div>
           )}
+          {/* Liens secondaires sur UNE ligne : Restaurer (natif) · CGU · Confidentialité.
+              Zones tactiles py-1.5 : ne pas coller au CTA (le doigt touchait les deux). */}
+          <div className="flex flex-wrap items-center justify-center -my-1 font-sans text-[11px] text-black/55">
+            {native && (
+              <>
+                <button
+                  type="button"
+                  onClick={handleRestore}
+                  disabled={busy}
+                  className={FOOTER_LINK}
+                >
+                  {t.premium.restore}
+                </button>
+                <span aria-hidden="true">·</span>
+              </>
+            )}
+            <button type="button" onClick={() => setLegalTab('cgu')} className={FOOTER_LINK}>
+              {t.premium.termsLink}
+            </button>
+            <span aria-hidden="true">·</span>
+            <button type="button" onClick={() => setLegalTab('privacy')} className={FOOTER_LINK}>
+              {t.premium.privacyLink}
+            </button>
+          </div>
         </div>
         </>
         )}
       </div>
     </div>,
     document.body,
+    )}
+    {legalTab && (
+      <MentionsModal isOpen initialTab={legalTab} onClose={() => setLegalTab(null)} />
+    )}
+    </>
   );
 };
 

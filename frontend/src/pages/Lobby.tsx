@@ -312,7 +312,7 @@ const Lobby = () => {
                         {/* Bouton retour + raccourci "Comment jouer ?" sur la même ligne. */}
                         <div className="shrink-0 flex items-center justify-between gap-2">
                             <BackButton onClick={leaveLobby} label={t.common.back} tone="danger" />
-                            <HowToPlayButton onClick={() => setIsHowToPlayOpen(true)} />
+                            <HowToPlayButton onClick={() => setIsHowToPlayOpen(true)} hintAlign="end" />
                         </div>
 
                         {/* Tabs : intercalaires cartonnés en éventail, coins asymétriques */}

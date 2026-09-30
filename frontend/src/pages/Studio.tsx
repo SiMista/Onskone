@@ -82,6 +82,10 @@ const Studio = () => {
 
   const addSlot = () => {
     if (slots.length >= 12) return;
+    // Le stockage est namespacé par INDEX de slot : un slot recréé à l'index d'un
+    // slot supprimé héritait de tout son localStorage (flags vus, stats…). Un
+    // nouveau slot = un nouveau joueur, vierge.
+    purgeStudioSlot(slots.length);
     setSlots((s) => [...s, makeSlot(s.length)]);
   };
   const removeLastSlot = () => removeSlot(slots[slots.length - 1].id);
@@ -247,6 +251,9 @@ const Studio = () => {
       // Les bascules en cours de partie passent par postMessage : SlotCard ne
       // recharge PAS l'iframe quand seuls `bot`/`premium` changent dans l'URL.
       params.set('premium', slot.premium ? '1' : '0');
+      // Plateforme simulée (studioPlatform.ts) : lue au boot, pas de bascule live.
+      // Paramètre non « live » : le changer recharge l'iframe (cf. SlotCard).
+      if (slot.platform !== 'web') params.set('platform', slot.platform);
       if (!isRunning) return `${base}/?${params.toString()}`;
       if (index === 0) {
         params.set('autoCreate', '1');

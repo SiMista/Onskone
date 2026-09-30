@@ -3,6 +3,13 @@ import { AVATARS } from '../../constants/game';
 
 export type Orientation = 'portrait' | 'landscape';
 export type Layout = 'auto' | 'cols2' | 'cols3' | 'cols4';
+/** Plateforme simulée du slot : 'ios'/'android' = paywall natif avec achat factice. */
+export type SlotPlatform = 'web' | 'ios' | 'android';
+export const SLOT_PLATFORMS: { id: SlotPlatform; label: string }[] = [
+  { id: 'web', label: '🌐 Web' },
+  { id: 'ios', label: '🍎 iOS' },
+  { id: 'android', label: '🤖 Android' },
+];
 
 export interface ViewportPreset {
   id: string;
@@ -39,6 +46,8 @@ export interface SlotConfig {
   bot: boolean;
   /** Test premium de CE joueur (thèmes débloqués, badge, etc.) sans vrai achat. */
   premium: boolean;
+  /** Plateforme simulée (paywall natif, achat factice). Changer recharge le slot. */
+  platform: SlotPlatform;
 }
 
 export interface SlotRuntimeState {
@@ -62,6 +71,7 @@ export const makeSlot = (i: number): SlotConfig => ({
   orientation: 'portrait',
   bot: false,
   premium: false,
+  platform: 'web',
 });
 
 export interface SavedConfig {
@@ -84,6 +94,7 @@ export const loadSavedConfig = (): SavedConfig | null => {
       ...s,
       bot: !!s.bot,
       premium: !!s.premium,
+      platform: SLOT_PLATFORMS.some((p) => p.id === s.platform) ? s.platform! : 'web',
       viewportId: s.viewportId && VIEWPORT_PRESETS.some((p) => p.id === s.viewportId)
         ? s.viewportId
         : 'iphone-17',

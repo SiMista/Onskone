@@ -249,6 +249,7 @@ export const fr: Dictionary = {
   howToPlay: {
     button: 'Comment jouer ?',
     ariaButton: 'Comment jouer',
+    firstTimeHint: 'Nouveau joueur ? Toutes les règles ici !',
     goToStep: (n) => `Aller à l'étape ${n}`,
     steps: [
       ({ Pilier }) => (
@@ -431,19 +432,29 @@ export const fr: Dictionary = {
           content: `Certains decks signalés +18 comportent un contenu réservé aux personnes majeures. L'utilisateur est seul responsable de l'usage qu'il fait du contenu dans son contexte social et s'engage à ne pas utiliser l'Application d'une manière qui pourrait nuire à autrui. Onskoné ne saurait être tenu responsable d'un accès à ces contenus par un mineur ni d'un usage inadapté de l'Application.`,
         },
         {
-          title: 'Article 5 - Données personnelles',
+          title: 'Article 5 - Achat Premium',
+          content: `L'Application propose un achat intégré « Onskoné Premium ». Il s'agit d'un achat unique et non consommable, sans abonnement ni renouvellement automatique : une fois payé, il donne un accès à vie, sur le compte Apple ou Google ayant servi à l'achat, aux avantages suivants :`,
+          list: [
+            'Les thèmes et questions premium',
+            'Le pseudo doré',
+            'Les contenus premium ajoutés par la suite, sans engagement sur leur nombre ni leur calendrier',
+          ],
+          extra: `Le prix est affiché dans l'Application avant tout paiement, dans la devise de l'utilisateur. Le paiement, la facturation et les éventuels remboursements sont gérés exclusivement par Apple (App Store) ou Google (Google Play), selon leurs propres conditions. L'achat peut être restauré à tout moment via le bouton « Restaurer mes achats », sur tout appareil connecté au même compte. Il n'est pas transférable d'une plateforme à l'autre : un achat sur l'App Store ne débloque pas le Premium sur Android, et inversement.`,
+        },
+        {
+          title: 'Article 6 - Données personnelles',
           content: `Onskoné traite les données personnelles conformément au RGPD (UE 2016/679) et à la loi Informatique et Libertés, en ne collectant que les données strictement nécessaires au fonctionnement du jeu. Le détail figure dans la <a href="/privacy" class="text-primary underline">Politique de confidentialité</a>.`,
         },
         {
-          title: 'Article 6 - Disponibilité & responsabilité',
+          title: 'Article 7 - Disponibilité & responsabilité',
           content: `Onskoné s'efforce de maintenir l'Application disponible mais ne garantit pas une disponibilité ininterrompue. Onskoné ne pourra être tenu responsable des dommages directs ou indirects résultant d'une interruption de service, d'une erreur de contenu ou d'un usage inapproprié.`,
         },
         {
-          title: 'Article 7 - Modification des CGU',
+          title: 'Article 8 - Modification des CGU',
           content: `Onskoné se réserve le droit de modifier les présentes CGU à tout moment. La version en vigueur est celle disponible dans l'Application et sur onskone.fr. L'usage continu de l'Application après une modification vaut acceptation de la nouvelle version.`,
         },
         {
-          title: 'Article 8 - Loi applicable & juridiction',
+          title: 'Article 9 - Loi applicable & juridiction',
           content: `Les présentes CGU sont soumises au droit français. En cas de litige, les parties s'engagent à rechercher une solution amiable avant tout recours judiciaire. À défaut d'accord, les tribunaux français seront compétents.`,
         },
       ],
@@ -551,7 +562,8 @@ export const fr: Dictionary = {
 
   premium: {
     title: 'Onskoné Premium',
-    subtitle: 'Débloque tout, une fois pour toutes.',
+    // « à vie » explicite : App Review a pris le Premium pour un abonnement (3.1.2).
+    subtitle: 'Paiement unique · un seul achat, débloqué à vie',
     perkQuestions: '+50 questions en plus',
     perkThemes: 'Tous les thèmes premium',
     perkFuture: 'Tout le futur contenu inclus',
@@ -562,6 +574,10 @@ export const fr: Dictionary = {
     perkAdsDesc: 'Plus jamais une seule interruption.',
     unlock: 'Débloquer le Premium',
     restore: 'Restaurer mes achats',
+    kebab: "C'est moins cher qu'un kebab…",
+    lifetimeSticker: "À vie !",
+    termsLink: "Conditions d'utilisation",
+    privacyLink: "Confidentialité",
     purchasing: 'Achat en cours…',
     purchaseError: 'L\'achat n\'a pas pu aboutir. Réessaie dans un instant.',
     purchaseUnavailable: 'Le Premium n\'est pas encore disponible à l\'achat. Reviens bientôt !',
@@ -573,8 +589,9 @@ export const fr: Dictionary = {
     close: 'Plus tard',
     welcomeTitle: 'Bienvenue dans le Premium !',
     welcomeRestoredTitle: 'Premium restauré !',
-    welcomeDesc: 'Merci ÉNORMÉMENT pour ton soutien <3\nDésormais, tu as accès à tous les thèmes premium (et ceux à venir), ton pseudo doré et zéro pub !',
-    welcomeCta: 'Trop bien !',
+    // « et zéro pub » retiré tant qu'il n'y a pas de pub (cf. PremiumModal).
+    welcomeDesc: 'Merci ÉNORMÉMENT pour ton soutien <3\nDésormais, tu as accès à tous les thèmes premium (et ceux à venir) et à ton pseudo doré !',
+    welcomeCta: 'C\'est parti !',
     activeToast: 'Tu es Premium ! Merci pour ton soutien <3',
   },
 

@@ -1,44 +1,29 @@
-import { useState } from 'react';
+import { useState, type MouseEvent } from 'react';
+import { Capacitor } from '@capacitor/core';
 import Modal from '../Modal';
 import { useLocale } from '../../i18n';
 
-const OpenInNewTabIcon = ({ to, label }: { to: string; label: string }) => (
-  <a
-    href={to}
-    target="_blank"
-    rel="noopener noreferrer"
-    onClick={(e) => e.stopPropagation()}
-    aria-label={label}
-    title={label}
-    className="inline-flex shrink-0 text-gray-400 hover:text-black transition-colors"
-  >
-    <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M11 4h5v5M16 4l-7 7M14 11v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h4" />
-    </svg>
-  </a>
-);
+type Tab = 'cgu' | 'mentions' | 'privacy';
 
 interface MentionsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /** Onglet ouvert d'entrée (ex. 'privacy' depuis le paywall). Défaut : CGU. */
+  initialTab?: Tab;
 }
-
-type Tab = 'cgu' | 'mentions' | 'privacy';
-
-const tabWrapClass = (active: boolean): string =>
-  [
-    'flex-1 inline-flex items-center justify-center gap-1.5 border-b-2 transition-colors',
-    active ? 'border-black' : 'border-transparent',
-  ].join(' ');
 
 const tabClass = (active: boolean): string =>
   [
-    'py-3 px-2 text-sm font-bold transition-colors cursor-pointer bg-transparent',
-    active ? 'text-black' : 'text-gray-500 hover:text-gray-800',
+    'flex-1 py-3 px-2 text-sm font-bold border-b-2 transition-colors cursor-pointer bg-transparent',
+    active ? 'text-black border-black' : 'text-gray-500 border-transparent hover:text-gray-800',
   ].join(' ');
 
-const MentionsModal = ({ isOpen, onClose }: MentionsModalProps) => {
-  const [tab, setTab] = useState<Tab>('cgu');
+// Lien « page complète » réservé au web : en natif, `target="_blank"` sur un
+// chemin relatif n'ouvre rien, et le contenu est déjà entier dans la modale.
+const isNative = Capacitor.isNativePlatform();
+
+const MentionsModal = ({ isOpen, onClose, initialTab = 'cgu' }: MentionsModalProps) => {
+  const [tab, setTab] = useState<Tab>(initialTab);
   const { t } = useLocale();
 
   const tabDef: { id: Tab; label: string; to: string; title: string }[] = [
@@ -49,16 +34,26 @@ const MentionsModal = ({ isOpen, onClose }: MentionsModalProps) => {
 
   const tabs = (
     <div className="flex border-b border-gray-200">
-      {tabDef.map(({ id, label, to }) => (
-        <div key={id} className={tabWrapClass(tab === id)}>
-          <button type="button" onClick={() => setTab(id)} className={tabClass(tab === id)}>
-            {label}
-          </button>
-          <OpenInNewTabIcon to={to} label={t.legal.openPage} />
-        </div>
+      {tabDef.map(({ id, label }) => (
+        <button key={id} type="button" onClick={() => setTab(id)} className={tabClass(tab === id)}>
+          {label}
+        </button>
       ))}
     </div>
   );
+
+  // Liens internes du texte légal (« /privacy » dans les CGU, « /cgu » dans les
+  // mentions) : on bascule d'onglet au lieu de naviguer. En natif, suivre le lien
+  // rechargeait la WebView hors de la partie en cours.
+  const onContentClick = (e: MouseEvent<HTMLDivElement>) => {
+    const href = (e.target as HTMLElement).closest('a')?.getAttribute('href');
+    const target = tabDef.find((d) => d.to === href);
+    if (!target) return;
+    e.preventDefault();
+    setTab(target.id);
+  };
+
+  const currentPath = tabDef.find((d) => d.id === tab)?.to ?? '/cgu';
 
   return (
     <Modal
@@ -67,7 +62,7 @@ const MentionsModal = ({ isOpen, onClose }: MentionsModalProps) => {
       title={tabDef.find((d) => d.id === tab)?.title ?? t.legal.cgu.title}
       subHeader={tabs}
     >
-      <div className="text-gray-700">
+      <div className="text-gray-700" onClick={onContentClick}>
         {tab === 'cgu' && (
           <div className="space-y-4">
             {t.legal.cgu.sections.map((section, index) => (
@@ -126,6 +121,17 @@ const MentionsModal = ({ isOpen, onClose }: MentionsModalProps) => {
               </section>
             ))}
           </div>
+        )}
+
+        {!isNative && (
+          <a
+            href={currentPath}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block mt-6 text-sm font-semibold text-gray-500 underline underline-offset-2 hover:text-black"
+          >
+            {t.legal.openPage} ↗
+          </a>
         )}
       </div>
     </Modal>

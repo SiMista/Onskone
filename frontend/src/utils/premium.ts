@@ -3,6 +3,7 @@ import { Capacitor } from '@capacitor/core';
 import { studioStorage, isStudioFrame } from './studioStorage';
 import socket, { setAnnouncedPremium } from './socket';
 import { reportClientLog, describeError } from './clientLog';
+import { simulatedPlatform } from './studioPlatform';
 
 // Statut premium de l'utilisateur (achat unique à vie "premium").
 //
@@ -83,7 +84,14 @@ export const usePremium = (): boolean =>
 export const getIsPremium = (): boolean => isPremium;
 
 /** true si l'achat in-app est possible (natif uniquement). Sinon → redirection store. */
-export const canPurchase = (): boolean => Capacitor.isNativePlatform();
+export const canPurchase = (): boolean => Capacitor.isNativePlatform() || simulatedPlatform !== null;
+
+// --- Achat simulé (Studio, slot en iOS/Android) ------------------------------
+// Aucun SDK : prix fictif et achat qui aboutit après un délai, pour voir le
+// paywall natif et l'écran de victoire sans téléphone (cf. studioPlatform.ts).
+const SIMULATED_PRICE = '3,99 €';
+const SIMULATED_DELAY_MS = 800;
+const simulatedWait = () => new Promise<void>((r) => setTimeout(r, SIMULATED_DELAY_MS));
 
 // --- Override de test (web / Studio) -----------------------------------------
 // Permet de tester le déblocage sans vrai achat (pas de SDK sur web).
@@ -110,7 +118,11 @@ if (isStudioFrame && typeof window !== 'undefined') {
 interface RCCustomerInfo {
   entitlements: { active: Record<string, unknown> };
 }
-interface RCPackage { identifier: string }
+interface RCPackage {
+  identifier: string;
+  // priceString : prix formaté par le store, dans la devise du compte (ex. « 3,99 € »).
+  product?: { priceString?: string };
+}
 interface RCPurchasesApi {
   // configure()/setLogLevel() sont RETURN_NONE côté natif, mais le wrapper de
   // @capacitor/core est async : ils renvoient une Promise, résolue dès que l'appel
@@ -271,6 +283,37 @@ export const refreshPremiumStatus = async (): Promise<boolean> => {
   }
 };
 
+// Prix du Premium, mémorisé après la première lecture réussie : il ne bouge pas
+// pendant la session, inutile de re-solliciter le store à chaque ouverture.
+let cachedPrice: string | null = null;
+
+/**
+ * Prix localisé du Premium tel que servi par le store (devise et format du
+ * compte Apple/Google, ex. « 3,99 € », « $3.99 »). null sur web, SDK absent ou
+ * produit pas encore servi : l'UI retombe alors sur son libellé sans prix.
+ * Affiché sur le paywall : Apple exige le prix dans le parcours d'achat (3.1.2).
+ */
+export const getPremiumPrice = async (): Promise<string | null> => {
+  if (cachedPrice) return cachedPrice;
+  if (simulatedPlatform) {
+    // Délai : laisse voir le CTA sans prix (fallback) avant qu'il n'arrive.
+    await simulatedWait();
+    return SIMULATED_PRICE;
+  }
+  if (!Capacitor.isNativePlatform()) return null;
+  const mod = await loadPurchases();
+  if (!mod) return null;
+  if (!(await ensureConfigured())) return null;
+  try {
+    const offerings = await withTimeout(mod.Purchases.getOfferings(), 'getOfferings');
+    cachedPrice = offerings.current?.availablePackages?.[0]?.product?.priceString ?? null;
+    return cachedPrice;
+  } catch (err) {
+    rcLog('lecture du prix impossible → paywall sans prix', err);
+    return null;
+  }
+};
+
 /**
  * Pourquoi une tentative n'a pas abouti, quand `ok` est false :
  * - `cancelled` : l'utilisateur a fermé la feuille native → ne RIEN afficher ;
@@ -317,6 +360,11 @@ const isUserCancelled = (err: unknown): boolean => {
  * en cas d'échec réel (mais pas si l'utilisateur a simplement annulé).
  */
 export const purchasePremium = async (): Promise<PurchaseResult> => {
+  if (simulatedPlatform) {
+    await simulatedWait();
+    setPremium(true);
+    return { ok: true };
+  }
   // Web : le bouton d'achat n'est même pas rendu (cf. canPurchase), donc y
   // arriver signale un appel qui n'aurait pas dû se produire → 'error'.
   if (!Capacitor.isNativePlatform()) return { ok: false, failure: 'error' };
@@ -367,6 +415,11 @@ export const purchasePremium = async (): Promise<PurchaseResult> => {
 
 /** Restaure les achats (obligatoire Apple). Même contrat de résultat que purchasePremium. */
 export const restorePurchases = async (): Promise<PurchaseResult> => {
+  // Simulé : restaure ce que le slot a déjà (👑 de la Régie ou achat simulé).
+  if (simulatedPlatform) {
+    await simulatedWait();
+    return isPremium ? { ok: true } : { ok: false, failure: 'empty' };
+  }
   if (!Capacitor.isNativePlatform()) return { ok: false, failure: 'error' };
   const mod = await loadPurchases();
   if (!mod) return { ok: false, failure: 'error' };

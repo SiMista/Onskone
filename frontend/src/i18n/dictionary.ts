@@ -210,6 +210,7 @@ export interface Dictionary {
   howToPlay: {
     button: string;
     ariaButton: string;
+    firstTimeHint: string; // bulle sous le bouton au tout premier passage
     goToStep: (n: number) => string;
     steps: Array<(m: HowToPlayMarkers) => ReactNode>;
   };
@@ -300,6 +301,10 @@ export interface Dictionary {
     // Mode natif (achat possible)
     unlock: string;
     restore: string;
+    kebab: string;            // accroche prix sous le CTA
+    lifetimeSticker: string;  // sticker penché collé sur le CTA
+    termsLink: string;        // liens légaux en pied de paywall
+    privacyLink: string;
     purchasing: string;
     purchaseError: string;
     purchaseUnavailable: string;

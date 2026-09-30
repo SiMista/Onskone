@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { getAvatarUrl } from '../../constants/game';
 import {
   SlotConfig, SlotRuntimeState,
-  VIEWPORT_PRESETS, presetById, viewportDims,
+  VIEWPORT_PRESETS, SLOT_PLATFORMS, presetById, viewportDims,
   PILL_ICON, SELECT_CLS,
 } from './shared';
 
@@ -142,6 +142,17 @@ export const SlotCard = ({
           title="Format d'écran"
         >
           {VIEWPORT_PRESETS.map((p) => (
+            <option key={p.id} value={p.id}>{p.label}</option>
+          ))}
+        </select>
+
+        <select
+          value={slot.platform}
+          onChange={(e) => onUpdateSlot(slot.id, { platform: e.target.value as SlotConfig['platform'] })}
+          className={SELECT_CLS}
+          title="Plateforme simulée : iOS/Android affichent le paywall natif (prix + achat factices). Recharge le slot."
+        >
+          {SLOT_PLATFORMS.map((p) => (
             <option key={p.id} value={p.id}>{p.label}</option>
           ))}
         </select>
@@ -296,6 +307,12 @@ export const SlotCard = ({
           <>
             <span className="text-white/15">·</span>
             <span className="text-amber-300">👑 premium</span>
+          </>
+        )}
+        {slot.platform !== 'web' && (
+          <>
+            <span className="text-white/15">·</span>
+            <span className="text-sky-300">{slot.platform === 'ios' ? '🍎 iOS' : '🤖 Android'} simulé</span>
           </>
         )}
       </div>

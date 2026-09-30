@@ -512,8 +512,10 @@ button {
   100% { opacity: 0; transform: scale(0.92); }
 }
 
+/* --sheet-drag : décalage déjà parcouru au doigt (PremiumModal), pour que la
+   sortie reparte de là au lieu de remonter en haut. 0 par défaut (BottomSheet). */
 @keyframes bottomsheet-out {
-  0% { opacity: 1; transform: translateY(0); }
+  0% { opacity: 1; transform: translateY(var(--sheet-drag, 0px)); }
   100% { opacity: 0; transform: translateY(100%); }
 }
 
@@ -585,6 +587,16 @@ button {
 
 .animate-player-pop {
   animation: player-pop-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* Sortie de la bulle « Nouveau joueur ? » (HowToPlayButton) : elle se rétracte
+   vers le bouton qu'elle pointe. */
+@keyframes hint-bubble-out {
+  0%   { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-6px) scale(0.8); }
+}
+.animate-hint-bubble-out {
+  animation: hint-bubble-out 0.2s cubic-bezier(0.4, 0, 1, 1) forwards;
 }
 
 /* Fade/slide in pour transitions de phase */
@@ -1213,18 +1225,18 @@ button {
    (dégradé or) ne bouge pas. Avant, le dégradé or défilait avec deux bandes
    crème autour d'un cœur jaune : on voyait deux reflets se suivre.
    Positions calculées pour une couche de 250% : 105% = bande hors champ à
-   gauche, -5% = hors champ à droite. Balayage ~1.1s puis ~2.1s de pause. */
+   gauche, -5% = hors champ à droite. Balayage lent ~3s puis ~4s de pause. */
 @keyframes gold-glint {
   0%        { background-position: 105% 0, 0 0; }
-  35%, 100% { background-position: -5% 0, 0 0; }
+  45%, 100% { background-position: -5% 0, 0 0; }
 }
 .text-gold-shine {
   background-image:
     linear-gradient(
       100deg,
-      rgba(255, 255, 255, 0) 40%,
-      rgba(255, 255, 255, 0.95) 50%,
-      rgba(255, 255, 255, 0) 60%
+      rgba(255, 255, 255, 0) 36%,
+      rgba(255, 255, 255, 0.85) 50%,
+      rgba(255, 255, 255, 0) 64%
     ),
     linear-gradient(
       100deg,
@@ -1241,7 +1253,7 @@ button {
   -webkit-background-clip: text;
   color: transparent;
   -webkit-text-fill-color: transparent;
-  animation: gold-glint 3.2s ease-in-out infinite;
+  animation: gold-glint 7s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
