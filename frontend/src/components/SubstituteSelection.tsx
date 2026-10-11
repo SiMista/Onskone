@@ -7,6 +7,7 @@ import QuestionByline from './QuestionByline';
 import Dropdown from './Dropdown';
 import { getPhaseDuration } from '../constants/game';
 import { IPlayer, RoundPhase, GameCard } from '@onskone/shared';
+import type { GameSpeed } from '@onskone/shared';
 import { useStartTimerDelayed } from '../hooks';
 import socket from '../utils/socket';
 import { getQuestionSubtitle } from '../utils/questionHelpers';
@@ -20,7 +21,7 @@ const SubstituteSelection = ({
   players,
   question,
   card,
-  timeMultiplier,
+  gameSpeed,
 }: {
   lobbyCode: string;
   isLeader: boolean;
@@ -28,7 +29,7 @@ const SubstituteSelection = ({
   players: IPlayer[];
   question: string;
   card?: GameCard;
-  timeMultiplier: number;
+  gameSpeed: GameSpeed;
 }) => {
   const { t } = useLocale();
   const leader = players.find(p => p.id === leaderId);
@@ -52,7 +53,7 @@ const SubstituteSelection = ({
   useEffect(() => { selectedIdRef.current = effectiveSelectedId; }, [effectiveSelectedId]);
   useEffect(() => { submittedRef.current = submitted; }, [submitted]);
 
-  const phaseDuration = getPhaseDuration(RoundPhase.SUBSTITUTE_SELECTION, timeMultiplier);
+  const phaseDuration = getPhaseDuration(RoundPhase.SUBSTITUTE_SELECTION, gameSpeed);
   useStartTimerDelayed(isLeader, lobbyCode, phaseDuration);
 
   useEffect(() => {

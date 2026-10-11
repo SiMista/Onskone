@@ -129,6 +129,7 @@ export const Simulators = () => {
           <Button text="warning" variant="warning" onClick={() => showToast('Attention, vérifie ce point', 'warning')} />
           <Button text="error" variant="danger" onClick={() => showToast('Quelque chose a planté', 'error')} />
           <Button text="achievement" variant="primary" onClick={() => showToast('Succès débloqué ! - Première partie', 'achievement')} />
+          <Button text="premium" variant="primary" onClick={() => showToast('Premium déjà actif, merci !', 'premium')} />
         </div>
       </Section>
 

@@ -8,6 +8,7 @@ import AnswerText from './AnswerText';
 import Avatar from './Avatar';
 import Dropdown, { type DropdownOption } from './Dropdown';
 import { IPlayer, RoundPhase, GameCard, GameMode, RevealResult, isNoResponse } from '@onskone/shared';
+import type { GameSpeed } from '@onskone/shared';
 import { getPhaseDuration } from '../constants/game';
 import { useStartTimerDelayed, useSocketEvent } from '../hooks';
 import socket from '../utils/socket';
@@ -24,7 +25,7 @@ interface Answer {
 // Valeur sentinelle du dropdown pour retirer l'attribution (Dropdown ne renvoie qu'une string).
 const CLEAR = '__CLEAR__';
 
-const GuessingPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, question, card, initialGuesses, playerCount, roundNumber, gameMode, timeMultiplier }: {
+const GuessingPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, question, card, initialGuesses, playerCount, roundNumber, gameMode, gameSpeed }: {
   lobbyCode: string;
   isLeader: boolean;
   leader: IPlayer;
@@ -35,7 +36,7 @@ const GuessingPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, question,
   playerCount: number;
   roundNumber: number;
   gameMode: GameMode;
-  timeMultiplier: number;
+  gameSpeed: GameSpeed;
 }) => {
   const { t } = useLocale();
   const [answers, setAnswers] = useState<Answer[]>([]);
@@ -52,11 +53,11 @@ const GuessingPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, question,
   const justAssignedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Durée du timer GUESSING (120s à 3 joueurs, +20s/joueur), scalée par le
-  // multiplicateur de temps du lobby. La formule de base vit dans getPhaseDuration.
+  // Durée du timer GUESSING selon la vitesse de jeu du lobby (base à 3 joueurs,
+  // + un extra par joueur supplémentaire). La formule vit dans getPhaseDuration.
   const timerDuration = useMemo(
-    () => getPhaseDuration(RoundPhase.GUESSING, timeMultiplier, playerCount),
-    [playerCount, timeMultiplier]
+    () => getPhaseDuration(RoundPhase.GUESSING, gameSpeed, playerCount),
+    [playerCount, gameSpeed]
   );
 
   useStartTimerDelayed(isLeader, lobbyCode, timerDuration);
@@ -85,10 +86,22 @@ const GuessingPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, question,
   };
 
   // Demander les réponses mélangées à l'entrée dans la phase, et nettoyer les
-  // timeouts d'animation au démontage.
+  // timeouts d'animation au démontage. La demande est RELANCÉE tant que rien n'est
+  // reçu (requête perdue sur socket instable) : sans ça l'écran restait sur
+  // « chargement » jusqu'à la fin de la phase.
+  const poolReceivedRef = useRef(false);
   useEffect(() => {
+    poolReceivedRef.current = false;
     socket.emit('requestShuffledAnswers', { lobbyCode });
+    const retry = setInterval(() => {
+      if (poolReceivedRef.current) {
+        clearInterval(retry);
+        return;
+      }
+      socket.emit('requestShuffledAnswers', { lobbyCode });
+    }, 3000);
     return () => {
+      clearInterval(retry);
       if (justAssignedTimeoutRef.current) clearTimeout(justAssignedTimeoutRef.current);
       if (highlightTimeoutRef.current) clearTimeout(highlightTimeoutRef.current);
     };
@@ -99,6 +112,7 @@ const GuessingPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, question,
     if (data.roundNumber !== roundNumber) {
       return;
     }
+    poolReceivedRef.current = true;
 
     setAnswers(data.answers);
     setPlayers(data.players);

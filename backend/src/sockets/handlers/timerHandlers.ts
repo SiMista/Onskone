@@ -1,6 +1,7 @@
 import { rateLimiters } from '../../utils/rateLimiter.js';
 import logger from '../../utils/logger.js';
 import { armServerTimer, processTimerExpiration, getServerPhaseDuration } from '../broadcasting.js';
+import { isTimerExpiryPlausible } from '../../utils/timerExpiry.js';
 import {
     type HandlerContext,
     type AppSocket,
@@ -36,12 +37,11 @@ export function registerTimerHandlers(socket: AppSocket, ctx: HandlerContext): v
             }
 
             // Durée calculée par le SERVEUR pour la phase courante, pas celle envoyée
-            // par le client. `data.duration` n'est plus qu'indicatif : un client en mode
-            // DEBUG (DEBUG_TIMER = 3600) imposait sinon un timer d'une heure à toute la
-            // table, et un `startTimer` parti juste avant une transition armait la durée
-            // de l'ANCIENNE phase sur la nouvelle. Le serveur connaît déjà la bonne
-            // valeur (même source partagée que le front) : il n'a aucune raison de faire
-            // confiance au client ici.
+            // par le client. `data.duration` n'est plus qu'indicatif : un client modifié
+            // imposerait sinon un timer arbitraire à toute la table, et un `startTimer`
+            // parti juste avant une transition armait la durée de l'ANCIENNE phase sur
+            // la nouvelle. Le serveur connaît déjà la bonne valeur (même source partagée
+            // que le front) : il n'a aucune raison de faire confiance au client ici.
             const timerDuration = getServerPhaseDuration(requestedPhase, lobby);
             if (timerDuration <= 0) {
                 logger.debug('startTimer ignoré : phase sans timer', { lobbyCode: data.lobbyCode, phase: requestedPhase });
@@ -126,6 +126,18 @@ export function registerTimerHandlers(socket: AppSocket, ctx: HandlerContext): v
                     lobbyCode: data.lobbyCode,
                     reported: data.phase,
                     current: currentRound.phase,
+                });
+                return;
+            }
+            // Le serveur tient son propre timer : un `timerExpired` nettement en avance
+            // (horloge du pilier en avance, client modifié) concluait la phase pour toute
+            // la table avant la fin du temps. On n'accepte que l'avance de tolérance ;
+            // sinon le timeout serveur fera le travail à l'heure.
+            if (!isTimerExpiryPlausible(currentRound.timerEnd, Date.now())) {
+                logger.warn('timerExpired ignoré : trop en avance sur le timer serveur', {
+                    lobbyCode: data.lobbyCode,
+                    phase: currentRound.phase,
+                    serverTimerEnd: currentRound.timerEnd?.toISOString() ?? null,
                 });
                 return;
             }

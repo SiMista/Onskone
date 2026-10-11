@@ -6,9 +6,11 @@ interface CheckboxProps {
   label: string;
   description?: string;
   disabled?: boolean;
+  /** Côté de la case. `right` : ligne de réglage groupée, alignée sur les chevrons des lignes voisines. */
+  boxSide?: 'left' | 'right';
 }
 
-const Checkbox = ({ checked, onChange, label, description, disabled = false }: CheckboxProps) => {
+const Checkbox = ({ checked, onChange, label, description, disabled = false, boxSide = 'left' }: CheckboxProps) => {
   return (
     <button
       type="button"
@@ -17,14 +19,14 @@ const Checkbox = ({ checked, onChange, label, description, disabled = false }: C
       aria-label={label}
       disabled={disabled}
       onClick={() => onChange(!checked)}
-      className={`group flex items-start gap-3 w-full text-left transition-transform duration-150 active:scale-[0.98] ${
+      className={`group flex ${boxSide === 'right' ? 'flex-row-reverse items-center' : 'items-start'} gap-3 w-full text-left transition-transform duration-150 active:scale-[0.98] ${
         disabled ? 'opacity-65 pointer-events-none' : 'cursor-pointer'
       }`}
     >
       <span
         aria-hidden
-        className={`relative shrink-0 mt-0.5 w-7 h-7 md:w-8 md:h-8 rounded-md card-paper stack-shadow-sm transition-colors duration-200 ${
-          checked ? 'bg-warning-500' : 'bg-cream-settings'
+        className={`relative shrink-0 ${boxSide === 'right' ? '' : 'mt-0.5'} w-7 h-7 md:w-8 md:h-8 rounded-md card-paper stack-shadow-sm transition-colors duration-200 ${
+          checked ? 'bg-warning-500' : 'bg-cream-checkbox'
         }`}
       >
         <LuCheck
@@ -40,7 +42,7 @@ const Checkbox = ({ checked, onChange, label, description, disabled = false }: C
           {label}
         </div>
         {description && (
-          <div className="font-sans text-[11px] text-gray-600 leading-snug mt-1">
+          <div className="font-sans text-xs text-gray-600 leading-snug mt-1">
             {description}
           </div>
         )}

@@ -1,5 +1,6 @@
 import { useState, type MouseEvent } from 'react';
 import { Capacitor } from '@capacitor/core';
+import { LuArrowUpRight } from 'react-icons/lu';
 import Modal from '../Modal';
 import { useLocale } from '../../i18n';
 
@@ -122,18 +123,21 @@ const MentionsModal = ({ isOpen, onClose, initialTab = 'cgu' }: MentionsModalPro
             ))}
           </div>
         )}
-
-        {!isNative && (
-          <a
-            href={currentPath}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block mt-6 text-sm font-semibold text-gray-500 underline underline-offset-2 hover:text-black"
-          >
-            {t.legal.openPage} ↗
-          </a>
-        )}
       </div>
+
+      {/* Hors du conteneur `onContentClick` : son href (= chemin de l'onglet courant)
+          serait intercepté comme un lien interne et ne ferait rien. */}
+      {!isNative && (
+        <a
+          href={currentPath}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 mt-6 text-sm font-semibold text-gray-500 underline underline-offset-2 hover:text-black"
+        >
+          {t.legal.openPage}
+          <LuArrowUpRight size={14} strokeWidth={2.5} aria-hidden className="shrink-0" />
+        </a>
+      )}
     </Modal>
   );
 };

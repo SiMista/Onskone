@@ -20,6 +20,10 @@ type HowToPlayButtonProps = {
 // style de la bulle) : tous les joueurs existants la reverraient.
 const SEEN_KEY = 'onskone_howtoplay_seen';
 
+// Durée minimale d'affichage après le pop : un tap distrait (le joueur tape son
+// pseudo, ferme le clavier...) ne la fait plus disparaître avant qu'il l'ait lue.
+const HINT_MIN_VISIBLE_MS = 5000;
+
 const isFirstVisit = (): boolean => {
   try {
     if (studioStorage.getItem(SEEN_KEY) === '1') return false;
@@ -35,19 +39,28 @@ const HowToPlayButton = ({ onClick, className = '', hintAlign = 'center' }: HowT
   const [hintVisible, setHintVisible] = useState(isFirstVisit);
   // Sortie animée : la bulle reste montée le temps de hint-bubble-out.
   const [hintLeaving, setHintLeaving] = useState(false);
-  // Vrai une fois le pop d'entrée lancé (il a 600ms de délai). Un tap AVANT ne
-  // doit pas jouer la sortie : la bulle, encore invisible, flasherait à l'écran.
-  const popStartedRef = useRef(false);
+  // Instant (performance.now) où le pop d'entrée a démarré (il a 600ms de délai) ;
+  // null avant. Une sortie AVANT ne doit pas jouer d'animation : la bulle, encore
+  // invisible, flasherait à l'écran.
+  const poppedAtRef = useRef<number | null>(null);
+  const [popped, setPopped] = useState(false);
+  // Le joueur a tapé quelque part : la bulle partira, mais pas avant HINT_MIN_VISIBLE_MS.
+  const [dismissRequested, setDismissRequested] = useState(false);
 
-  const dismissHint = () => {
-    if (!popStartedRef.current) {
-      setHintVisible(false);
-      return;
-    }
-    setHintLeaving(true);
-    // Filet si animationend ne tombe pas (animation coupée par le navigateur).
-    setTimeout(() => setHintVisible(false), 300);
+  const markPopped = () => {
+    if (poppedAtRef.current !== null) return;
+    poppedAtRef.current = performance.now();
+    setPopped(true);
   };
+
+  // Filet si animationstart ne tombe pas (animation coupée) : considérée apparue à
+  // la fin de son délai d'entrée, sinon un tap ne pourrait plus jamais la fermer.
+  useEffect(() => {
+    if (!hintVisible) return;
+    const timer = setTimeout(markPopped, 700);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Marquée vue dès qu'elle s'affiche : elle ne reviendra plus, même si le
   // joueur ne l'a pas lue ni n'a ouvert le tuto.
@@ -57,16 +70,36 @@ const HowToPlayButton = ({ onClick, className = '', hintAlign = 'center' }: HowT
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Masquée au premier tap n'importe où.
+  // Premier tap n'importe où : demande de sortie (différée, cf. effet suivant).
   useEffect(() => {
-    if (!hintVisible || hintLeaving) return;
-    document.addEventListener('pointerdown', dismissHint, { capture: true, once: true });
-    return () => document.removeEventListener('pointerdown', dismissHint, { capture: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hintVisible, hintLeaving]);
+    if (!hintVisible || dismissRequested) return;
+    const onTap = () => setDismissRequested(true);
+    document.addEventListener('pointerdown', onTap, { capture: true, once: true });
+    return () => document.removeEventListener('pointerdown', onTap, { capture: true });
+  }, [hintVisible, dismissRequested]);
 
-  // Le pointerdown a déjà lancé la sortie : le clic ouvre juste le tuto.
+  // Sortie au plus tôt HINT_MIN_VISIBLE_MS après le pop. Un tap pendant le délai
+  // d'entrée attend donc l'apparition, puis le temps de lecture.
+  useEffect(() => {
+    if (!dismissRequested || !popped || hintLeaving || poppedAtRef.current === null) return;
+    const remaining = Math.max(0, HINT_MIN_VISIBLE_MS - (performance.now() - poppedAtRef.current));
+    const timer = setTimeout(() => setHintLeaving(true), remaining);
+    return () => clearTimeout(timer);
+  }, [dismissRequested, popped, hintLeaving]);
+
+  // Filet si animationend ne tombe pas (animation coupée par le navigateur).
+  useEffect(() => {
+    if (!hintLeaving) return;
+    const timer = setTimeout(() => setHintVisible(false), 300);
+    return () => clearTimeout(timer);
+  }, [hintLeaving]);
+
+  // Clic sur le bouton : la bulle a rempli son rôle, elle part tout de suite.
   const handleClick = () => {
+    if (hintVisible) {
+      if (popped) setHintLeaving(true);
+      else setHintVisible(false);
+    }
     onClick();
   };
 
@@ -86,18 +119,18 @@ const HowToPlayButton = ({ onClick, className = '', hintAlign = 'center' }: HowT
         // sinon l'animation écrasait le -translate-x du centrage.
         <span
           role="status"
-          className={`pointer-events-none absolute top-full mt-2.5 z-20 ${hintAlign === 'end' ? 'right-0' : 'left-1/2 -translate-x-1/2'}`}
+          className={`pointer-events-none absolute top-full mt-3 z-20 ${hintAlign === 'end' ? 'right-0' : 'left-1/2 -translate-x-1/2'}`}
         >
           <span
-            onAnimationStart={() => { popStartedRef.current = true; }}
+            onAnimationStart={markPopped}
             onAnimationEnd={() => { if (hintLeaving) setHintVisible(false); }}
-            className={`${hintLeaving ? 'animate-hint-bubble-out' : 'animate-player-pop'} ${hintAlign === 'end' ? 'origin-top-right' : 'origin-top'} relative block w-max max-w-[280px] px-3 py-1.5 rounded-xl border-2 border-black bg-white stack-shadow-sm font-display font-bold text-xs text-black text-center leading-snug`}
+            className={`${hintLeaving ? 'animate-hint-bubble-out' : 'animate-player-pop'} ${hintAlign === 'end' ? 'origin-top-right' : 'origin-top'} relative block w-max max-w-[300px] px-4 py-2.5 rounded-2xl border-2 border-black bg-white stack-shadow font-display font-bold text-sm text-black text-center leading-snug`}
             style={hintLeaving ? undefined : { animationDelay: '600ms' }}
           >
             {/* Queue de la bulle, pointée vers le bouton */}
             <span
               aria-hidden
-              className={`absolute -top-[7px] w-3 h-3 rotate-45 bg-white border-l-2 border-t-2 border-black ${hintAlign === 'end' ? 'right-5' : 'left-1/2 -ml-1.5'}`}
+              className={`absolute -top-[9px] w-4 h-4 rotate-45 bg-white border-l-2 border-t-2 border-black ${hintAlign === 'end' ? 'right-6' : 'left-1/2 -ml-2'}`}
             />
             {t.howToPlay.firstTimeHint}
           </span>

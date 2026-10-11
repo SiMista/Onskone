@@ -2,8 +2,9 @@ import { IPlayer } from './player.js';
 import { IGame, LeaderboardEntry, GameStatus } from './game.js';
 import { IRound, GameCard, RoundPhase } from './round.js';
 import { DecksCatalog, DecksCatalogWithMeta, SelectedDecks } from './decks.js';
-import { GameMode } from './lobby.js';
+import { GameMode, GameSpeed } from './lobby.js';
 import { Locale } from './locale.js';
+import type { VersionPolicy } from '../version.js';
 
 /**
  * Données envoyées sur reconnexion pour restaurer l'état local du joueur
@@ -26,6 +27,9 @@ export interface ReconnectionData {
   /** Indices des réponses déjà révélées en phase REVEAL */
   revealedIndices?: number[];
 }
+
+/** Joueur déconnecté dont le slot peut être repris (cf. lobbyInfo / reclaimPlayer). */
+export type ReclaimablePlayer = Pick<IPlayer, 'id' | 'name' | 'avatarId'>;
 
 /**
  * Résultat d'une réponse dans la phase de révélation
@@ -66,6 +70,15 @@ export interface RevealResult {
  * Événements envoyés par le SERVEUR vers les CLIENTS
  */
 export interface ServerToClientEvents {
+  // ===== VERSION =====
+
+  /**
+   * Politique de maj forcée (plancher + version déployée). Émise à chaque connexion
+   * et rediffusée quand le plancher change en admin. Le client applique la règle
+   * `shouldBlockForUpdate` en croisant avec SON store (cf. frontend versionGate.ts).
+   */
+  versionPolicy: (policy: VersionPolicy) => void;
+
   // ===== LOBBY EVENTS =====
 
   /**
@@ -108,7 +121,19 @@ export interface ServerToClientEvents {
     lobbyCode?: string;
     /** Statut de la partie (WAITING si aucune) : sert à proposer la reprise d'une partie en cours. */
     gameStatus?: GameStatus;
+    /**
+     * Joueurs du salon dont la connexion est tombée (slot libre à reprendre via
+     * `reclaimPlayer`). Permet à un joueur qui a perdu sa session (crash, appli
+     * tuée, stockage vidé) de redevenir lui-même en entrant juste le code.
+     */
+    reclaimablePlayers?: ReclaimablePlayer[];
   }) => void;
+
+  /**
+   * Réponse à `reclaimPlayer` : le slot est repris. `reconnectToken` est le NOUVEAU
+   * secret du joueur (l'ancien est révoqué), émis à ce seul socket.
+   */
+  playerReclaimed: (data: { player: IPlayer; reconnectToken: string; gameStatus: GameStatus }) => void;
 
   /** Notification que la partie a déjà commencé (nouveau joueur refusé) */
   gameAlreadyStarted: (data: { message: string }) => void;
@@ -120,6 +145,13 @@ export interface ServerToClientEvents {
     selected: SelectedDecks;
     gameMode: GameMode;
     guessMyAnswerMode: boolean;
+    gameSpeed: GameSpeed;
+    /** Joueurs exclus du rôle de pilier (limités aux joueurs présents dans le salon) */
+    excludedLeaderIds: string[];
+    /**
+     * @deprecated Ancien multiplicateur (0.7 / 1), émis UNIQUEMENT pour les apps
+     * d'avant `gameSpeed`. À retirer quand MIN_SUPPORTED_VERSION les exclut.
+     */
     timeMultiplier: number;
     locale: Locale;
   }) => void;
@@ -127,7 +159,10 @@ export interface ServerToClientEvents {
   /** Le mode "Devine ma réponse" a été mis à jour */
   guessMyAnswerModeUpdated: (data: { guessMyAnswerMode: boolean }) => void;
 
-  /** Le multiplicateur de temps des phases a été mis à jour */
+  /** La vitesse de jeu (durées des phases) a été mise à jour */
+  gameSpeedUpdated: (data: { gameSpeed: GameSpeed }) => void;
+
+  /** @deprecated Pendant legacy de `gameSpeedUpdated`, pour les apps d'avant `gameSpeed`. */
   timeMultiplierUpdated: (data: { timeMultiplier: number }) => void;
 
   /** Un substitut a été sélectionné par le pilier */
@@ -135,13 +170,28 @@ export interface ServerToClientEvents {
     substitutePlayerId: string;
     phase: RoundPhase;
     auto?: boolean;
+    /** Manche concernée : un delta d'une autre manche que celle affichée = resynchroniser. */
+    roundNumber: number;
   }) => void;
 
   /** Le substitut a soumis sa réponse au nom du pilier */
   substituteAnswerSubmitted: (data: {
     phase: RoundPhase;
     forced?: boolean;
+    roundNumber: number;
   }) => void;
+
+  // ===== SYNC =====
+
+  /**
+   * Réponse à `syncCheck` quand aucun état n'est renvoyé :
+   *  - `ok`       : l'empreinte du client est celle du serveur, rien à faire ;
+   *  - `detached` : ce socket n'est pas (ou plus) rattaché au slot du joueur ->
+   *                 le client doit refaire une reconnexion complète (`getGameState`
+   *                 avec son secret).
+   * Empreinte différente : le serveur émet directement `gameState`.
+   */
+  syncResult: (data: { status: 'ok' | 'detached' }) => void;
 
   // ===== GAME EVENTS =====
 
@@ -162,7 +212,8 @@ export interface ServerToClientEvents {
   /** Un round a été sauté (pilier déconnecté) */
   roundSkipped: (data: {
     skippedLeaderName: string;
-    reason: 'leader_disconnected';
+    /** `leader_idle` : le pilier n'a pas conclu la révélation dans le délai (REVEAL_BACKSTOP_MS). */
+    reason: 'leader_disconnected' | 'leader_idle';
   }) => void;
 
   /** Réception des 3 questions pour le pilier (tirage unique par manche). */
@@ -174,6 +225,7 @@ export interface ServerToClientEvents {
     phase: RoundPhase;
     auto?: boolean; // Si la question a été auto-sélectionnée (timer expiré)
     card?: GameCard; // Carte contenant la question sélectionnée (catégorie, thème, sujet)
+    roundNumber: number;
   }) => void;
 
   /** Un joueur a soumis sa réponse */
@@ -181,6 +233,7 @@ export interface ServerToClientEvents {
     playerId: string;
     totalAnswers: number;
     expectedAnswers: number;
+    roundNumber: number;
   }) => void;
 
   /** Un joueur a retiré sa réponse pour la modifier */
@@ -195,6 +248,7 @@ export interface ServerToClientEvents {
     phase: RoundPhase;
     answersCount: number;
     forced?: boolean; // Si forcé par expiration du timer
+    roundNumber: number;
   }) => void;
 
   /** Réception des réponses mélangées pour le pilier */
@@ -220,12 +274,14 @@ export interface ServerToClientEvents {
     scores: Record<string, number>;
     leaderboard: LeaderboardEntry[];
     forced?: boolean; // Si forcé par expiration du timer
+    roundNumber: number;
   }) => void;
 
   /** Une réponse a été révélée par le pilier */
   answerRevealed: (data: {
     revealedIndex: number; // Index de la réponse révélée
     revealedIndices: number[]; // Tous les indices révélés
+    roundNumber: number;
   }) => void;
 
   /** Similarité détectée entre deux réponses (après reveal d'une réponse incorrecte) */
@@ -276,6 +332,12 @@ export interface ServerToClientEvents {
   error: (data: {
     message: string;
     code?: ErrorCode; // Code d'erreur stable optionnel (cf. ERROR_CODES)
+    /**
+     * La SESSION du client n'est plus reconnue (secret de reconnexion refusé, slot
+     * inconnu du salon) : ce n'est pas une action refusée mais une identité à
+     * reprendre (cf. reclaimPlayer). Le client quitte l'écran de jeu pour l'accueil.
+     */
+    sessionLost?: boolean;
   }) => void;
 }
 
@@ -349,6 +411,16 @@ export interface ClientToServerEvents {
     reconnectToken?: string;
   }) => void;
 
+  /**
+   * Reprendre le slot d'un joueur DÉCONNECTÉ du salon sans secret de reconnexion
+   * (session perdue : crash, appli tuée, stockage vidé). Refusé si le joueur est
+   * encore connecté. Le serveur répond `playerReclaimed` avec un nouveau secret.
+   */
+  reclaimPlayer: (data: {
+    lobbyCode: string;
+    playerId: string;
+  }) => void;
+
   /** Quitter le lobby */
   leaveLobby: (data: {
     lobbyCode: string;
@@ -390,7 +462,22 @@ export interface ClientToServerEvents {
     guessMyAnswerMode: boolean;
   }) => void;
 
-  /** Mettre à jour le multiplicateur de temps des phases (réservé à l'hôte) */
+  /** Mettre à jour la vitesse de jeu (réservé à l'hôte) */
+  updateGameSpeed: (data: {
+    lobbyCode: string;
+    gameSpeed: GameSpeed;
+  }) => void;
+
+  /** Mettre à jour les joueurs exclus du rôle de pilier (réservé à l'hôte) */
+  updateExcludedLeaders: (data: {
+    lobbyCode: string;
+    excludedLeaderIds: string[];
+  }) => void;
+
+  /**
+   * @deprecated Ancien réglage par multiplicateur, encore envoyé par les apps d'avant
+   * `gameSpeed` (0.7 → fast, le reste → normal). À retirer avec `timeMultiplierUpdated`.
+   */
   updateTimeMultiplier: (data: {
     lobbyCode: string;
     timeMultiplier: number;
@@ -425,6 +512,17 @@ export interface ClientToServerEvents {
      * dépendre de l'UUID public).
      */
     reconnectToken?: string;
+  }) => void;
+
+  /**
+   * Vérification périodique de synchronisation (cf. shared/src/sync.ts) : le client
+   * envoie l'empreinte de ce qu'il affiche. Réponse : `syncResult`, ou `gameState`
+   * complet si l'empreinte diffère de celle du serveur.
+   */
+  syncCheck: (data: {
+    lobbyCode: string;
+    playerId: string;
+    fingerprint: string;
   }) => void;
 
   /** Demander des cartes de questions (réservé au pilier) */

@@ -39,13 +39,26 @@ export function useRevealCursor(
   isLeader: boolean,
   gameMode: GameMode,
   lobbyCode: string,
-  initialRevealedIndices?: number[],
+  serverRevealedIndices?: number[],
 ) {
   const [revealedIndices, setRevealedIndices] = useState<Set<number>>(
-    new Set(initialRevealedIndices || []),
+    new Set(serverRevealedIndices || []),
   );
   const [similarityModal, setSimilarityModal] = useState<SimilarityModalState | null>(null);
   const [correctedIndices, setCorrectedIndices] = useState<Set<number>>(new Set());
+
+  // Convergence vers le serveur : une resynchronisation (`gameState`) peut apporter
+  // des révélations ratées (évènements perdus). On les intègre sans remonter le
+  // composant, pour ne pas perdre le curseur, la modale de similarité ni les animations.
+  useEffect(() => {
+    if (!serverRevealedIndices?.length) return;
+    setRevealedIndices(prev => {
+      if (serverRevealedIndices.every(i => prev.has(i))) return prev;
+      const merged = new Set(prev);
+      serverRevealedIndices.forEach(i => merged.add(i));
+      return merged;
+    });
+  }, [serverRevealedIndices]);
 
   // Index de l'entrée que le pilier s'est attribuée à lui-même (mode "Devine ma réponse")
   // - on la garde pour la fin du reveal. Doit être calculé à partir de leaderId
@@ -76,7 +89,7 @@ export function useRevealCursor(
   );
 
   const [pilierCursor, setPilierCursor] = useState<number>(() =>
-    findFirstDisplayable(0, new Set(initialRevealedIndices || [])),
+    findFirstDisplayable(0, new Set(serverRevealedIndices || [])),
   );
   const [pilierPhase, setPilierPhase] = useState<'prompt' | 'revealed'>('prompt');
   // Le bouton "Suivant" apparaît 1s après la révélation

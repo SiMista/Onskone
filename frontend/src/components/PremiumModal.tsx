@@ -39,8 +39,6 @@ interface PremiumModalProps {
   previewCelebration?: 'purchase' | 'restore';
 }
 
-// Dégradé doré du bouton Premium (fond de la feuille).
-const GOLD_BG = 'linear-gradient(160deg, #FFE066 0%, #FFC23D 45%, #FF8A3D 100%)';
 // Délai pendant lequel la feuille ignore toute demande de fermeture après son
 // ouverture : évite qu'un tap déjà en cours la referme aussitôt apparue.
 const OPEN_LOCK_MS = 1000;
@@ -52,8 +50,8 @@ const FOOTER_LINK = 'py-2.5 px-2 underline underline-offset-2 hover:text-black d
 
 /**
  * Paywall premium - bottom sheet doré, composant DÉDIÉ (pas de ModalShell).
- * Slide depuis le bas (animate-bottomsheet), fond dégradé jaune→orange comme le
- * bouton Premium, DA carton conservée (bordure noire, rondeurs, stack-shadow).
+ * Slide depuis le bas (animate-bottomsheet), fond dégradé or (`.bg-premium-gold`)
+ * comme le bouton Premium, DA carton conservée (bordure noire, rondeurs, stack-shadow).
  * Glissable vers le bas au doigt pour fermer. Aucun scroll interne : tient d'un bloc.
  */
 const PremiumModal = ({ isOpen, onClose, lockOnOpen = false, previewName: previewNameProp, previewCelebration }: PremiumModalProps) => {
@@ -230,9 +228,10 @@ const PremiumModal = ({ isOpen, onClose, lockOnOpen = false, previewName: previe
           de rester une petite languette perdue en bas de l'iPad. */}
       <div
         ref={sheetRef}
-        className={`relative w-full max-w-md sm:max-w-2xl flex flex-col max-h-[92dvh] sm:max-h-[85dvh] select-none border-[3px] border-b-0 sm:border-b-[3px] border-black rounded-t-[30px] sm:rounded-[30px] overflow-hidden stack-shadow-lg safe-pb sm:pb-0 texture-paper ${closing ? 'animate-bottomsheet-out' : dragging ? '' : 'animate-bottomsheet'}`}
+        className={`relative w-full max-w-md sm:max-w-2xl flex flex-col max-h-[92dvh] sm:max-h-[85dvh] select-none border-[3px] border-b-0 sm:border-b-[3px] border-black rounded-t-[30px] sm:rounded-[30px] overflow-hidden stack-shadow-lg safe-pb sm:pb-0 texture-paper bg-premium-gold ${closing ? 'animate-bottomsheet-out' : dragging ? '' : 'animate-bottomsheet'}`}
         style={{
-          background: GOLD_BG,
+          // Feuille haute et étroite : dégradé plus vertical que les pastilles.
+          ['--premium-gold-angle' as string]: '160deg',
           transform: !closing && dragY ? `translateY(${dragY}px)` : undefined,
           // Fermeture après glissement : l'animation de sortie part de la position
           // du doigt (--sheet-drag, cf. bottomsheet-out). Pas de transition pendant
@@ -272,7 +271,7 @@ const PremiumModal = ({ isOpen, onClose, lockOnOpen = false, previewName: previe
               <span aria-hidden className="block mx-auto w-11 h-1.5 rounded-full bg-black/25" />
             </div>
             <span className="animate-player-pop w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center rounded-3xl bg-black border-[3px] border-black stack-shadow">
-              <LuCrown size={44} strokeWidth={2.25} className="text-warning-orange" />
+              <LuCrown size={44} strokeWidth={2.25} className="text-premium-300" />
             </span>
             <h2 className="relative mt-1 mb-0 font-display font-extrabold text-[28px] sm:text-[36px] leading-none text-black tracking-tight">
               {celebration === 'restore' ? t.premium.welcomeRestoredTitle : t.premium.welcomeTitle}
@@ -293,7 +292,7 @@ const PremiumModal = ({ isOpen, onClose, lockOnOpen = false, previewName: previe
               type="button"
               onClick={tryClose}
               onPointerDown={(e) => e.stopPropagation()}
-              className="relative mt-1 w-full h-13 sm:h-15 flex items-center justify-center rounded-2xl border-[3px] border-black bg-black font-display font-extrabold text-base sm:text-lg text-warning-orange stack-shadow active:scale-[0.98] transition-transform cursor-pointer"
+              className="relative mt-1 w-full h-13 sm:h-15 flex items-center justify-center rounded-2xl border-[3px] border-black bg-black font-display font-extrabold text-base sm:text-lg text-premium-300 stack-shadow active:scale-[0.98] transition-transform cursor-pointer"
             >
               {t.premium.welcomeCta}
             </button>
@@ -318,8 +317,8 @@ const PremiumModal = ({ isOpen, onClose, lockOnOpen = false, previewName: previe
           {/* HERO : couronne + titre (agrandis sur tablette pour remplir l'espace) */}
           <div className="flex flex-col items-center text-center px-5 pt-1 pb-2.5 sm:pt-3 sm:pb-4">
             <span className="w-14 h-14 sm:w-20 sm:h-20 flex items-center justify-center rounded-2xl sm:rounded-3xl bg-black border-[3px] border-black stack-shadow">
-              <LuCrown size={28} strokeWidth={2.25} className="text-warning-orange sm:hidden" />
-              <LuCrown size={40} strokeWidth={2.25} className="text-warning-orange hidden sm:block" />
+              <LuCrown size={28} strokeWidth={2.25} className="text-premium-300 sm:hidden" />
+              <LuCrown size={40} strokeWidth={2.25} className="text-premium-300 hidden sm:block" />
             </span>
             <h2 className="relative mt-2 sm:mt-3.5 mb-0 font-display font-extrabold text-[26px] sm:text-[34px] leading-none text-black tracking-tight">
               {t.premium.title}
@@ -352,7 +351,7 @@ const PremiumModal = ({ isOpen, onClose, lockOnOpen = false, previewName: previe
               le pavé le plus lourd de la feuille.
           <div className="flex items-center gap-3 rounded-xl border-2 border-black bg-white/75 px-3.5 py-2.5">
             <span className="shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-black border-2 border-black">
-              <LuBellOff size={18} strokeWidth={2.75} className="text-warning-orange" />
+              <LuBellOff size={18} strokeWidth={2.75} className="text-premium-300" />
             </span>
             <div className="flex flex-col leading-tight">
               <span className="font-display font-extrabold text-base text-black tracking-tight">
@@ -364,13 +363,13 @@ const PremiumModal = ({ isOpen, onClose, lockOnOpen = false, previewName: previe
           */}
 
           <ul className="flex flex-col gap-2 m-0 p-0 list-none">
-            <Perk icon={<LuMessagesSquare size={16} strokeWidth={2.5} className="text-warning-orange" />}>
+            <Perk icon={<LuMessagesSquare size={16} strokeWidth={2.5} className="text-premium-300" />}>
               {t.premium.perkQuestions}
             </Perk>
-            <Perk icon={<LuLayers size={16} strokeWidth={2.5} className="text-warning-orange" />}>
+            <Perk icon={<LuLayers size={16} strokeWidth={2.5} className="text-premium-300" />}>
               {t.premium.perkThemes}
             </Perk>
-            <Perk icon={<LuInfinity size={16} strokeWidth={2.5} className="text-warning-orange" />}>
+            <Perk icon={<LuInfinity size={16} strokeWidth={2.5} className="text-premium-300" />}>
               {t.premium.perkFuture}
             </Perk>
           </ul>
@@ -385,7 +384,7 @@ const PremiumModal = ({ isOpen, onClose, lockOnOpen = false, previewName: previe
                   type="button"
                   onClick={handlePurchase}
                   disabled={busy}
-                  className="relative w-full h-13 sm:h-15 flex items-center justify-center gap-2 rounded-2xl border-[3px] border-black bg-black font-display font-extrabold text-base sm:text-lg text-warning-orange stack-shadow active:scale-[0.98] transition-transform disabled:opacity-60 cursor-pointer"
+                  className="relative w-full h-13 sm:h-15 flex items-center justify-center gap-2 rounded-2xl border-[3px] border-black bg-black font-display font-extrabold text-base sm:text-lg text-premium-300 stack-shadow active:scale-[0.98] transition-transform disabled:opacity-60 cursor-pointer"
                 >
                   <LuCrown size={20} strokeWidth={2.5} />
                   <span>{busy ? t.premium.purchasing : price ? `${t.premium.unlock} · ${price}` : t.premium.unlock}</span>
@@ -399,7 +398,7 @@ const PremiumModal = ({ isOpen, onClose, lockOnOpen = false, previewName: previe
                   className="pointer-events-none absolute -top-3 -right-1.5 rotate-[8deg]"
                 >
                   <span
-                    className="animate-player-pop block px-2 py-0.5 rounded-md border-2 border-black bg-warning-100 stack-shadow-sm font-display font-extrabold text-[11px] sm:text-xs uppercase tracking-wide text-black whitespace-nowrap"
+                    className="animate-player-pop block px-2 py-0.5 rounded-md border-2 border-black bg-premium-100 stack-shadow-sm font-display font-extrabold text-[11px] sm:text-xs uppercase tracking-wide text-black whitespace-nowrap"
                     style={{ animationDelay: '350ms' }}
                   >
                     {t.premium.lifetimeSticker}

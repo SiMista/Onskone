@@ -5,9 +5,22 @@ apply plugin: 'com.android.application'
 // dernier commit ayant modifie VERSION ; versionCode = nb total de commits.
 // rootDir = frontend/android -> la racine du repo est deux niveaux au-dessus.
 def repoRoot = new File(rootDir, '../..')
-def gitVersionName = { ->
+// Garde-fou (meme regle que scripts/app-version.mjs) : sur un clone superficiel,
+// PATCH et versionCode seraient faux EN SILENCE -> on prefere faire echouer le build.
+def assertFullHistory = { ->
+    def shallow = ''
     try {
-        def mv = new File(repoRoot, 'VERSION').text.trim().replaceFirst('^v', '')
+        shallow = 'git rev-parse --is-shallow-repository'.execute(null, repoRoot).text.trim()
+    } catch (ignored) {}
+    if (shallow == 'true') {
+        throw new GradleException('Clone git superficiel : version incalculable. Lance `git fetch --unshallow`.')
+    }
+}
+def gitVersionName = { ->
+    assertFullHistory()
+    try {
+        // VERSION tel que commite dans HEAD (pas le working tree), comme app-version.mjs.
+        def mv = 'git show HEAD:VERSION'.execute(null, repoRoot).text.trim().replaceFirst('^v', '')
         def parts = mv.split('\\.')
         def bump = 'git log -1 --format=%H -- VERSION'.execute(null, repoRoot).text.trim()
         def count = (bump ? "git rev-list ${bump}..HEAD --count" : 'git rev-list --count HEAD')
@@ -19,6 +32,7 @@ def gitVersionName = { ->
     }
 }
 def gitVersionCode = { ->
+    assertFullHistory()
     try {
         return 'git rev-list --count HEAD'.execute(null, repoRoot).text.trim().toInteger()
     } catch (ignored) {

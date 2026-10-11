@@ -2,78 +2,115 @@ import { describe, it, expect } from '@jest/globals';
 import {
   getPhaseDuration,
   getBasePhaseDuration,
-  clampTimeMultiplier,
+  isGameSpeed,
   RoundPhase,
   GAME_CONSTANTS,
 } from '@onskone/shared';
+import type { GameSpeed } from '@onskone/shared';
+import { speedFromLegacyMultiplier, legacyMultiplierFromSpeed } from '../src/utils/legacyTimeMultiplier';
 
 const T = GAME_CONSTANTS.TIMERS;
 
 describe('getBasePhaseDuration', () => {
-  it('returns the fixed base for non-GUESSING timed phases', () => {
-    expect(getBasePhaseDuration(RoundPhase.QUESTION_SELECTION, 3)).toBe(T.QUESTION_SELECTION);
-    expect(getBasePhaseDuration(RoundPhase.SUBSTITUTE_SELECTION, 3)).toBe(T.SUBSTITUTE_SELECTION);
-    expect(getBasePhaseDuration(RoundPhase.ANSWERING, 3)).toBe(T.ANSWERING);
-    expect(getBasePhaseDuration(RoundPhase.SUBSTITUTE_ANSWERING, 3)).toBe(T.SUBSTITUTE_ANSWERING);
+  it('returns the fixed durations of the requested speed', () => {
+    for (const speed of ['normal', 'fast'] as GameSpeed[]) {
+      expect(getBasePhaseDuration(RoundPhase.QUESTION_SELECTION, 3, speed)).toBe(T[speed].QUESTION_SELECTION);
+      expect(getBasePhaseDuration(RoundPhase.SUBSTITUTE_SELECTION, 3, speed)).toBe(T[speed].SUBSTITUTE_SELECTION);
+      expect(getBasePhaseDuration(RoundPhase.ANSWERING, 3, speed)).toBe(T[speed].ANSWERING);
+      expect(getBasePhaseDuration(RoundPhase.SUBSTITUTE_ANSWERING, 3, speed)).toBe(T[speed].SUBSTITUTE_ANSWERING);
+    }
   });
 
-  it('returns 0 for phases without a timer (REVEAL)', () => {
+  it('returns 0 for REVEAL (no timer)', () => {
     expect(getBasePhaseDuration(RoundPhase.REVEAL, 3)).toBe(0);
   });
 
-  it('scales GUESSING by GUESSING_EXTRA_PER_PLAYER beyond 3 players', () => {
-    const extra = GAME_CONSTANTS.GUESSING_EXTRA_PER_PLAYER;
-    expect(getBasePhaseDuration(RoundPhase.GUESSING, 3)).toBe(T.GUESSING);
-    expect(getBasePhaseDuration(RoundPhase.GUESSING, 5)).toBe(T.GUESSING + 2 * extra);
-    expect(getBasePhaseDuration(RoundPhase.GUESSING, 10)).toBe(T.GUESSING + 7 * extra);
+  it('adds GUESSING_EXTRA_PER_PLAYER beyond 3 players, per speed', () => {
+    for (const speed of ['normal', 'fast'] as GameSpeed[]) {
+      const { GUESSING, GUESSING_EXTRA_PER_PLAYER: extra } = T[speed];
+      expect(getBasePhaseDuration(RoundPhase.GUESSING, 3, speed)).toBe(GUESSING);
+      expect(getBasePhaseDuration(RoundPhase.GUESSING, 5, speed)).toBe(GUESSING + 2 * extra);
+      expect(getBasePhaseDuration(RoundPhase.GUESSING, 10, speed)).toBe(GUESSING + 7 * extra);
+    }
   });
 
   it('never reduces GUESSING below the base for fewer than 3 players', () => {
-    expect(getBasePhaseDuration(RoundPhase.GUESSING, 2)).toBe(T.GUESSING);
+    expect(getBasePhaseDuration(RoundPhase.GUESSING, 2)).toBe(T.normal.GUESSING);
+  });
+
+  it('defaults to the normal speed', () => {
+    expect(GAME_CONSTANTS.GAME_SPEED_DEFAULT).toBe('normal');
+    expect(getBasePhaseDuration(RoundPhase.ANSWERING, 3)).toBe(T.normal.ANSWERING);
+  });
+
+  it('falls back to the default speed for an unknown value', () => {
+    expect(getBasePhaseDuration(RoundPhase.ANSWERING, 3, 'turbo' as GameSpeed)).toBe(T.normal.ANSWERING);
   });
 });
 
-describe('clampTimeMultiplier', () => {
-  const levels = GAME_CONSTANTS.TIME_MULTIPLIER_LEVELS;
-  it('clamps into the allowed range', () => {
-    expect(clampTimeMultiplier(0.1)).toBe(levels[0]);
-    expect(clampTimeMultiplier(9)).toBe(levels[levels.length - 1]);
-    expect(clampTimeMultiplier(1)).toBe(1);
+describe('fast speed', () => {
+  it('is never slower than normal', () => {
+    for (const phase of [
+      RoundPhase.QUESTION_SELECTION,
+      RoundPhase.SUBSTITUTE_SELECTION,
+      RoundPhase.ANSWERING,
+      RoundPhase.SUBSTITUTE_ANSWERING,
+      RoundPhase.GUESSING,
+    ]) {
+      for (const players of [3, 8, GAME_CONSTANTS.MAX_PLAYERS]) {
+        expect(getPhaseDuration(phase, 'fast', players)).toBeLessThanOrEqual(getPhaseDuration(phase, 'normal', players));
+      }
+    }
   });
-  it('falls back to the default for non-finite input (NaN / Infinity)', () => {
-    expect(clampTimeMultiplier(NaN)).toBe(GAME_CONSTANTS.TIME_MULTIPLIER_DEFAULT);
-    expect(clampTimeMultiplier(Infinity)).toBe(GAME_CONSTANTS.TIME_MULTIPLIER_DEFAULT);
+});
+
+describe('isGameSpeed', () => {
+  it('accepts the known speeds (debug included, filtered server-side)', () => {
+    expect(isGameSpeed('fast')).toBe(true);
+    expect(isGameSpeed('normal')).toBe(true);
+    expect(isGameSpeed('debug')).toBe(true);
+  });
+  it('rejects anything else', () => {
+    expect(isGameSpeed('slow')).toBe(false);
+    expect(isGameSpeed(1)).toBe(false);
+    expect(isGameSpeed(undefined)).toBe(false);
+    expect(isGameSpeed('toString')).toBe(false); // pas de fuite par le prototype
   });
 });
 
 describe('getPhaseDuration', () => {
-  it('applies the base durations at the default multiplier', () => {
-    expect(getPhaseDuration(RoundPhase.QUESTION_SELECTION, 1, 3)).toBe(45);
-    expect(getPhaseDuration(RoundPhase.ANSWERING, 1, 3)).toBe(120);
-    expect(getPhaseDuration(RoundPhase.GUESSING, 1, 3)).toBe(120);
-  });
-
-  it('combines the GUESSING per-player rule with the multiplier', () => {
-    // base 5 players = 160, *1.3 = 208
-    expect(getPhaseDuration(RoundPhase.GUESSING, 1, 5)).toBe(160);
-    expect(getPhaseDuration(RoundPhase.GUESSING, 1.3, 5)).toBe(Math.round(160 * 1.3));
-  });
-
-  it('rounds the multiplied duration and clamps the multiplier', () => {
-    expect(getPhaseDuration(RoundPhase.ANSWERING, 0.7, 3)).toBe(Math.round(120 * 0.7)); // 84
-    expect(getPhaseDuration(RoundPhase.ANSWERING, 1.3, 3)).toBe(Math.round(120 * 1.3)); // 156
-    // Out-of-range multiplier is clamped to 1.3 before applying.
-    expect(getPhaseDuration(RoundPhase.ANSWERING, 99, 3)).toBe(Math.round(120 * 1.3));
-    // NaN multiplier falls back to the default (1).
-    expect(getPhaseDuration(RoundPhase.ANSWERING, NaN, 3)).toBe(120);
+  it('uses the current normal values', () => {
+    expect(getPhaseDuration(RoundPhase.QUESTION_SELECTION, 'normal', 3)).toBe(45);
+    expect(getPhaseDuration(RoundPhase.ANSWERING, 'normal', 3)).toBe(110);
+    expect(getPhaseDuration(RoundPhase.GUESSING, 'normal', 3)).toBe(100);
+    // 100 + (8 - 3) * 15 = 175.
+    expect(getPhaseDuration(RoundPhase.GUESSING, 'normal', 8)).toBe(175);
   });
 
   it('floors any timerless phase at 1 second', () => {
-    expect(getPhaseDuration(RoundPhase.REVEAL, 1, 3)).toBe(1);
-    expect(getPhaseDuration(RoundPhase.REVEAL, 1.3, 8)).toBe(1);
+    expect(getPhaseDuration(RoundPhase.REVEAL, 'normal', 3)).toBe(1);
+    expect(getPhaseDuration(RoundPhase.REVEAL, 'fast', 8)).toBe(1);
   });
 
-  it('defaults playerCount to 3 when omitted', () => {
-    expect(getPhaseDuration(RoundPhase.GUESSING)).toBe(120);
+  it('defaults speed to normal and playerCount to 3 when omitted', () => {
+    expect(getPhaseDuration(RoundPhase.GUESSING)).toBe(T.normal.GUESSING);
+  });
+});
+
+describe('legacy time multiplier bridge', () => {
+  it('maps old multipliers to a speed', () => {
+    expect(speedFromLegacyMultiplier(0.7)).toBe('fast');
+    expect(speedFromLegacyMultiplier(1)).toBe('normal');
+    // L'ancien niveau "Longue" n'existe plus : il retombe sur normal.
+    expect(speedFromLegacyMultiplier(1.3)).toBe('normal');
+    expect(speedFromLegacyMultiplier(30)).toBe('debug');
+    expect(speedFromLegacyMultiplier(NaN)).toBe('normal');
+    expect(speedFromLegacyMultiplier('n/a')).toBe('normal');
+  });
+
+  it('round-trips every speed', () => {
+    for (const speed of ['fast', 'normal', 'debug'] as GameSpeed[]) {
+      expect(speedFromLegacyMultiplier(legacyMultiplierFromSpeed(speed))).toBe(speed);
+    }
   });
 });

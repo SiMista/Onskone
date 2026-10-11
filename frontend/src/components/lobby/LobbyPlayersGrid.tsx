@@ -9,6 +9,8 @@ interface LobbyPlayersGridProps {
   /** Ids des joueurs présents au premier render (pas d'animation de "pop" pour eux). */
   initialPlayerIds: Set<string> | null;
   activePlayersCount: number;
+  /** Joueurs exclus du rôle de pilier (badge "Pas pilier" sur leur carte). */
+  excludedLeaderIds: string[];
   onKick: (playerId: string) => void;
   onPromote: (playerId: string) => void;
   t: Dictionary;
@@ -26,6 +28,7 @@ const LobbyPlayersGrid = ({
   currentPlayer,
   initialPlayerIds,
   activePlayersCount,
+  excludedLeaderIds,
   onKick,
   onPromote,
   t,
@@ -36,7 +39,10 @@ const LobbyPlayersGrid = ({
         <p className="m-0 font-display font-bold text-sm text-gray-800">{t.lobby.inTheRoom}</p>
         <p className="m-0 text-xs text-gray-400">{t.lobby.connectedCount(activePlayersCount)}</p>
       </div>
-      <ul className="list-none w-full m-0 p-0 grid grid-cols-3 md:grid-cols-4 gap-2">
+      {/* auto-rows-fr + tuiles h-full : toutes les tuiles font la même taille, quel que
+          soit leur contenu (cadre premium, case vide). Sur mobile le contenu dépasse le
+          carré, c'est donc lui qui dicte la hauteur : sans ça, chaque tuile avait la sienne. */}
+      <ul className="list-none w-full m-0 p-0 grid grid-cols-3 md:grid-cols-4 auto-rows-fr gap-2">
         {players.map((player, index) => (
           <li key={player.id} className={`min-w-0 ${initialPlayerIds?.has(player.id) ? '' : 'animate-player-pop'}`} style={initialPlayerIds?.has(player.id) ? undefined : { animationDelay: `${Math.min(index, 6) * 50}ms` }}>
             <PlayerCard
@@ -49,6 +55,7 @@ const LobbyPlayersGrid = ({
               isActive={player.isActive}
               isFirstPlayer={index < 3}
               premium={player.isPremium}
+              notLeader={excludedLeaderIds.includes(player.id)}
               variant="square"
               onKick={onKick}
               onPromote={onPromote}
@@ -57,9 +64,10 @@ const LobbyPlayersGrid = ({
         ))}
         {players.length < GAME_CONFIG.MAX_PLAYERS && (
           <li className="min-w-0">
-            <div className="relative aspect-square flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-[10px] w-full border-2 border-dashed border-gray-300 bg-gray-50/50">
+            <div className="relative aspect-square h-full flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-[10px] w-full border-2 border-dashed border-gray-300 bg-gray-50/50">
               <div className="w-16 h-16 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-300 text-xl">?</div>
-              <span className="text-xs text-gray-400 italic text-center truncate w-full px-1">...</span>
+              {/* text-sm : même hauteur de ligne que le nom d'une tuile joueur */}
+              <span className="text-sm text-gray-400 italic text-center truncate w-full px-1">...</span>
             </div>
           </li>
         )}

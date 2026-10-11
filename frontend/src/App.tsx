@@ -14,6 +14,7 @@ import { initPremium } from './utils/premium';
 import { installGlobalErrorLogging } from './utils/clientLog';
 import UpdateRequiredModal from './components/UpdateRequiredModal';
 import AppDownloadBanner from './components/AppDownloadBanner';
+import { AppErrorBoundary } from './components/AppErrorBoundary';
 
 const Lobby = lazy(() => import('./pages/Lobby'));
 const Game = lazy(() => import('./pages/Game'));
@@ -144,6 +145,7 @@ const App = () => {
   return (
     <ToastProvider>
       <LocaleProvider>
+      <AppErrorBoundary>
       <Router>
         <AppShell>
           <UpdateRequiredModal />
@@ -173,6 +175,7 @@ const App = () => {
           </Suspense>
         </AppShell>
       </Router>
+      </AppErrorBoundary>
       </LocaleProvider>
     </ToastProvider>
   );

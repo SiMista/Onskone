@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import socket from '../utils/socket';
 import Timer from './Timer';
 import { GameCard, IPlayer, RoundPhase } from '@onskone/shared';
+import type { GameSpeed } from '@onskone/shared';
 import { getPhaseDuration } from '../constants/game';
 import { getRandomFunFact, getNextFunFact } from '../constants/funFacts';
 import { playSound } from '../utils/sounds';
@@ -12,11 +13,11 @@ import { useSwipe } from '../hooks/useSwipe';
 import { useSocketEvent } from '../hooks';
 import { useLocale } from '../i18n';
 
-const QuestionSelection = ({ lobbyCode, isLeader, leader, timeMultiplier }: {
+const QuestionSelection = ({ lobbyCode, isLeader, leader, gameSpeed }: {
   lobbyCode: string;
   isLeader: boolean;
   leader: Pick<IPlayer, 'id' | 'name' | 'avatarId' | 'isPremium'>;
-  timeMultiplier: number;
+  gameSpeed: GameSpeed;
 }) => {
   const { t } = useLocale();
   const [cards, setCards] = useState<GameCard[]>([]);
@@ -35,7 +36,7 @@ const QuestionSelection = ({ lobbyCode, isLeader, leader, timeMultiplier }: {
   const [revealedIdx, setRevealedIdx] = useState<Set<number>>(new Set());
 
   const currentCard = cards.length > 0 ? cards[currentCardIndex] : null;
-  const phaseDuration = getPhaseDuration(RoundPhase.QUESTION_SELECTION, timeMultiplier);
+  const phaseDuration = getPhaseDuration(RoundPhase.QUESTION_SELECTION, gameSpeed);
 
   // Jouer le son au début de la phase
   useEffect(() => {

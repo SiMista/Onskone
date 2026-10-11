@@ -1,4 +1,4 @@
-import { ILobby, GAME_CONSTANTS, SelectedDecks, GameMode, Locale, DEFAULT_LOCALE } from '@onskone/shared';
+import { ILobby, GAME_CONSTANTS, SelectedDecks, GameMode, GameSpeed, Locale, DEFAULT_LOCALE } from '@onskone/shared';
 import { IGame } from '../types/IGame';
 import type { ServerPlayer } from '../types/ServerPlayer.js';
 import { getDefaultSelectedDecks } from '../data/questionsRepository.js';
@@ -14,7 +14,8 @@ export class Lobby implements ILobby {
     selectedDecks: SelectedDecks;
     gameMode: GameMode;
     guessMyAnswerMode: boolean;
-    timeMultiplier: number;
+    gameSpeed: GameSpeed;
+    excludedLeaderIds: string[];
     locale: Locale;
     /**
      * Statut premium de l'host (serveur-only, non diffusé dans ILobby).
@@ -32,7 +33,8 @@ export class Lobby implements ILobby {
         this.selectedDecks = getDefaultSelectedDecks(locale);
         this.gameMode = 'local';
         this.guessMyAnswerMode = false;
-        this.timeMultiplier = GAME_CONSTANTS.TIME_MULTIPLIER_DEFAULT;
+        this.gameSpeed = GAME_CONSTANTS.GAME_SPEED_DEFAULT;
+        this.excludedLeaderIds = [];
         this.hostIsPremium = false;
     }
 
@@ -58,8 +60,10 @@ export class Lobby implements ILobby {
 
     removePlayer(player: ServerPlayer): void {
         this.players = this.players.filter(p => p.id !== player.id);
-        // Chokepoint unique de sortie d'un joueur : purge son entrée d'index.
+        // Chokepoint unique de sortie d'un joueur : purge son entrée d'index et son
+        // éventuelle exclusion du rôle de pilier (un id parti ne doit pas traîner).
         unregisterSocket(player.socketId);
+        this.excludedLeaderIds = this.excludedLeaderIds.filter(id => id !== player.id);
     }
 
     getPlayer(playerId: string): ServerPlayer | undefined {

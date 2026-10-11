@@ -42,4 +42,10 @@ export interface IGame {
 
   /** Statut du jeu */
   status: GameStatus;
+
+  /**
+   * Nombre de manches prévues (piliers possibles au démarrage). Optionnel : absent
+   * des serveurs d'avant l'exclusion de piliers.
+   */
+  totalRounds?: number;
 }

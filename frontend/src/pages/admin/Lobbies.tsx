@@ -6,6 +6,8 @@ import { fetchAdminLobbies } from '../../utils/adminDataApi';
 import { CLUSTER } from './shared';
 
 const LOBBIES_REFRESH_MS = 5000;
+// Trafic, visiteurs et sources : suivis par Umami (script dans index.html).
+const UMAMI_DASHBOARD_URL = 'https://stats.onskone.fr/';
 
 const PHASE_META: Record<AdminLobbySummary['phase'], { label: string; pill: string; dot: string }> = {
   lobby: {
@@ -166,6 +168,17 @@ export const LobbiesPanel = ({ active, refreshKey }: { active: boolean; refreshK
           <span className="font-mono text-[11px] text-white/30 whitespace-nowrap">
             {lastFetch ? `maj ${formatAge(lastFetch)}` : '…'} · refresh 5s
           </span>
+
+          <a
+            href={UMAMI_DASHBOARD_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-sky-400/30 bg-sky-500/[0.06] text-sky-200 hover:bg-sky-500/15 font-mono text-[11px] uppercase tracking-wider transition-colors whitespace-nowrap"
+          >
+            <Icon icon="mdi:chart-line" className="w-3.5 h-3.5" />
+            dashboard umami
+            <Icon icon="mdi:open-in-new" className="w-3 h-3 opacity-60" />
+          </a>
         </div>
       </div>
 

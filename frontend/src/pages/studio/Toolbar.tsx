@@ -1,4 +1,5 @@
 import { GameMode, GAME_CONSTANTS } from '@onskone/shared';
+import type { GameSpeed } from '@onskone/shared';
 import { Layout, SlotConfig, SELECT_CLS } from './shared';
 
 // Variants compacts (locaux) pour la Toolbar, plus denses que le PILL_ICON
@@ -20,8 +21,8 @@ interface ToolbarProps {
   setDebugTimers: (v: boolean | ((prev: boolean) => boolean)) => void;
   gameMode: GameMode;
   setGameMode: (m: GameMode) => void;
-  timeMultiplier: number;
-  setTimeMultiplier: (m: number) => void;
+  gameSpeed: GameSpeed;
+  setGameSpeed: (s: GameSpeed) => void;
   running: boolean;
   allBots: boolean;
   premium: boolean;
@@ -42,7 +43,7 @@ export const Toolbar = ({
   view, setView,
   slots, layout, setLayout, zoom, setZoom, debugTimers, setDebugTimers,
   gameMode, setGameMode,
-  timeMultiplier, setTimeMultiplier,
+  gameSpeed, setGameSpeed,
   running, allBots, premium, onTogglePremium, burstCount, setBurstCount,
   limitBreaker, onToggleLimitBreaker,
   onAddSlot, onRemoveLastSlot, onToggleAllBots,
@@ -131,19 +132,19 @@ export const Toolbar = ({
             className={COMPACT_CLUSTER}
             title={debugTimers
               ? 'Rythme de jeu — SANS EFFET tant que les slow timers (⏱ 1h) sont actifs. Décoche ⏱ pour le tester.'
-              : 'Rythme de jeu — multiplicateur de durée des phases (appliqué à la création du lobby).'}
+              : 'Rythme de jeu — vitesse (durées des phases) appliquée à la création du lobby.'}
           >
-            {GAME_CONSTANTS.TIME_MULTIPLIER_LEVELS.map((lvl, i) => {
-              const on = lvl === timeMultiplier;
-              const emoji = i === 0 ? '🐇' : i === 1 ? '⏱' : '🐢';
+            {GAME_CONSTANTS.GAME_SPEEDS.map((speed) => {
+              const on = speed === gameSpeed;
+              const emoji = speed === 'fast' ? '🐇' : '⏱';
               return (
                 <button
-                  key={lvl}
+                  key={speed}
                   type="button"
-                  onClick={() => setTimeMultiplier(lvl)}
+                  onClick={() => setGameSpeed(speed)}
                   disabled={running}
                   className={`${COMPACT_ICON} disabled:opacity-25 disabled:cursor-not-allowed ${on ? '!bg-amber-300/15 !border-amber-300/50 !text-amber-100' : ''}`}
-                  title={`${lvl}×`}
+                  title={speed}
                 >{emoji}</button>
               );
             })}

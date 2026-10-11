@@ -134,12 +134,9 @@ export function scheduleLeaderSkipTimeout(
                 reason: 'leader_disconnected'
             });
 
-            // Vérifier s'il reste des joueurs éligibles pour être pilier
-            const activePlayers = currentLobby.players.filter(p => p.isActive);
-            const eligibleLeaders = currentGame.getEligibleLeaders();
-
-            // Si pas assez de joueurs OU pas de pilier éligible → terminer la partie
-            if (activePlayers.length < 2 || eligibleLeaders.length === 0) {
+            // Plus de manche à jouer (nombre prévu atteint, pas assez de joueurs ou plus
+            // de pilier éligible) → terminer la partie. Même règle que nextRound().
+            if (currentGame.isGameOver()) {
                 endGame(io, lobbyCode, currentLobby, currentGame as Game);
             } else {
                 // Démarrer le round suivant avec un nouveau pilier

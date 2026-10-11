@@ -11,6 +11,7 @@
     "@capacitor/ios": "^8.4.0",
     "@capacitor/share": "^8.0.1",
     "@capacitor/splash-screen": "^8.0.1",
+    "@capawesome/capacitor-app-update": "8.0.5",
     "@iconify/react": "^6.0.2",
     "@onskone/shared": "workspace:*",
     "@revenuecat/purchases-capacitor": "^13.2.3",

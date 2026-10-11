@@ -1,5 +1,6 @@
 import { GameCard } from '@onskone/shared';
 import { getCategoryColor } from '../constants/game';
+import PremiumCardBadge from './PremiumCardBadge';
 
 const QuestionCard = ({ question, card, variant = 'full', subtitle, subtitleBadge }: {
   question: string;
@@ -28,6 +29,12 @@ const QuestionCard = ({ question, card, variant = 'full', subtitle, subtitleBadg
           >
             {card.category}
           </span>
+        )}
+        {card?.premium && (
+          <PremiumCardBadge
+            size={isCompact ? 'sm' : 'md'}
+            className={`absolute right-2 ${isCompact ? 'top-1.5 md:top-2' : 'top-2 md:top-2.5'}`}
+          />
         )}
         <div className={card ? (isCompact ? 'pt-4 md:pt-5' : 'pt-5 md:pt-6') : ''}>
           {card && isCompact && (

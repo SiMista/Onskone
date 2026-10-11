@@ -2,7 +2,6 @@ import { useState } from 'react';
 import AboutModal from './AboutModal';
 import ContactModal from './ContactModal';
 import MentionsModal from './MentionsModal';
-import ReportTrigger from '../ReportTrigger';
 import { useLocale } from '../../i18n';
 
 type ModalType = 'about' | 'mentions' | 'contact' | null;
@@ -24,11 +23,6 @@ const Footer = () => {
         className="w-full py-5 text-center text-white/60 text-[10px] md:text-xs select-none pointer-events-none"
         style={{ paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom, 0px))' }}
       >
-        <div className="mb-2">
-          <span className="pointer-events-auto inline-block">
-            <ReportTrigger variant="footer" label={t.report.footerLabel} />
-          </span>
-        </div>
         <div className="flex justify-center items-center gap-3 md:gap-5 whitespace-nowrap">
           <button
             type="button"

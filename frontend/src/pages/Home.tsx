@@ -14,15 +14,15 @@ import PremiumModal from '../components/PremiumModal';
 import ConfirmModal from '../components/ConfirmModal';
 import HowToPlayCarousel from '../components/HowToPlayCarousel';
 import HowToPlayButton from '../components/HowToPlayButton';
-import LanguageSwitcher from '../components/LanguageSwitcher';
+import SettingsButton from '../components/SettingsButton';
 import { useLocale } from '../i18n';
 import { useToast } from '../components/Toast';
-import type { Locale } from '@onskone/shared';
+import type { Locale, IPlayer, ReclaimablePlayer } from '@onskone/shared';
 import BackButton from '../components/BackButton';
 import { Icon } from '@iconify/react';
 import { useSocketEvent } from '../hooks';
 import { useDocumentMeta } from '../hooks/useDocumentMeta';
-import { GameMode, GameStatus } from '@onskone/shared';
+import { GameMode, GameStatus, isGameSpeed } from '@onskone/shared';
 import { GAME_CONFIG, AVATARS } from '../constants/game';
 import { STICKER_FILTER } from '../constants/icons';
 import {
@@ -32,7 +32,19 @@ import {
   getUnseenAchievementIds,
   markAchievementsAsSeen,
 } from '../utils/playerStats';
-import { storeReconnectToken, getLastGame, clearLastGame } from '../utils/playerHelpers';
+import {
+  storeReconnectToken,
+  storeCurrentPlayer,
+  storeLobbyIdentity,
+  getLastGame,
+  clearLastGame,
+} from '../utils/playerHelpers';
+import ReclaimPlayerModal from '../components/ReclaimPlayerModal';
+
+// Popup de reprise sans place libre : relance toutes les 5 s pendant 1 min (le
+// temps que le serveur constate la mort de l'ancien socket, ~25 s).
+const RECLAIM_POLL_MS = 5_000;
+const RECLAIM_MAX_POLLS = 12;
 import { usePremium } from '../utils/premium';
 import { useAppBannerVisible } from '../utils/appBanner';
 
@@ -131,6 +143,9 @@ const Home = () => {
   const isPremium = usePremium();
   // Partie en cours mémorisée et confirmée par le serveur : on propose d'y revenir.
   const [resumeGame, setResumeGame] = useState<{ lobbyCode: string } | null>(null);
+  // Partie en cours dont des joueurs sont déconnectés : « tu étais qui ? » permet
+  // de reprendre sa place avec le seul code du salon (session perdue).
+  const [reclaim, setReclaim] = useState<{ lobbyCode: string; players: ReclaimablePlayer[] } | null>(null);
   // Code saisi dans la popup "Rejoindre" en cours de validation (getLobbyInfo).
   // Tant qu'il est posé, la réponse lobbyInfo concerne la popup (pas l'URL).
   const [pendingJoinCode, setPendingJoinCode] = useState<string | null>(null);
@@ -250,14 +265,11 @@ const Home = () => {
         window.parent.postMessage({ type: 'studio:lobbyCreated', lobbyCode: data.lobbyCode }, '*');
       } catch { /* silent */ }
     }
-    // Studio: appliquer le multiplicateur de temps choisi dans la toolbar. Le créateur
-    // est l'hôte et déjà dans la room, donc le handler host-only passe.
-    const studioMult = searchParams.get('studioTimeMultiplier');
-    if (studioMult !== null) {
-      const m = Number(studioMult);
-      if (Number.isFinite(m)) {
-        socket.emit('updateTimeMultiplier', { lobbyCode: data.lobbyCode, timeMultiplier: m });
-      }
+    // Studio: appliquer la vitesse choisie dans la toolbar. Le créateur est l'hôte
+    // et déjà dans la room, donc le handler host-only passe.
+    const studioSpeed = searchParams.get('studioGameSpeed');
+    if (isGameSpeed(studioSpeed)) {
+      socket.emit('updateGameSpeed', { lobbyCode: data.lobbyCode, gameSpeed: studioSpeed });
     }
     const name = urlPlayerName || playerName;
     navigate(`/lobby/${data.lobbyCode}?playerName=${encodeURIComponent(name)}&avatarId=${avatarId}`);
@@ -290,10 +302,47 @@ const Home = () => {
     setHighlightedAchievementIds(new Set());
   }, []);
 
-  const handleError = useCallback((data: { message: string }) => {
+  const handleError = useCallback((data: { message: string; code?: string }) => {
     console.error('Erreur:', data.message);
+    // Reprise refusée (le joueur est finalement connecté) : texte traduit + liste
+    // rafraîchie, plutôt que le message serveur brut.
+    if (reclaim && data.code === 'CONFLICT') {
+      showToast(t.home.reclaim.alreadyConnected, 'warning', 5000);
+      socket.emit('getLobbyInfo', { lobbyCode: reclaim.lobbyCode });
+      return;
+    }
     showToast(data.message, 'error');
-  }, [showToast]);
+  }, [showToast, reclaim, t]);
+
+  // Partie en cours : impossible d'y entrer en nouveau joueur. Seule issue, reprendre
+  // la place d'un joueur déconnecté (session perdue). Liste vide = personne de
+  // déconnecté POUR L'INSTANT : juste après un crash, le serveur peut mettre ~25 s à
+  // constater la mort de l'ancien socket. La popup reste ouverte et se rafraîchit
+  // (cf. effet de relance) plutôt que de renvoyer le joueur à l'accueil.
+  const offerReclaim = useCallback((code: string, players: ReclaimablePlayer[]) => {
+    setReclaim({ lobbyCode: code, players });
+  }, []);
+
+  // Relance `getLobbyInfo` tant que la popup attend qu'une place se libère ; au bout
+  // du compte, on conclut que personne n'était déconnecté.
+  const reclaimPollsRef = useRef(0);
+  useEffect(() => {
+    if (!reclaim || reclaim.players.length > 0) {
+      reclaimPollsRef.current = 0;
+      return;
+    }
+    const code = reclaim.lobbyCode;
+    const interval = setInterval(() => {
+      if (++reclaimPollsRef.current > RECLAIM_MAX_POLLS) {
+        setReclaim(null);
+        showToast(t.home.toasts.gameInProgress, 'error', 5000);
+        navigate('/', { replace: true });
+        return;
+      }
+      socket.emit('getLobbyInfo', { lobbyCode: code });
+    }, RECLAIM_POLL_MS);
+    return () => clearInterval(interval);
+  }, [reclaim, navigate, showToast, t]);
 
   const handleLobbyInfo = useCallback((data: {
     exists: boolean;
@@ -301,6 +350,7 @@ const Home = () => {
     locale?: Locale;
     lobbyCode?: string;
     gameStatus?: GameStatus;
+    reclaimablePlayers?: ReclaimablePlayer[];
   }) => {
     // Réponse à la vérification de reprise (salon mémorisé) : elle ne concerne ni
     // la popup « Rejoindre » ni l'URL. Le serveur fait écho du code demandé.
@@ -315,23 +365,38 @@ const Home = () => {
       return;
     }
 
+    const inProgress = data.exists && data.gameStatus === GameStatus.IN_PROGRESS;
+    const reclaimable = data.reclaimablePlayers ?? [];
+
     // Flow popup "Rejoindre" : la réponse concerne le code saisi à la main.
     if (pendingJoinCode !== null) {
       const code = pendingJoinCode;
       setPendingJoinCode(null);
-      if (data.exists) {
-        // Code valide : ferme la popup et bascule en mode rejoindre via l'URL.
-        setIsJoinByCodeOpen(false);
-        navigate(`/?lobbyCode=${encodeURIComponent(code)}`);
-      } else {
+      if (!data.exists) {
         // Salon introuvable : on reste sur la popup avec un toast.
         showToast(t.home.toasts.lobbyNotFound, 'error');
+        return;
       }
+      setIsJoinByCodeOpen(false);
+      // Code valide : bascule en mode rejoindre via l'URL (partie en cours comprise :
+      // la réponse suivante, pour l'URL, ouvrira la popup de reprise).
+      navigate(`/?lobbyCode=${encodeURIComponent(code)}`);
       return;
     }
 
     setLobbyExists(data.exists);
     if (data.exists) {
+      // Lien d'invitation (ou retour après session perdue) vers une partie en cours.
+      // Jamais dans le flux Studio (jointure auto avant le lancement).
+      if (inProgress && lobbyCode && !autoJoin) {
+        offerReclaim(lobbyCode, reclaimable);
+        return;
+      }
+      // La partie s'est terminée pendant que la popup de reprise attendait.
+      if (reclaim && lobbyCode === reclaim.lobbyCode) {
+        setReclaim(null);
+        return;
+      }
       if (data.hostName) setHostName(data.hostName);
       // Le joiner suit la langue du salon (UI + questions cohérentes), sans
       // écraser sa préférence sauvegardée (override de session uniquement).
@@ -339,12 +404,46 @@ const Home = () => {
     } else {
       // Salon inexistant via URL (ex : lien périmé, salon solo quitté qui vient
       // d'être supprimé) : on rentre à l'accueil sans toast (pas une action
-      // utilisateur explicite ici).
+      // utilisateur explicite ici). Sauf si la popup de reprise attendait CE salon
+      // (partie finie et salon nettoyé pendant l'attente) : la fermer — sinon elle
+      // restait ouverte à relancer getLobbyInfo sur un salon mort, puis concluait à
+      // tort « partie en cours » — et le dire, là le joueur avait demandé à reprendre.
+      if (reclaim && reclaim.lobbyCode === (data.lobbyCode ?? lobbyCode)) {
+        setReclaim(null);
+        showToast(t.game.lobbyGone, 'error', 5000);
+      }
       navigate('/', { replace: true });
     }
-  }, [navigate, locale, setLocale, showToast, t, pendingJoinCode, lobbyCode]);
+  }, [navigate, locale, setLocale, showToast, t, pendingJoinCode, lobbyCode, autoJoin, offerReclaim, reclaim]);
+
+  const handleReclaimPick = useCallback((playerId: string) => {
+    if (!reclaim) return;
+    socket.emit('reclaimPlayer', { lobbyCode: reclaim.lobbyCode, playerId });
+  }, [reclaim]);
+
+  const handleReclaimDismiss = useCallback(() => {
+    setReclaim(null);
+    showToast(t.home.toasts.gameInProgress, 'info', 5000);
+    navigate('/', { replace: true });
+  }, [navigate, showToast, t]);
+
+  // Slot repris : on redevient ce joueur (nouveau secret, identité, mémoire de
+  // partie) et on file là où en est le salon.
+  const handlePlayerReclaimed = useCallback((data: { player: IPlayer; reconnectToken: string; gameStatus: GameStatus }) => {
+    const code = reclaim?.lobbyCode ?? lobbyCode;
+    if (!code) return;
+    storeReconnectToken(code, data.reconnectToken);
+    storeCurrentPlayer(data.player);
+    storeLobbyIdentity(code, data.player.name, data.player.avatarId);
+    rememberIdentity(data.player.name, data.player.avatarId);
+    setReclaim(null);
+    if (data.gameStatus === GameStatus.IN_PROGRESS) navigate(`/game/${code}`);
+    else if (data.gameStatus === GameStatus.FINISHED) navigate(`/endgame/${code}`);
+    else navigate(`/lobby/${code}`);
+  }, [reclaim, lobbyCode, navigate]);
 
   useSocketEvent('lobbyInfo', handleLobbyInfo);
+  useSocketEvent('playerReclaimed', handlePlayerReclaimed);
   useSocketEvent('lobbyCreated', handleLobbyCreated);
   useSocketEvent('playerNameExists', handlePlayerNameExists);
   useSocketEvent('playerNameValid', handlePlayerNameValid);
@@ -366,9 +465,9 @@ const Home = () => {
           // animé) à la place du bouton d'achat. Tap = petit merci, pas de paywall.
           <button
             type="button"
-            onClick={() => showToast(t.premium.activeToast, 'achievement')}
+            onClick={() => showToast(t.premium.activeToast, 'premium')}
             aria-label={t.premium.title}
-            className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-full border-2 border-black bg-black font-display font-bold text-[11px] text-warning-orange active:scale-95 transition-all cursor-pointer stack-shadow-sm"
+            className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-full border-2 border-black bg-black font-display font-bold text-[11px] text-premium-300 active:scale-95 transition-all cursor-pointer stack-shadow-sm"
           >
             <Icon icon="fluent-emoji-flat:crown" width={14} height={14} style={{ filter: STICKER_FILTER }} aria-hidden />
             Premium
@@ -378,16 +477,16 @@ const Home = () => {
             type="button"
             onClick={() => setIsPremiumOpen(true)}
             aria-label={t.premium.title}
-            className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-full border-2 border-black font-display font-bold text-[11px] text-black/85 active:scale-95 transition-all cursor-pointer stack-shadow-sm"
-            style={{ background: 'linear-gradient(135deg, #FFE066 0%, #FF8A3D 100%)' }}
+            className="inline-flex items-center gap-1.5 h-9 px-3 rounded-full border-2 border-black bg-premium-gold font-display font-bold text-[11px] leading-[1.1] text-left text-black/85 whitespace-pre-line active:scale-95 transition-all cursor-pointer stack-shadow-sm"
           >
             <Icon icon="fluent-emoji-flat:crown" width={14} height={14} style={{ filter: STICKER_FILTER }} aria-hidden />
-            Premium
+            {t.premium.homeButton}
           </button>
         )}
       </div>
+      {/* Haut droite : réglages (son, vibrations, langue). */}
       <div className={`absolute ${topControlsClass} right-3 z-30 safe-pt transition-[top] duration-200`}>
-        <LanguageSwitcher />
+        <SettingsButton />
       </div>
 
       {/* Modal d'information */}
@@ -410,6 +509,14 @@ const Home = () => {
         isOpen={isJoinByCodeOpen}
         onClose={() => { setIsJoinByCodeOpen(false); setPendingJoinCode(null); }}
         onSubmit={handleJoinByCode}
+      />
+
+      {/* « Tu étais qui ? » : reprise d'une place en cours de partie (session perdue). */}
+      <ReclaimPlayerModal
+        isOpen={reclaim !== null}
+        players={reclaim?.players ?? []}
+        onPick={handleReclaimPick}
+        onDismiss={handleReclaimDismiss}
       />
 
       {/* Reprise d'une partie en cours (app tuée en arrière-plan). Fermer ne

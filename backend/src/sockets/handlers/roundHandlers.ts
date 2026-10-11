@@ -4,7 +4,7 @@ import {
 } from '../../data/questionsRepository.js';
 import { Round } from '../../models/Round';
 import type { ReconnectionData } from '@onskone/shared';
-import { RoundPhase, ERROR_CODES, isNoResponse } from '@onskone/shared';
+import { RoundPhase, ERROR_CODES, isNoResponse, gameFingerprint } from '@onskone/shared';
 import { validateAnswer, validatePlayerId, sanitizeInput } from '../../utils/validation.js';
 import { rateLimiters } from '../../utils/rateLimiter.js';
 import { errMessage } from '../../utils/helpers.js';
@@ -12,17 +12,18 @@ import { isSimilarPair } from '../../utils/similarity.js';
 import logger from '../../utils/logger.js';
 import {
     serializeGame,
-    serializeRound,
     serializeRounds,
     serializePlayers,
     buildRevealResults,
     transitionToGuessing,
     finishAnsweringPhase,
     finishGuessing,
-    endGame,
+    advanceAfterReveal,
+    armRevealBackstop,
     armServerTimerForPhase,
 } from '../broadcasting.js';
-import { armLeaderSkipIfDisconnected } from './disconnectHandler.js';
+import type { Lobby } from '../../models/Lobby';
+import type { Game } from '../../models/Game';
 import {
     type HandlerContext,
     type AppSocket,
@@ -30,7 +31,7 @@ import {
     withGameGuards,
     withLeaderGuards,
 } from './context.js';
-import { reconnectPlayerSlot } from './reconnection.js';
+import { reconnectPlayerSlot, tokenMatches, revokeClaimIfProvenOwner } from './reconnection.js';
 
 /**
  * Tolérance pour un `submitAnswer` arrivé juste après la bascule de phase. Couvre
@@ -54,6 +55,47 @@ function answeredIdsFor(round: { phase: RoundPhase; answers: Record<string, stri
     const isAnsweringStage = round.phase === RoundPhase.ANSWERING
         || round.phase === RoundPhase.SUBSTITUTE_ANSWERING;
     return isAnsweringStage ? Object.keys(round.answers) : [];
+}
+
+/**
+ * Envoie l'état complet de la partie au socket, avec les données de reconnexion du
+ * joueur (sa réponse, ses attributions s'il est pilier, le reveal en cours). Partagé
+ * par `getGameState` (reconnexion) et `syncCheck` (resynchronisation). L'appelant a
+ * vérifié que le socket a le droit de lire cet état.
+ */
+function emitGameState(socket: AppSocket, lobby: Lobby, game: Game, playerId: string | undefined): void {
+    const round = game.currentRound as Round | null;
+    const reconnectionData: ReconnectionData = {
+        answeredPlayerIds: answeredIdsFor(round),
+    };
+
+    // Réponse déjà soumise par ce joueur (restaurée dans sa zone de saisie).
+    if (playerId && round?.answers[playerId]) {
+        reconnectionData.myAnswer = round.answers[playerId];
+    }
+
+    // Attributions en cours (GUESSING) : RÉSERVÉ au pilier — les autres joueurs ne
+    // doivent pas les connaître — et traduites en slots opaques (jamais l'auteur réel).
+    const callerIsLeader = !!round && (
+        round.leader.socketId === socket.id
+        || (!!playerId && round.leader.id === playerId)
+    );
+    if (callerIsLeader && round) {
+        reconnectionData.currentGuesses = round.currentGuessesBySlot();
+    }
+
+    // Résultats + réponses déjà révélées pour la phase REVEAL.
+    if (round && round.phase === RoundPhase.REVEAL) {
+        reconnectionData.revealResults = buildRevealResults(lobby, round);
+        reconnectionData.revealedIndices = round.revealedIndices || [];
+    }
+
+    socket.emit('gameState', {
+        game: serializeGame(lobby),
+        players: serializePlayers(lobby.players),
+        leaderboard: game.getLeaderboard(),
+        reconnectionData,
+    });
 }
 
 export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): void {
@@ -84,6 +126,9 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
         withLeaderGuards(socket, data, {
             limiter: rateLimiters.requestQuestions,
             requireLeaderAction: 'demander des questions',
+            // Hors sélection, la demande (tardive, arrière-plan) écrasait `gameCard`
+            // sans la diffuser : les clients resynchronisés voyaient un autre thème.
+            requirePhase: RoundPhase.QUESTION_SELECTION,
         }, ({ game, round: currentRound }, data) => {
             // Des cartes existent déjà → c'est une reconnexion : renvoyer les mêmes.
             // (Le tirage n'a lieu qu'une fois par manche : le pilier ne peut plus
@@ -159,7 +204,8 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
             io.to(data.lobbyCode).emit('questionSelected', {
                 question: data.selectedQuestion,
                 phase: currentRound.phase,
-                card: selectedCard
+                card: selectedCard,
+                roundNumber: currentRound.roundNumber,
             });
             logger.debug(`Question sélectionnée`, { lobbyCode: data.lobbyCode });
             // Le serveur arme lui-même le timer de la nouvelle phase (cf. armServerTimerForPhase).
@@ -189,22 +235,10 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
                 return;
             }
 
-            // Vérifier si le jeu est terminé
-            if (game.isGameOver()) {
-                endGame(io, data.lobbyCode, lobby, game);
-                return;
-            }
-
-            // Sinon, passer au round suivant
-            game.nextRound();
-            if (game.currentRound) {
-                io.to(data.lobbyCode).emit('roundStarted', { round: serializeRound(game.currentRound)! });
-                logger.game.roundStarted(data.lobbyCode, game.currentRound.roundNumber, game.currentRound.leader.name);
-                armServerTimerForPhase(io, data.lobbyCode, lobby, game.currentRound as Round);
-                // Pilier tiré alors que son socket est déjà tombé (pas encore marqué
-                // inactif) : sans ça, aucun saut n'est jamais armé pour lui.
-                armLeaderSkipIfDisconnected(io, registry, data.lobbyCode, game.currentRound as Round);
-            }
+            // Fin de partie ou manche suivante (logique partagée avec le filet REVEAL).
+            // Le crochet posé par SocketHandler arme le saut de pilier si le pilier tiré
+            // est déjà déconnecté.
+            advanceAfterReveal(io, data.lobbyCode, lobby, game);
         });
     });
 
@@ -250,7 +284,9 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
             }
 
             if (!game) {
-                socket.emit('error', { message: 'Partie introuvable', code: ERROR_CODES.NOT_FOUND });
+                // Salon/partie disparus (redéploiement : tout est en mémoire) : le client
+                // quitte l'écran de jeu au lieu de réessayer en boucle.
+                socket.emit('error', { message: 'Partie introuvable', code: ERROR_CODES.NOT_FOUND, sessionLost: true });
                 return;
             }
 
@@ -261,7 +297,9 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
             const isMember = socket.rooms.has(lobby.code)
                 || (!!data.playerId && lobby.players.some(p => p.id === data.playerId));
             if (!isMember) {
-                socket.emit('error', { message: 'Action non autorisée', code: ERROR_CODES.FORBIDDEN });
+                // `sessionLost` : le client sait que SA session est invalide (pas une
+                // action refusée) et propose de reprendre sa place depuis l'accueil.
+                socket.emit('error', { message: 'Action non autorisée', code: ERROR_CODES.FORBIDDEN, sessionLost: true });
                 return;
             }
 
@@ -280,10 +318,7 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
                         // prouve l'identité → reconnexion autorisée, on contourne la garde
                         // de liveness (le slot lui appartient même si l'ancien socket vit
                         // encore brièvement).
-                        const tokenMatches = !!data.reconnectToken
-                            && data.reconnectToken === player.reconnectToken;
-
-                        if (!tokenMatches) {
+                        if (!tokenMatches(player, data.reconnectToken)) {
                             // Token absent/erroné : le joueur cible possède un secret défini,
                             // donc une reconnexion non prouvée ne peut JAMAIS reprendre le slot,
                             // même pendant la fenêtre de déconnexion. L'UUID public (playerId)
@@ -295,7 +330,7 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
                                 victimSocketId: player.socketId,
                                 tokenProvided: !!data.reconnectToken,
                             });
-                            socket.emit('error', { message: 'Reconnexion non autorisée', code: ERROR_CODES.CONFLICT });
+                            socket.emit('error', { message: 'Reconnexion non autorisée', code: ERROR_CODES.CONFLICT, sessionLost: true });
                             return;
                         }
 
@@ -329,6 +364,9 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
                             const oldSocketId = player.socketId;
                             // Cœur partagé : cancel timeouts + réassociation slot/socket + pilier.
                             reconnectPlayerSlot(registry, lobby, player, socket);
+                            // Le propriétaire prouvé est de retour : une reprise sans preuve
+                            // (claimToken) perd ses droits, son socket est évincé ci-dessous.
+                            revokeClaimIfProvenOwner(player, data.reconnectToken);
 
                             logger.info(`Player ${player.name} reconnected to game`, {
                                 lobbyCode: data.lobbyCode,
@@ -363,39 +401,41 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
                 }
             }
 
-            // Données de reconnexion pour restaurer l'état du joueur
-            const reconnectionData: ReconnectionData = {
-                answeredPlayerIds: answeredIdsFor(game.currentRound)
-            };
+            emitGameState(socket, lobby, game, data.playerId);
+        });
+    });
 
-            // Si le joueur a fourni son ID, envoyer sa réponse s'il en a soumis une
-            if (data.playerId && game.currentRound?.answers[data.playerId]) {
-                reconnectionData.myAnswer = game.currentRound.answers[data.playerId];
+    // Vérification périodique de synchronisation (cf. shared/src/sync.ts). Le client
+    // envoie l'empreinte de ce qu'il affiche ; si elle diffère de la réalité serveur,
+    // il reçoit l'état complet. Sécurité : l'état n'est envoyé qu'au socket RATTACHÉ au
+    // slot du joueur (même socketId) — un socket détaché (zombie évincé, session non
+    // reprise) est renvoyé vers la reconnexion complète, qui exige le secret.
+    socket.on('syncCheck', (data) => {
+        withGuards(socket, data, {
+            limiter: rateLimiters.syncCheck,
+            requireLobbyCode: true,
+            requirePlayerId: 'playerId',
+        }, ({ lobby, game }, data) => {
+            // Salon ou partie disparus (redéploiement du backend : tout est en mémoire) :
+            // `sessionLost` fait quitter l'écran de jeu au lieu de toaster toutes les 5 s.
+            if (!lobby || !game) {
+                socket.emit('error', { message: 'Partie introuvable', code: ERROR_CODES.NOT_FOUND, sessionLost: true });
+                return;
             }
-
-            // Restaurer les guesses (phase GUESSING) : RÉSERVÉ au pilier — les autres
-            // joueurs ne doivent pas connaître les attributions en cours — et traduit en
-            // slots opaques (jamais l'auteur réel).
-            const callerIsLeader = !!game.currentRound && (
-                game.currentRound.leader.socketId === socket.id
-                || (!!data.playerId && game.currentRound.leader.id === data.playerId)
-            );
-            if (callerIsLeader && game.currentRound) {
-                reconnectionData.currentGuesses = (game.currentRound as Round).currentGuessesBySlot();
+            const player = lobby.getPlayer(data.playerId);
+            if (!player || player.socketId !== socket.id || !socket.rooms.has(lobby.code)) {
+                socket.emit('syncResult', { status: 'detached' });
+                return;
             }
-
-            // Restaurer les résultats pour la phase REVEAL
-            if (game.currentRound && game.currentRound.phase === RoundPhase.REVEAL) {
-                reconnectionData.revealResults = buildRevealResults(lobby, game.currentRound);
-                reconnectionData.revealedIndices = game.currentRound.revealedIndices || [];
+            const serverFingerprint = gameFingerprint(game);
+            if (serverFingerprint === data.fingerprint) {
+                socket.emit('syncResult', { status: 'ok' });
+                return;
             }
-
-            socket.emit('gameState', {
-                game: serializeGame(lobby),
-                players: serializePlayers(lobby.players),
-                leaderboard: game.getLeaderboard(),
-                reconnectionData
+            logger.info('Client désynchronisé, état complet renvoyé', {
+                lobbyCode: lobby.code, player: player.name, client: data.fingerprint, server: serverFingerprint,
             });
+            emitGameState(socket, lobby, game, player.id);
         });
     });
 
@@ -524,7 +564,8 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
             io.to(data.lobbyCode).emit('playerAnswered', {
                 playerId: data.playerId,
                 totalAnswers: Object.keys(round.answers).length,
-                expectedAnswers: respondingPlayers.length
+                expectedAnswers: respondingPlayers.length,
+                roundNumber: round.roundNumber,
             });
 
             logger.debug(`Réponse soumise par ${player.name}`, { lobbyCode: data.lobbyCode, answers: Object.keys(round.answers).length });
@@ -630,6 +671,7 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
             io.to(data.lobbyCode).emit('substituteSelected', {
                 substitutePlayerId: substitute.id,
                 phase: currentRound.phase,
+                roundNumber: currentRound.roundNumber,
             });
             logger.info('Substitut sélectionné', { lobbyCode: data.lobbyCode, substitutePlayerId: substitute.id });
             armServerTimerForPhase(io, data.lobbyCode, lobby, currentRound);
@@ -721,6 +763,7 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
 
             io.to(data.lobbyCode).emit('substituteAnswerSubmitted', {
                 phase: RoundPhase.GUESSING,
+                roundNumber: currentRound.roundNumber,
             });
             transitionToGuessing(io, data.lobbyCode, lobby, currentRound, false);
             logger.info('Réponse du substitut soumise, passage à GUESSING', { lobbyCode: data.lobbyCode });
@@ -861,7 +904,7 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
             requireLeaderAction: 'révéler les réponses',
             // Guard de phase : revealAnswer n'a de sens qu'en REVEAL.
             requirePhase: RoundPhase.REVEAL,
-        }, ({ lobby, round: currentRound }, data) => {
+        }, ({ lobby, game, round: currentRound }, data) => {
             // Validation stricte : answerIndex doit être un entier dans [0, totalAnswers)
             const totalAnswers = Object.keys(currentRound.getGuessingAnswers()).length;
             if (
@@ -911,8 +954,11 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
 
             io.to(data.lobbyCode).emit('answerRevealed', {
                 revealedIndex: data.answerIndex,
-                revealedIndices: currentRound.revealedIndices
+                revealedIndices: currentRound.revealedIndices,
+                roundNumber: currentRound.roundNumber,
             });
+            // Le pilier est actif : on lui relaisse le délai complet avant le filet.
+            armRevealBackstop(io, data.lobbyCode, lobby, game, currentRound);
         });
     });
 
@@ -921,7 +967,7 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
         withLeaderGuards(socket, data, {
             limiter: rateLimiters.gameAction,
             requireLeaderAction: 'avancer le curseur',
-        }, ({ round: currentRound }, data) => {
+        }, ({ lobby, game, round: currentRound }, data) => {
             const totalAnswers = Object.keys(currentRound.getGuessingAnswers()).length;
             // nextIndex doit être un entier dans [-1, totalAnswers) (-1 = fin du reveal)
             if (
@@ -933,6 +979,7 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
                 return;
             }
             io.to(data.lobbyCode).emit('revealCursorAdvanced', { nextIndex: data.nextIndex });
+            armRevealBackstop(io, data.lobbyCode, lobby, game, currentRound);
         });
     });
 
@@ -990,6 +1037,9 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
             });
 
             logger.info('Similarité confirmée', { lobbyCode: data.lobbyCode, answerIndex: data.answerIndex });
+            // Action du pilier pendant la révélation : le filet REVEAL repart de zéro.
+            const lobbyForBackstop = LobbyManager.getLobby(data.lobbyCode);
+            if (lobbyForBackstop) armRevealBackstop(io, data.lobbyCode, lobbyForBackstop, game, currentRound);
         });
     });
 
@@ -998,11 +1048,12 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
         withLeaderGuards(socket, data, {
             limiter: rateLimiters.gameAction,
             requireLeaderAction: 'rejeter la similarité',
-        }, (_resolved, data) => {
+        }, ({ lobby, game, round: currentRound }, data) => {
             // Broadcaster le rejet pour fermer le modal chez tout le monde
             io.to(data.lobbyCode).emit('similarityDismissed', {
                 answerIndex: data.answerIndex
             });
+            armRevealBackstop(io, data.lobbyCode, lobby, game, currentRound);
         });
     });
 }

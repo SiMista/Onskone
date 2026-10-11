@@ -18,6 +18,8 @@ export class Player implements ServerPlayer {
      * du nom / UUID publics (anti-usurpation pendant la fenêtre de déconnexion).
      */
     reconnectToken: string;
+    /** Secret provisoire d'une reprise de slot sans preuve (cf. ServerPlayer). */
+    claimToken?: string;
     // Note: score est optionnel dans IPlayer et n'est pas utilisé ici
     // Les scores sont stockés dans Round.scores pour chaque round
 

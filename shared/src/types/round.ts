@@ -38,6 +38,9 @@ export interface GameCard {
 
   /** Liste de questions pour ce sujet */
   questions: string[];
+
+  /** Carte issue d'un thème premium (cf. `ThemeInfo.premium`) - affiche le badge exclusif. */
+  premium?: boolean;
 }
 
 /**

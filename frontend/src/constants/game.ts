@@ -2,10 +2,9 @@
 import {
   GAME_CONSTANTS,
   RoundPhase,
-  clampTimeMultiplier,
   getBasePhaseDuration,
-  getPhaseDuration as getSharedPhaseDuration,
 } from '@onskone/shared';
+import type { GameSpeed } from '@onskone/shared';
 import { Capacitor } from '@capacitor/core';
 
 // Domaine public canonique du jeu (site web prod). Sert de base aux liens
@@ -59,18 +58,18 @@ const resolveDebugMode = (): boolean => {
 const DEBUG_MODE = resolveDebugMode();
 
 /**
- * Multiplicateur de temps à appliquer au lobby quand le mode debug est actif.
+ * Vitesse de jeu à appliquer au lobby quand le mode debug est actif.
  * `null` hors DEV : le mode debug n'existe pas en production.
  *
  * Remplace l'ancien `DEBUG_TIMER` (1h renvoyée localement par getPhaseDuration).
  * Celui-ci ne trompait que l'affichage : la durée fait autorité côté serveur, qui
  * coupait la phase à l'heure réelle. Et surtout, le pilier l'envoyait via
  * `startTimer`, imposant 1h à TOUTE la table — joueurs en prod compris.
- * Passer par le multiplicateur du lobby rend le réglage explicite, partagé et
+ * Passer par la vitesse du lobby rend le réglage explicite, partagé et
  * refusé par le serveur hors développement.
  */
-export const DEBUG_TIME_MULTIPLIER: number | null =
-  DEBUG_MODE ? GAME_CONSTANTS.TIME_MULTIPLIER_DEBUG : null;
+export const DEBUG_GAME_SPEED: GameSpeed | null =
+  DEBUG_MODE ? GAME_CONSTANTS.GAME_SPEED_DEBUG : null;
 
 // Configuration des avatars DiceBear - Caractéristiques exactes (pas de seed/probabilité)
 // Documentation: https://www.dicebear.com/styles/micah/
@@ -131,61 +130,75 @@ export const GAME_CONFIG = {
   MAX_ANSWER_LENGTH: GAME_CONSTANTS.MAX_ANSWER_LENGTH,
 } as const;
 
-// ===== Durée des phases avec multiplicateur de temps réglable =====
-// La logique (clamp + durée de base + durée effective) vit désormais dans
-// @onskone/shared (single source of truth partagée avec le backend, cf.
-// broadcasting.getServerPhaseDuration). Ici on n'ajoute QUE l'enveloppe DEBUG_MODE.
-
-/**
- * Durée effective d'une phase en secondes, multiplicateur appliqué.
- * En mode DEBUG, on ignore le multiplicateur et on renvoie la durée de debug (1h).
- */
-export const getPhaseDuration = (
-  phase: RoundPhase,
-  timeMultiplier: number = GAME_CONSTANTS.TIME_MULTIPLIER_DEFAULT,
-  playerCount = 3,
-): number => {
-  // NB : plus de court-circuit DEBUG ici. La durée fait désormais autorité côté
-  // SERVEUR (il ignore celle envoyée par le client), donc un allongement purement
-  // local ne ferait qu'afficher un sablier qui ment : le serveur couperait la phase
-  // à la durée réelle. Pour rallonger les phases en DEV, l'hôte règle le
-  // multiplicateur de debug du lobby (TIME_MULTIPLIER_DEBUG), appliqué par le
-  // serveur et donc partagé par toute la table.
-  return getSharedPhaseDuration(phase, timeMultiplier, playerCount);
-};
+// ===== Durée des phases selon la vitesse de jeu =====
+// Les tables de durées et leur logique vivent dans @onskone/shared (single source
+// of truth partagée avec le backend, cf. broadcasting.getServerPhaseDuration) :
+// ré-exportée telle quelle, sans enveloppe. La durée fait autorité côté SERVEUR (il
+// ignore celle envoyée par le client), donc un allongement purement local ne ferait
+// qu'afficher un sablier qui ment. Pour rallonger les phases en DEV, l'hôte règle la
+// vitesse de debug du lobby (GAME_SPEED_DEBUG), appliquée par le serveur et donc
+// partagée par toute la table.
+export { getPhaseDuration } from '@onskone/shared';
 
 // Marge approximative pour la phase REVEAL (pas de timer serveur) dans l'estimation.
 const REVEAL_ESTIMATE_SECONDS = 20;
 
 // Les joueurs n'utilisent jamais tout le timer : on n'estime qu'une fraction du temps imparti.
-const ESTIMATE_TIMER_USAGE = 0.3;
+const ESTIMATE_TIMER_USAGE = 0.5;
 
 /**
- * Estimation de la durée totale d'une partie en MINUTES, pour l'affichage "~X min"
- * dans le lobby. Total ≈ durée d'un round × nombre de joueurs (1 round par joueur).
- * Le multiplicateur DEBUG n'est volontairement PAS pris en compte ici (l'estimation
- * reflète les vraies durées de jeu, pas le mode debug).
+ * Durée totale d'une partie en SECONDES si chaque timer est consommé à hauteur de
+ * `timerUsage` (0..1). Total ≈ durée d'un round × nombre de manches (1 par pilier).
+ * `playerCount` pèse sur la devinette (plus de réponses à attribuer).
+ * La vitesse DEBUG n'est volontairement PAS prise en compte ici (on reflète les
+ * vraies durées de jeu, pas le mode debug).
  */
-export const estimateGameMinutes = (
+const gameSeconds = (
   playerCount: number,
-  timeMultiplier: number,
+  roundCount: number,
+  gameSpeed: GameSpeed,
   guessMyAnswerMode: boolean,
+  timerUsage: number,
 ): number => {
-  const m = clampTimeMultiplier(timeMultiplier);
-  // Fraction du timer réellement consommée (les joueurs répondent avant la fin).
+  const speed = gameSpeed === GAME_CONSTANTS.GAME_SPEED_DEBUG ? GAME_CONSTANTS.GAME_SPEED_DEFAULT : gameSpeed;
   const dur = (phase: RoundPhase) =>
-    Math.round(getBasePhaseDuration(phase, playerCount) * m * ESTIMATE_TIMER_USAGE);
+    Math.round(getBasePhaseDuration(phase, playerCount, speed) * timerUsage);
   let roundSeconds =
     dur(RoundPhase.QUESTION_SELECTION) +
     dur(RoundPhase.ANSWERING) +
     dur(RoundPhase.GUESSING) +
-    Math.round(REVEAL_ESTIMATE_SECONDS * m); // pas de timer : on scale juste sur la vitesse
+    REVEAL_ESTIMATE_SECONDS; // pas de timer : même marge quelle que soit la vitesse
   if (guessMyAnswerMode) {
     roundSeconds += dur(RoundPhase.SUBSTITUTE_SELECTION) + dur(RoundPhase.SUBSTITUTE_ANSWERING);
   }
-  const totalSeconds = roundSeconds * Math.max(1, playerCount);
+  return roundSeconds * Math.max(1, roundCount);
+};
+
+/**
+ * Estimation de la durée totale d'une partie en MINUTES, pour l'affichage "~X min"
+ * dans le lobby (fraction ESTIMATE_TIMER_USAGE de chaque timer).
+ */
+export const estimateGameMinutes = (
+  playerCount: number,
+  roundCount: number,
+  gameSpeed: GameSpeed,
+  guessMyAnswerMode: boolean,
+): number => {
+  // Fraction du timer réellement consommée (les joueurs répondent avant la fin).
+  const totalSeconds = gameSeconds(playerCount, roundCount, gameSpeed, guessMyAnswerMode, ESTIMATE_TIMER_USAGE);
   return Math.max(1, Math.round(totalSeconds / 60));
 };
+
+/**
+ * Durée MAX d'une partie en MINUTES (arrondie au-dessus) : tous les timers vont
+ * au bout. La révélation, sans timer, garde sa marge REVEAL_ESTIMATE_SECONDS.
+ */
+export const maxGameMinutes = (
+  playerCount: number,
+  roundCount: number,
+  gameSpeed: GameSpeed,
+  guessMyAnswerMode: boolean,
+): number => Math.max(1, Math.ceil(gameSeconds(playerCount, roundCount, gameSpeed, guessMyAnswerMode, 1) / 60));
 
 // Couleurs associées à chaque catégorie de cartes (utilisées pour le fond du
 // bloc illustration des thèmes et le surlignage des pills sélectionnées).

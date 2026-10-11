@@ -14,6 +14,8 @@ import socket, {
   getTestVersionOverride,
   setTestVersionOverride,
 } from '../../utils/socket';
+import { IOS_RELEASE_GRACE_MS } from '../../utils/versionPolicy';
+import { formatDate } from './shared';
 
 export const VersionGatePanel = ({
   onStateChange, onConfirmingChange,
@@ -54,7 +56,7 @@ export const VersionGatePanel = ({
       onStateChange?.(next);
       showToast(
         action === 'force_latest'
-          ? `Maj forcée : clients < ${next.minVersion} bloqués.`
+          ? `Maj forcée : plancher ${next.minVersion}, appliqué à la prochaine (re)connexion de chaque joueur.`
           : 'Blocage levé.',
         'success',
       );
@@ -67,14 +69,21 @@ export const VersionGatePanel = ({
 
   const blocking = state?.blocking ?? false;
   const deployed = state?.deployedVersion || '?';
+  const appStore = state?.appStore ?? null;
+  const appStoreReleasedAt = appStore ? Date.parse(appStore.releasedAt) : NaN;
+  // Même délai que les iPhone (versionPolicy.ts) : avant, ils ne sont pas invités à mettre à jour.
+  const appStoreInGrace = Number.isFinite(appStoreReleasedAt) && Date.now() - appStoreReleasedAt < IOS_RELEASE_GRACE_MS;
 
   return (
     <div>
       <SectionHeader title="Mise à jour forcée" />
       <p className="text-[13px] text-white/55 mb-4 max-w-2xl">
-        Bloque au handshake les clients dont la version est inférieure au plancher.
-        Ils voient l'écran « Mise à jour requise » jusqu'à ce qu'ils se mettent à jour.
-        Le plancher est appliqué en direct (aucun redéploiement requis) et survit aux restarts.
+        Un joueur sous le plancher voit l'écran « Mise à jour requise » seulement si une version
+        plus récente lui est réellement disponible : son store sur mobile, un rechargement sur le web.
+        Celui qui a déjà la dernière version qu'il peut obtenir n'est jamais bloqué. Appliqué à la
+        prochaine connexion <strong>ou reconnexion</strong> de chaque joueur — y compris une reconnexion
+        automatique en pleine partie (téléphone verrouillé, réseau) : à faire quand personne ne joue.
+        Survit aux restarts.
       </p>
 
       {loading ? (
@@ -94,6 +103,23 @@ export const VersionGatePanel = ({
               <p className={`mt-1 text-[16px] font-semibold flex items-center gap-2 ${blocking ? 'text-amber-300' : 'text-emerald-300'}`}>
                 <span className={`inline-block h-2 w-2 rounded-full ${blocking ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'}`} />
                 {blocking ? `Blocage actif (< ${state?.minVersion})` : 'Aucun blocage'}
+              </p>
+            </div>
+            <div className="rounded-lg surface-glass p-3 sm:col-span-2">
+              <p className="text-[12px] text-white/55">En ligne sur l'App Store</p>
+              <p className="mt-1 text-[20px] font-semibold tabular-nums text-white">{appStore?.version || '?'}</p>
+              {appStore && Number.isFinite(appStoreReleasedAt) && (
+                <p className="mt-0.5 text-[11px] text-white/40">
+                  depuis le {formatDate(appStoreReleasedAt)} · iOS {appStore.minimumOsVersion} minimum
+                </p>
+              )}
+              {appStoreInGrace && (
+                <p className="mt-1 text-[11px] text-amber-200/80">
+                  Sortie il y a moins de 24 h : les iPhone ne seront invités à la prendre qu'après ce délai.
+                </p>
+              )}
+              <p className="mt-1.5 text-[11px] text-white/35">
+                Play Store : chaque téléphone Android interroge Google lui-même (pas de version publique côté Google).
               </p>
             </div>
           </div>
@@ -126,9 +152,10 @@ export const VersionGatePanel = ({
           </div>
 
           <p className="text-[11px] text-white/35">
-            « Forcer » pose le plancher = version déployée : action volontaire et à fort impact (tous
-            les clients antérieurs sont coupés). Vérifie que la nouvelle version est bien publiée sur
-            les stores avant de bloquer les versions mobiles.
+            « Forcer » pose le plancher = version déployée. Chaque appareil vérifie lui-même son
+            store : si le store est en retard (review Apple, rollout progressif, hotfix d'une seule
+            plateforme), ses joueurs ne sont pas bloqués. Les anciennes apps mobiles, sans cette
+            vérification, ne sont jamais bloquées. « Désactiver » libère tout le monde en direct.
           </p>
 
           {import.meta.env.DEV && <TestZone deployed={deployed} />}
@@ -140,7 +167,7 @@ export const VersionGatePanel = ({
       {confirm === 'force' && createPortal(
         <ConfirmDialog
           title={`Forcer la maj vers ${deployed} ?`}
-          message={`Tous les joueurs sur une version inférieure à ${deployed} seront immédiatement bloqués jusqu'à ce qu'ils mettent à jour.`}
+          message={`À leur prochaine connexion, les joueurs sous ${deployed} devront mettre à jour, seulement si une version plus récente leur est disponible. Personne n'est bloqué sans pouvoir se mettre à jour.`}
           confirmLabel="Forcer la maj"
           onConfirm={() => { setConfirm(null); apply('force_latest'); }}
           onCancel={() => setConfirm(null)}

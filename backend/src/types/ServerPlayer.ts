@@ -17,6 +17,12 @@ import type { IPlayer } from '@onskone/shared';
 export interface ServerPlayer extends IPlayer {
     socketId: string;
     reconnectToken: string;
+    /**
+     * Secret PROVISOIRE remis à qui reprend le slot sans preuve (cf. reclaimPlayer).
+     * Donne les mêmes droits que `reconnectToken` jusqu'à ce que le propriétaire
+     * prouvé (détenteur de `reconnectToken`) se reconnecte : il est alors révoqué.
+     */
+    claimToken?: string;
     // Toujours défini côté serveur (le modèle Player l'initialise). Requis ici
     // pour rester assignable à Player (où isPremium n'est pas optionnel).
     isPremium: boolean;

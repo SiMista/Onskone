@@ -4,6 +4,7 @@ import { GameCard } from '@onskone/shared';
 import { getCategoryColor } from '../constants/game';
 import { useLocale } from '../i18n';
 import { useSwipe } from '../hooks/useSwipe';
+import PremiumCardBadge from './PremiumCardBadge';
 
 /** Handlers (touch + souris) renvoyés par `useSwipe`. */
 type SwipeHandlers = ReturnType<typeof useSwipe>;
@@ -198,6 +199,9 @@ const CardHand = ({
                 >
                   {card.category}
                 </div>
+                {card.premium && (
+                  <PremiumCardBadge className="absolute top-2 right-2 md:top-3 md:right-3" />
+                )}
 
                 <div className="pt-6 tablet:pt-10 flex-1 flex flex-col">
                   {/* Thème : titre héros de la carte */}

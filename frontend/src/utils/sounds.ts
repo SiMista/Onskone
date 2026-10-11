@@ -4,6 +4,8 @@
  * Utilise HTMLAudioElement avec préchargement pour une meilleure compatibilité.
  */
 
+import { getSettings } from './settings';
+
 const SOUNDS = {
   questionSelection: '/sounds/question_selection_phase.mp3',
   answering: '/sounds/answering_phase.mp3',
@@ -78,6 +80,8 @@ export const initSounds = (): void => soundManager.init();
  * Joue un son par son nom
  */
 export const playSound = (soundName: SoundName, volume: number = 0.5): void => {
+  // Son coupé dans les Réglages : on ne joue rien (lu à chaque appel, effet immédiat).
+  if (!getSettings().sound) return;
   soundManager.play(soundName, volume);
 };
 

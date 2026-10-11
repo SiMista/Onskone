@@ -13,6 +13,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          # Historique complet : le build front calcule la version en comptant les
+          # commits (scripts/app-version.mjs refuse un clone superficiel).
+          fetch-depth: 0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
@@ -56,6 +60,11 @@ jobs:
     needs: ci
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
+    # Un seul déploiement à la fois : deux push rapprochés ne doivent pas builder en
+    # parallèle sur le VPS (build front et backend de commits différents).
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
     # Optionnel: créer un environment "production" dans GitHub pour exiger une
     # approbation manuelle avant chaque déploiement.
     # environment: production
@@ -71,6 +80,8 @@ jobs:
           script: |
             set -euo pipefail
             cd "${APP_DIR:-$HOME/apps/Onskone}"
-            git fetch --depth 1 origin main
+            # PAS de --depth : un clone superficiel figeait la version a "x.y.0"
+            # (cf. scripts/app-version.mjs). deploy.sh dé-shallow au besoin.
+            git fetch origin main
             git reset --hard origin/main
             bash scripts/deploy.sh

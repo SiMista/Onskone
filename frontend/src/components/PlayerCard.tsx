@@ -106,6 +106,8 @@ interface PlayerCardProps {
   isActive?: boolean;
   isFirstPlayer?: boolean;
   premium?: boolean;
+  /** Exclu du rôle de pilier par l'hôte (lobby) : badge texte, pas seulement visuel. */
+  notLeader?: boolean;
   variant?: 'row' | 'square';
   onKick?: (id: string) => void;
   onPromote?: (id: string) => void;
@@ -121,6 +123,7 @@ const PlayerCard = ({
   isActive = true,
   isFirstPlayer = false,
   premium = false,
+  notLeader = false,
   variant = 'row',
   onKick,
   onPromote,
@@ -156,7 +159,7 @@ const PlayerCard = ({
 
   if (variant === 'square') {
     return (
-      <div className={`relative aspect-square flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-[10px] shadow-[0_2px_6px_rgba(0,0,0,0.1)] w-full transition-all duration-300 ${currentBorder} ${
+      <div className={`relative aspect-square h-full flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-[10px] shadow-[0_2px_6px_rgba(0,0,0,0.1)] w-full transition-all duration-300 ${currentBorder} ${
         isActive ? 'bg-cream-player' : 'bg-gray-200'
       }`}>
         {/* Couronne ou menu en haut à droite */}
@@ -192,7 +195,17 @@ const PlayerCard = ({
         </div>
 
         <div className={`flex flex-col items-center gap-1.5 min-w-0 w-full ${!isActive ? 'opacity-50 grayscale' : ''}`}>
-          <Avatar avatarId={avatarId} name={name} size="lg" premium={premium} />
+          <span className="relative">
+            {/* Premium : le cadre doré (p-[2.5px]) déborde vers l'extérieur au lieu d'agrandir
+                l'avatar, pour que le nom reste à la même hauteur que sur les tuiles voisines. */}
+            <Avatar avatarId={avatarId} name={name} size="lg" premium={premium} className={premium ? '-m-[2.5px]' : ''} />
+            {/* Exclu du rôle de pilier : ruban sticker en bas de l'avatar, loin de la couronne / du menu */}
+            {notLeader && (
+              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 -rotate-6 whitespace-nowrap text-display-xs leading-none px-1.5 py-1 rounded-md border-[1.5px] border-black bg-cream-kraft text-black stack-shadow-sm">
+                {t.lobby.notLeaderBadge}
+              </span>
+            )}
+          </span>
           <PremiumName
             name={name}
             premium={premium}

@@ -23,47 +23,19 @@ describe('getCategoryColor', () => {
 describe('getPhaseDuration', () => {
   // NB: getPhaseDuration ne court-circuite plus rien en mode debug — la durée fait
   // autorité côté serveur, donc un allongement purement client ne ferait qu'afficher
-  // un sablier qui ment. Le mode debug passe désormais par le multiplicateur de temps
-  // du lobby (DEBUG_TIME_MULTIPLIER -> updateTimeMultiplier), appliqué par le serveur.
+  // un sablier qui ment. Le mode debug passe désormais par la vitesse de jeu du
+  // lobby (DEBUG_GAME_SPEED -> updateGameSpeed), appliquée par le serveur.
   // Ces durées sont donc toujours les durées réelles.
+  const T = GAME_CONSTANTS.TIMERS;
 
-  it('returns the base timer for a fixed phase at the default multiplier', () => {
-    expect(getPhaseDuration(RoundPhase.QUESTION_SELECTION)).toBe(
-      GAME_CONSTANTS.TIMERS.QUESTION_SELECTION,
-    );
-    expect(getPhaseDuration(RoundPhase.ANSWERING)).toBe(GAME_CONSTANTS.TIMERS.ANSWERING);
+  it('returns the normal timers by default', () => {
+    expect(getPhaseDuration(RoundPhase.QUESTION_SELECTION)).toBe(T.normal.QUESTION_SELECTION);
+    expect(getPhaseDuration(RoundPhase.ANSWERING)).toBe(T.normal.ANSWERING);
   });
 
-  it('scales fixed phases by the time multiplier and rounds', () => {
-    // Mirror the implementation's exact IEEE-754 rounding rather than hand-math:
-    // 45 * 0.7 = 31.4999... -> Math.round -> 31; 45 * 1.3 = 58.5 -> 59.
-    expect(getPhaseDuration(RoundPhase.QUESTION_SELECTION, 0.7)).toBe(
-      Math.round(GAME_CONSTANTS.TIMERS.QUESTION_SELECTION * 0.7),
-    );
-    expect(getPhaseDuration(RoundPhase.QUESTION_SELECTION, 1.3)).toBe(
-      Math.round(GAME_CONSTANTS.TIMERS.QUESTION_SELECTION * 1.3),
-    );
-    // Sanity-check the concrete values too.
-    expect(getPhaseDuration(RoundPhase.QUESTION_SELECTION, 0.7)).toBe(31);
-    expect(getPhaseDuration(RoundPhase.QUESTION_SELECTION, 1.3)).toBe(59);
-  });
-
-  it('clamps a NaN multiplier back to the default (no scaling)', () => {
-    expect(getPhaseDuration(RoundPhase.ANSWERING, NaN)).toBe(GAME_CONSTANTS.TIMERS.ANSWERING);
-  });
-
-  it('clamps an out-of-range multiplier to the allowed levels', () => {
-    const levels = GAME_CONSTANTS.TIME_MULTIPLIER_LEVELS;
-    const max = levels[levels.length - 1];
-    const min = levels[0];
-    // 1000 clamps down to the max level (1.3).
-    expect(getPhaseDuration(RoundPhase.ANSWERING, 1000)).toBe(
-      Math.round(GAME_CONSTANTS.TIMERS.ANSWERING * max),
-    );
-    // 0 clamps up to the min level (0.7).
-    expect(getPhaseDuration(RoundPhase.ANSWERING, 0)).toBe(
-      Math.round(GAME_CONSTANTS.TIMERS.ANSWERING * min),
-    );
+  it('returns the fixed timers of the fast speed (no multiplier)', () => {
+    expect(getPhaseDuration(RoundPhase.QUESTION_SELECTION, 'fast')).toBe(T.fast.QUESTION_SELECTION);
+    expect(getPhaseDuration(RoundPhase.ANSWERING, 'fast')).toBe(T.fast.ANSWERING);
   });
 
   it('never returns less than 1 second', () => {
@@ -71,16 +43,20 @@ describe('getPhaseDuration', () => {
   });
 
   it('computes GUESSING dynamically: base at 3 players', () => {
-    expect(getPhaseDuration(RoundPhase.GUESSING, 1, 3)).toBe(120);
+    expect(getPhaseDuration(RoundPhase.GUESSING, 'normal', 3)).toBe(T.normal.GUESSING);
   });
 
-  it('adds 20s per extra player above 3 for GUESSING', () => {
-    // 120 + (6 - 3) * 20 = 180.
-    expect(getPhaseDuration(RoundPhase.GUESSING, 1, 6)).toBe(180);
+  it('adds GUESSING_EXTRA_PER_PLAYER per extra player above 3 for GUESSING', () => {
+    expect(getPhaseDuration(RoundPhase.GUESSING, 'normal', 6)).toBe(
+      T.normal.GUESSING + 3 * T.normal.GUESSING_EXTRA_PER_PLAYER,
+    );
+    expect(getPhaseDuration(RoundPhase.GUESSING, 'fast', 6)).toBe(
+      T.fast.GUESSING + 3 * T.fast.GUESSING_EXTRA_PER_PLAYER,
+    );
   });
 
   it('does not subtract time for GUESSING below 3 players', () => {
-    expect(getPhaseDuration(RoundPhase.GUESSING, 1, 1)).toBe(120);
+    expect(getPhaseDuration(RoundPhase.GUESSING, 'normal', 1)).toBe(T.normal.GUESSING);
   });
 });
 

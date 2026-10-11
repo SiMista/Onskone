@@ -60,6 +60,28 @@ export function getCurrentPlayerFromStorage(): IPlayer | null {
   }
 }
 
+/** Mémorise le joueur courant (lu par la page de jeu pour s'identifier au serveur). */
+export function storeCurrentPlayer(player: IPlayer): void {
+  try {
+    studioStorage.setItem('currentPlayer', JSON.stringify(player));
+  } catch {
+    /* silent */
+  }
+}
+
+/**
+ * Identité (pseudo + avatar) attachée à un salon, lue par le Lobby au montage
+ * (cf. useLobbyIdentity) pour envoyer `joinLobby` sous le bon nom.
+ */
+export function storeLobbyIdentity(lobbyCode: string, playerName: string, avatarId: number): void {
+  try {
+    studioStorage.setItem(`playerName_${lobbyCode}`, playerName);
+    studioStorage.setItem(`avatarId_${lobbyCode}`, String(avatarId));
+  } catch {
+    /* silent */
+  }
+}
+
 /**
  * Clé de stockage du secret de reconnexion. Namespacée par lobby (comme
  * `playerName_${lobbyCode}`) pour qu'ouvrir un autre salon dans le même onglet

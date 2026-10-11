@@ -13,6 +13,27 @@ export const fr: Dictionary = {
     pseudoPlaceholder: 'Ton pseudo',
   },
 
+  settings: {
+    button: 'Réglages',
+    title: 'Réglages',
+    sound: 'Son',
+    vibration: 'Vibrations',
+    on: 'Activé',
+    off: 'Coupé',
+    unavailable: 'Indisponible',
+    report: 'Signaler un problème',
+    contentLocaleHint: 'Les questions de cette partie restent dans la langue du salon.',
+    languageNames: { fr: 'Français', en: 'Anglais' },
+    lobby: 'Salon',
+    inviteHint: "Un ami déconnecté reprend sa place en entrant ce code sur l'accueil.",
+  },
+
+  app: {
+    crashTitle: 'Oups, ça a planté !',
+    crashBody: "Un problème d'affichage est survenu. Reviens à l'accueil pour repartir sur de bonnes bases.",
+    crashHome: "Retour à l'accueil",
+  },
+
   update: {
     title: 'Mise à jour requise',
     message: 'Une nouvelle version est disponible. Mets à jour Onskoné pour continuer à jouer.',
@@ -27,6 +48,14 @@ export const fr: Dictionary = {
       message: 'Tu as quitté une partie en cours. Tu veux y retourner ?',
       confirm: 'Revenir dans la partie',
       cancel: 'Non merci',
+    },
+    reclaim: {
+      title: 'Tu étais dans cette partie ?',
+      message: 'Une partie est en cours dans ce salon. Si tu as été déconnecté, choisis ton pseudo pour reprendre ta place.',
+      pick: "C'est moi",
+      notMe: 'Je ne jouais pas',
+      waiting: 'Personne de déconnecté pour le moment… si tu viens de perdre la connexion, ta place se libère dans quelques secondes.',
+      alreadyConnected: 'Ce joueur est finalement connecté, sa place n\'est plus libre.',
     },
     invite: (hostName) => (
       <>
@@ -55,6 +84,7 @@ export const fr: Dictionary = {
       invalidLobbyCode: 'Code de salon invalide',
       lobbyNotFound: 'Salon introuvable',
       pseudoTaken: (name) => `Le pseudo "${name}" est déjà pris dans ce salon`,
+      gameInProgress: 'Une partie est déjà en cours dans ce salon, impossible de la rejoindre.',
     },
     joinByCode: {
       button: 'Rejoindre une partie',
@@ -75,18 +105,29 @@ export const fr: Dictionary = {
     settingsHostOnlySuffix: 'peut modifier les paramètres',
     guessMyAnswer: {
       label: 'Devine ma réponse',
-      description: "Un joueur est désigné pour écrire la réponse que le pilier aurait répondu",
+      description: "Un joueur est désigné pour écrire la réponse que le pilier aurait donnée",
     },
     gameSpeed: {
-      label: 'Durée de partie',
-      fast: 'Courte',
-      normal: 'Moyenne',
-      slow: 'Longue',
+      label: 'Durée des manches',
+      fast: 'Rapide',
+      normal: 'Normale', // accord avec le titre « Durée des manches »
       estimate: (m) => `~${m} min`,
     },
+    options: {
+      title: 'Options de jeu',
+      summary: (speed, rounds, m) => `${speed} · ${rounds} manche${rounds > 1 ? 's' : ''} ~${m} min`,
+      leaders: 'Piliers',
+      rounds: (n) => `${n} manche${n > 1 ? 's' : ''}`,
+      leadersHint: 'Décoche ceux qui ne veulent pas être pilier : ils jouent quand même !',
+      you: '(toi)',
+      hostOnly: (host) => `Seul ${host} peut modifier les options.`,
+      estimateLabel: 'Durée estimée',
+    },
+    notLeaderBadge: 'Pas pilier',
+    atLeastOneLeader: 'Il faut au moins 1 pilier pour lancer',
     themes: 'Thèmes',
+    gameSection: 'Partie',
     start: 'Démarrer',
-    copyInviteLink: "Copier le lien d'invitation",
     shareInvite: {
       button: "Partager l'invitation",
       title: 'Onskoné',
@@ -131,6 +172,7 @@ export const fr: Dictionary = {
       kicked: (name) => `${name} t'a expulsé du salon`,
       kickedAnon: 'Tu as été expulsé du salon',
       closedInactive: 'Ce salon a été fermé pour inactivité',
+      joinRefused: 'Ce pseudo est déjà pris dans ce salon, ou ta session a expiré.',
       playerJoined: (name) => `${name} a rejoint le salon`,
       playerLeft: (name) => `${name} a quitté le salon`,
     },
@@ -143,7 +185,14 @@ export const fr: Dictionary = {
 
   game: {
     loading: 'Chargement du jeu...',
+    loadingSlow: 'La connexion met du temps…',
+    loadingRetry: 'Réessayer',
+    loadingHome: "Retour à l'accueil",
     leaderDisconnected: (name) => `${name} s'est déconnecté - round passé`,
+    leaderIdle: (name) => `${name} n'a pas conclu la manche - round passé automatiquement`,
+    sessionLost: 'Ta session a expiré. Choisis ton pseudo pour reprendre ta place.',
+    lobbyGone: "Ce salon n'existe plus.",
+    connectedElsewhere: 'Tu as repris ta place depuis un autre appareil.',
   },
 
   seo: {
@@ -162,6 +211,7 @@ export const fr: Dictionary = {
     quit: 'Quitter',
     individualScores: 'Scores individuels',
     points: (n) => `${n} pt${n > 1 ? 's' : ''}`,
+    unranked: 'Hors classement',
     receivedQuestion: 'Question reçue',
     correctAnswersCount: (n) => `${n} Bonne${n > 1 ? 's' : ''} réponse${n > 1 ? 's' : ''}`,
     byPlayer: (name) => `(par ${name})`,
@@ -288,11 +338,9 @@ export const fr: Dictionary = {
     categoryPlaceholder: 'Sélectionne une catégorie…',
     messageLabel: 'Message',
     messagePlaceholder: 'Décris en quelques mots…',
-    messageDisabled: "Sélectionne d'abord un type ci-dessus.",
     cancel: 'Annuler',
     send: 'Envoyer',
     success: 'Merci ! Ton signalement a été envoyé.',
-    footerLabel: 'Signaler un problème',
     unknownError: 'Erreur inconnue',
   },
 
@@ -375,11 +423,18 @@ export const fr: Dictionary = {
       seoDescription: "Politique de confidentialité d'Onskoné : quelles données de jeu sont collectées, comment elles sont utilisées et conservées.",
       sections: [
         {
+          title: 'Responsable du traitement',
+          content: `Simeon Deivassagayame, éditeur d'Onskoné. Contact : onskonelejeu@gmail.com`,
+        },
+        {
           title: 'Collecte des données',
-          content: `Onskone collecte uniquement les données strictement nécessaires au fonctionnement du jeu :`,
+          content: `Onskone collecte uniquement les données nécessaires au fonctionnement du jeu, à son amélioration et, dans l'application mobile gratuite, à l'affichage de publicités :`,
           list: [
             'Votre pseudo (choisi librement, non lié à votre identité)',
             'Vos réponses aux questions durant les parties',
+            `Les signalements que vous nous envoyez volontairement (message, pseudo, type d'appareil)`,
+            `Des rapports d'erreurs techniques (version de l'application, type d'appareil), sans donnée d'identification`,
+            `Dans l'application mobile : les données publicitaires collectées par Google AdMob (voir « Publicité »)`,
           ],
         },
         {
@@ -388,24 +443,38 @@ export const fr: Dictionary = {
           list: [
             'Permettre le déroulement des parties de jeu',
             'Afficher les scores et résultats',
-            `Améliorer l'expérience utilisateur`,
+            `Améliorer l'expérience utilisateur et corriger les bugs`,
+            `Mesurer l'audience de manière anonyme`,
+            `Afficher des publicités dans l'application mobile gratuite`,
           ],
         },
         {
+          title: 'Publicité',
+          content: `La version gratuite de l'application mobile (Android et iOS) peut afficher des publicités fournies par Google AdMob (Google Ireland Limited). Google peut alors collecter l'identifiant publicitaire de votre appareil, votre adresse IP (dont il déduit une localisation approximative), des informations sur votre appareil et vos interactions avec les publicités. Ces données servent à afficher les publicités, à les personnaliser si vous y avez consenti, à mesurer leurs performances, à limiter leur répétition et à lutter contre la fraude. Dans l'Union européenne, au Royaume-Uni et en Suisse, un message vous demande votre consentement : vous pouvez refuser, des publicités non personnalisées sont alors affichées, et modifier votre choix à tout moment depuis l'application. Sur iOS, l'accès à l'identifiant publicitaire dépend aussi de l'autorisation « Suivi » d'Apple. Les utilisateurs Premium ne voient aucune publicité, et le site onskone.fr n'en affiche pas. Pour en savoir plus sur l'utilisation des données par Google : https://policies.google.com/technologies/partner-sites`,
+        },
+        {
+          title: 'Achats Premium',
+          content: `Les achats intégrés sont payés via Apple (App Store) ou Google (Google Play), puis vérifiés via RevenueCat (RevenueCat, Inc.), qui reçoit un identifiant anonyme et l'historique d'achat associé afin de confirmer votre accès Premium. Nous n'avons jamais accès à vos coordonnées bancaires.`,
+        },
+        {
+          title: "Mesure d'audience",
+          content: `Le site et l'application utilisent Umami, un outil de statistiques que nous hébergeons nous-mêmes (stats.onskone.fr). Il fonctionne sans cookie et ne collecte aucune donnée permettant de vous identifier.`,
+        },
+        {
           title: 'Conservation des données',
-          content: `Les données de jeu (pseudos, réponses) sont temporaires et ne sont pas conservées après la fin de la session de jeu. Aucune donnée personnelle n'est stockée de manière permanente sur nos serveurs.`,
+          content: `Les données de jeu (pseudos, réponses) sont temporaires et ne sont pas conservées après la fin de la session de jeu. Les signalements et rapports d'erreurs sont conservés le temps nécessaire à leur traitement ; l'adresse IP associée n'y est enregistrée que sous forme chiffrée (hachée). Les données publicitaires sont conservées par Google selon sa propre politique.`,
         },
         {
-          title: 'Cookies',
-          content: `Le site peut utiliser des cookies techniques nécessaires au bon fonctionnement du service (gestion de session, préférences). Ces cookies ne collectent aucune donnée personnelle à des fins publicitaires.`,
-        },
-        {
-          title: 'Vos droits',
-          content: `Conformément à la réglementation en vigueur, vous disposez d'un droit d'accès, de rectification et de suppression de vos données. Pour exercer ces droits, contactez-nous à : onskonelejeu@gmail.com`,
+          title: 'Cookies et traceurs',
+          content: `Le site utilise uniquement le stockage local nécessaire à son fonctionnement (préférences, reprise de partie). Aucun cookie publicitaire n'est déposé sur le site. Dans l'application mobile, les traceurs publicitaires de Google sont utilisés selon les choix que vous avez faits dans le message de consentement.`,
         },
         {
           title: 'Partage des données',
-          content: `Onskone ne vend, n'échange ni ne loue vos informations personnelles à des tiers. Vos données ne sont jamais partagées à des fins commerciales.`,
+          content: `Onskone ne vend, n'échange ni ne loue vos informations personnelles. Les seuls tiers qui reçoivent des données sont nos prestataires techniques, chacun pour sa finalité : Google (publicité dans l'application mobile), Apple, Google et RevenueCat (achats Premium). Ces données peuvent être transférées hors de l'Union européenne, avec les garanties prévues par le RGPD.`,
+        },
+        {
+          title: 'Vos droits',
+          content: `Conformément à la réglementation en vigueur, vous disposez d'un droit d'accès, de rectification et de suppression de vos données, ainsi que du droit de retirer à tout moment votre consentement publicitaire. Pour exercer ces droits, contactez-nous à : onskonelejeu@gmail.com. Vous pouvez aussi adresser une réclamation à la CNIL (www.cnil.fr).`,
         },
       ],
     },
@@ -523,9 +592,6 @@ export const fr: Dictionary = {
     "Le jour de sa naissance, la première phrase prononcée par Squeezie a été : 'Est-ce que c'est bon pour vous ?'",
     "Au casino, tu peux remporter 4000 fois ta mise, mais tu ne peux perdre qu’1 fois ta mise, donc mise tout la prochaine fois ;)",
     "Il est statistiquement plus sûr de parier sur un but de Kylian Mbappé que sur un but de l’arbitre.",
-    'Aller à la salle de sport régulièrement confère en plus du gain musculaire, une odeur corporelle nauséabonde',
-    'Ne pas se brosser les dents entraîne systématiquement une haleine de dragon',
-    'Manger du KFC tous les jours augmente fortement tes dépenses en papier toilette',
     "Celui qui s'endort avec les fesses qui grattent, se réveille avec les doigts qui puent",
     "Onskoné a crée 10 couples. Incroyable ! (et en a détruit 35)",
     "Le pilier de la manche qui arrive à 0 bonnes réponses a 50% d'être mauvais et 50% de chances d'être bourré.",
@@ -533,14 +599,15 @@ export const fr: Dictionary = {
     "Si personne ne trouve tes réponses, deux hypothèses : tu es un génie incompris ou tu es juste extrêmement bizarre.",
     "Onskoné est actuellement interdit dans 0 pays. Mais ça pourrait changer (on croise les doigts !) ",
     "Onskoné est le seul jeu où tu peux te faire des amis et en perdre en même temps.",
+    'Pour répondre, pense à tout : travail, amis, famille, études, voyages…',
+    'SOIS SPONTANÉ sur Onskoné ! Les premières réponses qui te viennent en tête sont souvent les meilleures.',
+    "N'essaie pas de trouver THE PERFECT réponse : cherche plutôt celle que tu donnerais naturellement !",
   ],
 
   decks: {
     instruction: 'Clique sur les thèmes pour les ajouter/retirer',
-    selectedCount: (n) => `${n} thème${n > 1 ? 's' : ''} sélectionné${n > 1 ? 's' : ''}`,
     all: 'Tout',
     loading: 'Chargement des decks de questions…',
-    goToCategory: (cat) => `Aller à ${cat}`,
     categoryDescriptions: {
       ICEBREAKERS: 'Questions simples pour briser la glace',
       FUN: 'Amuse-toi avec tes amis sur des sujets marrants',
@@ -575,7 +642,6 @@ export const fr: Dictionary = {
     perkFuture: 'Tout le futur contenu inclus',
     perkName: 'Ton pseudo en or brillant',
     perkNameSample: 'Toi',
-    perkNamePreviewHint: 'Ton aperçu premium',
     perkAdsTitle: 'ZÉRO PUB',
     perkAdsDesc: 'Plus jamais une seule interruption.',
     unlock: 'Débloquer le Premium',
@@ -599,6 +665,7 @@ export const fr: Dictionary = {
     welcomeDesc: 'Merci ÉNORMÉMENT pour ton soutien <3\nDésormais, tu as accès à tous les thèmes premium (et ceux à venir) et à ton pseudo doré !',
     welcomeCta: 'C\'est parti !',
     activeToast: 'Tu es Premium ! Merci pour ton soutien <3',
+    homeButton: 'Débloquer\nPremium',
   },
 
   appBanner: {
@@ -664,10 +731,8 @@ export const fr: Dictionary = {
       removeOption: 'Retirer l\'attribution',
       assignWaiting: 'assigne les réponses…',
       answers: 'Réponses',
-      allAssigned: 'Toutes les réponses ont été attribuées',
       remainingCount: (n) => `Il reste ${n} réponse${n > 1 ? 's' : ''} à attribuer`,
       validate: 'Valider mes choix',
-      removeAria: 'Retirer',
       rotateForLandscape: 'Tourne ton téléphone pour un affichage plus large',
       leaderFallback: 'le pilier',
     },
@@ -712,7 +777,6 @@ export const fr: Dictionary = {
     top3Label: 'TOP 3',
     ctaLine1: "Télécharge l'appli",
     ctaLine2: 'Onskoné !',
-    shareTitle: 'Onskoné',
   },
 
   apiErrors: {

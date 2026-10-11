@@ -110,8 +110,8 @@ export const formatRelative = (ms: number): string => {
 };
 
 // ---------- Navigation ----------
-export type AdminTab = 'overview' | 'tickets' | 'logs' | 'lobbies' | 'decks' | 'content' | 'stats';
-export type TabGroup = 'pilotage' | 'inbox' | 'catalogue' | 'analytics';
+export type AdminTab = 'overview' | 'tickets' | 'logs' | 'lobbies' | 'decks' | 'content';
+export type TabGroup = 'pilotage' | 'inbox' | 'catalogue';
 
 export interface TabDef {
   id: AdminTab;
@@ -130,10 +130,9 @@ export const TABS: TabDef[] = [
   { id: 'logs', icon: 'mdi:bug-outline', label: 'Logs', ariaLabel: 'Logs d\'erreurs de l\'app', hint: 'erreurs appareils', enabled: true, group: 'inbox' },
   { id: 'decks', icon: 'mdi:cards-outline', label: 'Decks', ariaLabel: 'Decks de questions', hint: 'catalogue', enabled: true, group: 'catalogue' },
   { id: 'content', icon: 'mdi:file-document-outline', label: 'Contenu', ariaLabel: 'Contenu du site', hint: 'données fixes', enabled: true, group: 'catalogue' },
-  { id: 'stats', icon: 'mdi:chart-line', label: 'Stats', ariaLabel: 'Stats', hint: 'analytics', enabled: true, group: 'analytics' },
 ];
 
-export const GROUP_ORDER: TabGroup[] = ['pilotage', 'inbox', 'catalogue', 'analytics'];
+export const GROUP_ORDER: TabGroup[] = ['pilotage', 'inbox', 'catalogue'];
 
 export const MOBILE_TAB_META: Record<AdminTab, { icon: string; label: string }> = {
   overview: { icon: 'mdi:home-variant-outline', label: 'Accueil' },
@@ -142,7 +141,6 @@ export const MOBILE_TAB_META: Record<AdminTab, { icon: string; label: string }> 
   logs: { icon: 'mdi:bug-outline', label: 'Logs' },
   decks: { icon: 'mdi:cards-outline', label: 'Decks' },
   content: { icon: 'mdi:file-document-outline', label: 'Contenu' },
-  stats: { icon: 'mdi:chart-line', label: 'Stats' },
 };
 
-export const MOBILE_TAB_ORDER: AdminTab[] = ['overview', 'lobbies', 'tickets', 'logs', 'decks', 'content', 'stats'];
+export const MOBILE_TAB_ORDER: AdminTab[] = ['overview', 'lobbies', 'tickets', 'logs', 'decks', 'content'];

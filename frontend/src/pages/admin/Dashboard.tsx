@@ -11,7 +11,6 @@ import { LogsPanel } from './Logs';
 import { LobbiesPanel } from './Lobbies';
 import { DecksPanel } from './Decks';
 import { ContentPanel } from './Content';
-import { StatsPanel } from './Stats';
 import { VersionGateButton } from './VersionGateButton';
 
 const LOBBY_COUNT_POLL_MS = 5000;
@@ -224,9 +223,6 @@ export const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
         {activeTab === 'content' && (
           <ContentPanel />
         )}
-        {activeTab === 'stats' && (
-          <StatsPanel />
-        )}
       </main>
 
       <MobileBottomNav activeTab={activeTab} setActiveTab={setActiveTab} lobbyCount={lobbyCount} ticketCount={openTicketCount} />
@@ -248,41 +244,66 @@ export const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
         .custom-scroll::-webkit-scrollbar-thumb:hover {
           background: rgba(255,255,255,0.18);
         }
+        /* Slider du simulateur (Réglages de jeu) : grosse zone de prise (28px de haut,
+           toute la hauteur est cliquable), rail 8px rempli jusqu'au curseur via la
+           variable --fill posée par le composant, curseur 22px + anneau au focus clavier. */
         .admin-mini-slider {
           -webkit-appearance: none;
           appearance: none;
-          height: 3px;
-          background: rgba(255,255,255,0.08);
-          border-radius: 999px;
+          height: 28px;
+          background: transparent;
           outline: none;
+          cursor: pointer;
+        }
+        .admin-mini-slider::-webkit-slider-runnable-track {
+          height: 8px;
+          border-radius: 999px;
+          background: linear-gradient(to right, rgba(251,191,36,0.85) var(--fill, 0%), rgba(255,255,255,0.1) var(--fill, 0%));
         }
         .admin-mini-slider::-webkit-slider-thumb {
           -webkit-appearance: none;
           appearance: none;
-          width: 10px;
-          height: 10px;
+          width: 22px;
+          height: 22px;
+          margin-top: -7px;
           border-radius: 999px;
-          background: rgba(255,255,255,0.55);
-          border: none;
-          transition: background 0.15s;
+          background: #fff;
+          border: 3px solid rgb(251,191,36);
+          box-shadow: 0 1px 4px rgba(0,0,0,0.45);
+          transition: transform 0.15s, box-shadow 0.15s;
         }
-        .admin-mini-slider:hover::-webkit-slider-thumb {
-          background: rgba(251,191,36,0.9);
+        .admin-mini-slider:hover::-webkit-slider-thumb,
+        .admin-mini-slider:active::-webkit-slider-thumb {
+          transform: scale(1.12);
         }
-        .admin-mini-slider::-moz-range-thumb {
-          width: 10px;
-          height: 10px;
-          border-radius: 999px;
-          background: rgba(255,255,255,0.55);
-          border: none;
-        }
-        .admin-mini-slider:hover::-moz-range-thumb {
-          background: rgba(251,191,36,0.9);
+        .admin-mini-slider:focus-visible::-webkit-slider-thumb {
+          box-shadow: 0 0 0 5px rgba(251,191,36,0.35), 0 1px 4px rgba(0,0,0,0.45);
         }
         .admin-mini-slider::-moz-range-track {
-          height: 3px;
-          background: rgba(255,255,255,0.08);
+          height: 8px;
           border-radius: 999px;
+          background: rgba(255,255,255,0.1);
+        }
+        .admin-mini-slider::-moz-range-progress {
+          height: 8px;
+          border-radius: 999px;
+          background: rgba(251,191,36,0.85);
+        }
+        .admin-mini-slider::-moz-range-thumb {
+          width: 16px;
+          height: 16px;
+          border-radius: 999px;
+          background: #fff;
+          border: 3px solid rgb(251,191,36);
+          box-shadow: 0 1px 4px rgba(0,0,0,0.45);
+          transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .admin-mini-slider:hover::-moz-range-thumb,
+        .admin-mini-slider:active::-moz-range-thumb {
+          transform: scale(1.12);
+        }
+        .admin-mini-slider:focus-visible::-moz-range-thumb {
+          box-shadow: 0 0 0 5px rgba(251,191,36,0.35), 0 1px 4px rgba(0,0,0,0.45);
         }
 
         /* Fil de progression discret sous le masthead pendant le refresh */

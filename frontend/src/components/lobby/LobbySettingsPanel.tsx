@@ -1,8 +1,8 @@
 import { Icon } from '@iconify/react';
 import { DecksCatalogWithMeta, SelectedDecks } from '@onskone/shared';
+import type { GameSpeed } from '@onskone/shared';
 import Checkbox from '../Checkbox';
-import GameSpeedSlider from '../GameSpeedSlider';
-import { GAME_CONFIG, getSoftCategoryColor, estimateGameMinutes } from '../../constants/game';
+import { getSoftCategoryColor } from '../../constants/game';
 import { STICKER_FILTER } from '../../constants/icons';
 import type { Dictionary } from '../../i18n/dictionary';
 
@@ -11,10 +11,11 @@ interface LobbySettingsPanelProps {
   hostName: string;
   guessMyAnswerMode: boolean;
   onGuessMyAnswerModeChange: (next: boolean) => void;
-  timeMultiplier: number;
-  onTimeMultiplierChange: (next: number) => void;
-  /** Nombre de joueurs actifs, pour estimer la durée de partie. */
-  activePlayersCount: number;
+  /** Résumé des options de jeu (rythme · manches · durée estimée). */
+  gameSpeed: GameSpeed;
+  roundCount: number;
+  estimatedMinutes: number;
+  onOpenOptions: () => void;
   selectedDecks: SelectedDecks;
   decksCatalogMeta: DecksCatalogWithMeta;
   totalThemesSelected: number;
@@ -22,19 +23,31 @@ interface LobbySettingsPanelProps {
   t: Dictionary;
 }
 
+// Titre de section : petit surtitre tracké, volontairement plus discret que les
+// titres de ligne (gras) pour ne pas confondre "section" et "réglage".
+const SECTION_TITLE = 'm-0 px-1 font-display text-xs font-bold uppercase tracking-[0.08em] text-black/60';
+
 /**
  * Panneau de réglages du lobby (onglet "Réglages") : bandeau "hôte uniquement"
- * pour les non-hôtes, mode "Devine ma réponse", rythme de jeu, et bloc Thèmes.
- * Les contrôles sont désactivés (lecture seule) pour les non-hôtes.
+ * pour les non-hôtes, puis deux sections titrées, chacune un bloc crème sur le
+ * panneau blanc :
+ * - Partie : le mode de jeu et la ligne "Options de jeu" qui résume et ouvre les
+ *   réglages fins (rythme, piliers) - les règles, regroupées dans un même bloc ;
+ * - Thèmes : le contenu. Hauteur variable, donc en dernier pour que le résumé des
+ *   options reste visible.
+ * Divulgation progressive : ce qui définit la partie reste visible, le réglage fin
+ * se replie. Les contrôles sont désactivés (lecture seule) pour les non-hôtes ; les
+ * options restent consultables.
  */
 const LobbySettingsPanel = ({
   isHost,
   hostName,
   guessMyAnswerMode,
   onGuessMyAnswerModeChange,
-  timeMultiplier,
-  onTimeMultiplierChange,
-  activePlayersCount,
+  gameSpeed,
+  roundCount,
+  estimatedMinutes,
+  onOpenOptions,
   selectedDecks,
   decksCatalogMeta,
   totalThemesSelected,
@@ -42,7 +55,7 @@ const LobbySettingsPanel = ({
   t,
 }: LobbySettingsPanelProps) => {
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5">
       {!isHost && (
         <div className="flex justify-center pt-4 pb-1">
           <div className="relative rotate-[-1.2deg] hover:rotate-0 transition-transform duration-300 ease-out">
@@ -71,42 +84,59 @@ const LobbySettingsPanel = ({
           </div>
         </div>
       )}
-      {/* Mode "Devine ma réponse" - décoché = mode Classique */}
-      <Checkbox
-        checked={guessMyAnswerMode}
-        onChange={onGuessMyAnswerModeChange}
-        disabled={!isHost}
-        label={t.lobby.guessMyAnswer.label}
-        description={t.lobby.guessMyAnswer.description}
-      />
+      {/* Section Partie - un bloc, deux lignes de réglage (façon réglages groupés) :
+          le mode (case à droite, alignée sur le chevron) puis les options de jeu. */}
+      <section className="flex flex-col gap-1.5">
+        <h3 className={SECTION_TITLE}>{t.lobby.gameSection}</h3>
+        <div className="rounded-2xl border-[2.5px] border-black bg-cream-settings stack-shadow-sm overflow-hidden">
+          {/* Mode "Devine ma réponse" - décoché = mode Classique */}
+          <div className="p-3">
+            <Checkbox
+              checked={guessMyAnswerMode}
+              onChange={onGuessMyAnswerModeChange}
+              disabled={!isHost}
+              label={t.lobby.guessMyAnswer.label}
+              description={t.lobby.guessMyAnswer.description}
+              boxSide="right"
+            />
+          </div>
 
-      <span aria-hidden className="w-full border-t-[1.5px] border-dashed border-black/15" />
+          <span aria-hidden className="block mx-3 border-t-[1.5px] border-dashed border-black/15" />
 
-      {/* Rythme de jeu : slider 3 niveaux, emoji carousel, section inline. */}
-      <GameSpeedSlider
-        value={timeMultiplier}
-        onChange={onTimeMultiplierChange}
-        disabled={!isHost}
-        estimateFor={(m) => estimateGameMinutes(
-          Math.max(GAME_CONFIG.MIN_PLAYERS, activePlayersCount),
-          m,
-          guessMyAnswerMode,
-        )}
-        t={t}
-      />
+          {/* Options de jeu : réglages fins repliés dans un bottom sheet. La ligne affiche
+              leur état courant, pour qu'un réglage replié ne soit jamais un réglage oublié.
+              Feedback de ligne (fond) et non de carte (translate) : la ligne vit dans le bloc. */}
+          <button
+            type="button"
+            onClick={onOpenOptions}
+            aria-haspopup="dialog"
+            className="group w-full flex items-center gap-3 p-3 text-left cursor-pointer transition-colors duration-200 hover:bg-black/[0.03] active:bg-black/[0.06]"
+          >
+            <span className="flex-1 min-w-0 flex flex-col gap-0.5">
+              <span className="font-display text-sm md:text-base font-bold uppercase tracking-tight text-black leading-none">
+                {t.lobby.options.title}
+              </span>
+              <span className="font-display text-xs font-bold tabular-nums text-black/60 truncate">
+                {t.lobby.options.summary(
+                  gameSpeed === 'fast' ? t.lobby.gameSpeed.fast : t.lobby.gameSpeed.normal,
+                  roundCount,
+                  estimatedMinutes,
+                )}
+              </span>
+            </span>
+            <Icon icon="lucide:chevron-right" width={18} height={18} aria-hidden className="shrink-0 text-black/75 transition-transform duration-200 group-hover:translate-x-0.5" />
+          </button>
+        </div>
+      </section>
 
-      <span aria-hidden className="w-full border-t-[1.5px] border-dashed border-black/15" />
-
-      {/* Section Thèmes - titre + bloc blanc (compteur top-left, Modifier top-right, chips). */}
-      <div className="flex flex-col gap-1.5">
-        <span className="font-display text-base font-bold uppercase tracking-tight text-black px-1">
-          {t.lobby.themes}
-        </span>
+      {/* Section Thèmes - titre + bloc crème (compteur top-left, Modifier top-right, chips). */}
+      <section className="flex flex-col gap-1.5">
+        <h3 className={SECTION_TITLE}>{t.lobby.themes}</h3>
         <button
           type="button"
           onClick={onOpenThemePicker}
           aria-label={isHost ? t.themePicker.modify : t.themePicker.view}
-          className="group w-full flex flex-col gap-2 p-3 rounded-2xl border-[2.5px] border-black bg-white stack-shadow-sm text-left cursor-pointer transition-all duration-200 hover:-translate-y-0.5 active:translate-y-[1px] active:[box-shadow:none!important]"
+          className="group w-full flex flex-col gap-2 p-3 rounded-2xl border-[2.5px] border-black bg-cream-settings stack-shadow-sm text-left cursor-pointer transition-all duration-200 hover:-translate-y-0.5 active:translate-y-[1px] active:[box-shadow:none!important]"
         >
           {/* En-tête du bloc : compteur top-left, Modifier/Voir top-right */}
           <span className="flex items-center gap-2 w-full">
@@ -151,7 +181,7 @@ const LobbySettingsPanel = ({
             )}
           </span>
         </button>
-      </div>
+      </section>
     </div>
   );
 };

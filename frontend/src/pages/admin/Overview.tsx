@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { Ticket, TicketStatus, TicketType } from '../../utils/ticketsApi';
 import { TYPE_META, STATUS_META, formatRelative } from './shared';
-import { PremiumPromoPanel } from './PremiumPromo';
 
 const SectionLabel = ({ children }: { children: React.ReactNode }) => (
   <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-white/55 font-bold mb-3">
@@ -39,10 +38,6 @@ export const OverviewPanel = ({
   onJumpToTickets: (status?: TicketStatus, type?: TicketType) => void;
 }) => {
   const stats = useMemo(() => {
-    const now = Date.now();
-    const dayMs = 24 * 60 * 60 * 1000;
-    const last24h = tickets.filter((t) => now - t.created_at < dayMs).length;
-    const last7d = tickets.filter((t) => now - t.created_at < 7 * dayMs).length;
     const byStatus = tickets.reduce((acc, t) => {
       acc[t.status] = (acc[t.status] || 0) + 1;
       return acc;
@@ -63,7 +58,7 @@ export const OverviewPanel = ({
     const recent = [...tickets]
       .sort((a, b) => b.created_at - a.created_at)
       .slice(0, 6);
-    return { last24h, last7d, byStatus, byType, hotLobbies, recent };
+    return { byStatus, byType, hotLobbies, recent };
   }, [tickets]);
 
   const open = (stats.byStatus.new || 0) + (stats.byStatus.in_progress || 0);
@@ -73,17 +68,10 @@ export const OverviewPanel = ({
     <div className="space-y-6">
       <div>
         <SectionLabel>Vue d'ensemble</SectionLabel>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <KpiCell label="Ouverts" value={open} hint={`${stats.byStatus.new || 0} nouveau · ${stats.byStatus.in_progress || 0} wip`} onClick={() => onJumpToTickets('new')} />
-          <KpiCell label="24 h" value={stats.last24h} hint="reçus aujourd'hui" />
-          <KpiCell label="7 jours" value={stats.last7d} hint="cadence hebdo" />
           <KpiCell label="Résolus" value={stats.byStatus.resolved || 0} hint={`${stats.byStatus.wont_fix || 0} sans suite`} onClick={() => onJumpToTickets('resolved')} />
         </div>
-      </div>
-
-      <div>
-        <SectionLabel>Pilotage</SectionLabel>
-        <PremiumPromoPanel />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">

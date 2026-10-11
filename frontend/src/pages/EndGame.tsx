@@ -204,9 +204,11 @@ const EndGame: React.FC = () => {
       (sum, r) => sum + (r.scores?.[currentPlayer.id] || 0),
       0
     );
-    // Rang strict : 1er = pas d'autre joueur strictement au-dessus en score.
+    // Rang strict : 1er = pas d'autre joueur strictement au-dessus en score. Un joueur
+    // hors classement (jamais pilier) n'est jamais 1er, même quand tout le monde est à 0.
     const maxScore = leaderboard.reduce((m, e) => Math.max(m, e.score), 0);
-    const finishRank = myScore === maxScore ? 1 : 2;
+    const isRanked = roundByLeaderId.size === 0 || roundByLeaderId.has(currentPlayer.id);
+    const finishRank = isRanked && myScore === maxScore ? 1 : 2;
 
     const unlocked = recordGameEnd({
       lobbyCode,
@@ -224,7 +226,7 @@ const EndGame: React.FC = () => {
         showToast(t.endGame.toasts.achievementUnlocked(meta?.title ?? ach.id), 'achievement', 4500);
       }, 2000 + idx * 1200));
     });
-  }, [lobbyCode, currentPlayer, leaderboard, rounds, pct, showToast, t]);
+  }, [lobbyCode, currentPlayer, leaderboard, rounds, roundByLeaderId, pct, showToast, t]);
 
   const handleBackToLobby = () => {
     if (lobbyCode) navigate(`/lobby/${lobbyCode}`);
@@ -250,7 +252,8 @@ const EndGame: React.FC = () => {
       verdictMessage: verdictMessage,
       color: verdict.color,
       tierEmoji: verdict.emoji,
-      topPlayers: leaderboard.slice(0, 3).map(e => ({
+      // Podium de l'image partagée : seuls les joueurs classés (qui ont été piliers).
+      topPlayers: leaderboard.filter(e => roundByLeaderId.size === 0 || roundByLeaderId.has(e.player.id)).slice(0, 3).map(e => ({
         name: e.player.name,
         score: e.score,
         avatarId: e.player.avatarId,
@@ -261,7 +264,7 @@ const EndGame: React.FC = () => {
       .then(blob => { if (!cancelled) preparedBlobRef.current = blob; })
       .catch(err => console.error('buildShareCard failed', err));
     return () => { cancelled = true; };
-  }, [revealed, leaderboard, pct, verdict, verdictTexts, verdictMessage, t, locale]);
+  }, [revealed, leaderboard, roundByLeaderId, pct, verdict, verdictTexts, verdictMessage, t, locale]);
 
   const handleShare = async () => {
     if (isSharing) return;

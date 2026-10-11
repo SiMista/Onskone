@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import socket from '../utils/socket';
 import Button from '../components/Button';
@@ -8,6 +8,7 @@ import ConfirmModal from '../components/ConfirmModal';
 import InfoModal from '../components/InfoModal';
 import HowToPlayCarousel from '../components/HowToPlayCarousel';
 import HowToPlayButton from '../components/HowToPlayButton';
+import SettingsButton from '../components/SettingsButton';
 import ShareInviteSheet from '../components/ShareInviteSheet';
 import { Icon } from '@iconify/react';
 import ThemePickerModal from '../components/ThemePickerModal';
@@ -16,6 +17,7 @@ import ScrollFade from '../components/ScrollFade';
 import LobbyTabs, { type LobbyTabId } from '../components/lobby/LobbyTabs';
 import LobbyPlayersGrid from '../components/lobby/LobbyPlayersGrid';
 import LobbySettingsPanel from '../components/lobby/LobbySettingsPanel';
+import GameOptionsSheet from '../components/lobby/GameOptionsSheet';
 import { IPlayer, ERROR_CODES } from '@onskone/shared';
 import type { ErrorCode } from '@onskone/shared';
 import { useSocketEvent, useLeavePrompt, useReconnectOnVisible } from '../hooks';
@@ -25,7 +27,7 @@ import { useLobbyState } from '../hooks/useLobbyState';
 import { useLobbyExitEvents } from '../hooks/useLobbyExitEvents';
 import { useToast } from '../components/Toast';
 import { useLocale } from '../i18n';
-import { GAME_CONFIG, DEBUG_TIME_MULTIPLIER } from '../constants/game';
+import { GAME_CONFIG, DEBUG_GAME_SPEED, estimateGameMinutes } from '../constants/game';
 import { STICKER_FILTER } from '../constants/icons';
 import { studioStorage, isStudioFrame, getStudioBotFlag } from '../utils/studioStorage';
 import { getCurrentPlayerFromStorage, storeReconnectToken, getReconnectToken } from '../utils/playerHelpers';
@@ -57,6 +59,7 @@ const Lobby = () => {
     const [isHowToPlayOpen, setIsHowToPlayOpen] = useState(false);
     const [isThemePickerOpen, setIsThemePickerOpen] = useState(false);
     const [shareSheetOpen, setShareSheetOpen] = useState(false);
+    const [optionsSheetOpen, setOptionsSheetOpen] = useState(false);
     const [lobbyTab, setLobbyTab] = useState<LobbyTabId>('settings');
     const lobbyTabScrollRef = useRef<HTMLDivElement | null>(null);
     // Le scroll-container est partagé entre les 2 tabs (grid stacking).
@@ -74,17 +77,21 @@ const Lobby = () => {
 
     const { playerName, avatarId } = useLobbyIdentity(lobbyCode, searchParams);
 
-    // Réglages du lobby (thèmes, mode, rythme) + leur synchro socket.
+    // Réglages du lobby (thèmes, mode, rythme, piliers) + leur synchro socket.
     const {
         decksCatalog,
         decksCatalogMeta,
         selectedDecks,
         gameMode,
         guessMyAnswerMode,
-        timeMultiplier,
+        gameSpeed,
+        excludedLeaderIds,
+        contentLocale,
         onGuessMyAnswerModeChange,
-        onTimeMultiplierChange,
+        onGameSpeedChange,
+        onExcludedLeadersChange,
         onSelectedDecksChange,
+        flushPendingSettings,
     } = useLobbyState(lobbyCode);
 
     // Partage de l'invitation : actions granulaires (partage OS, copie lien, copie code) + modale de repli.
@@ -118,9 +125,11 @@ const Lobby = () => {
 
     const doStartGame = useCallback(() => {
         if (lobbyCode) {
+            // Réglages encore en debounce d'abord : ils doivent arriver avant startGame.
+            flushPendingSettings();
             socket.emit('startGame', { lobbyCode });
         }
-    }, [lobbyCode]);
+    }, [lobbyCode, flushPendingSettings]);
 
     const startGame = useCallback(() => {
         const activeCount = players.filter(p => p.isActive).length;
@@ -182,22 +191,22 @@ const Lobby = () => {
         return () => clearTimeout(timer);
     }, [currentPlayer?.isHost, players, selectedDecks, decksCatalog, lobbyCode]);
 
-    // Mode debug (DEV + `?debug=1`) : l'hôte pousse UNE fois le multiplicateur de
-    // debug au lobby, pour que toutes les phases soient longues pendant qu'on
-    // bosse sur un écran. On passe par le réglage de lobby plutôt que par un
-    // court-circuit local de la durée : c'est ce qui rend l'allongement RÉEL (la
-    // durée fait autorité côté serveur) et partagé par toute la table, au lieu
-    // d'un sablier qui affiche 1h pendant que le serveur coupe à 2 minutes.
-    // Le serveur refuse ce niveau hors développement.
+    // Mode debug (DEV + `?debug=1`) : l'hôte pousse UNE fois la vitesse de debug
+    // (phases d'1h) au lobby, pour pouvoir bosser sur un écran sans se faire couper.
+    // On passe par le réglage de lobby plutôt que par un court-circuit local de la
+    // durée : c'est ce qui rend l'allongement RÉEL (la durée fait autorité côté
+    // serveur) et partagé par toute la table, au lieu d'un sablier qui affiche 1h
+    // pendant que le serveur coupe à 2 minutes. Le serveur refuse cette vitesse
+    // hors développement.
     const debugSpeedPushedRef = useRef(false);
     useEffect(() => {
-        if (DEBUG_TIME_MULTIPLIER === null || debugSpeedPushedRef.current) return;
+        if (DEBUG_GAME_SPEED === null || debugSpeedPushedRef.current) return;
         if (!lobbyCode || !currentPlayer?.isHost) return;
         debugSpeedPushedRef.current = true;
-        if (timeMultiplier !== DEBUG_TIME_MULTIPLIER) {
-            onTimeMultiplierChange(DEBUG_TIME_MULTIPLIER);
+        if (gameSpeed !== DEBUG_GAME_SPEED) {
+            onGameSpeedChange(DEBUG_GAME_SPEED);
         }
-    }, [lobbyCode, currentPlayer?.isHost, timeMultiplier, onTimeMultiplierChange]);
+    }, [lobbyCode, currentPlayer?.isHost, gameSpeed, onGameSpeedChange]);
 
     const handleUpdatePlayersList = useCallback((data: { players: IPlayer[] }) => {
         if (initialPlayerIdsRef.current === null && data.players.length > 0) {
@@ -257,7 +266,7 @@ const Lobby = () => {
 
     // Routing d'erreur sur le `code` stable du contrat ; fallback sur le
     // texte localisé pour les serveurs qui n'émettent pas encore de code.
-    const handleError = useCallback((data: { message: string; code?: ErrorCode }) => {
+    const handleError = useCallback((data: { message: string; code?: ErrorCode; sessionLost?: boolean }) => {
         const isNotFound = data.code
             ? data.code === ERROR_CODES.NOT_FOUND
             : data.message === 'Lobby not found' || data.message === 'Player not found';
@@ -265,8 +274,24 @@ const Lobby = () => {
             navigate('/');
             return;
         }
-        console.error('Error:', data.message);
-    }, [navigate]);
+        // Expulsé : retour à l'accueil, sans proposer de reprendre ce salon.
+        if (data.code === ERROR_CODES.KICKED) {
+            showToast(t.lobby.toasts.kickedAnon, 'error', 5000);
+            navigate('/', { replace: true });
+            return;
+        }
+        // Slot refusé (session perdue, pseudo déjà pris) : le dire — avant, l'erreur
+        // partait en console et le joueur restait sur un salon vide — et rentrer
+        // avec le code pour que l'accueil propose de reprendre sa place. Uniquement
+        // sur `sessionLost` : un simple CONFLICT (ex. promotePlayer « déjà l'hôte »)
+        // est une action refusée, pas une session morte — l'hôte se faisait éjecter.
+        if (data.sessionLost) {
+            showToast(t.lobby.toasts.joinRefused, 'error', 5000);
+            navigate(`/?lobbyCode=${lobbyCode}`, { replace: true });
+            return;
+        }
+        showToast(data.message, 'error', 5000);
+    }, [navigate, showToast, t, lobbyCode]);
 
     const handleGameStarted = useCallback(() => {
         if (currentPlayer) {
@@ -295,7 +320,17 @@ const Lobby = () => {
     const totalThemesSelected = Object.values(selectedDecks).reduce((acc, arr) => acc + arr.length, 0);
     const hasThemeSelected = totalThemesSelected > 0;
     const decksLoading = Object.keys(decksCatalog).length === 0;
-    const canStartGame = enoughPlayers && hasThemeSelected;
+    // Une manche par pilier possible : joueurs actifs que l'hôte n'a pas exclus.
+    const excludedLeaders = useMemo(() => new Set(excludedLeaderIds), [excludedLeaderIds]);
+    const roundCount = activePlayers.filter(p => !excludedLeaders.has(p.id)).length;
+    const hasLeader = roundCount > 0;
+    const estimatedMinutes = estimateGameMinutes(
+        Math.max(GAME_CONFIG.MIN_PLAYERS, activePlayers.length),
+        Math.max(1, roundCount),
+        gameSpeed,
+        guessMyAnswerMode,
+    );
+    const canStartGame = enoughPlayers && hasThemeSelected && hasLeader;
     const isHost = !!currentPlayer?.isHost;
 
     return (
@@ -309,10 +344,13 @@ const Lobby = () => {
                 <div className="w-full max-w-2xl md:max-w-3xl max-h-full min-h-0 mx-auto px-3 md:px-4 py-2 md:py-4 flex flex-col safe-pt">
                     {/* ===================== LAYOUT UNIFIÉ ===================== */}
                     <div className="min-h-0 flex flex-col gap-2 md:gap-4">
-                        {/* Bouton retour + raccourci "Comment jouer ?" sur la même ligne. */}
+                        {/* Bouton retour + raccourci "Comment jouer ?" + réglages sur la même ligne. */}
                         <div className="shrink-0 flex items-center justify-between gap-2">
                             <BackButton onClick={leaveLobby} label={t.common.back} tone="danger" />
-                            <HowToPlayButton onClick={() => setIsHowToPlayOpen(true)} hintAlign="end" />
+                            <div className="flex items-center gap-2">
+                                <HowToPlayButton onClick={() => setIsHowToPlayOpen(true)} hintAlign="end" />
+                                <SettingsButton contentLocale={contentLocale ?? undefined} />
+                            </div>
                         </div>
 
                         {/* Tabs : intercalaires cartonnés en éventail, coins asymétriques */}
@@ -347,9 +385,10 @@ const Lobby = () => {
                                             hostName={hostName}
                                             guessMyAnswerMode={guessMyAnswerMode}
                                             onGuessMyAnswerModeChange={onGuessMyAnswerModeChange}
-                                            timeMultiplier={timeMultiplier}
-                                            onTimeMultiplierChange={onTimeMultiplierChange}
-                                            activePlayersCount={activePlayers.length}
+                                            gameSpeed={gameSpeed}
+                                            roundCount={roundCount}
+                                            estimatedMinutes={estimatedMinutes}
+                                            onOpenOptions={() => setOptionsSheetOpen(true)}
                                             selectedDecks={selectedDecks}
                                             decksCatalogMeta={decksCatalogMeta}
                                             totalThemesSelected={totalThemesSelected}
@@ -366,6 +405,7 @@ const Lobby = () => {
                                             currentPlayer={currentPlayer}
                                             initialPlayerIds={initialPlayerIdsRef.current}
                                             activePlayersCount={activePlayers.length}
+                                            excludedLeaderIds={excludedLeaderIds}
                                             onKick={kickPlayer}
                                             onPromote={promotePlayer}
                                             t={t}
@@ -413,6 +453,11 @@ const Lobby = () => {
                             {currentPlayer?.isHost && enoughPlayers && !hasThemeSelected && (
                                 <small className="text-[11px] md:text-xs text-white/85 italic drop-shadow text-center">
                                     {decksLoading ? t.lobby.loadingThemes : t.lobby.selectAtLeastOneTheme}
+                                </small>
+                            )}
+                            {currentPlayer?.isHost && enoughPlayers && hasThemeSelected && !hasLeader && (
+                                <small className="text-[11px] md:text-xs text-white/85 italic drop-shadow text-center">
+                                    {t.lobby.atLeastOneLeader}
                                 </small>
                             )}
                         </div>
@@ -473,6 +518,23 @@ const Lobby = () => {
             </InfoModal>
 
             {/* Bottom sheet de partage : code + copie rapide, copier le lien, partage OS */}
+            {/* Bottom sheet des options de jeu : rythme + piliers (exclusion) */}
+            <GameOptionsSheet
+                isOpen={optionsSheetOpen}
+                onClose={() => setOptionsSheetOpen(false)}
+                isHost={isHost}
+                hostName={hostName}
+                gameSpeed={gameSpeed}
+                onGameSpeedChange={onGameSpeedChange}
+                players={players}
+                currentPlayerId={currentPlayer?.id}
+                excludedLeaderIds={excludedLeaderIds}
+                onExcludedLeadersChange={onExcludedLeadersChange}
+                roundCount={roundCount}
+                estimatedMinutes={estimatedMinutes}
+                t={t}
+            />
+
             <ShareInviteSheet
                 isOpen={shareSheetOpen}
                 onClose={() => setShareSheetOpen(false)}

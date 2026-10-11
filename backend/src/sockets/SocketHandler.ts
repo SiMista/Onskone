@@ -6,7 +6,8 @@ import { createHandlerContext } from './handlers/context.js';
 import { registerLobbyHandlers } from './handlers/lobbyHandlers.js';
 import { registerRoundHandlers } from './handlers/roundHandlers.js';
 import { registerTimerHandlers } from './handlers/timerHandlers.js';
-import { registerDisconnectHandler } from './handlers/disconnectHandler.js';
+import { registerDisconnectHandler, armLeaderSkipIfDisconnected } from './handlers/disconnectHandler.js';
+import { setRoundStartedHook } from './broadcasting.js';
 
 /**
  * Coquille mince qui câble les modules socket cohérents :
@@ -29,6 +30,10 @@ export class SocketHandler {
 
     private setupSocketEvents(): void {
         const ctx = createHandlerContext(this.io, this.registry);
+
+        // Manche démarrée par le serveur (nextRound du pilier, filet REVEAL) : armer le
+        // saut de pilier si le pilier tiré est déjà déconnecté (cf. broadcasting).
+        setRoundStartedHook((io, lobbyCode, round) => armLeaderSkipIfDisconnected(io, this.registry, lobbyCode, round));
 
         this.io.on('connection', (socket: Socket<ClientToServerEvents, ServerToClientEvents>) => {
             logger.socket.connect(socket.id);

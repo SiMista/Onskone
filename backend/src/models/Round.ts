@@ -48,6 +48,12 @@ export class Round implements IRound {
     substitutePlayerId: string | null; // Joueur substitut désigné par le pilier
     substituteAnswer: string | null; // Réponse écrite par le substitut au nom du pilier
     serverTimerHandle: NodeJS.Timeout | null; // Timeout serveur autoritatif d'expiration de phase
+    // Filet REVEAL (cf. GAME_CONSTANTS.REVEAL_BACKSTOP_MS) : réarmé à chaque action du
+    // pilier pendant la révélation, désarmé quand la manche se conclut.
+    revealBackstopHandle: NodeJS.Timeout | null;
+    // Nb de déclenchements du filet alors que le pilier était encore connecté : une
+    // table vivante (débat devant le classement) a droit à un sursis avant le saut.
+    revealBackstopStrikes: number;
 
     constructor(roundNumber: number, leader: IPlayer, gameCard: GameCard, guessMyAnswerMode: boolean = false) {
         this.roundNumber = roundNumber;
@@ -74,6 +80,16 @@ export class Round implements IRound {
         this.substituteAnswer = null;
         this.phaseEndedAt = undefined; // explicite : aucune fenêtre de grâce ouverte
         this.serverTimerHandle = null;
+        this.revealBackstopHandle = null;
+        this.revealBackstopStrikes = 0;
+    }
+
+    /** Désarme le filet REVEAL s'il est armé (manche conclue, partie terminée, réarmement). */
+    clearRevealBackstop(): void {
+        if (this.revealBackstopHandle) {
+            clearTimeout(this.revealBackstopHandle);
+            this.revealBackstopHandle = null;
+        }
     }
 
     /**

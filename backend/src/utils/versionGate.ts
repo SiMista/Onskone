@@ -1,19 +1,37 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import type { Socket, ExtendedError } from 'socket.io';
+import type { Server, Socket, ExtendedError } from 'socket.io';
+import {
+  isActiveVersion,
+  type ClientToServerEvents,
+  type ServerToClientEvents,
+  type VersionPolicy,
+} from '@onskone/shared';
 import logger from './logger.js';
 import { getConfig, setConfig } from '../db/appConfig.js';
+import { getDeployedVersion } from './appVersion.js';
+import { isNativeAppOrigin } from './origins.js';
+import { announcesClientPolicy, shouldBlockLegacyClient } from './versionRule.js';
 
-// Plancher de maj forcée : version minimale autorisée à se connecter. En dessous,
-// le client est refusé au handshake socket et voit l'écran "Mise à jour requise".
+// Maj forcée : plancher = version minimale DEMANDÉE. Règle (cf. shared/src/version.ts) :
+// un client n'est bloqué que s'il est sous le plancher ET qu'une version plus récente
+// lui est réellement obtenable. Personne n'est bloqué sans pouvoir se mettre à jour.
 //
-// Deux niveaux, du plus prioritaire au moins prioritaire :
+//   - Client récent (annonce CLIENT_VERSION_POLICY) : jamais bloqué au handshake. Il
+//     reçoit la politique (`versionPolicy`) et tranche lui-même en interrogeant SON
+//     store (Play Core / App Store) ou, sur le web, le /version.json réellement servi.
+//   - Ancien client : le serveur tranche avec ce qu'il peut prouver (shouldBlockLegacyClient).
+//
+// Plancher, du plus prioritaire au moins prioritaire :
 //   1. app_config (SQLite, clé `min_supported_version`) : posé en 1 clic depuis
 //      l'admin. Prioritaire dès qu'une valeur existe. Survit aux redéploiements.
 //   2. SEED par défaut : env MIN_SUPPORTED_VERSION, sinon fichier MIN_SUPPORTED_VERSION
 //      à la racine du repo. Sert tant que l'admin n'a jamais rien posé.
 // "0.0.0" (ou vide) => gate désactivé, tout le monde passe.
+
+type IoServer = Server<ClientToServerEvents, ServerToClientEvents>;
+type AppSocket = Socket<ClientToServerEvents, ServerToClientEvents>;
 
 const CONFIG_KEY = 'min_supported_version';
 
@@ -35,61 +53,38 @@ const readMinVersionFile = (): string => {
 // Valeur de départ (défaut) : env prioritaire sur le fichier.
 const SEED_MIN = (process.env.MIN_SUPPORTED_VERSION || readMinVersionFile()).trim();
 
-type Parts = [number, number, number];
-
-// "v1.3.7" -> [1, 3, 7]. Segments manquants ou non numériques => 0.
-const parse = (v: string): Parts => {
-  const seg = v.replace(/^v/, '').split('.');
-  const n = (i: number) => {
-    const x = parseInt(seg[i] ?? '', 10);
-    return Number.isFinite(x) ? x : 0;
-  };
-  return [n(0), n(1), n(2)];
-};
-
-// true si la version `a` est strictement antérieure à `b`.
-export const isOlder = (a: string, b: string): boolean => {
-  const pa = parse(a);
-  const pb = parse(b);
-  for (let i = 0; i < 3; i++) {
-    if (pa[i] < pb[i]) return true;
-    if (pa[i] > pb[i]) return false;
-  }
-  return false;
-};
-
-// "0.0.0" / vide = gate inactif (aucune version ne lui est strictement inférieure).
-const isActive = (v: string): boolean => {
-  const [a, b, c] = parse(v);
-  return !!(a || b || c);
-};
-
 // Plancher effectif, lu en LIVE (DB prioritaire, sinon seed). '' = désactivé.
 export const getMinSupportedVersion = (): string => {
   const stored = getConfig(CONFIG_KEY);
   const raw = (stored ?? SEED_MIN).trim();
-  return isActive(raw) ? raw : '';
+  return isActiveVersion(raw) ? raw : '';
 };
 
 // Pose le plancher depuis l'admin. Une valeur inactive est stockée en "0.0.0"
 // (désactivation EXPLICITE), pour ne pas retomber silencieusement sur le seed.
 export const setMinSupportedVersion = (v: string): void => {
   const raw = (v || '').trim();
-  setConfig(CONFIG_KEY, isActive(raw) ? raw : '0.0.0');
+  setConfig(CONFIG_KEY, isActiveVersion(raw) ? raw : '0.0.0');
 };
 
-// Middleware Socket.IO : refuse les clients sous le plancher effectif.
+const getVersionPolicy = (trigger: VersionPolicy['trigger']): VersionPolicy => ({
+  minVersion: getMinSupportedVersion(),
+  trigger,
+});
+
+// Middleware Socket.IO : ne refuse que les ANCIENS clients que le serveur peut
+// prouver capables de se mettre à jour (web sous la version réellement servie).
 // Le client annonce sa version dans handshake.auth.appVersion (cf. front socket.ts).
-export const versionGate = (socket: Socket, next: (err?: ExtendedError) => void): void => {
+export const versionGate = (socket: AppSocket, next: (err?: ExtendedError) => void): void => {
   const floor = getMinSupportedVersion();
-  if (!floor) {
+  if (!floor || announcesClientPolicy(socket.handshake.auth)) {
     next();
     return;
   }
+  // Pas de version annoncée = client antérieur à ce système : traité comme "0.0.0".
   const appVersion = String(socket.handshake.auth?.appVersion || '');
-  // Pas de version annoncée = client antérieur à ce système => bloqué aussi
-  // (sinon le gate serait contournable en n'envoyant rien).
-  if (!appVersion || isOlder(appVersion, floor)) {
+  const isNativeApp = isNativeAppOrigin(socket.handshake.headers.origin);
+  if (shouldBlockLegacyClient({ appVersion, minVersion: floor, deployedVersion: getDeployedVersion(), isNativeApp })) {
     const err = new Error('VERSION_TOO_OLD') as ExtendedError;
     err.data = { code: 'VERSION_TOO_OLD', minVersion: floor };
     logger.info(`Connexion refusée: version "${appVersion || '?'}" < ${floor}`);
@@ -97,4 +92,21 @@ export const versionGate = (socket: Socket, next: (err?: ExtendedError) => void)
     return;
   }
   next();
+};
+
+let ioRef: IoServer | null = null;
+
+// Branche le gate : middleware de handshake + envoi de la politique à chaque connexion.
+export const attachVersionGate = (io: IoServer): void => {
+  ioRef = io;
+  io.use(versionGate);
+  io.on('connection', (socket) => {
+    socket.emit('versionPolicy', getVersionPolicy('connect'));
+  });
+};
+
+// Après un changement de plancher en admin : rediffuse à tous les connectés. Côté
+// client, un 'update' ne peut que LEVER un blocage (jamais en poser un en pleine partie).
+export const broadcastVersionPolicy = (): void => {
+  ioRef?.emit('versionPolicy', getVersionPolicy('update'));
 };

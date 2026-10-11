@@ -43,7 +43,7 @@ const UpdateRequiredModal = () => {
         title={t.update.title}
         message={t.update.message}
         ctaLabel={isNativeUpdate() ? t.update.cta : t.update.ctaWeb}
-        onAction={openUpdate}
+        onAction={() => { void openUpdate(); }}
       />
       {testOverride && (
         <button

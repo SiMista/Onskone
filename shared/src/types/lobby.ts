@@ -6,6 +6,12 @@ import { Locale } from './locale.js';
 export type GameMode = 'local' | 'remote';
 
 /**
+ * Vitesse de jeu réglée par l'hôte : choisit la table de durées des phases
+ * (GAME_CONSTANTS.TIMERS). `debug` = DEV uniquement, refusée par le serveur en prod.
+ */
+export type GameSpeed = 'fast' | 'normal' | 'debug';
+
+/**
  * Lobby (salle d'attente avant le jeu)
  */
 export interface ILobby {
@@ -24,8 +30,15 @@ export interface ILobby {
   /** Mode "Devine ma réponse" : le pilier ne répond pas, un substitut écrit pour lui */
   guessMyAnswerMode: boolean;
 
-  /** Multiplicateur de durée des phases (0.7 → 1.3, défaut 1) - réglé par l'hôte */
-  timeMultiplier: number;
+  /** Vitesse de jeu (durées des phases) - réglée par l'hôte */
+  gameSpeed: GameSpeed;
+
+  /**
+   * Joueurs que l'hôte a exclus du rôle de pilier : ils jouent normalement mais ne
+   * sont jamais tirés comme pilier. Nombre de manches = joueurs actifs non exclus.
+   * Optionnel : absent des serveurs d'avant l'exclusion de piliers.
+   */
+  excludedLeaderIds?: string[];
 
   /** Langue du contenu (questions, thèmes) - choisie par l'hôte à la création */
   locale: Locale;

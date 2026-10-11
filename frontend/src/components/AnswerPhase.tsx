@@ -1,13 +1,15 @@
 import { useEffect, useState, useRef } from 'react';
-import { LuCheck, LuPencil } from 'react-icons/lu';
+import { LuPencil } from 'react-icons/lu';
 import HourglassTimer from './HourglassTimer';
 import Avatar from './Avatar';
 import QuestionCard from './QuestionCard';
 import QuestionByline from './QuestionByline';
 import PlayerBadge from './PlayerBadge';
 import NotebookInput from './NotebookInput';
+import PhaseScrollArea from './PhaseScrollArea';
 import { GAME_CONFIG, getPhaseDuration } from '../constants/game';
 import { IPlayer, RoundPhase, GameCard } from '@onskone/shared';
+import type { GameSpeed } from '@onskone/shared';
 import { playSound } from '../utils/sounds';
 import { useStartTimerDelayed, useSocketEvent } from '../hooks';
 import socket from '../utils/socket';
@@ -27,7 +29,7 @@ const AnswerPhase = ({
   leaderId,
   initialAnsweredPlayerIds,
   initialMyAnswer,
-  timeMultiplier
+  gameSpeed
 }: {
   lobbyCode: string;
   question: string;
@@ -38,13 +40,13 @@ const AnswerPhase = ({
   leaderId: string;
   initialAnsweredPlayerIds?: string[];
   initialMyAnswer?: string;
-  timeMultiplier: number;
+  gameSpeed: GameSpeed;
 }) => {
   const { t } = useLocale();
   const leader = players.find(p => p.id === leaderId);
   const subtitle = leader ? getQuestionSubtitle(t.phases, RoundPhase.ANSWERING, isLeader) : '';
   const subtitleBadge = !isLeader && leader ? <PlayerBadge player={leader} size="sm" /> : undefined;
-  const phaseDuration = getPhaseDuration(RoundPhase.ANSWERING, timeMultiplier);
+  const phaseDuration = getPhaseDuration(RoundPhase.ANSWERING, gameSpeed);
   useStartTimerDelayed(isLeader, lobbyCode, phaseDuration);
   const [answer, setAnswer] = useState(initialMyAnswer || '');
   const [submitted, setSubmitted] = useState(!!initialMyAnswer);
@@ -192,86 +194,87 @@ const AnswerPhase = ({
     const ringOffset = ringCircumference * (1 - ringProgress / 100);
 
     return (
-      <div className="flex flex-col items-center justify-start h-full p-3 md:p-6 gap-4">
-        <div className="flex flex-col items-center gap-1.5 w-full">
-          {subtitle && (
-            <p className="text-center text-sm md:text-base text-gray-700 italic m-0">
-              {subtitle}
-            </p>
-          )}
-          <QuestionCard question={question} card={card} subtitleBadge={subtitleBadge} variant="compact" />
-        </div>
-
-        <HourglassTimer
-          duration={phaseDuration}
-          onExpire={handleTimerExpire}
-          phase={RoundPhase.ANSWERING}
-          lobbyCode={lobbyCode}
-          hidden
-        />
-
-        <div className="flex flex-col items-center">
-          <div
-            className="relative w-24 h-24 md:w-28 md:h-28"
-            role="progressbar"
-            aria-valuenow={answersCount}
-            aria-valuemin={0}
-            aria-valuemax={expectedAnswers}
-            aria-label={t.phases.answering.answersReceived}
-          >
-            <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100" aria-hidden>
-              <circle cx="50" cy="50" r="42" fill="none" stroke="#e5e7eb" strokeWidth="8" />
-              <circle
-                cx="50" cy="50" r="42"
-                fill="none"
-                stroke="#22c55e"
-                strokeWidth="8"
-                strokeLinecap="round"
-                strokeDasharray={ringCircumference}
-                strokeDashoffset={ringOffset}
-                className="transition-[stroke-dashoffset] duration-500 ease-out"
-              />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <p className="font-display text-2xl md:text-3xl font-bold text-gray-800 leading-none">
-                {answersCount}<span className="text-gray-400">/{expectedAnswers}</span>
+      <PhaseScrollArea>
+        <div className="flex-1 flex flex-col items-center justify-start p-3 md:p-6 gap-4">
+          <div className="flex flex-col items-center gap-1.5 w-full">
+            {subtitle && (
+              <p className="text-center text-sm md:text-base text-gray-700 italic m-0">
+                {subtitle}
               </p>
-            </div>
+            )}
+            <QuestionCard question={question} card={card} subtitleBadge={subtitleBadge} variant="compact" />
           </div>
-          <p className="text-xs md:text-sm text-gray-600 mt-2 uppercase tracking-wide font-semibold">
-            {t.phases.answering.answersReceived}
-          </p>
-        </div>
 
-        <div className="flex flex-wrap justify-center gap-2 md:gap-3 max-w-2xl px-2">
-          {respondingPlayers.map((player) => {
-            const hasAnswered = answeredPlayerIds.has(player.id);
-            const isDisconnected = !player.isActive;
-            return (
-              <div
-                key={player.id}
-                className={`
-                  px-2 md:px-4 py-1.5 md:py-2 rounded-lg font-medium transition-all duration-300 text-sm md:text-base border-2
-                  ${isDisconnected
-                    ? 'bg-gray-300 text-gray-500 opacity-60 border-gray-400'
-                    : hasAnswered
-                      ? 'bg-green-500 text-white border-black scale-105 stack-shadow-sm'
-                      : 'bg-white text-gray-700 border-gray-300'}
-                `}
-              >
-                <span className="flex items-center gap-1.5 md:gap-2">
-                  <Avatar avatarId={player.avatarId} name={player.name} size="sm" />
-                  {!isDisconnected && hasAnswered && <LuCheck className="inline" aria-hidden />}
-                  <span className="max-w-[80px] md:max-w-none truncate">
-                    <PremiumName name={player.name} premium={!!player.isPremium} />
-                    {isDisconnected && t.common.disconnectedSuffix}
-                  </span>
-                </span>
+          <HourglassTimer
+            duration={phaseDuration}
+            onExpire={handleTimerExpire}
+            phase={RoundPhase.ANSWERING}
+            lobbyCode={lobbyCode}
+            hidden
+          />
+
+          <div className="flex flex-col items-center">
+            <div
+              className="relative w-24 h-24 md:w-28 md:h-28"
+              role="progressbar"
+              aria-valuenow={answersCount}
+              aria-valuemin={0}
+              aria-valuemax={expectedAnswers}
+              aria-label={t.phases.answering.answersReceived}
+            >
+              <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100" aria-hidden>
+                <circle cx="50" cy="50" r="42" fill="none" stroke="#e5e7eb" strokeWidth="8" />
+                <circle
+                  cx="50" cy="50" r="42"
+                  fill="none"
+                  stroke="#22c55e"
+                  strokeWidth="8"
+                  strokeLinecap="round"
+                  strokeDasharray={ringCircumference}
+                  strokeDashoffset={ringOffset}
+                  className="transition-[stroke-dashoffset] duration-500 ease-out"
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <p className="font-display text-2xl md:text-3xl font-bold text-gray-800 leading-none">
+                  {answersCount}<span className="text-gray-400">/{expectedAnswers}</span>
+                </p>
               </div>
-            );
-          })}
+            </div>
+            <p className="text-xs md:text-sm text-gray-600 mt-2 uppercase tracking-wide font-semibold">
+              {t.phases.answering.answersReceived}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap justify-center gap-2 md:gap-3 max-w-2xl px-2">
+            {respondingPlayers.map((player) => {
+              const hasAnswered = answeredPlayerIds.has(player.id);
+              const isDisconnected = !player.isActive;
+              return (
+                <div
+                  key={player.id}
+                  className={`
+                    px-2 md:px-4 py-1.5 md:py-2 rounded-lg font-medium transition-all duration-300 text-sm md:text-base border-2
+                    ${isDisconnected
+                      ? 'bg-gray-300 text-gray-500 opacity-60 border-gray-400'
+                      : hasAnswered
+                        ? 'bg-green-500 text-white border-black scale-105 stack-shadow-sm'
+                        : 'bg-white text-gray-700 border-gray-300'}
+                  `}
+                >
+                  <span className="flex items-center gap-1.5 md:gap-2">
+                    <Avatar avatarId={player.avatarId} name={player.name} size="sm" />
+                    <span className="max-w-[80px] md:max-w-none truncate">
+                      <PremiumName name={player.name} premium={!!player.isPremium} />
+                      {isDisconnected && t.common.disconnectedSuffix}
+                    </span>
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      </PhaseScrollArea>
     );
   }
 
@@ -282,94 +285,95 @@ const AnswerPhase = ({
   const showNotebook = stage !== 'done';
 
   return (
-    <div
-      className={`flex flex-col h-full max-w-2xl mx-auto w-full px-3 md:px-4 py-3 md:py-4 gap-3 ${showNotebook ? 'min-h-[55dvh]' : ''}`}
-      style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.75rem)' }}
-    >
-      {/* Timer en logique seulement (affichage géré par le header du Game) */}
-      <HourglassTimer
-        duration={phaseDuration}
-        onExpire={handleTimerExpire}
-        phase={RoundPhase.ANSWERING}
-        lobbyCode={lobbyCode}
-        hidden
-      />
-
-      <QuestionByline player={leader} />
-
-      <QuestionCard question={question} card={card} variant="compact" />
-
-      <p className="text-center text-sm md:text-base text-gray-700 italic m-0">
-        {t.phases.answering.writeYourAnswer}
-      </p>
-
-      {showNotebook ? (
-        <NotebookInput
-          value={answer}
-          onChange={setAnswer}
-          onSubmit={handleSubmit}
-          placeholder={t.phases.answering.placeholder}
-          maxLength={maxLen}
-          submitLabel={t.phases.answering.send}
-          disabled={stage !== 'idle'}
-          submitDisabled={!answer.trim() || stage !== 'idle'}
-          shaking={stage === 'shaking'}
+    <PhaseScrollArea>
+      <div
+        className={`flex-1 flex flex-col max-w-2xl mx-auto w-full px-3 md:px-4 py-3 md:py-4 gap-3 ${showNotebook ? 'min-h-[55dvh]' : ''}`}
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.75rem)' }}
+      >
+        {/* Timer en logique seulement (affichage géré par le header du Game) */}
+        <HourglassTimer
+          duration={phaseDuration}
+          onExpire={handleTimerExpire}
+          phase={RoundPhase.ANSWERING}
+          lobbyCode={lobbyCode}
+          hidden
         />
-      ) : (
-        /* État « envoyé » - récap grisé + attente */
-        <div className="flex-1 flex flex-col items-center justify-center gap-3 md:gap-4 animate-phase-enter">
-          <div
-            className="relative max-w-md w-full rounded-2xl border-[2.5px] border-black/40 stack-shadow texture-paper bg-gray-200/70 p-5 md:p-6 opacity-75"
-            style={{ transform: 'rotate(-0.8deg)' }}
-          >
-            <p className="text-gray-500 text-xs uppercase tracking-[0.15em] font-bold m-0 mb-2">{t.phases.answering.yourAnswer}</p>
-            <p className="text-base md:text-lg text-gray-600 leading-relaxed break-words whitespace-pre-wrap m-0">
-              {answer.length > 250 ? `${answer.slice(0, 250)}…` : answer}
+
+        <QuestionByline player={leader} />
+
+        <QuestionCard question={question} card={card} variant="compact" />
+
+        <p className="text-center text-sm md:text-base text-gray-700 italic m-0">
+          {t.phases.answering.writeYourAnswer}
+        </p>
+
+        {showNotebook ? (
+          <NotebookInput
+            value={answer}
+            onChange={setAnswer}
+            onSubmit={handleSubmit}
+            placeholder={t.phases.answering.placeholder}
+            maxLength={maxLen}
+            submitLabel={t.phases.answering.send}
+            disabled={stage !== 'idle'}
+            submitDisabled={!answer.trim() || stage !== 'idle'}
+            shaking={stage === 'shaking'}
+          />
+        ) : (
+          /* État « envoyé » - récap grisé + attente */
+          <div className="flex-1 flex flex-col items-center justify-center gap-3 md:gap-4 animate-phase-enter">
+            <div
+              className="relative max-w-md w-full rounded-2xl border-[2.5px] border-black/40 stack-shadow texture-paper bg-gray-200/70 p-5 md:p-6 opacity-75"
+              style={{ transform: 'rotate(-0.8deg)' }}
+            >
+              <p className="text-gray-500 text-xs uppercase tracking-[0.15em] font-bold m-0 mb-2">{t.phases.answering.yourAnswer}</p>
+              <p className="text-base md:text-lg text-gray-600 leading-relaxed break-words whitespace-pre-wrap m-0">
+                {answer.length > 250 ? `${answer.slice(0, 250)}…` : answer}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                socket.emit('withdrawAnswer', { lobbyCode, playerId: currentPlayerId });
+                setSubmitted(false);
+                setStage('idle');
+              }}
+              className="flex items-center gap-1.5 text-sm md:text-base font-semibold text-brand-700 hover:text-brand-500 underline-offset-2 hover:underline transition-colors"
+            >
+              <LuPencil aria-hidden />
+              {t.phases.answering.editAnswer}
+            </button>
+            <p className="text-gray-700 text-center text-sm md:text-base italic">
+              {t.phases.answering.waitingForOthers}
             </p>
+            <div className="flex flex-wrap justify-center gap-2 md:gap-3 max-w-2xl px-2">
+              {respondingPlayers.map((player) => {
+                const hasAnswered = answeredPlayerIds.has(player.id);
+                const isDisconnected = !player.isActive;
+                return (
+                  <div
+                    key={player.id}
+                    className={`
+                      px-2 md:px-3 py-1 md:py-1.5 rounded-lg font-medium text-xs md:text-sm border-2 transition-all duration-300
+                      ${isDisconnected
+                        ? 'bg-gray-300 text-gray-500 opacity-60 border-gray-400'
+                        : hasAnswered
+                          ? 'bg-green-500 text-white border-black scale-105 stack-shadow-sm'
+                          : 'bg-white/90 text-gray-700 border-gray-300'}
+                    `}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <Avatar avatarId={player.avatarId} name={player.name} size="sm" />
+                      <PremiumName name={player.name} premium={!!player.isPremium} className="max-w-[80px] md:max-w-none truncate" />
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              socket.emit('withdrawAnswer', { lobbyCode, playerId: currentPlayerId });
-              setSubmitted(false);
-              setStage('idle');
-            }}
-            className="flex items-center gap-1.5 text-sm md:text-base font-semibold text-brand-700 hover:text-brand-500 underline-offset-2 hover:underline transition-colors"
-          >
-            <LuPencil aria-hidden />
-            {t.phases.answering.editAnswer}
-          </button>
-          <p className="text-gray-700 text-center text-sm md:text-base italic">
-            {t.phases.answering.waitingForOthers}
-          </p>
-          <div className="flex flex-wrap justify-center gap-2 md:gap-3 max-w-2xl px-2">
-            {respondingPlayers.map((player) => {
-              const hasAnswered = answeredPlayerIds.has(player.id);
-              const isDisconnected = !player.isActive;
-              return (
-                <div
-                  key={player.id}
-                  className={`
-                    px-2 md:px-3 py-1 md:py-1.5 rounded-lg font-medium text-xs md:text-sm border-2 transition-all duration-300
-                    ${isDisconnected
-                      ? 'bg-gray-300 text-gray-500 opacity-60 border-gray-400'
-                      : hasAnswered
-                        ? 'bg-green-500 text-white border-black scale-105 stack-shadow-sm'
-                        : 'bg-white/90 text-gray-700 border-gray-300'}
-                  `}
-                >
-                  <span className="flex items-center gap-1.5">
-                    <Avatar avatarId={player.avatarId} name={player.name} size="sm" />
-                    {!isDisconnected && hasAnswered && <LuCheck className="inline" aria-hidden />}
-                    <PremiumName name={player.name} premium={!!player.isPremium} className="max-w-[80px] md:max-w-none truncate" />
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </PhaseScrollArea>
   );
 };
 

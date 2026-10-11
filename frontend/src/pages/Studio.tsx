@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { GameMode, GAME_CONSTANTS } from '@onskone/shared';
+import type { GameSpeed } from '@onskone/shared';
 import { AVATARS } from '../constants/game';
 import { useDocumentMeta } from '../hooks/useDocumentMeta';
 import { purgeStudioSlot } from '../utils/studioStorage';
@@ -29,12 +30,12 @@ const Studio = () => {
   const [zoom, setZoom] = useState<number>(saved?.zoom ?? 0.8);
   const [debugTimers, setDebugTimers] = useState<boolean>(saved?.debugTimers ?? true);
   const [gameMode, setGameMode] = useState<GameMode>(saved?.gameMode ?? 'local');
-  // On ignore une valeur sauvegardée qui n'est plus un niveau valide (ex. ancien 1.5
-  // resté en localStorage après un changement des niveaux) -> fallback sur le défaut.
-  const [timeMultiplier, setTimeMultiplier] = useState<number>(
-    GAME_CONSTANTS.TIME_MULTIPLIER_LEVELS.includes(saved?.timeMultiplier as number)
-      ? (saved!.timeMultiplier as number)
-      : GAME_CONSTANTS.TIME_MULTIPLIER_DEFAULT,
+  // On ignore une valeur sauvegardée qui n'est plus une vitesse proposée (ex. ancien
+  // multiplicateur resté en localStorage) -> fallback sur le défaut.
+  const [gameSpeed, setGameSpeed] = useState<GameSpeed>(
+    saved?.gameSpeed && GAME_CONSTANTS.GAME_SPEEDS.includes(saved.gameSpeed)
+      ? saved.gameSpeed
+      : GAME_CONSTANTS.GAME_SPEED_DEFAULT,
   );
 
   const [view, setView] = useState<'rigging' | 'gallery'>('rigging');
@@ -51,9 +52,9 @@ const Studio = () => {
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ slots, layout, zoom, debugTimers, gameMode, timeMultiplier }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ slots, layout, zoom, debugTimers, gameMode, gameSpeed }));
     } catch { /* silent */ }
-  }, [slots, layout, zoom, debugTimers, gameMode, timeMultiplier]);
+  }, [slots, layout, zoom, debugTimers, gameMode, gameSpeed]);
 
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
@@ -258,7 +259,7 @@ const Studio = () => {
       if (index === 0) {
         params.set('autoCreate', '1');
         params.set('studioGameMode', gameMode);
-        params.set('studioTimeMultiplier', String(timeMultiplier));
+        params.set('studioGameSpeed', gameSpeed);
         return `${base}/?${params.toString()}`;
       }
       if (!code) return null;
@@ -266,7 +267,7 @@ const Studio = () => {
       params.set('autoJoin', '1');
       return `${base}/?${params.toString()}`;
     },
-    [debugTimers, gameMode, timeMultiplier]
+    [debugTimers, gameMode, gameSpeed]
   );
 
   const cols = useMemo(() => {
@@ -313,8 +314,8 @@ const Studio = () => {
         setDebugTimers={setDebugTimers}
         gameMode={gameMode}
         setGameMode={setGameMode}
-        timeMultiplier={timeMultiplier}
-        setTimeMultiplier={setTimeMultiplier}
+        gameSpeed={gameSpeed}
+        setGameSpeed={setGameSpeed}
         running={running}
         allBots={allBots}
         premium={allPremium}

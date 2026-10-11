@@ -48,10 +48,10 @@ const NotebookInput = ({
   const isSubmitDisabled = submitDisabled ?? !value.trim();
 
   return (
-    <div className="flex-1 flex flex-col min-h-0">
+    <div className="flex-1 flex flex-col">
       <div
         className={`
-          relative flex-1 flex flex-col min-h-0 rounded-2xl border-[2.5px] border-black stack-shadow
+          relative flex-1 flex flex-col min-h-32 rounded-2xl border-[2.5px] border-black stack-shadow
           bg-cream-player texture-paper overflow-hidden
           ${shaking ? 'animate-paper-shake animate-flash-warm' : ''}
         `}

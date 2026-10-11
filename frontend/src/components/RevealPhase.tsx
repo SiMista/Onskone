@@ -17,14 +17,14 @@ import RevealPilierLocalView from './reveal/RevealPilierLocalView';
  *  3. pilier + carte "deviné"  → RevealPilierGuessedView (mode "Devine ma réponse")
  *  4. sinon (pilier local)     → RevealPilierLocalView
  */
-const RevealPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, isGameOver, results, initialRevealedIndices, gameMode }: {
+const RevealPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, isGameOver, results, serverRevealedIndices, gameMode }: {
   lobbyCode: string;
   isLeader: boolean;
   leader: Pick<IPlayer, 'id' | 'name' | 'avatarId' | 'isPremium'>;
   currentPlayerId: string;
   isGameOver: boolean;
   results: RevealResult[];
-  initialRevealedIndices?: number[];
+  serverRevealedIndices?: number[];
   gameMode: GameMode;
 }) => {
   const leaderId = leader.id;
@@ -34,7 +34,7 @@ const RevealPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, isGameOver,
     isLeader,
     gameMode,
     lobbyCode,
-    initialRevealedIndices,
+    serverRevealedIndices,
   );
 
   // 1) VUE JOUEUR (non-pilier) en mode local - carte unique de la réponse attribuée

@@ -53,10 +53,12 @@ pnpm lint                # ⚠️ NO-OP — pas d'ESLint installé/configuré da
 #   tsc -p frontend/tsconfig.json --noEmit
 #   tsc -p backend/tsconfig.json --noEmit
 
-# Backend tests (Jest, only package with tests)
+# Tests — backend (Jest) et frontend (Vitest) ; shared n'a pas de tests
 pnpm --filter backend test
 pnpm --filter backend test -- path/to/file.test.ts
 pnpm --filter backend test -- -t "name of test"
+pnpm --filter frontend test                        # vitest run (utils, hooks, composants)
+pnpm --filter frontend test -- src/utils/gameSync.test.ts
 
 # Regenerate the question deck from the Excel source (génère questions_fr.json + questions_en.json)
 node backend/src/data/build-questions.mjs
@@ -72,12 +74,17 @@ The game runs entirely in-memory; SQLite is only used for the tickets table (`ba
 
 - `LobbyManager` (singleton-style module in `backend/src/managers/`) holds the `Map<lobbyCode, Lobby>` of active lobbies and runs a cleanup interval for stale ones.
 - `GameManager` orchestrates round transitions and scoring against the `Game`/`Round`/`Player` models in `backend/src/models/`.
-- `SocketHandler` (single class in `backend/src/sockets/SocketHandler.ts`) wires every `ClientToServerEvents` socket event to the managers. **All gameplay actions go through Socket.IO**, not REST — the HTTP routes (`backend/src/routes/`) only cover tickets and admin auth.
-- Each lobby is a Socket.IO room keyed by the 6-char `lobbyCode`. The handler maintains several disconnect/reconnect maps:
-  - `disconnectTimeouts` / `RECONNECT_GRACE_PERIOD = 30s` — preserves a player slot when their socket drops.
-  - `leaderDisconnectTimeouts` / `LEADER_DISCONNECT_DELAY = 15s` — skips the round if the leader doesn't come back (mobile background tolerance).
-  - `inactiveTimeouts` / `INACTIVE_DELAY = 5s` — marks a player inactive without removing them.
-  - `kickedPlayers` / `KICK_BLOCK_DURATION = 5min` — temporary ban after a kick.
+- `SocketHandler` (single class in `backend/src/sockets/SocketHandler.ts`) wires every `ClientToServerEvents` socket event to the managers. **All gameplay actions go through Socket.IO**, not REST — the HTTP routes (`backend/src/routes/`) only cover tickets and admin (auth, données, maj forcée).
+- Each lobby is a Socket.IO room keyed by the 6-char `lobbyCode`. `ConnectionRegistry` (`backend/src/sockets/ConnectionRegistry.ts`) holds the disconnect/reconnect timers (delays in `shared/src/constants.ts`):
+  - `disconnectTimeouts` / `RECONNECT_GRACE_PERIOD_MS = 30s` — removes a dropped player from a **waiting** lobby. **Never during a game**: in-game players are kept until `gameEnded` (scores + reconnection), and `cleanupDisconnectedPlayers` is a no-op while IN_PROGRESS.
+  - `leaderDisconnectTimeouts` / `LEADER_DISCONNECT_DELAY_MS = 60s` — skips the round if the leader doesn't come back (mobile background tolerance).
+  - `inactiveTimeouts` / `INACTIVE_DELAY_MS = 60s` — marks a player inactive without removing them.
+  - `kickedPlayers` / `KICK_BLOCK_DURATION_MS = 5min` — temporary ban after a kick.
+  - `Round.revealBackstopHandle` / `REVEAL_BACKSTOP_MS = 4min` — REVEAL is the only phase without a timer; if the leader does nothing for that long the server concludes the round itself (`armRevealBackstop` in `broadcasting.ts`, rearmed on every reveal action).
+- **Reconnection & sync (server = single source of truth, clients converge):**
+  - Each player has a server-side `reconnectToken` (emitted only to its owner via `lobbyCreated`/`joinedLobby`). `getGameState`/`joinLobby` with a valid token reattach the slot and evict a still-connected old socket. A same-name join **without** the token is refused (`sessionLost: true` on the error).
+  - **Lost session** (app killed, storage wiped): `getLobbyInfo` returns `reclaimablePlayers` (players whose socket is dead); `reclaimPlayer {playerId}` takes that seat **only during an IN_PROGRESS game and only if its socket is dead**, issues a provisional `claimToken` (`playerReclaimed`) and is rate-limited per lobby. The original `reconnectToken` stays valid and wins: when its holder comes back, the claim is revoked and the claimant evicted (`tokenMatches` / `revokeClaimIfProvenOwner` in `handlers/reconnection.ts`). The Home page shows the « Tu étais qui ? » modal for in-progress lobbies (and polls while nobody is disconnected yet). **Choix assumé** : le code du salon suffit à reprendre un siège mort en partie (y compris celui du pilier) — compromis UX voulu, pas un oubli ; les garde-fous ci-dessus sont la limite à ne pas abaisser. Un socket qui tient déjà un slot du salon ne peut pas en reprendre un second (`socketHoldsOtherSlot`).
+  - Clients send `syncCheck` every 5 s with `gameFingerprint()` (`shared/src/sync.ts`, = status/round/phase/revealed count). Mismatch → the server pushes the full `gameState` (only to the socket attached to that player's slot); no answer in 4 s → the client forces a reconnect. Every phase delta carries `roundNumber`; a delta for another round is never applied, it triggers a resync (`frontend/src/utils/gameSync.ts`).
 - Round state machine: `RoundPhase` enum in `shared/src/types/round.ts` (`QUESTION_SELECTION → SUBSTITUTE_SELECTION? → ANSWERING → SUBSTITUTE_ANSWERING? → GUESSING → REVEAL`). Two game modes branch through it: **Classique** (no substitute) and **Devine ma réponse** (leader picks a substitute who writes the leader's answer).
 - Similarity scoring (`backend/src/utils/similarity.ts`) merges near-duplicate answers so the guesser doesn't get punished for paraphrases. Validation/sanitization lives in `backend/src/utils/validation.ts`; per-event rate limiters in `backend/src/utils/rateLimiter.ts`.
 
@@ -85,18 +92,24 @@ The game runs entirely in-memory; SQLite is only used for the tickets table (`ba
 
 `backend/src/index.ts` builds the Socket.IO and HTTP CORS allowlists from `process.env.ALLOWED_ORIGINS` (comma-separated). In **production**, an unset `ALLOWED_ORIGINS` rejects all browser requests — logged as a security warning at boot. In dev, only `localhost`, `127.0.0.1`, and `192.168.x.x:*` are allowed.
 
+### Version & mise à jour forcée
+
+La version de l'app est **dérivée de git** par `scripts/app-version.mjs` : `MAJOR.MINOR` lus dans le fichier `VERSION` commité à la racine, `PATCH` = nombre de commits depuis son dernier bump ; `versionCode` Android = total de commits. Source unique pour `__APP_VERSION__` (vite `define`), `/version.json` (émis au build, servi par nginx, relu en live par le backend via `utils/appVersion.ts`), Gradle (`-PappVersionName` / `-PappVersionCode`) et Codemagic. **Un clone shallow ou sans `.git` fait échouer `vite build`** (on ne livre jamais une fausse version) — d'où les `git fetch --unshallow` dans CI, Codemagic et `deploy.sh`. Le build Docker (`Dockerfile`) a donc besoin de `.git`, que `.dockerignore` exclut aujourd'hui (la prod tourne en pm2 via `scripts/deploy.sh`).
+
+Maj forcée : règle unique dans `shared/src/version.ts` (`shouldBlockForUpdate` : bloqué SSI version < plancher ET une version plus récente lui est réellement obtenable). Le plancher vient de l'admin (`POST /admin/version-gate`, SQLite `app_config`) ou du seed `MIN_SUPPORTED_VERSION` (env, sinon fichier racine). Le serveur l'envoie dans l'event `versionPolicy` à chaque connexion (`backend/src/utils/versionGate.ts`) et le client tranche lui-même (`frontend/src/utils/versionGate.ts` : `/version.json` sur le web, Play Core / App Store lookup en natif) ; seuls les anciens clients sans `handshake.auth.versionPolicy` sont refusés au handshake (`VERSION_TOO_OLD`).
+
 ### Frontend routing
 
-`frontend/src/App.tsx` registers the public routes: `/`, `/lobby/:lobbyCode`, `/game/:lobbyCode`, `/endgame/:lobbyCode`, `/privacy` et `/mentions` (tous deux rendus par `Legal` avec une prop `kind`), `/admin`, et la dev-only `/studio` (guarded by `import.meta.env.DEV`). **Pages lazy** (`React.lazy`) : `Lobby`, `Game`, `EndGame` et `Admin`. Eager : `Home`, `NotFound`, `Studio`, `Legal`.
+`frontend/src/App.tsx` registers the public routes: `/`, `/join/:lobbyCode` (`JoinRedirect`, cible des liens d'invitation `buildInviteUrl` / App Links), `/lobby/:lobbyCode`, `/game/:lobbyCode`, `/endgame/:lobbyCode`, `/privacy`, `/mentions`, `/cgu` et `/support` (tous rendus par `Legal` avec une prop `kind`), `/admin`, et la dev-only `/studio` (guarded by `import.meta.env.DEV`). **Pages lazy** (`React.lazy`) : `Lobby`, `Game`, `EndGame` et `Admin`. Eager : `Home`, `NotFound`, `Studio`, `Legal`.
 
 The single socket connection lives in `frontend/src/utils/socket.ts`; pages subscribe via `useSocketEvent` (`frontend/src/hooks/`). Most game state arrives through `gameStateUpdate`/`gameEnded` payloads — components do not refetch.
 
 ### Studio (dev-only test harness)
 
-`frontend/src/pages/Studio.tsx` is a multi-iframe rig that lets one developer simulate a whole lobby locally. Each iframe is a real frontend instance loaded with `?studioSlot=N&playerName=…&avatarId=…&autoCreate=1|autoJoin=1`. Critical pieces:
+`frontend/src/pages/Studio.tsx` is a multi-iframe rig that lets one developer simulate a whole lobby locally. Each iframe is a real frontend instance loaded with `?studioSlot=N&playerName=…&avatarId=…&autoCreate=1|autoJoin=1` (+ optionnels : `studioGameMode`, `studioGameSpeed`, `bot=1`, `premium=1`). Critical pieces:
 
 - `frontend/src/utils/studioStorage.ts` namespaces `localStorage` per slot using the `studioSlot` URL param (captured at module load), with `window.name` as a same-origin reload fallback. **Never write directly to `localStorage` from app code that runs inside a studio iframe** — go through `studioStorage` or the Studio slot's state will leak across iframes.
-- `frontend/src/hooks/useStudioBot.ts` reads `?bot=1` or a `studio:setBot` postMessage from the parent and auto-plays the current phase (leader: select question, pick substitute, submit guesses, reveal+next; non-leaders: submit a random answer). Used by the Studio's "Tous bots" toggle.
+- `frontend/src/hooks/useStudioBot.ts` reads `?bot=1` or a `studio:setBot` postMessage from the parent (flag aussi capté au niveau module dans `studioStorage.ts`, donc même hors `/game`) and auto-plays the current phase (leader: select question, pick substitute, submit guesses, reveal+next; non-leaders: submit a random answer). Used by the Studio's "Tous bots" toggle.
 - The "Composants" tab in Studio is `frontend/src/pages/studio/Gallery.tsx`, a live design-system inspector. The ShareCard preview section calls `buildShareCard` from `frontend/src/utils/shareCard.ts` (canvas 1080×1920 image used by the end-game share button).
 
 ### Admin
@@ -105,9 +118,9 @@ The single socket connection lives in `frontend/src/utils/socket.ts`; pages subs
 
 ### Questions deck
 
-Le deck est par locale : `backend/src/data/questions_fr.json` + `backend/src/data/questions_en.json` sont la source de vérité en jeu, **générés** depuis `Onskoné_2405.xlsx` via `node backend/src/data/build-questions.mjs` (la xlsx vit à côté dans `backend/src/data/`). Ne pas éditer ces JSON à la main ; éditer la xlsx et relancer le script. `GameManager` charge `questions_${locale}.json` selon la langue.
+Le deck est par locale : `backend/src/data/questions_fr.json` + `backend/src/data/questions_en.json` sont la source de vérité en jeu, **générés** depuis `Onskoné_2405.xlsx` via `node backend/src/data/build-questions.mjs` (la xlsx vit à côté dans `backend/src/data/`). Ne pas éditer ces JSON à la main ; éditer la xlsx et relancer le script. `questionsRepository.ts` charge `questions_${locale}.json` par langue (pools en mémoire) ; `GameManager` en tire le deck du salon via `resolveLobbyPool`.
 
-`backend/src/data/themes.json` est un fichier **distinct, maintenu à la main** (PAS généré par le script) : métadonnées de thèmes (`category`, `emoji`, `mature?`, `labels.{fr,en}`, `descriptions.{fr,en}`). `GameManager.loadThemesMeta()` le fusionne avec les questions pour construire le catalogue de decks ; un thème présent dans les questions mais absent de `themes.json` est ignoré avec un warning.
+`backend/src/data/themes.json` est un fichier **distinct, maintenu à la main** (PAS généré par le script) : métadonnées de thèmes (`category`, `emoji`, `mature?`, `premium?`, `labels.{fr,en}`, `descriptions.{fr,en}`). `loadThemesMeta()` dans `questionsRepository.ts` le fusionne avec les questions pour construire le catalogue de decks (le flag `premium` est recopié sur chaque `GameCard.premium`, d'où le badge exclusif côté front) ; un thème présent dans les questions mais absent de `themes.json` est ignoré avec un warning.
 
 ### Design system (frontend)
 
@@ -119,7 +132,8 @@ All design tokens live in `@theme` inside [frontend/src/index.css](frontend/src/
 - `success-700 / 500 / 400` - vert validation (boutons, réponses correctes)
 - `danger-700 / 500 / 400` - rouge danger (boutons quit, croix supprimer, réponses incorrectes)
 - `warning-700 / 500 / 400 / 350 / 300 / 200 / 100 / 50 / orange` - jaune chaud (CTA warning, achievements, target magnetic, pulse, kraft)
-- `cream-player / question / answer / paper / warm / kraft` - papiers cartonnés (chaque cream a un usage narratif distinct, ne pas les interchanger)
+- `premium-100 / 300 / 500 / 600 / 700` - or brillant façon ruban (or saturé, reflet jaune clair, ombres orangées), **seule** famille pour tout ce qui est premium (paywall, bouton accueil, cadre avatar, couronnes, badge carte, pseudo doré, toast `premium`). Ne jamais réutiliser le jaune `warning` pour du premium (sinon ça ressemble à un succès). Dégradé prêt à l'emploi : `.bg-premium-gold` (angle surchargeable via `--premium-gold-angle`) ; pseudo doré : `.text-gold-shine`.
+- `cream-player / question / answer / paper / kraft / settings / checkbox / focus` - papiers cartonnés (chaque cream a un usage narratif distinct, ne pas les interchanger)
 - `quit / quit-hover` - boutons de retrait neutres
 - `podium-gold / silver / bronze` - médailles EndGame (codes universels)
 
@@ -164,7 +178,8 @@ Le même build web `frontend/build` est embarqué dans une coquille native via C
 ## Gotchas
 
 - **Shared package is consumed from `dist/`** — if you change a type in `shared/src/types/` and front/back don't pick it up, you forgot to rebuild. `pnpm dev:shared` keeps watch.
-- **Two players with the same name fuse**: `SocketHandler.joinLobby` treats a same-name join as a reconnection. The Studio's `start()` enforces unique names+avatars across slots — preserve that invariant if you touch it.
+- **Same-name join = reconnection attempt**: `joinLobby` resolves an existing player by name (case-insensitive) and only reattaches the slot if the `reconnectToken` matches — otherwise it is refused (never a silent fusion). The Studio's `start()` enforces unique names+avatars across slots — preserve that invariant if you touch it.
+- **Any new socket event that returns game state must check that the socket is attached to the player's slot** (`player.socketId === socket.id` + in the room), like `syncCheck`; answers/guesses are only exposed in the phases where the client is allowed to see them (`serializeRound`).
 - **Studio route is dev-only** — gated by `import.meta.env.DEV`. Don't reference it from production pages.
 - **Backend is ESM with `.js` import extensions** in TypeScript (`from '../utils/logger.js'`) — required for `tsx`/native ESM resolution. Keep this convention when adding imports.
 - **Tailwind v4** is configured via `@tailwindcss/vite` and `@import "tailwindcss"` in `index.css`, with the design tokens (`--font-display`, `--color-cream-player`, etc.) declared in `@theme`. There is no `tailwind.config.js`.

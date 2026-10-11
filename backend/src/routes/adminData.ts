@@ -10,9 +10,9 @@ import { requireAdmin } from './admin.js';
 import * as LobbyManager from '../managers/LobbyManager.js';
 import { Game } from '../models/Game.js';
 import { Lobby } from '../models/Lobby.js';
-import { getMinSupportedVersion, setMinSupportedVersion } from '../utils/versionGate.js';
-import { isPremiumPromoActive, setPremiumPromoActive } from '../utils/premiumPromo.js';
-import { DEPLOYED_VERSION } from '../utils/appVersion.js';
+import { getMinSupportedVersion, setMinSupportedVersion, broadcastVersionPolicy } from '../utils/versionGate.js';
+import { getDeployedVersion } from '../utils/appVersion.js';
+import { getAppStoreVersion } from '../utils/appStoreVersion.js';
 
 const router: Router = Router();
 
@@ -124,58 +124,45 @@ router.get('/admin/decks', requireAdmin, (req: Request, res: Response) => {
 });
 
 // --- Maj forcée (version gate) ---
-// État courant : version déployée + plancher effectif. `minVersion` vide = aucun blocage.
-const versionGateState = () => {
+// État courant : version déployée (= build web réellement servi) + plancher effectif,
+// + version App Store pour info (cache, ne lève jamais). `minVersion` vide = aucun blocage.
+const versionGateState = async () => {
   const minVersion = getMinSupportedVersion();
-  return { deployedVersion: DEPLOYED_VERSION, minVersion, blocking: !!minVersion };
+  return {
+    deployedVersion: getDeployedVersion(),
+    minVersion,
+    blocking: !!minVersion,
+    appStore: await getAppStoreVersion(),
+  };
 };
 
-router.get('/admin/version-gate', requireAdmin, (_req: Request, res: Response) => {
-  res.json(versionGateState());
+router.get('/admin/version-gate', requireAdmin, async (_req: Request, res: Response) => {
+  res.json(await versionGateState());
 });
 
 // Pilotage 1-clic : le serveur décide le numéro (= version déployée), l'admin ne
-// saisit rien. `force_latest` bloque tout client < version déployée ; `disable`
-// lève le blocage.
-router.post('/admin/version-gate', requireAdmin, (req: Request, res: Response) => {
+// saisit rien. `force_latest` demande à tout client < version déployée de se mettre
+// à jour, SI une version plus récente lui est obtenable (cf. utils/versionGate.ts) ;
+// `disable` lève le blocage (rediffusé : les clients bloqués sont libérés en direct).
+router.post('/admin/version-gate', requireAdmin, async (req: Request, res: Response) => {
   const action = String(req.body?.action ?? '');
   if (action === 'force_latest') {
-    if (!DEPLOYED_VERSION) {
+    const deployed = getDeployedVersion();
+    if (!deployed) {
       res.status(409).json({ error: 'unknown_version' });
       return;
     }
-    setMinSupportedVersion(DEPLOYED_VERSION);
+    setMinSupportedVersion(deployed);
   } else if (action === 'disable') {
     setMinSupportedVersion('');
   } else {
     res.status(400).json({ error: 'invalid_action' });
     return;
   }
-  const state = versionGateState();
+  broadcastVersionPolicy();
+  const state = await versionGateState();
   logger.info(`Maj forcée: action=${action} -> plancher=${state.minVersion || '(désactivé)'}`);
   res.json(state);
-});
-
-// --- Promo premium ---
-// Flag global : quand actif, le premium est offert à tous (gating serveur des
-// thèmes premium considère tout host comme premium). Pilotage 1-clic.
-router.get('/admin/premium-promo', requireAdmin, (_req: Request, res: Response) => {
-  res.json({ active: isPremiumPromoActive() });
-});
-
-router.post('/admin/premium-promo', requireAdmin, (req: Request, res: Response) => {
-  const action = String(req.body?.action ?? '');
-  if (action === 'enable') {
-    setPremiumPromoActive(true);
-  } else if (action === 'disable') {
-    setPremiumPromoActive(false);
-  } else {
-    res.status(400).json({ error: 'invalid_action' });
-    return;
-  }
-  const active = isPremiumPromoActive();
-  logger.info(`Promo premium: action=${action} -> ${active ? 'ACTIVE' : 'inactive'}`);
-  res.json({ active });
 });
 
 export default router;

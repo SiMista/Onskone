@@ -14,6 +14,10 @@ cd shared
 call pnpm run build
 cd ..
 
+:: Purge du cache de pré-bundling Vite : sans ça, Vite garde la version cachée
+:: de @onskone/shared (workspace:*) et rate les nouveaux exports après un pull.
+if exist frontend\node_modules\.vite rmdir /s /q frontend\node_modules\.vite
+
 echo Starting backend server...
 start "Onskone backend" cmd /k "cd backend && pnpm run dev"
 

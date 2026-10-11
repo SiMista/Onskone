@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { Icon } from '@iconify/react';
 import { STICKER_FILTER } from '../constants/icons';
 
-export type ToastVariant = 'info' | 'success' | 'warning' | 'error' | 'achievement' | 'join' | 'leave';
+export type ToastVariant = 'info' | 'success' | 'warning' | 'error' | 'achievement' | 'premium' | 'join' | 'leave';
 
 interface Toast {
   id: number;
@@ -33,6 +33,13 @@ const VARIANT_STYLE: Record<ToastVariant, VariantStyle> = {
   achievement: {
     bg: 'linear-gradient(to bottom right, var(--color-warning-300), var(--color-warning-orange))',
     icon: 'fluent-emoji-flat:trophy',
+    iconOutlined: true,
+  },
+  // Statut premium : même or que le bouton Premium / le paywall (≠ succès).
+  premium: {
+    // Même dégradé que .bg-premium-gold (or → reflet → or → ombre orangée).
+    bg: 'linear-gradient(135deg, var(--color-premium-300) 0%, var(--color-premium-100) 28%, var(--color-premium-300) 52%, var(--color-premium-500) 100%)',
+    icon: 'fluent-emoji-flat:crown',
     iconOutlined: true,
   },
   // Arrivée / départ d'un joueur dans le lobby : la main qui salue / la porte

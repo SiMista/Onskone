@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { Locale } from '@onskone/shared';
 
 /**
  * Forme typée du dictionnaire d'i18n. Chaque langue (fr.ts, en.ts) exporte un
@@ -59,6 +60,34 @@ export interface Dictionary {
     pseudoPlaceholder: string;
   };
 
+  /** Modale Réglages (roue crantée de l'accueil) : préférences locales à l'appareil. */
+  settings: {
+    button: string;
+    title: string;
+    sound: string;
+    vibration: string;
+    /** État affiché sous l'icône (barrée quand coupé). */
+    on: string;
+    off: string;
+    /** Réglage sans effet sur cet appareil (ex. vibrations sur iOS Safari). */
+    unavailable: string;
+    report: string;
+    /** Sous le choix de langue, en lobby / partie, si l'interface ≠ langue du salon. */
+    contentLocaleHint: string;
+    /** Nom de chaque langue, écrit dans la langue de ce dictionnaire. */
+    languageNames: Record<Locale, string>;
+    /** Section "Salon" en partie : code du salon + raccourci d'invitation (cf. SettingsModal). */
+    lobby: string;
+    inviteHint: string;
+  };
+
+  /** Écran de secours quand le rendu plante (cf. AppErrorBoundary). */
+  app: {
+    crashTitle: string;
+    crashBody: string;
+    crashHome: string;
+  };
+
   /** Écran bloquant "maj forcée" (version trop vieille refusée par le serveur) */
   update: {
     title: string;
@@ -80,6 +109,8 @@ export interface Dictionary {
     stats: { gamesPlayed: string; pointsScored: string };
     // Popup de reprise d'une partie en cours (app tuée en arrière-plan)
     resume: { title: string; message: string; confirm: string; cancel: string };
+    /** « Tu étais qui ? » : reprise d'une place en cours de partie (session perdue). */
+    reclaim: { title: string; message: string; pick: string; notMe: string; waiting: string; alreadyConnected: string };
     aria: {
       seeAchievements: string;
       seeAchievementsWithNew: (count: number) => string;
@@ -90,6 +121,8 @@ export interface Dictionary {
       invalidLobbyCode: string;
       lobbyNotFound: string;
       pseudoTaken: (name: string) => string;
+      /** Partie en cours sans place à reprendre : impossible d'entrer. */
+      gameInProgress: string;
     };
     joinByCode: {
       button: string;
@@ -110,12 +143,27 @@ export interface Dictionary {
       label: string;
       fast: string;
       normal: string;
-      slow: string;
       estimate: (minutes: number) => string;
     };
+    /** Bottom sheet "Options de jeu" (rythme + piliers) et sa ligne de résumé. */
+    options: {
+      title: string;
+      summary: (speed: string, rounds: number, minutes: number) => string;
+      leaders: string;
+      rounds: (n: number) => string;
+      leadersHint: string;
+      you: string;
+      hostOnly: (host: string) => string;
+      /** Libellé du récap de durée en bas du sheet Options (dépend du rythme et des piliers). */
+      estimateLabel: string;
+    };
+    /** Badge sur la carte d'un joueur exclu du rôle de pilier. */
+    notLeaderBadge: string;
+    atLeastOneLeader: string;
     themes: string;
+    /** Titre de section du bloc mode + options de jeu (onglet Paramètres). */
+    gameSection: string;
     start: string;
-    copyInviteLink: string;
     shareInvite: {
       button: string;
       title: string;
@@ -148,6 +196,8 @@ export interface Dictionary {
       kicked: (name: string) => string;
       kickedAnon: string;
       closedInactive: string;
+      /** Slot refusé à l'entrée du salon (session perdue, pseudo déjà pris). */
+      joinRefused: string;
       playerJoined: (name: string) => string;
       playerLeft: (name: string) => string;
     };
@@ -160,7 +210,19 @@ export interface Dictionary {
 
   game: {
     loading: string;
+    /** Chargement anormalement long : proposer de réessayer / rentrer. */
+    loadingSlow: string;
+    loadingRetry: string;
+    loadingHome: string;
     leaderDisconnected: (name: string) => string;
+    /** Filet REVEAL : le pilier n'a pas conclu la manche, le serveur l'a fait. */
+    leaderIdle: (name: string) => string;
+    /** Session refusée par le serveur : retour à l'accueil pour reprendre sa place. */
+    sessionLost: string;
+    /** Salon/partie disparus (redéploiement, fermeture) : retour à l'accueil. */
+    lobbyGone: string;
+    /** Évincé : le slot a été repris depuis un autre appareil. */
+    connectedElsewhere: string;
   };
 
   /** Chaînes SEO / méta de l'accueil (titre onglet, description, h1, alt logo). */
@@ -179,6 +241,8 @@ export interface Dictionary {
     quit: string;
     individualScores: string;
     points: (n: number) => string;
+    /** À la place des points d'un joueur qui n'a jamais été pilier (exclu, ou partie écourtée). */
+    unranked: string;
     receivedQuestion: string;
     correctAnswersCount: (n: number) => string;
     /** Suffixe de l'entrée écrite par le substitut au nom du pilier : « (par Alice) ». */
@@ -224,11 +288,9 @@ export interface Dictionary {
     categoryPlaceholder: string;
     messageLabel: string;
     messagePlaceholder: string;
-    messageDisabled: string;
     cancel: string;
     send: string;
     success: string;
-    footerLabel: string;
     unknownError: string;
   };
 
@@ -263,10 +325,8 @@ export interface Dictionary {
 
   decks: {
     instruction: string;
-    selectedCount: (n: number) => string;
     all: string;
     loading: string;
-    goToCategory: (cat: string) => string;
     categoryDescriptions: Record<string, string>;
   };
 
@@ -297,7 +357,6 @@ export interface Dictionary {
     perkFuture: string;
     perkName: string;
     perkNameSample: string;   // pseudo d'exemple affiché en doré
-    perkNamePreviewHint: string; // sous-texte de l'aperçu avatar/nom premium
     perkAdsTitle: string;     // bloc "zéro pub" mis en avant
     perkAdsDesc: string;
     // Mode natif (achat possible)
@@ -324,6 +383,9 @@ export interface Dictionary {
     welcomeCta: string;
     // Toast du badge Premium de l'accueil (joueur déjà premium)
     activeToast: string;
+    // Pastille d'achat en haut à gauche de l'accueil (joueur pas encore premium).
+    // Sur 2 lignes : `\n` rendu par whitespace-pre-line.
+    homeButton: string;
   };
 
   appBanner: {
@@ -389,10 +451,8 @@ export interface Dictionary {
       removeOption: string;
       assignWaiting: string;
       answers: string;
-      allAssigned: string;
       remainingCount: (n: number) => string;
       validate: string;
-      removeAria: string;
       rotateForLandscape: string;
       leaderFallback: string;
     };
@@ -437,7 +497,6 @@ export interface Dictionary {
     top3Label: string;
     ctaLine1: string;
     ctaLine2: string;
-    shareTitle: string;
   };
 
   apiErrors: {

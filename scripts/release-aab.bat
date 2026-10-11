@@ -4,8 +4,23 @@
 ::
 :: VITE_SERVER_URL pointe sur le backend de PROD par defaut (un .aab part toujours
 :: pour le store). Pour viser un autre backend : set VITE_SERVER_URL=... avant.
-:: Le versionCode/versionName sont derives des tags/commits git (cf build.gradle).
+:: Le versionCode/versionName sont derives de VERSION + commits git (cf scripts/app-version.mjs).
+:: ATTENTION : jette les modifs locales non commitees (git reset --hard) puis pull.
+:: Chemin absolu du script capture AVANT le cd (%~f0 apres un cd peut se resoudre
+:: depuis le nouveau dossier si le script a ete lance avec un chemin relatif).
+set "SELF=%~f0"
 cd /d "%~dp0.."
+
+:: Bloc parse d'un coup par cmd : si le pull modifie ce .bat, on se relance sur la
+:: nouvelle version au lieu de continuer a lire l'ancien fichier par offset.
+if not "%~1"=="--synced" (
+  echo Recuperation de origin ^(fetch + reset des modifs locales + pull^)...
+  git fetch origin || exit /b 1
+  git reset --hard || exit /b 1
+  git pull || exit /b 1
+  call "%SELF%" --synced
+  exit /b
+)
 
 if "%VITE_SERVER_URL%"=="" (
   set VITE_SERVER_URL=https://onskone.fr

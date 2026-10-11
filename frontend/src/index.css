@@ -51,12 +51,25 @@
   --color-warning-crown-bg: #fff6dd;   /* Fond hover "promouvoir" du menu joueur */
   --color-warning-crown-text: #b07600; /* Texte hover "promouvoir" du menu joueur */
 
+  /* Or premium - famille UNIQUE pour tout ce qui est premium (paywall, bouton
+     accueil, cadre avatar, couronnes, badges, pseudo doré). Or BRILLANT façon ruban
+     doré : or moyen saturé, reflet jaune clair (pas blanc) qui traverse la surface,
+     ombres qui partent vers l'orange. Le reflet fait l'effet métal (cf. .bg-premium-gold).
+     Se distingue des succès (aplat pastel jaune → orange clair) par la saturation,
+     la bande de reflet et des ombres plus profondes. */
+  --color-premium-100: #fbe9a6; /* reflet jaune clair (bande brillante, sticker) */
+  --color-premium-300: #f2c33d; /* or principal (texte/icônes sur fond noir) : saturé mais pas citron, sinon ça fait toc */
+  --color-premium-500: #df9a1c; /* ombre or orangé (bas des dégradés) */
+  --color-premium-600: #c27f12; /* bordure (thème premium débloqué) */
+  --color-premium-700: #94600f; /* ombre profonde orangée (bords du pseudo doré) */
+
   --color-cream-player: #f9f4ee; /* Cartes joueurs (lobby, tuiles guessing) */
   --color-cream-question: #f9f4ee; /* Carte de question */
   --color-cream-answer: #f7f0e2; /* Carte réponse montrée au joueur (guessing / reveal) */
   --color-cream-paper: #fdfaf0; /* Feuille notebook (AnswerPhase) */
   --color-cream-kraft: #FFF6D6; /* Étiquettes kraft "settings hôte" */
-  --color-cream-settings: #f9f7f3; /* Cartes de réglages du lobby (ton crème abaissé, recède sur le panneau blanc) */
+  --color-cream-settings: #fbf9f4; /* Cartes de réglages du lobby (blanc cassé : se détache du panneau blanc sans attirer l'œil) */
+  --color-cream-checkbox: #f7f1e6; /* Case à cocher vide (crème papier : ressort sur les blocs cream-settings) */
   --color-cream-focus: #fff8ec; /* Fond focus de l'input pseudo */
 
   /* Jaune pastel (tooltips, current player highlight) - 4 hex pâles consolidés ici */
@@ -943,14 +956,15 @@ button {
   animation: paper-shake 0.28s ease-in-out;
 }
 
-/* Variante lente du shake, pour le hint "seul le pilier choisit" : plus posée, moins frénétique. */
+/* Variante lente du shake, pour le rappel "seul l'hôte peut modifier" (HostOnlyHint) :
+   plus posée que paper-shake, mais assez ample pour être vue du coin de l'œil. */
 @keyframes paper-shake-slow {
   0%, 100% { transform: translateX(0) rotate(0); }
-  15% { transform: translateX(-4px) rotate(-0.6deg); }
-  30% { transform: translateX(4px) rotate(0.6deg); }
-  45% { transform: translateX(-3px) rotate(-0.4deg); }
-  60% { transform: translateX(3px) rotate(0.4deg); }
-  75% { transform: translateX(-2px) rotate(-0.2deg); }
+  15% { transform: translateX(-7px) rotate(-1deg); }
+  30% { transform: translateX(7px) rotate(1deg); }
+  45% { transform: translateX(-5px) rotate(-0.7deg); }
+  60% { transform: translateX(5px) rotate(0.7deg); }
+  75% { transform: translateX(-3px) rotate(-0.4deg); }
   90% { transform: translateX(2px) rotate(0.2deg); }
 }
 
@@ -1201,23 +1215,36 @@ button {
   mix-blend-mode: overlay;
 }
 
-/* Halo doré doux qui respire derrière l'icône couronne. */
-@keyframes premium-halo {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 179, 71, 0.0), 0 0 18px 2px rgba(255, 199, 0, 0.25); }
-  50%      { box-shadow: 0 0 0 6px rgba(255, 179, 71, 0.12), 0 0 26px 6px rgba(255, 199, 0, 0.45); }
-}
-.premium-halo {
-  animation: premium-halo 2.8s ease-in-out infinite;
-}
-
 /* Glow doré resserré pour le cadre avatar : lueur douce qui respire, SANS gros
-   anneau qui s'étale (plus discret que premium-halo, mais reste attractif). */
+   anneau qui s'étale. */
 @keyframes premium-glow {
-  0%, 100% { box-shadow: 0 0 6px 1px rgba(230, 165, 42, 0.35); }
-  50%      { box-shadow: 0 0 12px 3px rgba(255, 210, 74, 0.6); }
+  0%, 100% { box-shadow: 0 0 6px 1px color-mix(in srgb, var(--color-premium-500) 35%, transparent); }
+  50%      { box-shadow: 0 0 12px 3px color-mix(in srgb, var(--color-premium-300) 60%, transparent); }
 }
 .premium-glow {
   animation: premium-glow 2.6s ease-in-out infinite;
+}
+
+/* Dégradé or STATIQUE premium (bouton accueil, cadre avatar, couronne de thème,
+   badge de carte, fond du paywall). Pas d'anim : l'accent idle de l'écran reste
+   ailleurs. Angle surchargeable via --premium-gold-angle (la feuille du paywall,
+   haute et étroite, passe en 160deg pour un dégradé plus vertical). Non hérité :
+   l'avatar premium DANS le paywall garde ses 135deg. */
+@property --premium-gold-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 135deg;
+}
+.bg-premium-gold {
+  /* or → bande de reflet → or → ombre orangée : la bande claire au premier tiers
+     fait l'effet ruban métallique (un dégradé clair → foncé seul fait aplat). */
+  background-image: linear-gradient(
+    var(--premium-gold-angle, 135deg),
+    var(--color-premium-300) 0%,
+    var(--color-premium-100) 28%,
+    var(--color-premium-300) 52%,
+    var(--color-premium-500) 100%
+  );
 }
 
 /* Nom brillant : or FIXE + UN seul reflet blanc qui traverse le texte, puis
@@ -1240,11 +1267,11 @@ button {
     ),
     linear-gradient(
       100deg,
-      #b8791a 0%,
-      #e6a52a 35%,
-      #ffcf3f 50%,
-      #e6a52a 65%,
-      #b8791a 100%
+      var(--color-premium-700) 0%,
+      var(--color-premium-500) 35%,
+      var(--color-premium-300) 50%,
+      var(--color-premium-500) 65%,
+      var(--color-premium-700) 100%
     );
   background-size: 250% 100%, 100% 100%;
   background-repeat: no-repeat;
@@ -1258,7 +1285,6 @@ button {
 
 @media (prefers-reduced-motion: reduce) {
   .premium-sweep::after { animation: none; opacity: 0; }
-  .premium-halo { animation: none; }
   .premium-glow { animation: none; }
   .text-gold-shine { animation: none; background-position: 105% 0, 0 0; }
 }

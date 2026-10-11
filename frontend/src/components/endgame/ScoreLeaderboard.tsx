@@ -38,6 +38,15 @@ const ScoreLeaderboard: React.FC<ScoreLeaderboardProps> = ({
 }) => {
   const { t } = useLocale();
 
+  // Seul le pilier marque des points : un joueur qui ne l'a jamais été (exclu par
+  // l'hôte, ou partie écourtée) finirait dernier à 0 pt sans l'avoir mérité. Il
+  // passe sous le classement, sans rang. Sans aucun round connu, on classe tout le monde.
+  const hasLed = (id: string) => roundByLeaderId.size === 0 || roundByLeaderId.has(id);
+  const rows = [
+    ...leaderboard.filter(e => hasLed(e.player.id)),
+    ...leaderboard.filter(e => !hasLed(e.player.id)),
+  ];
+
   const [openPopoverFor, setOpenPopoverFor] = useState<string | null>(null);
   const [renderedPopoverFor, setRenderedPopoverFor] = useState<string | null>(null);
   const [popoverVisible, setPopoverVisible] = useState(false);
@@ -109,9 +118,10 @@ const ScoreLeaderboard: React.FC<ScoreLeaderboardProps> = ({
           ref={listRef}
           className="space-y-1.5 md:space-y-2 max-h-[38dvh] md:max-h-[44dvh] overflow-y-auto overscroll-contain pr-1 pb-4 pt-1"
         >
-        {leaderboard.map((entry, index) => {
+        {rows.map((entry, index) => {
           const isCurrentPlayer = entry.player.id === currentPlayer?.id;
-          const isPodium = index < 3;
+          const isRanked = hasLed(entry.player.id);
+          const isPodium = isRanked && index < 3;
           const round = roundByLeaderId.get(entry.player.id);
           const hasQuestion = !!(round && round.selectedQuestion);
           const isOpen = openPopoverFor === entry.player.id;
@@ -157,7 +167,7 @@ const ScoreLeaderboard: React.FC<ScoreLeaderboardProps> = ({
                     color: isPodium && index === 0 ? '#000' : '#1f2937',
                   }}
                 >
-                  {index + 1}
+                  {isRanked ? index + 1 : '–'}
                 </span>
                 <Avatar avatarId={entry.player.avatarId} name={entry.player.name} size="sm" premium={entry.player.isPremium} className="flex-shrink-0 md:hidden" />
                 <Avatar avatarId={entry.player.avatarId} name={entry.player.name} size="md" premium={entry.player.isPremium} className="flex-shrink-0 hidden md:block" />
@@ -168,9 +178,15 @@ const ScoreLeaderboard: React.FC<ScoreLeaderboardProps> = ({
                 />
               </div>
               <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                <span className="text-base md:text-xl font-display font-bold tabular-nums text-gray-900">
-                  {t.endGame.points(entry.score)}
-                </span>
+                {isRanked ? (
+                  <span className="text-base md:text-xl font-display font-bold tabular-nums text-gray-900">
+                    {t.endGame.points(entry.score)}
+                  </span>
+                ) : (
+                  <span className="text-display-xs text-gray-500 text-right">
+                    {t.endGame.unranked}
+                  </span>
+                )}
                 {hasQuestion && (
                   <div className="relative">
                     <button

@@ -1,6 +1,6 @@
 import { io, Socket } from "socket.io-client";
 import { SERVER_URL } from '../constants/game';
-import { ServerToClientEvents, ClientToServerEvents } from '@onskone/shared';
+import { ServerToClientEvents, ClientToServerEvents, CLIENT_VERSION_POLICY } from '@onskone/shared';
 
 // Version réelle du build (injectée par Vite, cf. vite.config.ts).
 export const ACTUAL_APP_VERSION = __APP_VERSION__;
@@ -25,7 +25,7 @@ export const setTestVersionOverride = (v: string | null): void => {
 };
 
 // Version effectivement annoncée au handshake (override de test sinon build réel).
-const announcedVersion = (): string => getTestVersionOverride() || ACTUAL_APP_VERSION;
+export const announcedVersion = (): string => getTestVersionOverride() || ACTUAL_APP_VERSION;
 
 // Statut premium annoncé au handshake (gating "l'host débloque pour la table").
 // Mis à jour par premium.ts quand le statut change ; réévalué à chaque (re)connexion.
@@ -41,10 +41,11 @@ const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(SERVER_URL
   reconnectionDelayMax: 5000,
   reconnectionAttempts: Infinity, // Ne jamais abandonner (important pour mobile)
   timeout: 20000,
-  // Version du build annoncée au serveur : sert au gate de maj forcée
-  // (backend/src/utils/versionGate.ts refuse les clients trop vieux).
+  // Version du build annoncée au serveur : sert au gate de maj forcée. `versionPolicy`
+  // indique que ce client applique la règle lui-même (cf. utils/versionGate.ts) : le
+  // serveur ne le refuse plus au handshake, il lui envoie la politique.
   // Fonction => réévaluée à chaque (re)connexion (prend en compte l'override de test).
-  auth: (cb) => cb({ appVersion: announcedVersion(), premium: announcedPremium }),
+  auth: (cb) => cb({ appVersion: announcedVersion(), premium: announcedPremium, versionPolicy: CLIENT_VERSION_POLICY }),
 });
 
 export default socket;

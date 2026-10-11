@@ -107,15 +107,20 @@ const loadOne = (locale: Locale): boolean => {
         // via `codeByLabel` au moment du filtrage par sélection.
         for (const [category, themes] of Object.entries(data)) {
             for (const [theme, themeData] of Object.entries(themes)) {
-                if (!p.codeByLabel[theme]) {
+                const code = p.codeByLabel[theme];
+                if (!code) {
                     logger.warn('Theme in questions JSON not found in themes.json', { locale, category, theme });
                 }
+                // Flag premium porté par la carte : le front affiche le badge exclusif
+                // (sélection + mini-carte des phases suivantes) sans relire le catalogue.
+                const premium = !!(code && THEMES_META[code]?.premium);
                 for (const entry of themeData.subjects) {
                     p.pool.push({
                         category,
                         theme,
                         subject: entry.subject,
                         questions: entry.questions,
+                        ...(premium ? { premium: true } : {}),
                     });
                 }
             }

@@ -135,6 +135,11 @@ export const rateLimiters = {
   // General events: 60 per minute
   general: new RateLimiter({ windowMs: 60000, maxRequests: 60 }),
 
+  // syncCheck : un toutes les 5 s en régime normal (12/min), plus les relances au
+  // retour au premier plan. Limiteur dédié : ne doit pas consommer le budget
+  // `general` (requestTimerState, requestShuffledAnswers…).
+  syncCheck: new RateLimiter({ windowMs: 60000, maxRequests: 40 }),
+
   // Lobby settings toggles (mode, decks, guessMyAnswer): 240 per minute
   // L'hôte peut spammer les sliders sans déclencher le rate limit
   lobbySettings: new RateLimiter({ windowMs: 60000, maxRequests: 240 }),

@@ -3,19 +3,18 @@ import express from 'express';
 import http from 'http';
 import path from 'path';
 import fs from 'fs';
-import { fileURLToPath } from 'url';
 import { Server } from 'socket.io';
 import { SocketHandler } from './sockets/SocketHandler';
 import * as LobbyManager from './managers/LobbyManager.js';
 import { stopAllRateLimiters } from './utils/rateLimiter.js';
-import { versionGate, getMinSupportedVersion } from './utils/versionGate.js';
+import { attachVersionGate, getMinSupportedVersion } from './utils/versionGate.js';
+import { CAPACITOR_ORIGINS } from './utils/origins.js';
+import { FRONTEND_DIST } from './utils/frontendDist.js';
 import ticketsRouter from './routes/tickets.js';
 import clientLogsRouter from './routes/clientLogs.js';
 import adminDataRouter from './routes/adminData.js';
 import { printBanner } from './utils/banner.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const app = express();
 const server = http.createServer(app);
@@ -33,10 +32,6 @@ const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim()).filter(o => o.length > 0)
   : [];
 
-// Origines des apps natives Capacitor : toujours autorisées (web ET prod).
-// Android sert la page depuis https://localhost, iOS depuis capacitor://localhost.
-const CAPACITOR_ORIGINS = ['capacitor://localhost', 'https://localhost'];
-
 // Validation de la configuration en production
 if (process.env.NODE_ENV === 'production' && ALLOWED_ORIGINS.length === 0) {
   logger.warn('SECURITY WARNING: ALLOWED_ORIGINS is not set in production. CORS will reject all browser requests!');
@@ -44,6 +39,11 @@ if (process.env.NODE_ENV === 'production' && ALLOWED_ORIGINS.length === 0) {
 
 // Crée une instance de Server (socket.io)
 const io = new Server(server, {
+  // Détection des sockets morts (téléphone verrouillé, appli tuée) en ~25 s au lieu
+  // des ~45 s par défaut (25 s + 20 s) : les timeouts de déconnexion partent plus
+  // tôt et le slot est réellement « libre » plus vite pour une reprise.
+  pingInterval: 15_000,
+  pingTimeout: 10_000,
   cors: {
     origin: (origin, callback) => {
       // En production, vérifier la liste blanche strictement.
@@ -90,10 +90,10 @@ const io = new Server(server, {
   },
 });
 
-// Refus des clients trop vieux (maj forcée). Le plancher est dynamique (pilotable
-// en 1 clic depuis l'admin) : on enregistre toujours le middleware, il no-op tant
-// qu'aucun plancher actif n'est posé.
-io.use(versionGate);
+// Maj forcée (cf. utils/versionGate.ts). Le plancher est dynamique (pilotable en
+// 1 clic depuis l'admin) : on branche toujours le gate, il no-op tant qu'aucun
+// plancher actif n'est posé.
+attachVersionGate(io);
 const bootFloor = getMinSupportedVersion();
 logger.info(bootFloor
   ? `Maj forcée active au boot: version minimale requise = ${bootFloor}`
@@ -136,11 +136,7 @@ app.use('/api', clientLogsRouter);
 app.use('/api', adminDataRouter);
 
 // En production, servir le frontend statique. Le dossier est resolu via
-// FRONTEND_DIST si présent, sinon ../frontend/build par rapport au backend.
-const FRONTEND_DIST = process.env.FRONTEND_DIST
-  ? path.resolve(process.env.FRONTEND_DIST)
-  : path.resolve(__dirname, '../../frontend/build');
-
+// FRONTEND_DIST si présent, sinon frontend/build (cf. utils/frontendDist.ts).
 if (fs.existsSync(FRONTEND_DIST)) {
   logger.info(`Serving frontend from ${FRONTEND_DIST}`);
   // Apple Universal Links : le fichier n'a pas d'extension, express.static ne lui

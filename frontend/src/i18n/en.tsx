@@ -13,6 +13,27 @@ export const en: Dictionary = {
     pseudoPlaceholder: 'Your name',
   },
 
+  settings: {
+    button: 'Settings',
+    title: 'Settings',
+    sound: 'Sound',
+    vibration: 'Vibrations',
+    on: 'On',
+    off: 'Off',
+    unavailable: 'Unavailable',
+    report: 'Report a problem',
+    contentLocaleHint: "This game's questions stay in the lobby's language.",
+    languageNames: { fr: 'French', en: 'English' },
+    lobby: 'Lobby',
+    inviteHint: 'A disconnected friend gets their seat back by entering this code on the home screen.',
+  },
+
+  app: {
+    crashTitle: 'Oops, something broke!',
+    crashBody: 'A display error occurred. Go back to the home screen to start fresh.',
+    crashHome: 'Back to home',
+  },
+
   update: {
     title: 'Update required',
     message: 'A new version is available. Update Onskoné to keep playing.',
@@ -27,6 +48,14 @@ export const en: Dictionary = {
       message: 'You left a game in progress. Want to jump back in?',
       confirm: 'Back to the game',
       cancel: 'No thanks',
+    },
+    reclaim: {
+      title: 'Were you in this game?',
+      message: 'A game is in progress in this lobby. If you got disconnected, pick your name to get your seat back.',
+      pick: "That's me",
+      notMe: "I wasn't playing",
+      waiting: 'Nobody is disconnected right now… if you just lost your connection, your seat frees up in a few seconds.',
+      alreadyConnected: 'That player is connected after all, their seat is no longer free.',
     },
     invite: (hostName) => (
       <>
@@ -55,6 +84,7 @@ export const en: Dictionary = {
       invalidLobbyCode: 'Invalid lobby code',
       lobbyNotFound: 'Lobby not found',
       pseudoTaken: (name) => `The name "${name}" is already taken in this lobby`,
+      gameInProgress: 'A game is already in progress in this lobby, you cannot join it.',
     },
     joinByCode: {
       button: 'Join a game',
@@ -78,15 +108,26 @@ export const en: Dictionary = {
       description: 'One player is picked to write the answer the leader would have given',
     },
     gameSpeed: {
-      label: 'Game length',
-      fast: 'Short',
-      normal: 'Medium',
-      slow: 'Long',
+      label: 'Round length',
+      fast: 'Fast',
+      normal: 'Normal',
       estimate: (m) => `~${m} min`,
     },
+    options: {
+      title: 'Game options',
+      summary: (speed, rounds, m) => `${speed} · ${rounds} round${rounds !== 1 ? 's' : ''} ~${m} min`,
+      leaders: 'Leaders',
+      rounds: (n) => `${n} round${n !== 1 ? 's' : ''}`,
+      leadersHint: "Untick anyone who doesn't want to be leader: they still play!",
+      you: '(you)',
+      hostOnly: (host) => `Only ${host} can change the options.`,
+      estimateLabel: 'Estimated length',
+    },
+    notLeaderBadge: 'Not leader',
+    atLeastOneLeader: 'You need at least 1 leader to start',
     themes: 'Themes',
+    gameSection: 'Game',
     start: 'Start',
-    copyInviteLink: 'Copy invite link',
     shareInvite: {
       button: 'Share the invite',
       title: 'Onskoné',
@@ -131,6 +172,7 @@ export const en: Dictionary = {
       kicked: (name) => `${name} kicked you from the lobby`,
       kickedAnon: 'You were kicked from the lobby',
       closedInactive: 'This lobby was closed due to inactivity',
+      joinRefused: 'This name is already taken in this lobby, or your session expired.',
       playerJoined: (name) => `${name} joined the lobby`,
       playerLeft: (name) => `${name} left the lobby`,
     },
@@ -143,7 +185,14 @@ export const en: Dictionary = {
 
   game: {
     loading: 'Loading game...',
+    loadingSlow: 'The connection is taking a while…',
+    loadingRetry: 'Retry',
+    loadingHome: 'Back to home',
     leaderDisconnected: (name) => `${name} disconnected - round skipped`,
+    leaderIdle: (name) => `${name} didn't finish the round - round skipped automatically`,
+    sessionLost: 'Your session expired. Pick your name to get your seat back.',
+    lobbyGone: 'This lobby no longer exists.',
+    connectedElsewhere: 'You took your seat back from another device.',
   },
 
   seo: {
@@ -162,6 +211,7 @@ export const en: Dictionary = {
     quit: 'Quit',
     individualScores: 'Individual scores',
     points: (n) => `${n} pt${n > 1 ? 's' : ''}`,
+    unranked: 'Unranked',
     receivedQuestion: 'Question received',
     correctAnswersCount: (n) => `${n} Correct answer${n > 1 ? 's' : ''}`,
     byPlayer: (name) => `(by ${name})`,
@@ -288,11 +338,9 @@ export const en: Dictionary = {
     categoryPlaceholder: 'Pick a category…',
     messageLabel: 'Message',
     messagePlaceholder: 'Describe in a few words…',
-    messageDisabled: 'Pick a type above first.',
     cancel: 'Cancel',
     send: 'Send',
     success: 'Thanks! Your report has been sent.',
-    footerLabel: 'Report an issue',
     unknownError: 'Unknown error',
   },
 
@@ -375,11 +423,18 @@ export const en: Dictionary = {
       seoDescription: "Onskoné's privacy policy: what game data is collected, how it is used and how long it is kept.",
       sections: [
         {
+          title: 'Data controller',
+          content: `Simeon Deivassagayame, publisher of Onskoné. Contact: onskonelejeu@gmail.com`,
+        },
+        {
           title: 'Data collection',
-          content: `Onskone only collects data strictly necessary to run the game:`,
+          content: `Onskone only collects data needed to run the game, improve it and, in the free mobile app, display ads:`,
           list: [
             'Your name (chosen freely, not tied to your identity)',
             'Your answers to questions during games',
+            'Reports you choose to send us (message, name, device type)',
+            'Technical error reports (app version, device type), with no identifying data',
+            'In the mobile app: advertising data collected by Google AdMob (see "Advertising")',
           ],
         },
         {
@@ -388,24 +443,38 @@ export const en: Dictionary = {
           list: [
             'Run the game sessions',
             'Display scores and results',
-            'Improve user experience',
+            'Improve user experience and fix bugs',
+            'Measure audience anonymously',
+            'Display ads in the free mobile app',
           ],
         },
         {
+          title: 'Advertising',
+          content: `The free version of the mobile app (Android and iOS) may display ads provided by Google AdMob (Google Ireland Limited). Google may then collect your device's advertising ID, your IP address (from which it infers an approximate location), information about your device and your interactions with ads. This data is used to serve ads, personalize them if you have consented, measure their performance, limit how often they repeat and prevent fraud. In the European Union, the United Kingdom and Switzerland, a message asks for your consent: you can decline, in which case non-personalized ads are shown, and change your choice at any time from the app. On iOS, access to the advertising ID also depends on Apple's "Tracking" permission. Premium users see no ads, and the onskone.fr website displays none. To learn more about how Google uses data: https://policies.google.com/technologies/partner-sites`,
+        },
+        {
+          title: 'Premium purchases',
+          content: `In-app purchases are paid through Apple (App Store) or Google (Google Play), then verified through RevenueCat (RevenueCat, Inc.), which receives an anonymous ID and the related purchase history to confirm your Premium access. We never have access to your payment details.`,
+        },
+        {
+          title: 'Audience measurement',
+          content: `The website and the app use Umami, a statistics tool we host ourselves (stats.onskone.fr). It works without cookies and collects no data that can identify you.`,
+        },
+        {
           title: 'Data retention',
-          content: `Game data (names, answers) is temporary and is not kept after the end of the game session. No personal data is permanently stored on our servers.`,
+          content: `Game data (names, answers) is temporary and is not kept after the end of the game session. Reports and error logs are kept as long as needed to handle them; the related IP address is only stored in hashed form. Advertising data is kept by Google under its own policy.`,
         },
         {
-          title: 'Cookies',
-          content: `The site may use technical cookies needed for the service to work properly (session management, preferences). These cookies do not collect any personal data for advertising purposes.`,
-        },
-        {
-          title: 'Your rights',
-          content: `Under current regulations, you have a right to access, rectify and delete your data. To exercise these rights, contact us at: onskonelejeu@gmail.com`,
+          title: 'Cookies and trackers',
+          content: `The website only uses the local storage it needs to work (preferences, resuming a game). No advertising cookie is set on the website. In the mobile app, Google's advertising trackers are used according to the choices you made in the consent message.`,
         },
         {
           title: 'Data sharing',
-          content: `Onskone does not sell, trade or rent your personal information to third parties. Your data is never shared for commercial purposes.`,
+          content: `Onskone does not sell, trade or rent your personal information. The only third parties receiving data are our technical providers, each for its own purpose: Google (advertising in the mobile app), Apple, Google and RevenueCat (Premium purchases). This data may be transferred outside the European Union, with the safeguards provided by the GDPR.`,
+        },
+        {
+          title: 'Your rights',
+          content: `Under current regulations, you have a right to access, rectify and delete your data, and to withdraw your advertising consent at any time. To exercise these rights, contact us at: onskonelejeu@gmail.com. You can also lodge a complaint with your data protection authority (in France, the CNIL: www.cnil.fr).`,
         },
       ],
     },
@@ -522,9 +591,6 @@ export const en: Dictionary = {
   funFacts: [
     "At the casino you can win 4000 times your bet but you can only lose 1 time your bet, so bet it all next time ;)",
     "It's statistically safer to bet on a Kylian Mbappé goal than on a goal by the referee.",
-    "Going to the gym regularly gives you muscle gains plus a nauseating body odor",
-    "Skipping brushing your teeth systematically results in dragon breath",
-    "Eating KFC every day greatly increases your toilet paper expenses",
     "Whoever falls asleep with itchy butt cheeks wakes up with stinky fingers",
     "Onskoné has created 10 couples. Amazing! (and destroyed 35)",
     "The round's pillar who ends with 0 correct answers has a 50% chance of being bad and a 50% chance of being drunk.",
@@ -532,14 +598,15 @@ export const en: Dictionary = {
     "If nobody guesses your answers, two theories: you're a misunderstood genius, or you're just extremely weird.",
     "Onskoné is currently banned in 0 countries. But that could change (fingers crossed!)",
     "Onskoné is the only game where you can make friends and lose some at the same time.",
+    'To answer, think about everything: work, friends, family, school, travel…',
+    'BE SPONTANEOUS on Onskoné! The first answers that pop into your head are often the best ones.',
+    "Don't try to find THE PERFECT answer: go for the one you'd naturally give!",
   ],
 
   decks: {
     instruction: 'Tap themes to add/remove them',
-    selectedCount: (n) => `${n} theme${n > 1 ? 's' : ''} selected`,
     all: 'All',
     loading: 'Loading question decks…',
-    goToCategory: (cat) => `Go to ${cat}`,
     categoryDescriptions: {
       ICEBREAKERS: 'Simple questions to break the ice',
       FUN: 'Have fun with your friends on silly topics',
@@ -574,7 +641,6 @@ export const en: Dictionary = {
     perkFuture: 'All future content included',
     perkName: 'Your name in shiny gold',
     perkNameSample: 'You',
-    perkNamePreviewHint: 'Your premium preview',
     perkAdsTitle: 'ZERO ADS',
     perkAdsDesc: 'Never a single interruption again.',
     unlock: 'Unlock Premium',
@@ -598,6 +664,7 @@ export const en: Dictionary = {
     welcomeDesc: 'Thank you SO MUCH for your support <3\nYou now have access to every premium theme (and those to come) and your golden name!',
     welcomeCta: "Let's go!",
     activeToast: 'You\'re Premium! Thanks for your support <3',
+    homeButton: 'Unlock\nPremium',
   },
 
   appBanner: {
@@ -663,10 +730,8 @@ export const en: Dictionary = {
       removeOption: 'Clear assignment',
       assignWaiting: 'is assigning the answers…',
       answers: 'Answers',
-      allAssigned: 'All answers have been assigned',
       remainingCount: (n) => `${n} answer${n > 1 ? 's' : ''} left to assign`,
       validate: 'Confirm my picks',
-      removeAria: 'Remove',
       rotateForLandscape: 'Turn your phone for a wider view',
       leaderFallback: 'the leader',
     },
@@ -711,7 +776,6 @@ export const en: Dictionary = {
     top3Label: 'TOP 3',
     ctaLine1: 'Download the',
     ctaLine2: 'Onskoné app!',
-    shareTitle: 'Onskoné',
   },
 
   apiErrors: {

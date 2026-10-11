@@ -1,18 +1,28 @@
 import * as LobbyManager from '../../managers/LobbyManager';
 import { createGame } from '../../managers/GameManager.js';
 import { sanitizeSelectedDecks, getDefaultSelectedDecks } from '../../data/questionsRepository.js';
-import { isPremiumPromoActive, readHandshakePremium } from '../../utils/premiumPromo.js';
+import { readHandshakePremium } from '../../utils/premium.js';
 import { Player } from '../../models/Player';
 import { Lobby } from '../../models/Lobby';
-import { GAME_CONSTANTS, GameStatus, DEFAULT_LOCALE, isLocale, ERROR_CODES } from '@onskone/shared';
+import { GAME_CONSTANTS, GameStatus, DEFAULT_LOCALE, isLocale, isGameSpeed, ERROR_CODES } from '@onskone/shared';
+import type { GameSpeed } from '@onskone/shared';
 import { validatePlayerName, validateAvatarId, sanitizeInput } from '../../utils/validation.js';
 import { rateLimiters } from '../../utils/rateLimiter.js';
 import { errMessage } from '../../utils/helpers.js';
+import { speedFromLegacyMultiplier, legacyMultiplierFromSpeed } from '../../utils/legacyTimeMultiplier.js';
 import logger from '../../utils/logger.js';
 import { serializeGame, serializeRound, serializePlayer, serializePlayers, emitLobbyDecksState, armServerTimerForPhase } from '../broadcasting.js';
 import { scheduleLeaderSkipTimeout, armLeaderSkipIfDisconnected } from './disconnectHandler.js';
 import type { Round } from '../../models/Round.js';
-import { reconnectPlayerSlot } from './reconnection.js';
+import {
+    reconnectPlayerSlot,
+    isSocketAlive,
+    socketHoldsOtherSlot,
+    listReclaimablePlayers,
+    issueClaimToken,
+    tokenMatches,
+    revokeClaimIfProvenOwner,
+} from './reconnection.js';
 import {
     type HandlerContext,
     type AppSocket,
@@ -20,7 +30,7 @@ import {
 } from './context.js';
 
 /**
- * Applique un réglage de lobby réservé à l'hôte (decks, mode, multiplicateur de temps).
+ * Applique un réglage de lobby réservé à l'hôte (decks, mode, vitesse de jeu).
  * Centralise le préambule quasi-identique des 3 handlers de réglages :
  * rate-limit lobbySettings + validation code + lobby + host (message personnalisé) +
  * refus si partie en cours, puis exécute `apply(lobby)`.
@@ -79,8 +89,8 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
             // pour tout le lobby. Auto-déclaré (falsifiable, enjeu faible assumé).
             const hostPremium = readHandshakePremium(socket);
             if (lobby) {
-                lobby.hostIsPremium = hostPremium || isPremiumPromoActive();
-                // Host premium (ou promo) : les thèmes premium sont sélectionnés d'office
+                lobby.hostIsPremium = hostPremium;
+                // Host premium : les thèmes premium sont sélectionnés d'office
                 // (recalcul de la sélection par défaut, qui excluait les premium au constructeur).
                 if (lobby.hostIsPremium) {
                     lobby.selectedDecks = getDefaultSelectedDecks(lobby.locale, true);
@@ -172,17 +182,14 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
                 // secret du joueur cible → reconnexion prouvée, on contourne la garde de
                 // liveness (le slot lui appartient légitimement même si l'ancien socket
                 // n'est pas encore tombé).
-                const tokenMatches = !!data.reconnectToken
-                    && data.reconnectToken === existingPlayerByName.reconnectToken;
-
-                if (!tokenMatches) {
+                if (!tokenMatches(existingPlayerByName, data.reconnectToken)) {
                     // Pas de token (ou token erroné) : le joueur cible possède un secret
                     // défini, donc une reconnexion non prouvée n'est jamais autorisée à
                     // reprendre le slot — ni pendant la fenêtre de déconnexion. Les noms
                     // sont publics (getLobbyInfo/updatePlayersList) : sans ce refus, un
                     // attaquant rejoignant sous le nom de l'hôte/pilier récupérerait son
                     // socketId — donc ses privilèges (host/leader takeover).
-                    socket.emit('error', { message: 'Reconnexion non autorisée', code: ERROR_CODES.CONFLICT });
+                    socket.emit('error', { message: 'Reconnexion non autorisée', code: ERROR_CODES.CONFLICT, sessionLost: true });
                     logger.warn('Prise de contrôle par nom refusée (token de reconnexion absent/invalide)', {
                         lobbyCode: lobby.code,
                         name: sanitizedName,
@@ -192,19 +199,16 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
                     return;
                 }
 
-                // Défense secondaire (garde de liveness conservée) : même avec un token
-                // valide, on ne devrait pas reprendre un slot dont le socket est encore
-                // bien vivant — sinon double-onglet du même joueur s'arracherait le socket.
+                // Ancien socket encore vu comme vivant (mobile revenu au premier plan
+                // avant que le serveur ait constaté la mort de l'ancien socket, ou vrai
+                // double-onglet). Le token prouve que c'est le propriétaire : on REPREND
+                // le slot et on évince l'ancien socket après la réassociation — même
+                // politique que getGameState. Le refuser laissait le joueur dehors
+                // jusqu'à 45 s (ping timeout) avec « Ce nom est déjà utilisé ».
                 const existingSocket = io.sockets.sockets.get(existingPlayerByName.socketId);
-                if (existingSocket && existingSocket.connected && existingSocket.id !== socket.id) {
-                    socket.emit('error', { message: 'Ce nom est déjà utilisé dans ce salon', code: ERROR_CODES.CONFLICT });
-                    logger.warn('Reconnexion refusée (joueur encore connecté malgré token valide)', {
-                        lobbyCode: lobby.code,
-                        name: sanitizedName,
-                        attackerSocketId: socket.id,
-                    });
-                    return;
-                }
+                const staleSocket = existingSocket && existingSocket.connected && existingSocket.id !== socket.id
+                    ? existingSocket
+                    : null;
 
                 // Vérifier si une reconnexion est déjà en cours
                 if (registry.hasReconnectionLock(lobby.code, sanitizedName)) {
@@ -224,6 +228,17 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
                     existingPlayerByName.isPremium = joinerPremium; // rafraîchir le premium
                     // Cœur partagé : cancel timeouts + réassociation slot/socket + pilier.
                     reconnectPlayerSlot(registry, lobby, existingPlayerByName, socket);
+                    // Propriétaire prouvé de retour : toute reprise sans preuve est révoquée.
+                    revokeClaimIfProvenOwner(existingPlayerByName, data.reconnectToken);
+                    // Éviction APRÈS la réassociation : le handler `disconnect` de l'ancien
+                    // socket ne retrouve plus son id dans l'index et n'arme aucun timeout.
+                    if (staleSocket) {
+                        logger.info('Ancien socket évincé (slot repris avec token valide)', {
+                            lobbyCode: lobby.code, playerId: existingPlayerByName.id,
+                            evictedSocketId: staleSocket.id, newSocketId: socket.id,
+                        });
+                        staleSocket.disconnect();
+                    }
 
                     socket.emit('joinedLobby', { player: serializePlayer(existingPlayerByName), reconnectToken: existingPlayerByName.reconnectToken });
                     emitLobbyDecksState(io, socket, lobby);
@@ -262,6 +277,70 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
         });
     });
 
+    // Reprise d'un slot SANS secret de reconnexion (session perdue : crash, appli
+    // tuée, stockage vidé). Le joueur a choisi « c'était moi » dans la liste des
+    // déconnectés (cf. lobbyInfo.reclaimablePlayers). Garde-fous :
+    //   - partie EN COURS uniquement (en attente, un slot tombé est purgé après la
+    //     grâce et on rejoint à neuf ; ouvrir la reprise là n'apporterait rien et
+    //     permettrait de récupérer les droits de l'hôte) ;
+    //   - le slot visé doit être réellement sans connexion vivante — un joueur présent
+    //     n'est jamais délogeable sans son secret ;
+    //   - le secret D'ORIGINE reste valide : le vrai propriétaire qui revient reprend
+    //     son slot et révoque la reprise (cf. issueClaimToken) ;
+    //   - rate-limit par salon en plus du socket (un nouveau socket = budget neuf).
+    socket.on('reclaimPlayer', (data) => {
+        withGuards(socket, data, {
+            limiter: rateLimiters.joinLobby,
+            extraRateKeys: [`${data?.lobbyCode ?? ''}_reclaim`],
+            requireLobbyCode: true,
+            requirePlayerId: 'playerId',
+            requireLobby: true,
+        }, ({ lobby }, data) => {
+            if (lobby.game?.status !== GameStatus.IN_PROGRESS) {
+                socket.emit('error', { message: 'Aucune partie en cours à reprendre', code: ERROR_CODES.INVALID });
+                return;
+            }
+            const player = lobby.getPlayer(data.playerId);
+            if (!player) {
+                socket.emit('error', { message: 'Joueur introuvable', code: ERROR_CODES.NOT_FOUND });
+                return;
+            }
+            if (registry.isPlayerKicked(lobby.code, player.name)) {
+                socket.emit('error', { message: 'Vous avez été expulsé de ce salon', code: ERROR_CODES.KICKED });
+                return;
+            }
+            // Un socket ne tient qu'UN slot : s'il est déjà rattaché à un autre joueur du
+            // salon (joueur connecté qui rouvre le lien d'invitation et tape sur le nom
+            // d'un ami déconnecté), deux joueurs partageraient le même socketId et le
+            // handler `disconnect`, qui résout le joueur par socketId, n'en verrait qu'un.
+            if (socketHoldsOtherSlot(lobby, socket.id, player.id)) {
+                socket.emit('error', { message: 'Vous occupez déjà une place dans ce salon', code: ERROR_CODES.FORBIDDEN });
+                logger.warn('Reprise de slot refusée (socket déjà rattaché à un autre joueur)', {
+                    lobbyCode: lobby.code, playerId: player.id, requesterSocketId: socket.id,
+                });
+                return;
+            }
+            if (player.socketId !== socket.id && isSocketAlive(io, player.socketId)) {
+                socket.emit('error', { message: 'Ce joueur est déjà connecté', code: ERROR_CODES.CONFLICT });
+                logger.warn('Reprise de slot refusée (joueur encore connecté)', {
+                    lobbyCode: lobby.code, playerId: player.id, requesterSocketId: socket.id,
+                });
+                return;
+            }
+
+            lobby.updateActivity();
+            const reconnectToken = issueClaimToken(player);
+            player.isPremium = readHandshakePremium(socket);
+            reconnectPlayerSlot(registry, lobby, player, socket);
+
+            const gameStatus = lobby.game?.status ?? GameStatus.WAITING;
+            socket.emit('playerReclaimed', { player: serializePlayer(player), reconnectToken, gameStatus });
+            emitLobbyDecksState(io, socket, lobby);
+            io.to(lobby.code).emit('updatePlayersList', { players: serializePlayers(lobby.players) });
+            logger.info(`Slot de ${player.name} repris sans secret (session perdue) dans ${lobby.code}`, { gameStatus });
+        });
+    });
+
     // Get lobby info (for invite links)
     socket.on('getLobbyInfo', (data: { lobbyCode: string }) => {
         try {
@@ -284,6 +363,8 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
                 hostName: host?.name || null,
                 locale: lobby.locale,
                 gameStatus: lobby.game?.status ?? GameStatus.WAITING,
+                // Slots libres à reprendre (session perdue) : proposés par l'accueil.
+                reclaimablePlayers: listReclaimablePlayers(io, lobby),
             });
         } catch (error) {
             logger.error('Error getting lobby info', { error: errMessage(error) });
@@ -297,8 +378,7 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
         // propre try/catch interne (emit INTERNAL, jamais rethrow), donc ce wrapper
         // serait mort.
         applyHostSetting(socket, data, 'modifier les decks', (lobby) => {
-            const allowPremium = lobby.hostIsPremium || isPremiumPromoActive();
-            const sanitized = sanitizeSelectedDecks(data.selected || {}, lobby.locale, allowPremium);
+            const sanitized = sanitizeSelectedDecks(data.selected || {}, lobby.locale, lobby.hostIsPremium);
             const totalSelected = Object.values(sanitized).reduce((acc, arr) => acc + arr.length, 0);
             if (totalSelected === 0) {
                 socket.emit('error', { message: 'Au moins un thème doit être sélectionné', code: ERROR_CODES.INVALID });
@@ -326,29 +406,58 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
         });
     });
 
-    // Update phase time multiplier (host only)
-    socket.on('updateTimeMultiplier', (data) => {
+    // Applique une vitesse de jeu au lobby et la diffuse (event courant + pendant legacy).
+    const applyGameSpeed = (lobby: Lobby, requested: unknown): void => {
+        // Vitesse de debug : acceptée UNIQUEMENT si le backend tourne en développement.
+        // En production elle retombe sur la vitesse par défaut — sans quoi n'importe
+        // quel client pourrait imposer des phases interminables à la table.
+        const isAllowed = isGameSpeed(requested)
+            && (requested !== GAME_CONSTANTS.GAME_SPEED_DEBUG || process.env.NODE_ENV !== 'production');
+        const speed: GameSpeed = isAllowed ? requested : GAME_CONSTANTS.GAME_SPEED_DEFAULT;
+        lobby.gameSpeed = speed;
+        lobby.updateActivity();
+
+        emitLobbyDecksState(io, null, lobby);
+        io.to(lobby.code).emit('gameSpeedUpdated', { gameSpeed: speed });
+        io.to(lobby.code).emit('timeMultiplierUpdated', { timeMultiplier: legacyMultiplierFromSpeed(speed) });
+    };
+
+    // Update game speed (host only)
+    socket.on('updateGameSpeed', (data) => {
         // Cf. updateSelectedDecks : le try/catch interne de withGuards suffit.
         applyHostSetting(socket, data, 'modifier ce réglage', (lobby) => {
-            // Snap à l'un des 3 niveaux autorisés (le plus proche), fallback DEFAULT si NaN.
-            const raw = Number(data.timeMultiplier);
-            const levels = GAME_CONSTANTS.TIME_MULTIPLIER_LEVELS;
-            // Niveau de debug : accepté tel quel, mais UNIQUEMENT si le backend tourne
-            // en développement. En production il retombe dans le snap normal — sans quoi
-            // n'importe quel client pourrait imposer des phases interminables à la table.
-            const isDebugLevel = raw === GAME_CONSTANTS.TIME_MULTIPLIER_DEBUG
-                && process.env.NODE_ENV !== 'production';
-            lobby.timeMultiplier = isDebugLevel
-                ? GAME_CONSTANTS.TIME_MULTIPLIER_DEBUG
-                : Number.isFinite(raw)
-                    ? levels.reduce((best, lvl) => (Math.abs(lvl - raw) < Math.abs(best - raw) ? lvl : best), levels[0])
-                    : GAME_CONSTANTS.TIME_MULTIPLIER_DEFAULT;
+            applyGameSpeed(lobby, data.gameSpeed);
+        });
+    });
+
+    // Update excluded leaders (host only) : joueurs qui ne seront jamais pilier.
+    socket.on('updateExcludedLeaders', (data) => {
+        // Cf. updateSelectedDecks : le try/catch interne de withGuards suffit.
+        applyHostSetting(socket, data, 'modifier ce réglage', (lobby) => {
+            const raw: unknown = data.excludedLeaderIds;
+            // Payload mal formé (pas un tableau, ou plus long qu'un salon plein) : ignoré.
+            if (!Array.isArray(raw) || raw.length > GAME_CONSTANTS.MAX_PLAYERS) return;
+            const present = new Set(lobby.players.map(p => p.id));
+            const excluded = [...new Set(raw.filter((id): id is string => typeof id === 'string' && present.has(id)))];
+            // Au moins un joueur du salon doit rester pilier possible : on refuse et on
+            // renvoie l'état courant à l'hôte (réconcilie son UI optimiste). On ne regarde
+            // pas `isActive` ici (un hôte exclu revenu le premier doit pouvoir régler) :
+            // startGame revérifie qu'un pilier possible est bien actif au lancement.
+            if (!lobby.players.some(p => !excluded.includes(p.id))) {
+                emitLobbyDecksState(io, socket, lobby);
+                return;
+            }
+            lobby.excludedLeaderIds = excluded;
             lobby.updateActivity();
 
             emitLobbyDecksState(io, null, lobby);
-            io.to(lobby.code).emit('timeMultiplierUpdated', {
-                timeMultiplier: lobby.timeMultiplier,
-            });
+        });
+    });
+
+    // Legacy : apps d'avant gameSpeed (cf. utils/legacyTimeMultiplier).
+    socket.on('updateTimeMultiplier', (data) => {
+        applyHostSetting(socket, data, 'modifier ce réglage', (lobby) => {
+            applyGameSpeed(lobby, speedFromLegacyMultiplier(data.timeMultiplier));
         });
     });
 
@@ -563,6 +672,14 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
             const activePlayersAfterCleanup = lobby.players.filter(p => p.isActive);
             if (activePlayersAfterCleanup.length < 3) {
                 socket.emit('error', { message: 'Il faut au moins 3 joueurs pour lancer la partie', code: ERROR_CODES.INVALID });
+                return;
+            }
+
+            // Au moins un pilier possible : l'hôte a pu exclure tout le monde sauf des
+            // joueurs qui ont quitté depuis.
+            const excludedLeaders = new Set(lobby.excludedLeaderIds);
+            if (!activePlayersAfterCleanup.some(p => !excludedLeaders.has(p.id))) {
+                socket.emit('error', { message: 'Au moins un joueur doit pouvoir être pilier', code: ERROR_CODES.INVALID });
                 return;
             }
 

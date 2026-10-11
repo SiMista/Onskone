@@ -45,10 +45,20 @@ if [ -z "${CI:-}" ]; then
   git reset --hard origin/main
 fi
 
+# La version COMPTE des commits (cf. scripts/app-version.mjs) : sur un clone
+# superficiel elle tombait en silence a "x.y.0" (la CD fetchait en --depth 1).
+# On restaure l'historique complet si besoin (no-op une fois fait).
+if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then
+  echo "==> Clone superficiel détecté : récupération de l'historique complet"
+  git fetch --unshallow origin
+fi
+
 echo "==> Déploiement depuis $ROOT (commit $(git rev-parse --short HEAD))"
-# Affiche la version qui sera buildee : une regression silencieuse (ex: VERSION non
-# bumpe) saute aux yeux ici plutot que de se decouvrir sur le store.
-echo "==> Version: $(node scripts/app-version.mjs 2>/dev/null || echo '?') (code $(node scripts/app-version.mjs --code 2>/dev/null || echo '?'))"
+# Version calculee AVANT tout build : si elle est incalculable, `set -e` arrete le
+# deploiement ici (message d'app-version.mjs sur stderr) et la prod en place ne bouge pas.
+VNAME="$(node scripts/app-version.mjs)"
+VCODE="$(node scripts/app-version.mjs --code)"
+echo "==> Version: $VNAME (code $VCODE)"
 
 echo "==> Installation des dépendances (recompile better-sqlite3 natif pour ce serveur)"
 pnpm install --frozen-lockfile

@@ -44,8 +44,7 @@ export const PremiumShowcase = () => {
               {[t.perkQuestions, t.perkThemes, t.perkFuture].map((label) => (
                 <li key={label} className="flex items-center gap-2.5">
                   <span
-                    className="shrink-0 w-6 h-6 flex items-center justify-center rounded-full border-[2.5px] border-black"
-                    style={{ background: 'linear-gradient(135deg, #FFE680 0%, #FFB347 100%)' }}
+                    className="shrink-0 w-6 h-6 flex items-center justify-center rounded-full border-[2.5px] border-black bg-premium-gold"
                   >
                     <LuCheck size={14} strokeWidth={3.5} className="text-black" />
                   </span>

@@ -56,8 +56,7 @@ const Avatar = ({ avatarId, name = '', size = 'md', className = '', premium = fa
   // Cadre doré brillant premium : anneau dégradé + halo doux (respecte reduced-motion).
   return (
     <div
-      className={`premium-glow rounded-full p-[2.5px] flex items-center justify-center ${className}`}
-      style={{ background: 'linear-gradient(135deg, #fff1b8 0%, #ffd24a 45%, #e6a52a 100%)' }}
+      className={`premium-glow bg-premium-gold rounded-full p-[2.5px] flex items-center justify-center ${className}`}
     >
       {inner}
     </div>

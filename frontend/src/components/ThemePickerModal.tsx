@@ -12,6 +12,7 @@ import { usePremium } from '../utils/premium';
 import ConfirmModal from './ConfirmModal';
 import PremiumModal from './PremiumModal';
 import EmojiCard from './EmojiCard';
+import HostOnlyHint from './HostOnlyHint';
 
 interface ThemePickerModalProps {
   isOpen: boolean;
@@ -179,13 +180,11 @@ const ThemePickerModal = ({ isOpen, onClose, catalog, selected, mode, hostName, 
                 {t.themePicker.counter(totals.sel)}
               </span>
             </div>
-            <p
-              key={hintShake}
-              className={`!my-0 inline-flex items-center gap-1.5 text-xs font-sans italic text-white/75 leading-tight origin-left ${hintShake ? 'animate-paper-shake-slow' : ''}`}
-            >
-              {!isEditable && <LuLock size={12} strokeWidth={2.5} aria-hidden />}
-              <span>{isEditable ? t.themePicker.hostHint : t.themePicker.readOnlyHint(hostName)}</span>
-            </p>
+            {isEditable ? (
+              <p className="!my-0 text-xs font-sans italic text-white/75 leading-tight">{t.themePicker.hostHint}</p>
+            ) : (
+              <HostOnlyHint text={t.themePicker.readOnlyHint(hostName)} shakeKey={hintShake} className="text-white/75" />
+            )}
           </div>
           <button
             onClick={requestClose}
@@ -269,8 +268,7 @@ const ThemePickerModal = ({ isOpen, onClose, catalog, selected, mode, hostName, 
                     key={info.code}
                     type="button"
                     onClick={() => handleToggle(activeCategory, info.code, info)}
-                    style={goldFrame ? { borderColor: '#d69a1e' } : undefined}
-                    className={`group relative flex items-stretch w-full text-left border-[2.5px] rounded-2xl overflow-hidden bg-white min-h-[96px] md:min-h-[112px] transition-all duration-200 ${goldFrame ? '' : 'border-black'} ${isEditable ? 'cursor-pointer active:scale-[0.98]' : 'cursor-default'
+                    className={`group relative flex items-stretch w-full text-left border-[2.5px] rounded-2xl overflow-hidden bg-white min-h-[96px] md:min-h-[112px] transition-all duration-200 ${goldFrame ? 'border-premium-600' : 'border-black'} ${isEditable ? 'cursor-pointer active:scale-[0.98]' : 'cursor-default'
                       } ${active
                         ? 'stack-shadow-sm opacity-100'
                         : 'opacity-55 grayscale-[60%]'
@@ -314,8 +312,7 @@ const ThemePickerModal = ({ isOpen, onClose, catalog, selected, mode, hostName, 
                     {goldFrame && (
                       <span
                         aria-label={t.themePicker.premiumBadge}
-                        className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full border-2 border-black text-black stack-shadow-sm"
-                        style={{ background: 'linear-gradient(135deg, #fff1b8 0%, #ffd24a 45%, #e6a52a 100%)' }}
+                        className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full border-2 border-black text-black stack-shadow-sm bg-premium-gold"
                       >
                         <LuCrown size={13} strokeWidth={2.75} aria-hidden />
                       </span>

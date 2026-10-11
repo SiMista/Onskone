@@ -1,4 +1,5 @@
 import { GameMode } from '@onskone/shared';
+import type { GameSpeed } from '@onskone/shared';
 import { AVATARS } from '../../constants/game';
 
 export type Orientation = 'portrait' | 'landscape';
@@ -80,7 +81,7 @@ export interface SavedConfig {
   zoom: number;
   debugTimers: boolean;
   gameMode?: GameMode;
-  timeMultiplier?: number;
+  gameSpeed?: GameSpeed;
 }
 
 export const loadSavedConfig = (): SavedConfig | null => {

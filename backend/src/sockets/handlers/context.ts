@@ -3,7 +3,7 @@ import { Lobby } from '../../models/Lobby';
 import { Game } from '../../models/Game';
 import { Player } from '../../models/Player';
 import type { IGame } from '@onskone/shared';
-import { ERROR_CODES, RoundPhase } from '@onskone/shared';
+import { ERROR_CODES, GameStatus, RoundPhase } from '@onskone/shared';
 import { validateLobbyCode, validatePlayerId } from '../../utils/validation.js';
 import { Round } from '../../models/Round';
 import { RateLimiter } from '../../utils/rateLimiter.js';
@@ -54,6 +54,13 @@ export function cleanupDisconnectedPlayers(
     excludePlayerName?: string,
 ): void {
     if (!lobby) return;
+
+    // JAMAIS pendant une partie : un joueur déconnecté y est conservé jusqu'à
+    // gameEnded (scores dans lobby.players, cf. scheduleGracePeriodRemoval), et il
+    // doit pouvoir revenir (reconnexion / reprise de slot). Sans cette garde, le
+    // premier `joinLobby` venu (un ami qui revient, un lien d'invitation ouvert)
+    // effaçait tous les absents de la partie : points perdus et retour impossible.
+    if (lobby.game?.status === GameStatus.IN_PROGRESS) return;
 
     const room = io.sockets.adapter.rooms.get(lobby.code);
     const connectedSocketIds = room ? Array.from(room) : [];

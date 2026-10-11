@@ -12,8 +12,10 @@ import { Game } from '../models/Game';
 // serveur complet (méthodes métier + bookkeeping) porté par la classe Round.
 import type { IRound as ServerRound } from '../types/IRound';
 import type { ServerToClientEvents, ClientToServerEvents, IGame, IRound, IPlayer } from '@onskone/shared';
-import { RoundPhase, GameStatus, formatNoResponse, getPhaseDuration } from '@onskone/shared';
+import { RoundPhase, GameStatus, GAME_CONSTANTS, formatNoResponse, getPhaseDuration } from '@onskone/shared';
+import { getRandomQuestions } from '../data/questionsRepository.js';
 import { errMessage } from '../utils/helpers.js';
+import { legacyMultiplierFromSpeed } from '../utils/legacyTimeMultiplier.js';
 import logger from '../utils/logger.js';
 
 export type IoServer = Server<ClientToServerEvents, ServerToClientEvents>;
@@ -158,12 +160,14 @@ export function serializeGame(lobby: Lobby): IGame {
             selectedDecks: lobby.selectedDecks,
             gameMode: lobby.gameMode,
             guessMyAnswerMode: lobby.guessMyAnswerMode,
-            timeMultiplier: lobby.timeMultiplier,
+            gameSpeed: lobby.gameSpeed,
+            excludedLeaderIds: lobby.excludedLeaderIds,
             locale: lobby.locale,
         },
         currentRound: serializeRound(game.currentRound),
         status: game.status,
         rounds: serializeRounds(game.rounds),
+        totalRounds: game.getMaxRounds(),
     };
 }
 
@@ -181,7 +185,9 @@ export function emitLobbyDecksState(
         selected: lobby.selectedDecks,
         gameMode: lobby.gameMode,
         guessMyAnswerMode: lobby.guessMyAnswerMode,
-        timeMultiplier: lobby.timeMultiplier,
+        gameSpeed: lobby.gameSpeed,
+        excludedLeaderIds: lobby.excludedLeaderIds,
+        timeMultiplier: legacyMultiplierFromSpeed(lobby.gameSpeed), // apps d'avant gameSpeed
         locale: lobby.locale,
     };
     if (target) {
@@ -203,6 +209,7 @@ export function endGame(io: IoServer, lobbyCode: string, lobby: Lobby, game: Gam
     // pilier), le setTimeout survivrait, passerait la garde d'identité de round (même
     // round) et émettrait des events fantômes à des clients déjà sur l'écran de fin.
     (game.currentRound as Round | null)?.clearServerTimer();
+    (game.currentRound as Round | null)?.clearRevealBackstop();
     game.end();
     lobby.players.forEach(p => p.isActive = false);
     io.to(lobbyCode).emit('gameEnded', {
@@ -225,6 +232,7 @@ export function transitionToGuessing(io: IoServer, lobbyCode: string, lobby: Lob
         phase: currentRound.phase,
         answersCount: shuffledAnswers.length,
         forced,
+        roundNumber: currentRound.roundNumber,
     });
     io.to(lobbyCode).emit('shuffledAnswersReceived', {
         answers: shuffledAnswers,
@@ -263,6 +271,7 @@ export function finishAnsweringPhase(io: IoServer, lobbyCode: string, lobby: Lob
             phase: currentRound.phase,
             answersCount: Object.keys(currentRound.answers).length,
             forced,
+            roundNumber: currentRound.roundNumber,
         });
         armServerTimerForPhase(io, lobbyCode, lobby, currentRound);
         return;
@@ -277,13 +286,22 @@ export function finishAnsweringPhase(io: IoServer, lobbyCode: string, lobby: Lob
  * Expiration du timer en phase QUESTION_SELECTION : auto-sélectionne une question
  * au hasard si le pilier n'a pas choisi.
  */
-function handleQuestionSelectionTimeout(io: IoServer, lobbyCode: string, currentRound: Round): void {
+function handleQuestionSelectionTimeout(io: IoServer, lobbyCode: string, game: Game, currentRound: Round): void {
     if (currentRound.selectedQuestion) return;
 
-    const proposedCard = currentRound.gameCard;
+    // Carte sans question (cas limite du tirage) : on repioche dans le deck de la
+    // partie plutôt que de laisser la phase sans issue — la manche DOIT avancer.
+    let proposedCard = currentRound.gameCard;
     if (!proposedCard || proposedCard.questions.length === 0) {
-        logger.error('Pas de questions disponibles pour auto-sélection', { lobbyCode });
-        return;
+        const fallback = getRandomQuestions(1, currentRound.shownGameCards ?? [], game.cards)
+            .find(card => card.questions.length > 0);
+        if (!fallback) {
+            logger.error('Pas de questions disponibles pour auto-sélection, manche conclue sans question', { lobbyCode });
+            return;
+        }
+        proposedCard = fallback;
+        currentRound.gameCard = fallback;
+        logger.warn('Carte proposée vide : question de secours tirée du deck', { lobbyCode });
     }
 
     const randomQuestion = proposedCard.questions[randomInt(0, proposedCard.questions.length)];
@@ -295,6 +313,7 @@ function handleQuestionSelectionTimeout(io: IoServer, lobbyCode: string, current
         phase: currentRound.phase,
         auto: true,
         card: proposedCard,
+        roundNumber: currentRound.roundNumber,
     });
     logger.info(`Question auto-sélectionnée`, { lobbyCode });
 }
@@ -329,23 +348,28 @@ function handleSubstituteSelectionTimeout(io: IoServer, lobbyCode: string, lobby
             substitutePlayerId,
             phase: currentRound.phase,
             auto: true,
+            roundNumber: currentRound.roundNumber,
         });
         return;
     }
-    const candidates = lobby.players.filter(p => p.isActive && p.id !== currentRound.leader.id);
-    if (candidates.length === 0) {
-        logger.warn('Aucun candidat substitut disponible', { lobbyCode });
+    // Un joueur actif de préférence ; sinon n'importe quel autre joueur (il ne
+    // répondra pas et le timer de SUBSTITUTE_ANSWERING posera une réponse auto).
+    // Ne jamais laisser la phase sans issue : la manche DOIT avancer.
+    const others = lobby.players.filter(p => p.id !== currentRound.leader.id);
+    const chosen = others.find(p => p.isActive) ?? others[0];
+    if (!chosen) {
+        logger.warn('Aucun candidat substitut disponible (pilier seul)', { lobbyCode });
         return;
     }
-    const chosen = candidates[0];
     currentRound.setSubstitutePlayer(chosen.id);
     currentRound.nextPhase();
     io.to(lobbyCode).emit('substituteSelected', {
         substitutePlayerId: chosen.id,
         phase: currentRound.phase,
         auto: true,
+        roundNumber: currentRound.roundNumber,
     });
-    logger.info('Substitut auto-sélectionné', { lobbyCode, substitutePlayerId: chosen.id });
+    logger.info('Substitut auto-sélectionné', { lobbyCode, substitutePlayerId: chosen.id, wasActive: chosen.isActive });
 }
 
 /**
@@ -360,6 +384,7 @@ function handleSubstituteAnsweringTimeout(io: IoServer, lobbyCode: string, lobby
     io.to(lobbyCode).emit('substituteAnswerSubmitted', {
         phase: RoundPhase.GUESSING,
         forced: true,
+        roundNumber: currentRound.roundNumber,
     });
     transitionToGuessing(io, lobbyCode, lobby, currentRound, true);
 }
@@ -402,12 +427,91 @@ export function finishGuessing(io: IoServer, lobbyCode: string, lobby: Lobby, ga
         scores: round.scores,
         leaderboard: game.getLeaderboard(),
         forced,
+        roundNumber: round.roundNumber,
     });
+    armRevealBackstop(io, lobbyCode, lobby, game, round);
+}
+
+// ===== FIN DE MANCHE (REVEAL -> manche suivante / fin de partie) =====
+
+/**
+ * Branchement optionnel appelé après chaque manche démarrée par le serveur (filet
+ * REVEAL). Posé par SocketHandler pour armer le saut de pilier si le pilier tiré est
+ * déjà déconnecté : la logique vit dans disconnectHandler, qui importe ce module —
+ * d'où ce crochet plutôt qu'un import croisé.
+ */
+type RoundStartedHook = (io: IoServer, lobbyCode: string, round: Round) => void;
+let roundStartedHook: RoundStartedHook | null = null;
+export function setRoundStartedHook(hook: RoundStartedHook | null): void {
+    roundStartedHook = hook;
 }
 
 /**
- * Durée par défaut (en secondes) d'une phase côté serveur, multiplicateur de temps du
- * lobby appliqué. MIROIR de `getPhaseDuration` côté frontend
+ * Conclut la manche courante (depuis REVEAL) : fin de partie si c'était la dernière,
+ * sinon manche suivante + timer de phase. Partagé entre le `nextRound` du pilier et
+ * le filet REVEAL. L'appelant a validé la phase.
+ */
+export function advanceAfterReveal(io: IoServer, lobbyCode: string, lobby: Lobby, game: Game): void {
+    (game.currentRound as Round | null)?.clearRevealBackstop();
+
+    if (game.isGameOver()) {
+        endGame(io, lobbyCode, lobby, game);
+        return;
+    }
+
+    game.nextRound();
+    const round = game.currentRound as Round | null;
+    if (!round) return;
+    io.to(lobbyCode).emit('roundStarted', { round: serializeRound(round)! });
+    logger.game.roundStarted(lobbyCode, round.roundNumber, round.leader.name);
+    armServerTimerForPhase(io, lobbyCode, lobby, round);
+    roundStartedHook?.(io, lobbyCode, round);
+}
+
+/**
+ * (Ré)arme le filet de la phase REVEAL : sans action du pilier pendant
+ * REVEAL_BACKSTOP_MS, le serveur conclut la manche lui-même. Réarmé à chaque action
+ * du pilier (révélation, curseur, similarité), ce qui remet le sursis à zéro.
+ *
+ * Au déclenchement : pilier déconnecté ou inactif -> saut immédiat ; pilier encore
+ * connecté (table vivante qui débat devant le classement, ou appli posée sans
+ * coupure de socket) -> UN sursis de la même durée, puis saut quoi qu'il arrive.
+ * Revalide tout : la manche a pu être conclue entre-temps.
+ */
+export function armRevealBackstop(io: IoServer, lobbyCode: string, lobby: Lobby, game: Game, round: Round, resetStrikes = true): void {
+    round.clearRevealBackstop();
+    if (resetStrikes) round.revealBackstopStrikes = 0;
+    round.revealBackstopHandle = setTimeout(() => {
+        round.revealBackstopHandle = null;
+        try {
+            const currentLobby = LobbyManager.getLobby(lobbyCode);
+            if (!currentLobby || currentLobby.game !== game) return;
+            if (game.status !== GameStatus.IN_PROGRESS || game.currentRound !== round) return;
+            if (round.phase !== RoundPhase.REVEAL) return;
+
+            const leader = currentLobby.players.find(p => p.id === round.leader.id);
+            const leaderPresent = !!leader && leader.isActive && !!io.sockets.sockets.get(leader.socketId)?.connected;
+            if (leaderPresent && round.revealBackstopStrikes === 0) {
+                round.revealBackstopStrikes = 1;
+                logger.info('Filet REVEAL : pilier toujours connecté, sursis accordé', { lobbyCode, roundNumber: round.roundNumber });
+                armRevealBackstop(io, lobbyCode, currentLobby, game, round, false);
+                return;
+            }
+
+            logger.warn('Filet REVEAL : aucune action du pilier, manche conclue par le serveur', {
+                lobbyCode, roundNumber: round.roundNumber, leader: round.leader.name, leaderPresent,
+            });
+            io.to(lobbyCode).emit('roundSkipped', { skippedLeaderName: round.leader.name, reason: 'leader_idle' });
+            advanceAfterReveal(io, lobbyCode, currentLobby, game);
+        } catch (error) {
+            logger.error('Erreur dans le filet REVEAL', { lobbyCode, error: errMessage(error) });
+        }
+    }, GAME_CONSTANTS.REVEAL_BACKSTOP_MS);
+}
+
+/**
+ * Durée par défaut (en secondes) d'une phase côté serveur, selon la vitesse de jeu du
+ * lobby. MIROIR de `getPhaseDuration` côté frontend
  * (frontend/src/constants/game.ts) : c'est la durée que le pilier aurait émise via
  * `startTimer`. Sert à ré-armer un timeout serveur autoritatif après une auto-transition.
  * REVEAL (ou toute phase sans timer) renvoie 0.
@@ -417,8 +521,8 @@ export function getServerPhaseDuration(phase: RoundPhase, lobby: Lobby): number 
     // La fonction partagée renvoie un plancher de 1s pour ces phases (côté front,
     // getPhaseDuration ne descend jamais sous 1) ; ici on veut explicitement 0.
     if (phase === RoundPhase.REVEAL) return 0;
-    // Délègue à la source de vérité partagée (mêmes clamp/base/arrondi que le front).
-    return getPhaseDuration(phase, lobby.timeMultiplier, lobby.players.length);
+    // Délègue à la source de vérité partagée (mêmes tables de durées que le front).
+    return getPhaseDuration(phase, lobby.gameSpeed, lobby.players.length);
 }
 
 /**
@@ -530,7 +634,7 @@ export function processTimerExpiration(io: IoServer, lobbyCode: string, lobby: L
 
     switch (currentPhase) {
         case 'QUESTION_SELECTION':
-            handleQuestionSelectionTimeout(io, lobbyCode, currentRound);
+            handleQuestionSelectionTimeout(io, lobbyCode, game, currentRound);
             break;
         case 'SUBSTITUTE_SELECTION':
             handleSubstituteSelectionTimeout(io, lobbyCode, lobby, currentRound);

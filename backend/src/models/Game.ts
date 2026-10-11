@@ -10,8 +10,13 @@ export class Game implements IGame {
     currentRound: IRound | null;
     status: GameStatus;
     readonly cards: GameCard[];
-    // Nombre de joueurs actifs au démarrage de la partie (fixe)
-    private initialActivePlayerCount: number = 0;
+    // Nombre de piliers possibles au démarrage (joueurs actifs non exclus, fixe) :
+    // c'est le nombre de manches de la partie.
+    private initialLeaderCount: number = 0;
+    // Ids de ces piliers prévus : prioritaires sur un joueur inactif au démarrage qui
+    // reviendrait en cours de partie (sinon il prendrait la manche d'un prévu, qui
+    // finirait "hors classement" sans l'avoir demandé).
+    private initialLeaderIds: Set<string> = new Set();
 
     constructor(lobby: ILobby, questionsPool: GameCard[]) {
         this.lobby = lobby;
@@ -72,8 +77,10 @@ export class Game implements IGame {
     }
 
     start(): void {
-        // Capturer le nombre de joueurs actifs au démarrage (ne changera plus)
-        this.initialActivePlayerCount = this.getActivePlayers().length;
+        // Capturer les piliers possibles au démarrage (ne changeront plus)
+        const candidates = this.getLeaderCandidates();
+        this.initialLeaderCount = candidates.length;
+        this.initialLeaderIds = new Set(candidates.map(p => p.id));
         this.status = GameStatus.IN_PROGRESS;
     }
 
@@ -82,34 +89,43 @@ export class Game implements IGame {
     }
 
     getMaxRounds(): number {
-        // Nombre de rounds = nombre de joueurs actifs au démarrage de la partie
-        // Utilise la valeur capturée au start() pour éviter les incohérences
-        // si des joueurs se déconnectent pendant la partie
-        return this.initialActivePlayerCount;
+        // Nombre de rounds = nombre de piliers possibles au démarrage de la partie
+        // (joueurs actifs que l'hôte n'a pas exclus). Utilise la valeur capturée au
+        // start() pour éviter les incohérences si des joueurs se déconnectent.
+        return this.initialLeaderCount;
     }
 
     getActivePlayers(): typeof this.lobby.players {
         return this.lobby.players.filter(p => p.isActive);
     }
 
+    /** Joueurs actifs que l'hôte n'a pas exclus du rôle de pilier. */
+    getLeaderCandidates(): typeof this.lobby.players {
+        const excluded = new Set(this.lobby.excludedLeaderIds ?? []);
+        return this.getActivePlayers().filter(p => !excluded.has(p.id));
+    }
+
     /**
-     * Joueurs actifs qui n'ont pas encore été piliers cette partie.
-     * Source de vérité partagée entre isGameOver() et nextRound() pour éviter
-     * tout désaccord (soft-lock de fin de partie).
+     * Piliers possibles (actifs, non exclus) qui ne l'ont pas encore été cette partie.
+     * Ceux prévus au démarrage passent en priorité ; un revenant ne sert qu'à combler
+     * la place d'un prévu parti. Source de vérité partagée entre isGameOver() et
+     * nextRound() pour éviter tout désaccord (soft-lock de fin de partie).
      */
     getEligibleLeaders(): typeof this.lobby.players {
         const previousLeaderIds = new Set(this.rounds.map(r => r.leader.id));
-        return this.getActivePlayers().filter(p => !previousLeaderIds.has(p.id));
+        const eligible = this.getLeaderCandidates().filter(p => !previousLeaderIds.has(p.id));
+        const planned = eligible.filter(p => this.initialLeaderIds.has(p.id));
+        return planned.length > 0 ? planned : eligible;
     }
 
     isGameOver(): boolean {
         // La partie est terminée quand on a fait autant de rounds que prévu initialement,
         // s'il n'y a plus assez de joueurs actifs pour continuer, ou s'il ne reste plus
-        // aucun pilier éligible (tous les actifs ont déjà été piliers). Ce dernier cas
+        // aucun pilier éligible (tous les piliers possibles l'ont déjà été). Ce dernier cas
         // évite que nextRound() throw en boucle lorsque des joueurs se déconnectent.
         const activePlayers = this.getActivePlayers();
         return (
-            this.rounds.length >= this.initialActivePlayerCount ||
+            this.rounds.length >= this.initialLeaderCount ||
             activePlayers.length < 2 ||
             this.getEligibleLeaders().length === 0
         );
