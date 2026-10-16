@@ -13,8 +13,9 @@ import { getPhaseDuration } from '../constants/game';
 import { useStartTimerDelayed, useSocketEvent } from '../hooks';
 import socket from '../utils/socket';
 import { useLocale } from '../i18n';
-import { hapticLight, hapticAssigned } from '../utils/haptics';
+import { hapticAssigned } from '../utils/haptics';
 import PremiumName from './PremiumName';
+import ScrollFade from './ScrollFade';
 
 interface Answer {
   id: string; // slot opaque (non corrélé à l'auteur)
@@ -90,6 +91,7 @@ const GuessingPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, question,
   // reçu (requête perdue sur socket instable) : sans ça l'écran restait sur
   // « chargement » jusqu'à la fin de la phase.
   const poolReceivedRef = useRef(false);
+  const answersListRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     poolReceivedRef.current = false;
     socket.emit('requestShuffledAnswers', { lobbyCode });
@@ -192,12 +194,8 @@ const GuessingPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, question,
 
     socket.emit('updateGuess', { lobbyCode, answerId, playerId });
 
-    if (playerId) {
-      flashJustAssigned(answerId);
-      hapticAssigned();
-    } else {
-      hapticLight();
-    }
+    // Pas de vibration côté pilier : seul le joueur qui reçoit la réponse vibre.
+    if (playerId) flashJustAssigned(answerId);
   };
 
   const handleSubmit = () => {
@@ -324,56 +322,60 @@ const GuessingPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, question,
         />
       </div>
 
-      {/* Liste verticale unique : une carte par réponse, chacune avec son dropdown joueurs. */}
-      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain no-scrollbar space-y-2 md:space-y-3 pr-1">
-        {answers.map((answer) => {
-          const noResponse = isNoResponse(answer.text);
-          const currentId = guesses[answer.id] ?? '';
-          const isHighlighted = highlightedAnswerId === answer.id;
-          const isJustAssigned = justAssignedAnswerId === answer.id;
-
-          // Options : joueurs restants + le joueur actuel de cette réponse, puis "Retirer".
-          const options: DropdownOption[] = players
-            .filter(p => !assignedPlayerIds.has(p.id) || p.id === currentId)
-            .map(p => ({
-              value: p.id,
-              label: <PremiumName name={p.name} premium={!!p.isPremium} />,
-              prefix: <Avatar avatarId={p.avatarId} name={p.name} size="sm" />,
-            }));
-          if (currentId) {
-            options.push({
-              value: CLEAR,
-              label: t.phases.guessing.removeOption,
-              prefix: <Icon icon="lucide:x" width={20} height={20} className="text-danger-500" aria-hidden />,
-            });
-          }
-
-          return (
-            <div
-              key={answer.id}
-              className={`
-                rounded-xl p-2.5 md:p-3 space-y-2 border border-black stack-shadow-sm texture-paper
-                ${noResponse ? 'bg-gray-100 border-gray-300' : 'bg-cream-question'}
-                ${isHighlighted ? 'animate-halo-pulse' : ''}
-                ${isJustAssigned ? 'animate-snap-bounce' : ''}
-              `}
-            >
-              <AnswerText
-                text={answer.text}
-                className="text-sm md:text-base break-words whitespace-pre-wrap"
-                normalClass="text-gray-900"
-              />
-              <Dropdown
-                value={currentId}
-                onChange={(v) => handleAssign(answer.id, v === CLEAR ? null : v)}
-                options={options}
-                placeholder={t.phases.guessing.choosePlayer}
-                disabled={!isLeader || noResponse}
-                variant="flat"
-              />
-            </div>
-          );
-        })}
+      {/* Liste verticale unique : une carte par réponse, chacune avec son dropdown joueurs.
+          Fade blanc en bas tant qu'il reste des réponses sous le pli. */}
+      <div className="relative flex-1 min-h-0 flex flex-col overflow-hidden">
+        <div ref={answersListRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain no-scrollbar space-y-2 md:space-y-3 pr-1">
+          {answers.map((answer) => {
+            const noResponse = isNoResponse(answer.text);
+            const currentId = guesses[answer.id] ?? '';
+            const isHighlighted = highlightedAnswerId === answer.id;
+            const isJustAssigned = justAssignedAnswerId === answer.id;
+  
+            // Options : joueurs restants + le joueur actuel de cette réponse, puis "Retirer".
+            const options: DropdownOption[] = players
+              .filter(p => !assignedPlayerIds.has(p.id) || p.id === currentId)
+              .map(p => ({
+                value: p.id,
+                label: <PremiumName name={p.name} premium={!!p.isPremium} />,
+                prefix: <Avatar avatarId={p.avatarId} name={p.name} size="sm" />,
+              }));
+            if (currentId) {
+              options.push({
+                value: CLEAR,
+                label: t.phases.guessing.removeOption,
+                prefix: <Icon icon="lucide:x" width={20} height={20} className="text-danger-500" aria-hidden />,
+              });
+            }
+  
+            return (
+              <div
+                key={answer.id}
+                className={`
+                  rounded-xl p-2.5 md:p-3 space-y-2 border border-black stack-shadow-sm texture-paper
+                  ${noResponse ? 'bg-gray-100 border-gray-300' : 'bg-cream-question'}
+                  ${isHighlighted ? 'animate-halo-pulse' : ''}
+                  ${isJustAssigned ? 'animate-snap-bounce' : ''}
+                `}
+              >
+                <AnswerText
+                  text={answer.text}
+                  className="text-sm md:text-base break-words whitespace-pre-wrap"
+                  normalClass="text-gray-900"
+                />
+                <Dropdown
+                  value={currentId}
+                  onChange={(v) => handleAssign(answer.id, v === CLEAR ? null : v)}
+                  options={options}
+                  placeholder={t.phases.guessing.choosePlayer}
+                  disabled={!isLeader || noResponse}
+                  variant="flat"
+                />
+              </div>
+            );
+          })}
+        </div>
+        <ScrollFade scrollRef={answersListRef} />
       </div>
 
       {isLeader && (

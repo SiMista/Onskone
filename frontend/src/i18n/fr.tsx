@@ -26,6 +26,13 @@ export const fr: Dictionary = {
     languageNames: { fr: 'Français', en: 'Anglais' },
     lobby: 'Salon',
     inviteHint: "Un ami déconnecté reprend sa place en entrant ce code sur l'accueil.",
+    adChoices: 'Choix publicitaires',
+  },
+
+  ads: {
+    introTitle: 'Un mot sur les pubs',
+    introBody: "Onskoné est gratuit grâce à quelques pubs, affichées uniquement entre les parties, jamais pendant. Google va te demander si elles peuvent être personnalisées. Tu peux refuser : le jeu ne change pas.",
+    introContinue: 'Continuer',
   },
 
   app: {
@@ -105,7 +112,7 @@ export const fr: Dictionary = {
     settingsHostOnlySuffix: 'peut modifier les paramètres',
     guessMyAnswer: {
       label: 'Devine ma réponse',
-      description: "Un joueur est désigné pour écrire la réponse que le pilier aurait donnée",
+      description: 'Chaque manche, un joueur est choisi pour écrire la réponse que le pilier aurait donnée',
     },
     gameSpeed: {
       label: 'Durée des manches',
@@ -115,13 +122,15 @@ export const fr: Dictionary = {
     },
     options: {
       title: 'Options de jeu',
-      summary: (speed, rounds, m) => `${speed} · ${rounds} manche${rounds > 1 ? 's' : ''} ~${m} min`,
+      summary: (mode, speed, rounds, m) => `${mode} · ${speed} · ${rounds} manche${rounds > 1 ? 's' : ''} ~${m} min`,
+      classicMode: 'Classique',
       leaders: 'Piliers',
       rounds: (n) => `${n} manche${n > 1 ? 's' : ''}`,
       leadersHint: 'Décoche ceux qui ne veulent pas être pilier : ils jouent quand même !',
       you: '(toi)',
       hostOnly: (host) => `Seul ${host} peut modifier les options.`,
       estimateLabel: 'Durée estimée',
+      estimateHint: 'Le temps de jeu dépend du nombre de manches et du rythme.',
     },
     notLeaderBadge: 'Pas pilier',
     atLeastOneLeader: 'Il faut au moins 1 pilier pour lancer',
@@ -374,15 +383,15 @@ export const fr: Dictionary = {
       sections: [
         {
           title: 'Message du créateur',
-          content: `C'est avec plaisir que l'on vous présente le site officiel du jeu de société Onskoné? ! Sylvain, mon frère, a eu l'idée de ce jeu en 2024. Après l'avoir aidé pour les designs et présenté le prototype du jeu à de nombreux amis ainsi qu'au festival de Cannes, nous avons eu pas mal de retours positifs. Nous avons donc décidé de nous lancer dans le développement de ce site web pour populariser cette idée géniale. Nous espérons que vous apprécierez jouer à Onskoné? N'hésitez pas à nous donner votre avis sur le jeu, nous le lirons avec plaisir !`,
+          content: `C'est avec plaisir que l'on vous présente l'application officielle du jeu de société Onskoné? ! Sylvain, mon frère, a eu l'idée de ce jeu en 2024. Après l'avoir aidé pour les designs et présenté le prototype du jeu à de nombreux amis ainsi qu'au festival de Cannes, nous avons eu pas mal de retours positifs. Nous avons donc décidé de nous lancer dans le développement de cette application pour populariser cette idée géniale. Nous espérons que vous apprécierez jouer à Onskoné? N'hésitez pas à nous donner votre avis sur le jeu, nous le lirons avec plaisir !`,
         },
         {
           title: 'Remerciements',
           content: `Un ÉNORME merci, à ceux qui m'ont soutenu et encouragé à faire ce projet:`,
           list: [
-            "Mon ami Philippe, le goat, qui m'a soutenu sans arrêt pour faire le site et m'a aidé sur toute la partie technique du projet.",
-            "Ma soeur, Mimi, qui m'a encouragé à continuer le site tout au long du développement",
-            "Mon frère Sylvain, pour m'avoir fait entièrement confiance pour réaliser le site web de son jeu",
+            "Mon ami Philippe, le goat, qui m'a soutenu sans arrêt pour faire l'appli et m'a aidé sur toute la partie technique du projet.",
+            "Ma soeur, Mimi, qui m'a encouragé à continuer l'appli tout au long du développement",
+            "Mon frère Sylvain, pour m'avoir fait entièrement confiance pour réaliser l'appli de son jeu",
             "Brinda et Sathya, vous m'avez donné de l'ambition sans hésiter dès le début du projet",
             "Merci à Sujee, le créateur de l'appli Gigglz, le GOAT des jeux : allez installer son appli !!",
             "Et enfin tous mes amis, mes cousins avec qui j'ai pu tester le jeu et avoir des supers retours !",
@@ -395,16 +404,16 @@ export const fr: Dictionary = {
       seoDescription: 'Mentions légales du jeu Onskoné : éditeur, hébergement, propriété intellectuelle et responsabilité.',
       sections: [
         {
-          title: 'Développeur du site',
-          content: `<strong>Responsable du site :</strong> Simeon Deivassagayame<br /><strong>Créateur du jeu :</strong> Sylvain Deivassagayame<br /><strong>Contact :</strong> onskonelejeu@gmail.com`,
+          title: "Développeur de l'application",
+          content: `<strong>Responsable de l'application :</strong> Simeon Deivassagayame<br /><strong>Créateur du jeu :</strong> Sylvain Deivassagayame<br /><strong>Contact :</strong> onskonelejeu@gmail.com`,
         },
         {
           title: 'Hébergement',
-          content: `Ce site est hébergé par des services d'hébergement web standards. Les informations concernant l'hébergeur peuvent être obtenues sur demande.`,
+          content: `Les serveurs de l'application sont hébergés par des services d'hébergement web standards. Les informations concernant l'hébergeur peuvent être obtenues sur demande.`,
         },
         {
           title: 'Propriété intellectuelle',
-          content: `L'ensemble des contenus (textes, images, graphismes, logo, icônes, etc.) figurant sur le site Onskone sont protégés par les lois relatives à la propriété intellectuelle et appartiennent à l'éditeur ou font l'objet d'une autorisation d'utilisation.`,
+          content: `L'ensemble des contenus (textes, images, graphismes, logo, icônes, etc.) figurant dans l'application Onskoné sont protégés par les lois relatives à la propriété intellectuelle et appartiennent à l'éditeur ou font l'objet d'une autorisation d'utilisation.`,
           extra: `Le détail des droits et interdictions figure dans les <a href="/cgu" class="text-primary underline">Conditions Générales d'Utilisation</a>.`,
         },
         {
@@ -414,7 +423,7 @@ export const fr: Dictionary = {
         },
         {
           title: 'Limitation de responsabilité',
-          content: `Onskone ne pourra être tenu responsable des dommages directs ou indirects causés au matériel de l'utilisateur lors de l'accès au site. L'utilisateur s'engage à accéder au site en utilisant un matériel récent, ne contenant pas de virus et avec un navigateur mis à jour.`,
+          content: `Onskone ne pourra être tenu responsable des dommages directs ou indirects causés au matériel de l'utilisateur lors de l'utilisation de l'application. L'utilisateur s'engage à utiliser l'application sur un appareil récent, à jour et ne contenant pas de virus.`,
         },
       ],
     },
@@ -512,6 +521,7 @@ export const fr: Dictionary = {
           list: [
             'Les thèmes et questions premium',
             'Le pseudo doré',
+            "L'absence de publicité dans l'Application",
             'Les contenus premium ajoutés par la suite, sans engagement sur leur nombre ni leur calendrier',
           ],
           extra: `Le prix est affiché dans l'Application avant tout paiement, dans la devise de l'utilisateur. Le paiement, la facturation et les éventuels remboursements sont gérés exclusivement par Apple (App Store) ou Google (Google Play), selon leurs propres conditions. L'achat peut être restauré à tout moment via le bouton « Restaurer mes achats », sur tout appareil connecté au même compte. Il n'est pas transférable d'une plateforme à l'autre : un achat sur l'App Store ne débloque pas le Premium sur Android, et inversement.`,
@@ -589,10 +599,7 @@ export const fr: Dictionary = {
   },
 
   funFacts: [
-    "Le jour de sa naissance, la première phrase prononcée par Squeezie a été : 'Est-ce que c'est bon pour vous ?'",
-    "Au casino, tu peux remporter 4000 fois ta mise, mais tu ne peux perdre qu’1 fois ta mise, donc mise tout la prochaine fois ;)",
     "Il est statistiquement plus sûr de parier sur un but de Kylian Mbappé que sur un but de l’arbitre.",
-    "Celui qui s'endort avec les fesses qui grattent, se réveille avec les doigts qui puent",
     "Onskoné a crée 10 couples. Incroyable ! (et en a détruit 35)",
     "Le pilier de la manche qui arrive à 0 bonnes réponses a 50% d'être mauvais et 50% de chances d'être bourré.",
     "Ton mari ou ta femme n'a pas trouvé tes réponses pendant toute la partie ? C'est un motif valide de rupture (Article 711 du Code Civil)",
@@ -638,12 +645,10 @@ export const fr: Dictionary = {
     // « à vie » explicite : App Review a pris le Premium pour un abonnement (3.1.2).
     subtitle: 'Paiement unique · un seul achat, débloqué à vie',
     perkQuestions: '+50 questions en plus',
-    perkThemes: 'Tous les thèmes premium',
-    perkFuture: 'Tout le futur contenu inclus',
+    perkThemes: 'Tous les thèmes premium, actuels et à venir',
+    perkAds: "Zéro pub, plus d'interruptions",
     perkName: 'Ton pseudo en or brillant',
     perkNameSample: 'Toi',
-    perkAdsTitle: 'ZÉRO PUB',
-    perkAdsDesc: 'Plus jamais une seule interruption.',
     unlock: 'Débloquer le Premium',
     restore: 'Restaurer mes achats',
     kebab: "C'est moins cher qu'un kebab…",
@@ -661,8 +666,7 @@ export const fr: Dictionary = {
     close: 'Plus tard',
     welcomeTitle: 'Bienvenue dans le Premium !',
     welcomeRestoredTitle: 'Premium restauré !',
-    // « et zéro pub » retiré tant qu'il n'y a pas de pub (cf. PremiumModal).
-    welcomeDesc: 'Merci ÉNORMÉMENT pour ton soutien <3\nDésormais, tu as accès à tous les thèmes premium (et ceux à venir) et à ton pseudo doré !',
+    welcomeDesc: 'Merci ÉNORMÉMENT pour ton soutien <3\nDésormais, tu as accès à tous les thèmes premium (et ceux à venir), à ton pseudo doré, et zéro pub !',
     welcomeCta: 'C\'est parti !',
     activeToast: 'Tu es Premium ! Merci pour ton soutien <3',
     homeButton: 'Débloquer\nPremium',

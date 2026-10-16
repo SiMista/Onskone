@@ -30,6 +30,11 @@
             </intent-filter>
         </activity>
 
+        <!-- AdMob : sans cette entree, le SDK Google Mobile Ads crashe au demarrage. -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="@string/admob_app_id" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

@@ -41,7 +41,7 @@ export const PremiumShowcase = () => {
           </Tile>
           <Tile label="Puces d'avantages">
             <ul className="flex flex-col gap-2 m-0 p-0 list-none">
-              {[t.perkQuestions, t.perkThemes, t.perkFuture].map((label) => (
+              {[t.perkAds, t.perkQuestions, t.perkThemes].map((label) => (
                 <li key={label} className="flex items-center gap-2.5">
                   <span
                     className="shrink-0 w-6 h-6 flex items-center justify-center rounded-full border-[2.5px] border-black bg-premium-gold"

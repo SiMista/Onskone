@@ -21,7 +21,7 @@ import { isStudioFrame, studioSlotIndex } from '../utils/studioStorage';
 import { useStudioBot } from '../hooks/useStudioBot';
 import { useLocale } from '../i18n';
 import { storeLastGame } from '../utils/playerHelpers';
-import { useAppBannerVisible } from '../utils/appBanner';
+import { useAppBannerVisible, topControlsClass } from '../utils/appBanner';
 
 const GamePage: React.FC = () => {
   const { lobbyCode } = useParams<{ lobbyCode: string }>();
@@ -209,11 +209,10 @@ const GamePage: React.FC = () => {
     <div className="h-full flex flex-col items-center justify-center overflow-hidden px-2 tablet:px-0 safe-pt relative">
       <ScreenLogo />
       {/* Réglages flottants en haut à droite (hors de la carte), comme sur l'accueil. */}
-      <div className={`absolute ${bannerVisible ? 'top-[4.5rem]' : 'top-3'} right-3 z-30 safe-pt transition-[top] duration-200`}>
+      <div className={`absolute ${topControlsClass(bannerVisible)} right-3 z-30 safe-pt transition-[top,translate] duration-200`}>
         <SettingsButton
           contentLocale={game?.lobby?.locale}
           lobbyCode={lobbyCode}
-          gameMode={game?.lobby?.gameMode ?? null}
         />
       </div>
       {/* Main game area - sized to content, centré dans la fenêtre. La carte

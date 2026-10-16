@@ -76,9 +76,18 @@ export interface Dictionary {
     contentLocaleHint: string;
     /** Nom de chaque langue, écrit dans la langue de ce dictionnaire. */
     languageNames: Record<Locale, string>;
-    /** Section "Salon" en partie : code du salon + raccourci d'invitation (cf. SettingsModal). */
+    /** Section "Salon" en partie : code du salon, copiable (cf. SettingsModal). */
     lobby: string;
     inviteHint: string;
+    /** Rouvre le formulaire de consentement pub de Google (RGPD : retirer son accord). */
+    adChoices: string;
+  };
+
+  /** Écran d'intro avant le formulaire de consentement pub de Google (cf. ads.ts). */
+  ads: {
+    introTitle: string;
+    introBody: string;
+    introContinue: string;
   };
 
   /** Écran de secours quand le rendu plante (cf. AppErrorBoundary). */
@@ -145,17 +154,21 @@ export interface Dictionary {
       normal: string;
       estimate: (minutes: number) => string;
     };
-    /** Bottom sheet "Options de jeu" (rythme + piliers) et sa ligne de résumé. */
+    /** Bottom sheet "Options de jeu" (mode, rythme, piliers) et sa ligne de résumé. */
     options: {
       title: string;
-      summary: (speed: string, rounds: number, minutes: number) => string;
+      summary: (mode: string, speed: string, rounds: number, minutes: number) => string;
+      /** Nom du mode sans "Devine ma réponse", affiché dans le résumé. */
+      classicMode: string;
       leaders: string;
       rounds: (n: number) => string;
       leadersHint: string;
       you: string;
       hostOnly: (host: string) => string;
-      /** Libellé du récap de durée en bas du sheet Options (dépend du rythme et des piliers). */
+      /** Libellé du récap de durée en tête du sheet Options (dépend du rythme et des piliers). */
       estimateLabel: string;
+      /** Précision sous le récap de durée. */
+      estimateHint: string;
     };
     /** Badge sur la carte d'un joueur exclu du rôle de pilier. */
     notLeaderBadge: string;
@@ -354,11 +367,9 @@ export interface Dictionary {
     // Perks (liste d'avantages)
     perkQuestions: string;
     perkThemes: string;
-    perkFuture: string;
+    perkAds: string;
     perkName: string;
     perkNameSample: string;   // pseudo d'exemple affiché en doré
-    perkAdsTitle: string;     // bloc "zéro pub" mis en avant
-    perkAdsDesc: string;
     // Mode natif (achat possible)
     unlock: string;
     restore: string;

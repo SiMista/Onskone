@@ -11,6 +11,7 @@ import { buildShareCard, shareBlob } from '../utils/shareCard';
 import { useToast } from '../components/Toast';
 import ReportTrigger from '../components/ReportTrigger';
 import { recordGameEnd, computeTeamPct } from '../utils/playerStats';
+import { prepareEndGameAd, showEndGameAd } from '../utils/ads';
 import { useLocale } from '../i18n';
 import VerdictRing from '../components/endgame/VerdictRing';
 import ShareSection from '../components/endgame/ShareSection';
@@ -228,11 +229,34 @@ const EndGame: React.FC = () => {
     });
   }, [lobbyCode, currentPlayer, leaderboard, rounds, roundByLeaderId, pct, showToast, t]);
 
+  // Interstitiel de fin de partie : préchargé dès l'arrivée ici, affiché seulement
+  // quand le joueur QUITTE cet écran (jamais tout seul pendant le reveal : Google
+  // interdit les pubs "surprise"). Rien pour un premium, rien s'il n'est pas prêt.
+  useEffect(() => {
+    void prepareEndGameAd();
+  }, []);
+
+  // Une seule sortie : un double tap ne doit ni relancer la pub ni naviguer deux fois.
+  const leavingRef = useRef(false);
+
+  // "Retour au salon" : le salon n'est rejoint qu'à la FERMETURE de la pub. Pendant
+  // la pub le joueur reste ici, donc pas encore revenu pour le serveur : l'hôte ne
+  // peut pas lancer une partie qui démarrerait sous sa pub (au pire le joueur la
+  // rejoint en retardataire, pub fermée).
   const handleBackToLobby = () => {
-    if (lobbyCode) navigate(`/lobby/${lobbyCode}`);
+    if (leavingRef.current) return;
+    leavingRef.current = true;
+    void showEndGameAd().then(() => {
+      if (lobbyCode) navigate(`/lobby/${lobbyCode}`);
+    });
   };
 
+  // "Accueil" : le joueur quitte la table, personne ne l'attend : navigation tout
+  // de suite, derrière la pub.
   const handleBackToHome = () => {
+    if (leavingRef.current) return;
+    leavingRef.current = true;
+    void showEndGameAd();
     if (lobbyCode && currentPlayer) {
       socket.emit('leaveLobby', { lobbyCode, currentPlayerId: currentPlayer.id });
     }

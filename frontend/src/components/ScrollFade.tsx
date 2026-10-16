@@ -2,27 +2,51 @@ import { RefObject } from 'react';
 import { useScrollFade } from '../hooks/useScrollFade';
 
 interface ScrollFadeProps {
-  /** Ref du conteneur scrollable - sert à détecter s'il reste du contenu sous le viewport. */
+  /** Ref du conteneur scrollable - sert à détecter le contenu caché au-dessus / en dessous. */
   scrollRef: RefObject<HTMLElement | null>;
   /**
-   * Classes additionnelles - typiquement le border-radius bas pour matcher
-   * la bordure du parent (ex: "rounded-b-[25px]", "rounded-b-2xl").
+   * Classes additionnelles du fade du bas - typiquement le border-radius bas pour
+   * matcher la bordure du parent (ex: "rounded-b-[25px]", "rounded-b-2xl").
    */
   className?: string;
+  /**
+   * Couleur opaque (#rrggbb) du fond sous la liste, quand il n'est pas blanc (ex.
+   * fond teinté par catégorie) : le fade s'y fond au lieu de laisser une bande blanche.
+   */
+  color?: string;
 }
 
+const WHITE_GRADIENT = {
+  top: 'bg-gradient-to-b from-white via-white/85 to-transparent',
+  bottom: 'bg-gradient-to-t from-white via-white/85 to-transparent',
+};
+
 /**
- * Fade blanc en bas d'un scroll container, indice visuel "il reste du contenu
- * à scroller" (iOS Safari cache la scrollbar native). Disparaît dès qu'on
- * atteint le bas. À placer dans un parent `relative overflow-hidden`.
+ * Fades blancs en haut et en bas d'un scroll container, indices visuels "il y a
+ * du contenu par là" (iOS Safari cache la scrollbar native). Chacun disparaît
+ * dès qu'on atteint son bord. À placer dans un parent `relative overflow-hidden`
+ * qui épouse le scroll container (le fade du haut se cale sur le haut du parent).
  */
-const ScrollFade = ({ scrollRef, className = '' }: ScrollFadeProps) => {
-  const show = useScrollFade(scrollRef);
+const ScrollFade = ({ scrollRef, className = '', color }: ScrollFadeProps) => {
+  const { top, bottom } = useScrollFade(scrollRef);
+  const base = 'pointer-events-none absolute inset-x-0 transition-opacity duration-150';
+  // Même profil que le dégradé blanc : plein, 85 % (alpha d9) à mi-hauteur, transparent.
+  const colorStyle = (direction: 'to top' | 'to bottom') =>
+    color ? { backgroundImage: `linear-gradient(${direction}, ${color}, ${color}d9, ${color}00)` } : undefined;
   return (
-    <div
-      aria-hidden
-      className={`pointer-events-none absolute inset-x-0 bottom-0 h-12 md:h-14 bg-gradient-to-t from-white via-white/85 to-transparent transition-opacity duration-150 ${show ? 'opacity-100' : 'opacity-0'} ${className}`}
-    />
+    <>
+      {/* Haut : plus court que celui du bas, pour ne pas masquer la première ligne visible. */}
+      <div
+        aria-hidden
+        className={`${base} top-0 h-8 md:h-10 ${color ? '' : WHITE_GRADIENT.top} ${top ? 'opacity-100' : 'opacity-0'}`}
+        style={colorStyle('to bottom')}
+      />
+      <div
+        aria-hidden
+        className={`${base} bottom-0 h-12 md:h-14 ${color ? '' : WHITE_GRADIENT.bottom} ${bottom ? 'opacity-100' : 'opacity-0'} ${className}`}
+        style={colorStyle('to top')}
+      />
+    </>
   );
 };
 

@@ -1,7 +1,6 @@
 import { Icon } from '@iconify/react';
 import { DecksCatalogWithMeta, SelectedDecks } from '@onskone/shared';
 import type { GameSpeed } from '@onskone/shared';
-import Checkbox from '../Checkbox';
 import { getSoftCategoryColor } from '../../constants/game';
 import { STICKER_FILTER } from '../../constants/icons';
 import type { Dictionary } from '../../i18n/dictionary';
@@ -9,9 +8,8 @@ import type { Dictionary } from '../../i18n/dictionary';
 interface LobbySettingsPanelProps {
   isHost: boolean;
   hostName: string;
+  /** Résumé des options de jeu (mode · rythme · manches · durée estimée). */
   guessMyAnswerMode: boolean;
-  onGuessMyAnswerModeChange: (next: boolean) => void;
-  /** Résumé des options de jeu (rythme · manches · durée estimée). */
   gameSpeed: GameSpeed;
   roundCount: number;
   estimatedMinutes: number;
@@ -31,8 +29,8 @@ const SECTION_TITLE = 'm-0 px-1 font-display text-xs font-bold uppercase trackin
  * Panneau de réglages du lobby (onglet "Réglages") : bandeau "hôte uniquement"
  * pour les non-hôtes, puis deux sections titrées, chacune un bloc crème sur le
  * panneau blanc :
- * - Partie : le mode de jeu et la ligne "Options de jeu" qui résume et ouvre les
- *   réglages fins (rythme, piliers) - les règles, regroupées dans un même bloc ;
+ * - Partie : la ligne "Options de jeu" qui résume et ouvre les règles (mode
+ *   "Devine ma réponse", rythme, piliers) ;
  * - Thèmes : le contenu. Hauteur variable, donc en dernier pour que le résumé des
  *   options reste visible.
  * Divulgation progressive : ce qui définit la partie reste visible, le réglage fin
@@ -43,7 +41,6 @@ const LobbySettingsPanel = ({
   isHost,
   hostName,
   guessMyAnswerMode,
-  onGuessMyAnswerModeChange,
   gameSpeed,
   roundCount,
   estimatedMinutes,
@@ -84,25 +81,10 @@ const LobbySettingsPanel = ({
           </div>
         </div>
       )}
-      {/* Section Partie - un bloc, deux lignes de réglage (façon réglages groupés) :
-          le mode (case à droite, alignée sur le chevron) puis les options de jeu. */}
+      {/* Section Partie - un bloc, la ligne "Options de jeu" (mode, rythme, piliers). */}
       <section className="flex flex-col gap-1.5">
         <h3 className={SECTION_TITLE}>{t.lobby.gameSection}</h3>
         <div className="rounded-2xl border-[2.5px] border-black bg-cream-settings stack-shadow-sm overflow-hidden">
-          {/* Mode "Devine ma réponse" - décoché = mode Classique */}
-          <div className="p-3">
-            <Checkbox
-              checked={guessMyAnswerMode}
-              onChange={onGuessMyAnswerModeChange}
-              disabled={!isHost}
-              label={t.lobby.guessMyAnswer.label}
-              description={t.lobby.guessMyAnswer.description}
-              boxSide="right"
-            />
-          </div>
-
-          <span aria-hidden className="block mx-3 border-t-[1.5px] border-dashed border-black/15" />
-
           {/* Options de jeu : réglages fins repliés dans un bottom sheet. La ligne affiche
               leur état courant, pour qu'un réglage replié ne soit jamais un réglage oublié.
               Feedback de ligne (fond) et non de carte (translate) : la ligne vit dans le bloc. */}
@@ -116,8 +98,11 @@ const LobbySettingsPanel = ({
               <span className="font-display text-sm md:text-base font-bold uppercase tracking-tight text-black leading-none">
                 {t.lobby.options.title}
               </span>
-              <span className="font-display text-xs font-bold tabular-nums text-black/60 truncate">
+              {/* Pas de truncate : avec le mode en tête, le résumé passe à la ligne
+                  sur petit écran plutôt que de couper le nombre de manches. */}
+              <span className="font-display text-xs font-bold tabular-nums text-black/60 leading-snug">
                 {t.lobby.options.summary(
+                  guessMyAnswerMode ? t.lobby.guessMyAnswer.label : t.lobby.options.classicMode,
                   gameSpeed === 'fast' ? t.lobby.gameSpeed.fast : t.lobby.gameSpeed.normal,
                   roundCount,
                   estimatedMinutes,

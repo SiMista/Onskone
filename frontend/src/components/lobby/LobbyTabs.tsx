@@ -33,7 +33,8 @@ const LobbyTabs = ({ activeTab, onTabChange, activePlayersCount, t }: LobbyTabsP
   ];
 
   return (
-    <div className="shrink-0 flex gap-1 md:gap-1.5 -mb-[2.5px] relative z-10 px-1">
+    // items-end : l'onglet inactif, plus court, reste calé en bas (traits alignés).
+    <div className="shrink-0 flex items-end gap-1 md:gap-1.5 -mb-[2.5px] relative z-10 px-1">
       {tabs.map(tab => {
         const active = activeTab === tab.id;
         // Coin "extérieur" généreusement arrondi (bord du panel),
@@ -48,13 +49,16 @@ const LobbyTabs = ({ activeTab, onTabChange, activePlayersCount, t }: LobbyTabsP
             role="tab"
             aria-selected={active}
             onClick={() => onTabChange(tab.id)}
-            className={`flex-1 relative inline-flex items-center justify-center gap-2 px-3 md:px-4 pt-2 md:pt-2.5 pb-3 md:pb-3.5 bg-white ${radiusClasses} border-[2.5px] border-b-0 border-black cursor-pointer transition-all duration-200 origin-bottom overflow-hidden
+            className={`flex-1 relative inline-flex items-center justify-center gap-2 px-3 md:px-4 pb-3 md:pb-3.5 bg-white ${radiusClasses} border-[2.5px] border-black cursor-pointer transition-all duration-200 origin-bottom overflow-hidden
             ${active
-                ? 'shadow-[3px_-3px_0_0_rgba(0,0,0,0.18)] z-20'
-                : 'translate-y-1 hover:translate-y-0 z-10 opacity-90 hover:opacity-100'}
+                ? 'pt-2 md:pt-2.5 shadow-[3px_-3px_0_0_rgba(0,0,0,0.18)] z-20'
+                : 'pt-1 md:pt-1.5 hover:pt-2 md:hover:pt-2.5 z-10 opacity-90 hover:opacity-100'}
           `}
           >
-            {/* Bande accent inférieure colorée - plus haute si actif */}
+            {/* Bande accent inférieure colorée - plus haute si actif. Posée au-dessus
+                de la bordure basse : le trait noir ferme l'onglet sous la couleur et
+                recouvre celui du panel (-mb). L'onglet inactif s'enfonce par un padding
+                haut réduit (et non un translate) pour garder les deux traits alignés. */}
             <span
               className={`absolute left-0 right-0 bottom-0 pointer-events-none transition-[height] duration-200 ${active ? 'h-2 md:h-2.5' : 'h-1.5'}`}
               style={{ backgroundColor: tab.color }}

@@ -1,8 +1,8 @@
-import { ReactNode, useEffect, useRef, useState } from 'react';
+import { ReactNode } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { LuCopy, LuCheck, LuLink, LuShare2 } from 'react-icons/lu';
+import { LuLink, LuShare2 } from 'react-icons/lu';
 import BottomSheet from './BottomSheet';
-import { LobbyCodeDisplay } from './LobbyCode';
+import { CopyableLobbyCode } from './LobbyCode';
 import { useLocale } from '../i18n';
 import { buildInviteUrl } from '../constants/game';
 import type { GameMode } from '@onskone/shared';
@@ -61,22 +61,6 @@ const ShareInviteSheet = ({
 }: ShareInviteSheetProps) => {
   const { t } = useLocale();
 
-  // Feedback "copié" : l'icône copie du code se change en coche verte ~2s après
-  // le clic, puis revient. Le timeout est nettoyé au démontage / re-clic.
-  const [codeCopied, setCodeCopied] = useState(false);
-  const copiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => () => {
-    if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current);
-  }, []);
-
-  const handleCopyCode = () => {
-    onCopyCode();
-    setCodeCopied(true);
-    if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current);
-    copiedTimeoutRef.current = setTimeout(() => setCodeCopied(false), 2000);
-  };
-
   // QR : seulement en mode local (joueurs autour de la table scannent l'écran
   // de l'hôte). Encode le lien d'invitation /join/<code> (App/Universal Links).
   const showQr = gameMode === 'local' && !!lobbyCode;
@@ -105,18 +89,11 @@ const ShareInviteSheet = ({
           <span className="block text-display-xs text-gray-500 mb-1.5">
             {t.lobby.shareInvite.codeLabel}
           </span>
-          <LobbyCodeDisplay
+          <CopyableLobbyCode
             value={lobbyCode}
-            onClick={handleCopyCode}
+            onCopy={onCopyCode}
             ariaLabel={t.lobby.shareInvite.codeLabel}
             className="w-full"
-            trailing={
-              codeCopied ? (
-                <LuCheck size={18} strokeWidth={2.6} className="ml-1 text-success-500 animate-copied-pop" />
-              ) : (
-                <LuCopy size={18} strokeWidth={2.2} className="ml-1 text-gray-500" />
-              )
-            }
           />
         </div>
 

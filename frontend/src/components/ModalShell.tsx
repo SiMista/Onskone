@@ -147,7 +147,9 @@ const ModalShell = ({
 
           {/* Body */}
           {scrollable ? (
-            <>
+            // Wrapper relatif : les fades se calent sur la zone qui scrolle (le fade
+            // du haut sous le séparateur, pas sur le header de la modale).
+            <div className="relative flex-1 min-h-0 flex flex-col">
               <div
                 ref={scrollRef}
                 className="relative flex-1 min-h-0 px-5 py-4 text-gray-800 overflow-y-auto overscroll-contain"
@@ -155,7 +157,7 @@ const ModalShell = ({
                 {children}
               </div>
               {!disableScrollFade && <ScrollFade scrollRef={scrollRef} className="rounded-b-[25px]" />}
-            </>
+            </div>
           ) : (
             <div className="relative px-5 py-5 text-gray-800">{children}</div>
           )}

@@ -26,7 +26,8 @@ const MODES: ModeOption[] = [
   },
   {
     mode: 'remote',
-    icon: 'fluent-emoji-flat:globe-showing-europe-africa',
+    // Portable plutôt que globe : se lit tout de suite "chacun chez soi, en ligne".
+    icon: 'fluent-emoji-flat:laptop',
     iconBg: 'bg-gradient-to-br from-brand-200 to-brand-400',
   },
 ];

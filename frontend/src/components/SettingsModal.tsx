@@ -1,11 +1,12 @@
 import type { IconType } from 'react-icons';
-import { LuVolume2, LuVolumeX, LuVibrate, LuVibrateOff, LuTriangleAlert, LuShare2 } from 'react-icons/lu';
+import { LuVolume2, LuVolumeX, LuVibrate, LuVibrateOff, LuTriangleAlert, LuShieldCheck } from 'react-icons/lu';
 import ModalShell from './ModalShell';
 import Dropdown from './Dropdown';
-import { LobbyCodeDisplay } from './LobbyCode';
+import { CopyableLobbyCode } from './LobbyCode';
 import { useSettings } from '../hooks/useSettings';
 import { updateSettings } from '../utils/settings';
-import { canVibrate, hapticLight } from '../utils/haptics';
+import { canVibrate, hapticAssigned } from '../utils/haptics';
+import { useAdPrivacyOptions, openAdPrivacyOptions } from '../utils/ads';
 import { useLocale, LOCALE_META, SUPPORTED_LOCALES } from '../i18n';
 import type { Locale } from '@onskone/shared';
 
@@ -22,13 +23,12 @@ interface SettingsModalProps {
   contentLocale?: Locale;
   /**
    * Code du salon de la partie en cours : affiché pour qu'un joueur puisse le
-   * redonner à un ami dont l'appli a planté (il reprend sa place avec ce code), avec
-   * un raccourci vers la feuille d'invitation (`onInvite` : le parent ferme les
-   * Réglages et ouvre la feuille). Absent à l'accueil et en lobby, qui a déjà son
-   * propre bouton d'invitation.
+   * redonner à un ami dont l'appli a planté (il reprend sa place avec ce code), et
+   * copiable au tap (`onCopyCode`, cf. useShareInvite). Absent à l'accueil et en
+   * lobby, qui a déjà son propre bouton d'invitation.
    */
   lobbyCode?: string;
-  onInvite?: () => void;
+  onCopyCode?: () => void;
 }
 
 interface ToggleTileProps {
@@ -78,15 +78,18 @@ const ToggleTile = ({ on, onToggle, label, stateLabel, IconOn, IconOff, disabled
 
 /**
  * Modale Réglages (roue crantée) : son et vibrations, langue de l'interface (propres
- * à l'appareil et appliqués tout de suite), en partie le code du salon + invitation,
+ * à l'appareil et appliqués tout de suite), en partie le code du salon (copiable),
  * puis "Signaler un problème" en bas. La tuile Vibrations reste visible mais grisée
  * ("Indisponible") quand l'appareil ne sait pas vibrer (Safari iOS, Firefox
  * desktop) : la masquer laissait croire qu'elle manquait.
  */
-const SettingsModal = ({ isOpen, onClose, onReport, contentLocale, lobbyCode, onInvite }: SettingsModalProps) => {
+const SettingsModal = ({ isOpen, onClose, onReport, contentLocale, lobbyCode, onCopyCode }: SettingsModalProps) => {
   const { t, locale, setLocale } = useLocale();
   const { sound, vibration } = useSettings();
-  const showLobby = !!lobbyCode && !!onInvite;
+  const showLobby = !!lobbyCode && !!onCopyCode;
+  // RGPD : retirer son accord pub doit être aussi simple que le donner. Seulement
+  // quand Google l'exige (joueur européen non premium, cf. ads.ts).
+  const showAdChoices = useAdPrivacyOptions();
 
   return (
     // Avec la section Salon la modale s'allonge : on laisse le body scroller sur les
@@ -105,8 +108,9 @@ const SettingsModal = ({ isOpen, onClose, onReport, contentLocale, lobbyCode, on
           on={canVibrate && vibration}
           onToggle={() => {
             updateSettings({ vibration: !vibration });
-            // Petit retour quand on (ré)active : confirme que ça marche.
-            if (!vibration) hapticLight();
+            // À l'activation : la vibration "réponse reçue" de la partie, pour que
+            // l'aperçu corresponde à ce que le joueur sentira en jeu.
+            if (!vibration) hapticAssigned();
           }}
           label={t.settings.vibration}
           stateLabel={!canVibrate ? t.settings.unavailable : vibration ? t.settings.on : t.settings.off}
@@ -136,21 +140,17 @@ const SettingsModal = ({ isOpen, onClose, onReport, contentLocale, lobbyCode, on
         )}
       </section>
 
-      {/* Salon (partie en cours) : le code, lisible pour le redonner de vive voix, et
-          le raccourci vers la feuille d'invitation (lien / partage / QR). Même
-          affichage du code que la feuille elle-même (LobbyCodeDisplay). */}
+      {/* Salon (partie en cours) : le code, lisible pour le redonner de vive voix et
+          copiable au tap. Même bloc que la feuille d'invitation (CopyableLobbyCode). */}
       {showLobby && (
         <section className="w-full max-w-[18.75rem] mx-auto mt-5 flex flex-col gap-2">
           <h3 className="m-0 px-1 text-display-xs text-black/55">{t.settings.lobby}</h3>
-          <LobbyCodeDisplay value={lobbyCode} className="w-full" />
-          <button
-            type="button"
-            onClick={onInvite}
-            className="inline-flex items-center justify-center gap-1.5 min-h-11 w-full rounded-xl border-[2.5px] border-black bg-warning-500 stack-shadow-sm font-display text-sm font-bold uppercase tracking-tight text-black cursor-pointer transition-all duration-200 hover:-translate-y-0.5 active:translate-y-[1px] active:[box-shadow:none!important]"
-          >
-            <LuShare2 aria-hidden size={16} strokeWidth={2.5} />
-            {t.lobby.shareInvite.button}
-          </button>
+          <CopyableLobbyCode
+            value={lobbyCode}
+            onCopy={onCopyCode}
+            ariaLabel={t.lobby.shareInvite.codeLabel}
+            className="w-full"
+          />
           <p className="m-0 px-1 font-sans text-[11px] text-gray-600 leading-snug">
             {t.settings.inviteHint}
           </p>
@@ -159,8 +159,19 @@ const SettingsModal = ({ isOpen, onClose, onReport, contentLocale, lobbyCode, on
 
       <span aria-hidden className="block w-full mt-5 border-t-[1.5px] border-dashed border-black/15" />
 
-      {/* Signaler un problème : action à part, en rouge, sous les réglages. */}
-      <div className="flex justify-center pt-3 pb-1">
+      {/* Actions à part, sous les réglages : choix publicitaires (si requis) et
+          signaler un problème, en rouge. */}
+      <div className="flex flex-wrap justify-center gap-x-2 pt-3 pb-1">
+        {showAdChoices && (
+          <button
+            type="button"
+            onClick={() => { void openAdPrivacyOptions(); }}
+            className="inline-flex items-center gap-1.5 min-h-11 px-3 font-display text-sm font-bold uppercase tracking-tight text-black/60 hover:text-black transition-colors cursor-pointer"
+          >
+            <LuShieldCheck aria-hidden size={16} strokeWidth={2.5} />
+            {t.settings.adChoices}
+          </button>
+        )}
         <button
           type="button"
           onClick={onReport}

@@ -384,7 +384,6 @@ const Lobby = () => {
                                             isHost={isHost}
                                             hostName={hostName}
                                             guessMyAnswerMode={guessMyAnswerMode}
-                                            onGuessMyAnswerModeChange={onGuessMyAnswerModeChange}
                                             gameSpeed={gameSpeed}
                                             roundCount={roundCount}
                                             estimatedMinutes={estimatedMinutes}
@@ -518,12 +517,14 @@ const Lobby = () => {
             </InfoModal>
 
             {/* Bottom sheet de partage : code + copie rapide, copier le lien, partage OS */}
-            {/* Bottom sheet des options de jeu : rythme + piliers (exclusion) */}
+            {/* Bottom sheet des options de jeu : mode, rythme + piliers (exclusion) */}
             <GameOptionsSheet
                 isOpen={optionsSheetOpen}
                 onClose={() => setOptionsSheetOpen(false)}
                 isHost={isHost}
                 hostName={hostName}
+                guessMyAnswerMode={guessMyAnswerMode}
+                onGuessMyAnswerModeChange={onGuessMyAnswerModeChange}
                 gameSpeed={gameSpeed}
                 onGameSpeedChange={onGameSpeedChange}
                 players={players}

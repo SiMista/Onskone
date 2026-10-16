@@ -80,12 +80,142 @@
     }
     </script>
 
+    <!-- Écran de chargement (retiré par src/utils/bootSplash.ts) : en dur ici pour
+         s'afficher dès la première image, avant le JS et le CSS de l'appli. Couleurs
+         et ombres recopiées des tokens de index.css (brand-700 / brand-400 /
+         warning-500, stack-shadow), illisibles avant son chargement. -->
+    <style>
+        #boot-splash {
+            position: fixed;
+            inset: 0;
+            z-index: 2147483647;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 40px;
+            overflow: hidden;
+            isolation: isolate;
+            /* Volontairement distinct du fond de l'appli (motif "?") : écran titre,
+               halo clair derrière le logo qui fonce vers les bords. */
+            background: radial-gradient(circle at 50% calc(50% - 28px), #7DD3F0 0%, #1AAFDA 35%, #1f5d90 100%);
+            transition: opacity 300ms ease 250ms;
+        }
+        /* Rayons de soleil centrés sur le logo (centre de la colonne logo + barre,
+           décalé de la moitié de gap + barre), qui tournent lentement et s'éteignent
+           vers les bords. Seule animation infinie de l'écran. */
+        #boot-splash::before {
+            content: "";
+            position: absolute;
+            z-index: -1;
+            left: 50%;
+            top: calc(50% - 28px);
+            width: 250vmax;
+            height: 250vmax;
+            background: repeating-conic-gradient(rgba(255, 255, 255, 0.07) 0deg 9deg, transparent 9deg 18deg);
+            -webkit-mask-image: radial-gradient(circle, #000 0%, transparent 35%);
+            mask-image: radial-gradient(circle, #000 0%, transparent 35%);
+            transform: translate(-50%, -50%);
+            animation: boot-splash-spin 60s linear infinite;
+        }
+        @keyframes boot-splash-spin {
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            #boot-splash::before { animation: none; }
+        }
+        /* Figé : sinon le preflight Tailwind (border-box), chargé en cours de route,
+           fait sauter logo et barre de quelques pixels. */
+        #boot-splash, #boot-splash * {
+            box-sizing: border-box;
+        }
+        #boot-splash.boot-splash--done {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .boot-splash__logo {
+            display: block;
+            width: 112px;
+            height: 112px;
+            border: 3px solid #000;
+            border-radius: 28px;
+            box-shadow: 4px 4px 0 0 #000, 8px 8px 0 0 rgba(0, 0, 0, 0.18), 12px 12px 0 0 rgba(0, 0, 0, 0.08);
+        }
+        /* Libellé en absolu sous la barre : la colonne logo + barre garde sa hauteur,
+           donc le centre des rayons (calé sur le logo) ne bouge pas. Fredoka comme
+           text-display-xs ; repli système le temps que la police arrive. */
+        .boot-splash__progress {
+            position: relative;
+        }
+        .boot-splash__label {
+            position: absolute;
+            top: calc(100% + 14px);
+            left: 0;
+            right: 0;
+            margin: 0;
+            text-align: center;
+            font-family: 'Fredoka', system-ui, sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            line-height: 16px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.9);
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+        }
+        .boot-splash__track {
+            width: min(220px, 60vw);
+            height: 16px;
+            background: #fff;
+            border: 2.5px solid #000;
+            border-radius: 999px;
+            overflow: hidden;
+            box-shadow: 2px 2px 0 0 #000, 4px 4px 0 0 rgba(0, 0, 0, 0.18), 6px 6px 0 0 rgba(0, 0, 0, 0.08);
+        }
+        /* Progression simulée (le chargement d'un bundle ne se mesure pas) : file
+           vite puis ralentit sans jamais finir ; bootSplash.ts la complète à 100 %. */
+        .boot-splash__fill {
+            width: 0;
+            height: 100%;
+            background: #FFC700;
+            animation: boot-splash-fill 6s cubic-bezier(0.1, 0.7, 0.25, 1) forwards;
+            transition: width 250ms ease-out;
+        }
+        @keyframes boot-splash-fill {
+            to { width: 92%; }
+        }
+    </style>
+
     <!-- Umami: stats sur stats.onskone.fr -->
     <script defer src="https://stats.onskone.fr/script.js" data-website-id="7ac005be-3f53-41ed-86a4-49088e497b6b"></script>
 </head>
 
 <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
+    <noscript><style>#boot-splash { display: none; }</style></noscript>
+    <div id="boot-splash" role="progressbar" aria-labelledby="boot-splash-label">
+        <!-- boot-logo.webp : assets/icon-only.png réduit à 336px (3x les 112px affichés,
+             net sur les écrans haute densité), WebP qualité 90 (~11 Ko). logo192.png en
+             repli pour les navigateurs sans WebP. -->
+        <picture>
+            <source srcset="/boot-logo.webp" type="image/webp" />
+            <img class="boot-splash__logo" src="/logo192.png" alt="" width="112" height="112" />
+        </picture>
+        <div class="boot-splash__progress">
+            <div class="boot-splash__track"><div class="boot-splash__fill"></div></div>
+            <p id="boot-splash-label" class="boot-splash__label">Chargement…</p>
+        </div>
+    </div>
+    <script>
+        // Langue du libellé, même règle que detectInitialLocale (src/i18n/index.tsx) :
+        // choix sauvegardé, sinon langue de l'appareil, sinon français.
+        (function () {
+            var locale;
+            try { locale = localStorage.getItem('onskone:locale'); } catch (e) { /* stockage bloqué */ }
+            if (locale !== 'fr' && locale !== 'en') locale = (navigator.language || '').slice(0, 2).toLowerCase();
+            if (locale === 'en') document.getElementById('boot-splash-label').textContent = 'Loading…';
+        })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/index.tsx"></script>
 </body>

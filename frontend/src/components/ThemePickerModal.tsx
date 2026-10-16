@@ -5,6 +5,7 @@ import { LuX, LuLock, LuCrown } from 'react-icons/lu';
 import type { DecksCatalogWithMeta, SelectedDecks, ThemeInfo } from '@onskone/shared';
 import { useLocale } from '../i18n';
 import { getCategoryColor, lightenHex, darkenHex } from '../constants/game';
+import ScrollFade from './ScrollFade';
 import { STICKER_FILTER } from '../constants/icons';
 import { useModalChrome } from '../hooks/useModalChrome';
 import { useModalTransition } from '../hooks/useModalTransition';
@@ -248,78 +249,84 @@ const ThemePickerModal = ({ isOpen, onClose, catalog, selected, mode, hostName, 
               </div>
             )}
 
-            {/* Liste verticale scrollable des cartes-thèmes */}
-            <div
-              ref={listRef}
-              className="relative flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 flex flex-col gap-2.5"
-              style={{ backgroundColor: `${activeColor}25`, scrollbarWidth: 'none' }}
-            >
-              {activePattern && (
-                <span aria-hidden className={`pointer-events-none absolute inset-0 ${activePattern} opacity-15`} />
-              )}
-              {activeThemes.map((info: ThemeInfo) => {
-                const active = isThemeSelected(localSelected, activeCategory, info.code);
-                // Verrouillé = premium ET pas débloqué. Reste toujours grisé + cadenas.
-                const locked = !!info.premium && !isPremium;
-                // Premium débloqué : cadre doré (rappelle que le thème fait partie du pack).
-                const goldFrame = !!info.premium && !locked;
-                return (
-                  <button
-                    key={info.code}
-                    type="button"
-                    onClick={() => handleToggle(activeCategory, info.code, info)}
-                    className={`group relative flex items-stretch w-full text-left border-[2.5px] rounded-2xl overflow-hidden bg-white min-h-[96px] md:min-h-[112px] transition-all duration-200 ${goldFrame ? 'border-premium-600' : 'border-black'} ${isEditable ? 'cursor-pointer active:scale-[0.98]' : 'cursor-default'
-                      } ${active
-                        ? 'stack-shadow-sm opacity-100'
-                        : 'opacity-55 grayscale-[60%]'
-                      }`}
-                  >
-                    {/* Bloc illustration emoji - dégradé diagonal pour le relief */}
-                    <EmojiCard
-                      icon={info.emoji}
-                      bgImage={buildEmojiGradient(activeColor)}
-                      pattern={activePattern}
-                      filterStrength="strong"
-                    />
-                    {/* Texte */}
-                    <div className="flex-1 min-w-0 px-3.5 py-3 md:px-4 md:py-3.5 flex flex-col justify-center gap-1">
-                      <div className="font-display font-bold text-display-md text-gray-900 leading-tight line-clamp-1 flex items-center gap-1.5">
-                        <span className="truncate">{info.name}</span>
-                        {info.mature && (
-                          <span className="shrink-0 inline-flex items-center justify-center h-5 px-2 rounded-full bg-red-600 text-white text-[12px] font-display font-bold leading-none border-[2.5px] border-black stack-shadow-sm">
-                            {t.themePicker.matureBadge}
-                          </span>
+            {/* Liste verticale scrollable des cartes-thèmes. Wrapper relatif : les fades
+                se calent sur la liste (le fade du haut sous la description). */}
+            <div className="relative flex-1 min-h-0 flex flex-col">
+              <div
+                ref={listRef}
+                className="relative flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 flex flex-col gap-2.5"
+                style={{ backgroundColor: `${activeColor}25`, scrollbarWidth: 'none' }}
+              >
+                {activePattern && (
+                  <span aria-hidden className={`pointer-events-none absolute inset-0 ${activePattern} opacity-15`} />
+                )}
+                {activeThemes.map((info: ThemeInfo) => {
+                  const active = isThemeSelected(localSelected, activeCategory, info.code);
+                  // Verrouillé = premium ET pas débloqué. Reste toujours grisé + cadenas.
+                  const locked = !!info.premium && !isPremium;
+                  // Premium débloqué : cadre doré (rappelle que le thème fait partie du pack).
+                  const goldFrame = !!info.premium && !locked;
+                  return (
+                    <button
+                      key={info.code}
+                      type="button"
+                      onClick={() => handleToggle(activeCategory, info.code, info)}
+                      className={`group relative flex items-stretch w-full text-left border-[2.5px] rounded-2xl overflow-hidden bg-white min-h-[96px] md:min-h-[112px] transition-all duration-200 ${goldFrame ? 'border-premium-600' : 'border-black'} ${isEditable ? 'cursor-pointer active:scale-[0.98]' : 'cursor-default'
+                        } ${active
+                          ? 'stack-shadow-sm opacity-100'
+                          : 'opacity-55 grayscale-[60%]'
+                        }`}
+                    >
+                      {/* Bloc illustration emoji - dégradé diagonal pour le relief */}
+                      <EmojiCard
+                        icon={info.emoji}
+                        bgImage={buildEmojiGradient(activeColor)}
+                        pattern={activePattern}
+                        filterStrength="strong"
+                      />
+                      {/* Texte */}
+                      <div className="flex-1 min-w-0 px-3.5 py-3 md:px-4 md:py-3.5 flex flex-col justify-center gap-1">
+                        <div className="font-display font-bold text-display-md text-gray-900 leading-tight line-clamp-1 flex items-center gap-1.5">
+                          <span className="truncate">{info.name}</span>
+                          {info.mature && (
+                            <span className="shrink-0 inline-flex items-center justify-center h-5 px-2 rounded-full bg-red-600 text-white text-[12px] font-display font-bold leading-none border-[2.5px] border-black stack-shadow-sm">
+                              {t.themePicker.matureBadge}
+                            </span>
+                          )}
+                        </div>
+                        {info.description && (
+                          <div className="font-sans text-xs md:text-sm leading-snug text-gray-600 line-clamp-2">
+                            {info.description}
+                          </div>
                         )}
                       </div>
-                      {info.description && (
-                        <div className="font-sans text-xs md:text-sm leading-snug text-gray-600 line-clamp-2">
-                          {info.description}
-                        </div>
-                      )}
-                    </div>
-                    {/* Indicateur premium en haut à droite - deux états :
-                        - verrouillé (non-premium) : pastille noire + cadenas ("faut payer")
-                        - débloqué (premium) : cadre doré (ci-dessus) + petite couronne
-                          d'angle (rappelle que le thème vient du pack, sans encombrer). */}
-                    {locked && (
-                      <span className="absolute top-2 right-2 inline-flex items-center gap-1 h-7 px-2 rounded-full bg-black/70 text-white border-2 border-white/70">
-                        <LuLock size={13} strokeWidth={2.75} aria-hidden />
-                        <span className="text-[11px] font-display font-bold leading-none tracking-wide">
-                          {t.themePicker.premiumBadge}
+                      {/* Indicateur premium en haut à droite - deux états :
+                          - verrouillé (non-premium) : pastille noire + cadenas ("faut payer")
+                          - débloqué (premium) : cadre doré (ci-dessus) + petite couronne
+                            d'angle (rappelle que le thème vient du pack, sans encombrer). */}
+                      {locked && (
+                        <span className="absolute top-2 right-2 inline-flex items-center gap-1 h-7 px-2 rounded-full bg-black/70 text-white border-2 border-white/70">
+                          <LuLock size={13} strokeWidth={2.75} aria-hidden />
+                          <span className="text-[11px] font-display font-bold leading-none tracking-wide">
+                            {t.themePicker.premiumBadge}
+                          </span>
                         </span>
-                      </span>
-                    )}
-                    {goldFrame && (
-                      <span
-                        aria-label={t.themePicker.premiumBadge}
-                        className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full border-2 border-black text-black stack-shadow-sm bg-premium-gold"
-                      >
-                        <LuCrown size={13} strokeWidth={2.75} aria-hidden />
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+                      )}
+                      {goldFrame && (
+                        <span
+                          aria-label={t.themePicker.premiumBadge}
+                          className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full border-2 border-black text-black stack-shadow-sm bg-premium-gold"
+                        >
+                          <LuCrown size={13} strokeWidth={2.75} aria-hidden />
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              {/* Fond de la liste = teinte de la catégorie à ~15 % sur blanc (`${color}25`) :
+                  le fade reprend cette teinte, rendue opaque. */}
+              <ScrollFade scrollRef={listRef} color={lightenHex(activeColor, 1 - 0x25 / 0xff)} />
             </div>
           </div>
         </div>

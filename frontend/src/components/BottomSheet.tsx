@@ -1,6 +1,7 @@
-import { ReactNode } from 'react';
+import { ReactNode, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { LuX } from 'react-icons/lu';
+import ScrollFade from './ScrollFade';
 import { useModalChrome } from '../hooks/useModalChrome';
 import { useModalTransition } from '../hooks/useModalTransition';
 import { useLocale } from '../i18n';
@@ -19,6 +20,7 @@ export interface BottomSheetProps {
  */
 const BottomSheet = ({ isOpen, onClose, title, children }: BottomSheetProps) => {
   const { t } = useLocale();
+  const bodyRef = useRef<HTMLDivElement>(null);
 
   const { render, closing, requestClose } = useModalTransition(isOpen, onClose);
   const { onBackdropClick } = useModalChrome(render, requestClose);
@@ -31,13 +33,15 @@ const BottomSheet = ({ isOpen, onClose, title, children }: BottomSheetProps) => 
       className={`fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm ${closing ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop'}`}
       onClick={onBackdropClick}
     >
+      {/* Hauteur capée : un contenu plus haut que l'écran (petit téléphone, longue
+          liste) scrolle dans le body au lieu de pousser le header hors de l'écran. */}
       <div
-        className={`relative w-full max-w-md bg-white border-[3px] border-black border-b-0 rounded-t-[28px] texture-paper stack-shadow-lg safe-pb ${closing ? 'animate-bottomsheet-out' : 'animate-bottomsheet'}`}
+        className={`relative w-full max-w-md max-h-[92dvh] flex flex-col bg-white border-[3px] border-black border-b-0 rounded-t-[28px] texture-paper stack-shadow-lg safe-pb ${closing ? 'animate-bottomsheet-out' : 'animate-bottomsheet'}`}
         onClick={(e) => e.stopPropagation()}
         style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom, 0px))' }}
       >
         {/* Header */}
-        <div className="relative px-5 pt-5 pb-3 flex items-start justify-between gap-3">
+        <div className="relative shrink-0 px-5 pt-5 pb-3 flex items-start justify-between gap-3">
           <h2 className="marker-highlight text-lg md:text-xl font-display font-bold text-gray-900 m-0 tracking-tight">
             {title}
           </h2>
@@ -52,10 +56,16 @@ const BottomSheet = ({ isOpen, onClose, title, children }: BottomSheetProps) => 
         </div>
 
         {/* Séparateur pointillé */}
-        <div className="mx-5 border-t-[2px] border-dashed border-black/35" />
+        <div className="shrink-0 mx-5 border-t-[2px] border-dashed border-black/35" />
 
         {/* Body */}
-        <div className="relative px-5 pt-4 text-gray-800">{children}</div>
+        <div className="relative flex-1 min-h-0 flex flex-col">
+          {/* pb-2 : le scroll coupe ce qui déborde, dont l'ombre (stack-shadow) du dernier élément. */}
+          <div ref={bodyRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain no-scrollbar px-5 pt-4 pb-2 text-gray-800">
+            {children}
+          </div>
+          <ScrollFade scrollRef={bodyRef} />
+        </div>
       </div>
     </div>,
     document.body,

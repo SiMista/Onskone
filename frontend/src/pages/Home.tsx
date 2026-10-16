@@ -46,7 +46,7 @@ import ReclaimPlayerModal from '../components/ReclaimPlayerModal';
 const RECLAIM_POLL_MS = 5_000;
 const RECLAIM_MAX_POLLS = 12;
 import { usePremium } from '../utils/premium';
-import { useAppBannerVisible } from '../utils/appBanner';
+import { useAppBannerVisible, topControlsClass } from '../utils/appBanner';
 
 // Contenu de la modale "Mes succès". Extrait en composant enfant pour que sa
 // lecture localStorage (getStats) + le map sur ACHIEVEMENTS ne s'exécutent que
@@ -452,14 +452,14 @@ const Home = () => {
   // Le bandeau app (overlay, web) occupe le haut : on descend juste les boutons
   // du haut (Premium / langue) sous lui, sans pousser le reste du contenu.
   const bannerVisible = useAppBannerVisible();
-  const topControlsClass = bannerVisible ? 'top-[4.5rem]' : 'top-3';
+  const topControls = topControlsClass(bannerVisible);
 
   return (
     <div className="relative h-full flex flex-col overflow-hidden">
       {/* Titre principal de la page pour les moteurs/lecteurs d'écran : le logo
           visible est une image, ce h1 porte donc l'intitulé réel de l'accueil. */}
       <h1 className="sr-only">{t.seo.homeH1}</h1>
-      <div className={`absolute ${topControlsClass} left-3 z-30 safe-pt transition-[top] duration-200`}>
+      <div className={`absolute ${topControls} left-3 z-30 safe-pt transition-[top,translate] duration-200`}>
         {isPremium ? (
           // Déjà premium : badge noir & or STATIQUE (l'accueil a déjà son accent
           // animé) à la place du bouton d'achat. Tap = petit merci, pas de paywall.
@@ -485,7 +485,7 @@ const Home = () => {
         )}
       </div>
       {/* Haut droite : réglages (son, vibrations, langue). */}
-      <div className={`absolute ${topControlsClass} right-3 z-30 safe-pt transition-[top] duration-200`}>
+      <div className={`absolute ${topControls} right-3 z-30 safe-pt transition-[top,translate] duration-200`}>
         <SettingsButton />
       </div>
 

@@ -175,6 +175,14 @@ Le même build web `frontend/build` est embarqué dans une coquille native via C
 - **CORS** : `CAPACITOR_ORIGINS` (`capacitor://localhost`, `https://localhost`) est toujours autorisé dans `backend/src/index.ts`, indépendamment de `ALLOWED_ORIGINS`.
 - Scripts : `scripts/start-mobile.*` (live reload) et `scripts/build-mobile.*` (build final + Android Studio).
 
+### Pubs (AdMob, natif uniquement)
+
+**Règle produit : jamais de pub pendant une partie.** Deux emplacements entre les parties : pub d'ouverture au lancement (format App open, splash tenu 3,5 s max) et interstitiel au clic « Retour au salon » / « Accueil » de l'écran de fin (« Retour au salon » ne rejoint le salon qu'à la **fermeture** de la pub : sinon le joueur y paraît présent et l'hôte peut lancer une partie qui démarre sous sa pub). Premium = SDK jamais initialisé (ni pub ni popup). Règles pures dans `frontend/src/utils/adPolicy.ts` (testées), orchestration dans `frontend/src/utils/ads.ts`.
+
+- Plugin `@capacitor-community/admob` **épinglé en 8.1.0** : la 8.2+ exige Capacitor 8.5. Ne pas le monter seul.
+- En dev (Vite) les blocs de démo Google sont utilisés d'office ; `VITE_ADMOB_TEST_ADS=1` force le mode test sur un build de prod. Ne jamais cliquer ses propres vraies pubs (compte suspendu).
+- App ID Android dans `strings.xml` ; côté iOS, App ID + SKAdNetwork + texte ATT injectés par Codemagic.
+
 ## Gotchas
 
 - **Shared package is consumed from `dist/`** — if you change a type in `shared/src/types/` and front/back don't pick it up, you forgot to rebuild. `pnpm dev:shared` keeps watch.

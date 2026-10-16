@@ -19,19 +19,10 @@ const webVibrate = (pattern: number | number[]) => {
   }
 };
 
-// Petit retour tactile (sélection / drag côté pilier).
-export const hapticLight = () => {
-  if (vibrationOff()) return;
-  if (isNative) {
-    Haptics.impact({ style: ImpactStyle.Light }).catch(() => { /* haptics best-effort */ });
-  } else {
-    webVibrate(10);
-  }
-};
-
-// Retour marqué : une réponse vient d'être attribuée au joueur, ou le pilier
-// vient d'en recevoir une. `notification(Success)` était trop discret pour être
-// senti téléphone posé sur la table — on double d'un impact Heavy.
+// Retour marqué : une réponse vient d'être attribuée au joueur (jamais côté pilier,
+// qui attribue). Aussi joué à l'activation dans les Réglages, en aperçu fidèle.
+// `notification(Success)` était trop discret pour être senti téléphone posé sur
+// la table — on double d'un impact Heavy.
 export const hapticAssigned = () => {
   if (vibrationOff()) return;
   if (isNative) {

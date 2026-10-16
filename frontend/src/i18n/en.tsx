@@ -26,6 +26,13 @@ export const en: Dictionary = {
     languageNames: { fr: 'French', en: 'English' },
     lobby: 'Lobby',
     inviteHint: 'A disconnected friend gets their seat back by entering this code on the home screen.',
+    adChoices: 'Ad choices',
+  },
+
+  ads: {
+    introTitle: 'A word about ads',
+    introBody: 'Onskoné is free thanks to a few ads, shown only between games, never during one. Google will ask whether they can be personalized. You can say no: the game stays the same.',
+    introContinue: 'Continue',
   },
 
   app: {
@@ -105,7 +112,7 @@ export const en: Dictionary = {
     settingsHostOnlySuffix: 'can change the settings',
     guessMyAnswer: {
       label: 'Guess my answer',
-      description: 'One player is picked to write the answer the leader would have given',
+      description: 'Each round, a player is picked to write the answer the leader would have given',
     },
     gameSpeed: {
       label: 'Round length',
@@ -115,13 +122,15 @@ export const en: Dictionary = {
     },
     options: {
       title: 'Game options',
-      summary: (speed, rounds, m) => `${speed} · ${rounds} round${rounds !== 1 ? 's' : ''} ~${m} min`,
+      summary: (mode, speed, rounds, m) => `${mode} · ${speed} · ${rounds} round${rounds !== 1 ? 's' : ''} ~${m} min`,
+      classicMode: 'Classic',
       leaders: 'Leaders',
       rounds: (n) => `${n} round${n !== 1 ? 's' : ''}`,
       leadersHint: "Untick anyone who doesn't want to be leader: they still play!",
       you: '(you)',
       hostOnly: (host) => `Only ${host} can change the options.`,
       estimateLabel: 'Estimated length',
+      estimateHint: 'Game length depends on the number of rounds and the pace.',
     },
     notLeaderBadge: 'Not leader',
     atLeastOneLeader: 'You need at least 1 leader to start',
@@ -374,15 +383,15 @@ export const en: Dictionary = {
       sections: [
         {
           title: 'A word from the creator',
-          content: `We're glad to introduce the official site of the Onskoné? board game! Sylvain, my brother, came up with the idea for this game in 2024. After helping him with the designs and showing the prototype to many friends and at the Cannes festival, we got loads of positive feedback. So we decided to dive into building this website to make this great idea known to everyone. We hope you'll enjoy playing Onskoné? Don't hesitate to share your feedback, we'll read it with pleasure!`,
+          content: `We're glad to introduce the official app of the Onskoné? board game! Sylvain, my brother, came up with the idea for this game in 2024. After helping him with the designs and showing the prototype to many friends and at the Cannes festival, we got loads of positive feedback. So we decided to dive into building this app to make this great idea known to everyone. We hope you'll enjoy playing Onskoné? Don't hesitate to share your feedback, we'll read it with pleasure!`,
         },
         {
           title: 'Thanks',
           content: `A HUGE thanks to everyone who supported me and pushed me to make this project happen:`,
           list: [
-            "My friend Philippe, the GOAT, who kept supporting me through the site and helped me on the whole technical side.",
+            "My friend Philippe, the GOAT, who kept supporting me through the app and helped me on the whole technical side.",
             "My sister Mimi, who kept cheering me on throughout the development",
-            "My brother Sylvain, for fully trusting me to build the website for his game",
+            "My brother Sylvain, for fully trusting me to build the app for his game",
             "Brinda and Sathya, who gave me ambition right from the start of the project",
             "Thanks to Sujee, creator of the Gigglz app, the GOAT of games: go install his app!!",
             "And finally all my friends and cousins who tested the game with me and gave great feedback!",
@@ -395,16 +404,16 @@ export const en: Dictionary = {
       seoDescription: 'Legal notice for the Onskoné game: publisher, hosting, intellectual property and liability.',
       sections: [
         {
-          title: 'Site developer',
-          content: `<strong>Site owner:</strong> Simeon Deivassagayame<br /><strong>Game creator:</strong> Sylvain Deivassagayame<br /><strong>Contact:</strong> onskonelejeu@gmail.com`,
+          title: 'App developer',
+          content: `<strong>App owner:</strong> Simeon Deivassagayame<br /><strong>Game creator:</strong> Sylvain Deivassagayame<br /><strong>Contact:</strong> onskonelejeu@gmail.com`,
         },
         {
           title: 'Hosting',
-          content: `This site is hosted by standard web hosting services. Information about the host can be obtained upon request.`,
+          content: `The app's servers are hosted by standard web hosting services. Information about the host can be obtained upon request.`,
         },
         {
           title: 'Intellectual property',
-          content: `All content (text, images, graphics, logo, icons, etc.) on the Onskone site is protected by intellectual property laws and belongs to the publisher or is used with permission.`,
+          content: `All content (text, images, graphics, logo, icons, etc.) in the Onskoné app is protected by intellectual property laws and belongs to the publisher or is used with permission.`,
           extra: `The detail of rights and prohibitions is set out in the <a href="/cgu" class="text-primary underline">Terms of Use</a>.`,
         },
         {
@@ -414,7 +423,7 @@ export const en: Dictionary = {
         },
         {
           title: 'Limitation of liability',
-          content: `Onskone cannot be held responsible for direct or indirect damages to user equipment when accessing the site. The user agrees to access the site using recent, virus-free equipment and an up-to-date browser.`,
+          content: `Onskone cannot be held responsible for direct or indirect damages to user equipment when using the app. The user agrees to use the app on a recent, up-to-date and virus-free device.`,
         },
       ],
     },
@@ -512,6 +521,7 @@ export const en: Dictionary = {
           list: [
             'Premium themes and questions',
             'The golden name',
+            'No ads in the Application',
             'Premium content added later, with no commitment as to its amount or schedule',
           ],
           extra: `The price is displayed in the Application before any payment, in the user's currency. Payment, billing and any refunds are handled exclusively by Apple (App Store) or Google (Google Play), under their own terms. The purchase can be restored at any time with the "Restore purchases" button, on any device signed in to the same account. It cannot be transferred between platforms: a purchase on the App Store does not unlock Premium on Android, and vice versa.`,
@@ -589,9 +599,7 @@ export const en: Dictionary = {
   },
 
   funFacts: [
-    "At the casino you can win 4000 times your bet but you can only lose 1 time your bet, so bet it all next time ;)",
     "It's statistically safer to bet on a Kylian Mbappé goal than on a goal by the referee.",
-    "Whoever falls asleep with itchy butt cheeks wakes up with stinky fingers",
     "Onskoné has created 10 couples. Amazing! (and destroyed 35)",
     "The round's pillar who ends with 0 correct answers has a 50% chance of being bad and a 50% chance of being drunk.",
     "Your husband or wife didn't guess a single one of your answers the whole game? That's valid grounds for a breakup (Article 711 of the Civil Code)",
@@ -637,12 +645,10 @@ export const en: Dictionary = {
     // « for life » explicite : App Review a pris le Premium pour un abonnement (3.1.2).
     subtitle: 'One-time payment · one purchase, unlocked for life',
     perkQuestions: '+50 extra questions',
-    perkThemes: 'All premium themes',
-    perkFuture: 'All future content included',
+    perkThemes: 'All premium themes, current and upcoming',
+    perkAds: 'No ads, no more interruptions',
     perkName: 'Your name in shiny gold',
     perkNameSample: 'You',
-    perkAdsTitle: 'ZERO ADS',
-    perkAdsDesc: 'Never a single interruption again.',
     unlock: 'Unlock Premium',
     restore: 'Restore purchases',
     kebab: "It's cheaper than a cheeseburger…",
@@ -661,7 +667,7 @@ export const en: Dictionary = {
     welcomeTitle: 'Welcome to Premium!',
     welcomeRestoredTitle: 'Premium restored!',
     // « and zero ads » retiré tant qu'il n'y a pas de pub (cf. PremiumModal).
-    welcomeDesc: 'Thank you SO MUCH for your support <3\nYou now have access to every premium theme (and those to come) and your golden name!',
+    welcomeDesc: 'Thank you SO MUCH for your support <3\nYou now have access to every premium theme (and those to come), your golden name, and no ads!',
     welcomeCta: "Let's go!",
     activeToast: 'You\'re Premium! Thanks for your support <3',
     homeButton: 'Unlock\nPremium',

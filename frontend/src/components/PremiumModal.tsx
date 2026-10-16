@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-// LuBellOff : à réimporter avec le bloc ZÉRO PUB (commenté plus bas).
-import { LuX, LuCrown, LuMessagesSquare, LuLayers, LuInfinity } from 'react-icons/lu';
+import { LuX, LuCrown, LuMessagesSquare, LuLayers, LuBellOff } from 'react-icons/lu';
 import StoreBadge from './StoreBadge';
 import Avatar from './Avatar';
 import { useLocale } from '../i18n';
@@ -343,34 +342,15 @@ const PremiumModal = ({ isOpen, onClose, lockOnOpen = false, previewName: previe
             </div>
           </div>
 
-          {/* ZÉRO PUB : désactivé tant que l'app n'affiche aucune pub (promettre
-              un avantage inexistant = rejet App Review). À décommenter (+ l'import
-              LuBellOff et la mention dans welcomeDesc) quand AdMob sera branché.
-              Mis en avant mais CLAIR. Le noir est réservé à l'aperçu
-              pseudo (le doré a besoin d'un fond sombre) et au CTA, qui doit rester
-              le pavé le plus lourd de la feuille.
-          <div className="flex items-center gap-3 rounded-xl border-2 border-black bg-white/75 px-3.5 py-2.5">
-            <span className="shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-black border-2 border-black">
-              <LuBellOff size={18} strokeWidth={2.75} className="text-premium-300" />
-            </span>
-            <div className="flex flex-col leading-tight">
-              <span className="font-display font-extrabold text-base text-black tracking-tight">
-                {t.premium.perkAdsTitle}
-              </span>
-              <span className="font-sans text-[11px] text-black/60">{t.premium.perkAdsDesc}</span>
-            </div>
-          </div>
-          */}
-
           <ul className="flex flex-col gap-2 m-0 p-0 list-none">
+            <Perk icon={<LuBellOff size={16} strokeWidth={2.5} className="text-premium-300" />}>
+              {t.premium.perkAds}
+            </Perk>
             <Perk icon={<LuMessagesSquare size={16} strokeWidth={2.5} className="text-premium-300" />}>
               {t.premium.perkQuestions}
             </Perk>
             <Perk icon={<LuLayers size={16} strokeWidth={2.5} className="text-premium-300" />}>
               {t.premium.perkThemes}
-            </Perk>
-            <Perk icon={<LuInfinity size={16} strokeWidth={2.5} className="text-premium-300" />}>
-              {t.premium.perkFuture}
             </Perk>
           </ul>
         </div>

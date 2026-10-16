@@ -11,8 +11,11 @@ import { ToastProvider } from './components/Toast';
 import { LocaleProvider } from './i18n';
 import { extractLobbyCode } from './constants/game';
 import { initPremium } from './utils/premium';
+import { initAds } from './utils/ads';
 import { installGlobalErrorLogging } from './utils/clientLog';
+import { BootSplashHold } from './utils/bootSplash';
 import UpdateRequiredModal from './components/UpdateRequiredModal';
+import AdConsentIntroModal from './components/AdConsentIntroModal';
 import AppDownloadBanner from './components/AppDownloadBanner';
 import { AppErrorBoundary } from './components/AppErrorBoundary';
 
@@ -108,10 +111,11 @@ const DeepLinkHandler = () => {
 const App = () => {
   const soundsInitialized = useRef(false);
 
-  // Retire le splash AndroidX des que l'app React est montee (no-op sur web).
+  // Retire le splash AndroidX une fois la pub d'ouverture tranchee : tout de suite
+  // si aucune n'est prevue, sinon apres sa fermeture (plafonne, cf. ads.ts). No-op sur web.
   useEffect(() => {
     if (Capacitor.isNativePlatform()) {
-      SplashScreen.hide();
+      initAds().finally(() => SplashScreen.hide());
     }
   }, []);
 
@@ -149,8 +153,10 @@ const App = () => {
       <Router>
         <AppShell>
           <UpdateRequiredModal />
+          <AdConsentIntroModal />
           <DeepLinkHandler />
-          <Suspense fallback={<div />}>
+          {/* Page lazy au démarrage : l'écran de chargement reste affiché en attendant. */}
+          <Suspense fallback={<BootSplashHold />}>
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/join/:lobbyCode" element={<JoinRedirect />} />

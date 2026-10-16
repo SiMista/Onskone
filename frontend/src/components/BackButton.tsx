@@ -32,7 +32,7 @@ const BackButton = ({
       type="button"
       onClick={onClick}
       aria-label={ariaLabel ?? displayLabel}
-      className={`self-start inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border-[1.5px] border-transparent text-white/75 font-display font-bold text-[11px] uppercase tracking-[0.12em] cursor-pointer transition-all duration-200 ease-out hover:-translate-x-0.5 active:translate-x-0 active:translate-y-0.5 ${hoverClasses} ${className}`}
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border-[1.5px] border-transparent text-white/75 font-display font-bold text-[11px] uppercase tracking-[0.12em] cursor-pointer transition-all duration-200 ease-out hover:-translate-x-0.5 active:translate-x-0 active:translate-y-0.5 ${hoverClasses} ${className}`}
     >
       <BsFillCaretLeftFill size={9} className="opacity-80" />
       <span>{displayLabel}</span>

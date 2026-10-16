@@ -3,6 +3,7 @@ import { LuCheck, LuTimer } from 'react-icons/lu';
 import type { GameSpeed, IPlayer } from '@onskone/shared';
 import BottomSheet from '../BottomSheet';
 import GameSpeedSlider from '../GameSpeedSlider';
+import Checkbox from '../Checkbox';
 import Avatar from '../Avatar';
 import PremiumName from '../PremiumName';
 import ScrollFade from '../ScrollFade';
@@ -14,6 +15,8 @@ interface GameOptionsSheetProps {
   onClose: () => void;
   isHost: boolean;
   hostName: string;
+  guessMyAnswerMode: boolean;
+  onGuessMyAnswerModeChange: (next: boolean) => void;
   gameSpeed: GameSpeed;
   onGameSpeedChange: (next: GameSpeed) => void;
   players: IPlayer[];
@@ -28,7 +31,8 @@ interface GameOptionsSheetProps {
 }
 
 /**
- * Bottom sheet "Options de jeu" : rythme (Rapide / Normal) et piliers. Les
+ * Bottom sheet "Options de jeu" : mode "Devine ma réponse", rythme (Rapide / Normal)
+ * et piliers. Les
  * piliers sont une liste à décocher (exclusion) : tout le monde est pilier par
  * défaut, y compris les joueurs qui arrivent, et le nombre de manches en découle.
  * On ne peut pas décocher le dernier pilier possible (il faut au moins 1 manche).
@@ -40,6 +44,8 @@ const GameOptionsSheet = ({
   onClose,
   isHost,
   hostName,
+  guessMyAnswerMode,
+  onGuessMyAnswerModeChange,
   gameSpeed,
   onGameSpeedChange,
   players,
@@ -73,19 +79,38 @@ const GameOptionsSheet = ({
         {/* Durée estimée : résultat de la durée des manches ET du nombre de piliers (= manches),
             donc en récap global en tête du sheet plutôt qu'accolée au slider. Info, pas un
             contrôle : jamais grisée. Fond discret plutôt qu'un trait de plus. */}
-        <div className="flex items-center justify-between gap-3 px-3 py-2 rounded-xl bg-black/[0.04]">
-          <span className="inline-flex items-center gap-1.5 font-display text-xs font-bold uppercase tracking-tight text-black/60">
-            <LuTimer size={14} strokeWidth={2.5} aria-hidden className="shrink-0" />
-            {t.lobby.options.estimateLabel}
-          </span>
-          <span className="font-display text-sm font-bold tabular-nums text-black" aria-live="polite">
-            {t.lobby.gameSpeed.estimate(estimatedMinutes)}
-          </span>
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center justify-between gap-3 px-3 py-2 rounded-xl bg-black/[0.04]">
+            <span className="inline-flex items-center gap-1.5 font-display text-xs font-bold uppercase tracking-tight text-black/60">
+              <LuTimer size={14} strokeWidth={2.5} aria-hidden className="shrink-0" />
+              {t.lobby.options.estimateLabel}
+            </span>
+            <span className="font-display text-sm font-bold tabular-nums text-black" aria-live="polite">
+              {t.lobby.gameSpeed.estimate(estimatedMinutes)}
+            </span>
+          </div>
+          <p className="m-0 px-3 font-sans text-[11px] text-gray-600 leading-snug">
+            {t.lobby.options.estimateHint}
+          </p>
         </div>
 
         {!isHost && (
           <HostOnlyHint text={t.lobby.options.hostOnly(hostName)} shakeKey={hintShake} className="px-1 text-gray-600" />
         )}
+
+        {/* Mode "Devine ma réponse" (décoché = Classique) : en tête, c'est l'option qui
+            change le plus la partie. Case désactivée côté non-hôte (pointer-events
+            coupés) : le tap tombe sur le wrapper, qui secoue le rappel. */}
+        <div className="px-1" onClick={isHost ? undefined : triggerHintShake}>
+          <Checkbox
+            checked={guessMyAnswerMode}
+            onChange={onGuessMyAnswerModeChange}
+            disabled={!isHost}
+            label={t.lobby.guessMyAnswer.label}
+            description={t.lobby.guessMyAnswer.description}
+            boxSide="right"
+          />
+        </div>
 
         {/* Durée des manches (vitesse de jeu) : slider à crans. */}
         <GameSpeedSlider

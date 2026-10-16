@@ -11,9 +11,11 @@ const config: CapacitorConfig = {
     SplashScreen: {
       // Splash AndroidX (icone sur fond, defini dans le theme). Le plugin garde le
       // splash a l'ecran jusqu'a SplashScreen.hide() (appele quand l'app est prete) ;
-      // launchAutoHide + launchShowDuration servent de filet de securite.
+      // launchAutoHide + launchShowDuration servent de filet de securite. Le splash
+      // est tenu le temps de la pub d'ouverture (3,5 s max, cf. utils/ads.ts) : le
+      // filet doit rester au-dessus.
       launchAutoHide: true,
-      launchShowDuration: 3000,
+      launchShowDuration: 4000,
       backgroundColor: '#4aaad9',
     },
   },
