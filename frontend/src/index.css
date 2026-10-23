@@ -359,10 +359,14 @@ img {
 
 body {
   @apply m-0 font-sans relative;
+  /* Fond : « ? » en filigrane (tile SVG, ~38 petits « ? » à 8-14 % de blanc) sur le halo de l'écran
+     de chargement (même dégradé que index.html, contraste légèrement renforcé) : aucune rupture entre le splash et l'app. */
   background:
-    url('./assets/images/interrogation_bg_transparent.png') repeat ,
-    linear-gradient(to bottom, rgba(31,93,144,0.93), rgba(24,187,237,0.93));
-  background-size: 280px 340px, auto;
+    url('./assets/images/bg-question-marks.svg') 0 0 / 440px 560px repeat,
+    radial-gradient(circle at 50% 56%,
+      color-mix(in oklab, var(--color-brand-200) 88%, white) 0%,
+      var(--color-brand-500) 35%,
+      color-mix(in oklab, var(--color-brand-700) 88%, black) 100%);
   background-attachment: fixed;
 }
 
