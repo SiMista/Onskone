@@ -37,7 +37,7 @@ const LobbyPlayersGrid = ({
     <div className="flex flex-col gap-2">
       <div className="flex items-baseline gap-2">
         <p className="m-0 font-display font-bold text-sm text-gray-800">{t.lobby.inTheRoom}</p>
-        <p className="m-0 text-xs text-gray-400">{t.lobby.connectedCount(activePlayersCount)}</p>
+        <p className="m-0 text-xs text-gray-600">{t.lobby.connectedCount(activePlayersCount)}</p>
       </div>
       {/* auto-rows-fr + tuiles h-full : toutes les tuiles font la même taille, quel que
           soit leur contenu (cadre premium, case vide). Sur mobile le contenu dépasse le

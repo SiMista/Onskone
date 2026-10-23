@@ -69,7 +69,7 @@ const ToggleTile = ({ on, onToggle, label, stateLabel, IconOn, IconOff, disabled
       <span className="font-display text-sm font-bold uppercase tracking-tight text-black leading-none mt-1">
         {label}
       </span>
-      <span className={`text-display-xs leading-none ${on ? 'text-black/60' : 'text-black/40'}`}>
+      <span className={`text-display-xs leading-none ${on ? 'text-black/60' : 'text-black/55'}`}>
         {stateLabel}
       </span>
     </button>

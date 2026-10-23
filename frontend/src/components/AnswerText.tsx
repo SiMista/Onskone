@@ -9,7 +9,7 @@ const AnswerText = ({
   text,
   className = '',
   normalClass = 'text-gray-900',
-  noResponseClass = 'text-gray-400 italic',
+  noResponseClass = 'text-gray-500 italic',
   as = 'p',
 }: {
   /** Texte brut (peut contenir le préfixe __NO_RESPONSE__) */

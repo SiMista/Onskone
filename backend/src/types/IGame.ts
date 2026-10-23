@@ -13,6 +13,9 @@ export interface IGame extends Omit<IGameData, 'rounds' | 'currentRound'> {
   currentRound: IRound | null;
   /** Pool de cartes filtré selon les decks sélectionnés (figé au démarrage) */
   cards: GameCard[];
+  /** Questions déjà choisies par un pilier (plus proposées) */
+  usedQuestions: Set<string>;
+  getSelectableCards(): GameCard[];
   nextRound(): void;
   start(): void;
   end(): void;

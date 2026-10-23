@@ -237,7 +237,7 @@ const AnswerPhase = ({
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <p className="font-display text-2xl md:text-3xl font-bold text-gray-800 leading-none">
-                  {answersCount}<span className="text-gray-400">/{expectedAnswers}</span>
+                  {answersCount}<span className="text-gray-500">/{expectedAnswers}</span>
                 </p>
               </div>
             </div>

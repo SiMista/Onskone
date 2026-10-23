@@ -96,6 +96,9 @@ importers:
       '@capacitor-community/admob':
         specifier: 8.1.0
         version: 8.1.0
+      '@capacitor-community/keep-awake':
+        specifier: 8.0.1
+        version: 8.0.1(@capacitor/core@8.4.0)
       '@capacitor/android':
         specifier: ^8.4.0
         version: 8.4.0(@capacitor/core@8.4.0)
@@ -398,6 +401,11 @@ packages:
   '@capacitor-community/admob@8.1.0':
     resolution: {integrity: sha512-DMIxg80CwQsJd0EcvsCNtpWizFcesZUFCFNVxRctv4HLSH8RPGfaS3pxRuq+tXw6jy0za5o3g5l/+z201nHNsw==}
     engines: {node: '>=22.0.0'}
+
+  '@capacitor-community/keep-awake@8.0.1':
+    resolution: {integrity: sha512-wTI5A6FWl5gWoMduzJ5euuJ1P73SO+rea0jV6vNdmz5TLbwIDhufelFe/GowNvU9gog6kDYbFhJ2pOp9ua1f3w==}
+    peerDependencies:
+      '@capacitor/core': '>=8.0.0'
 
   '@capacitor/android@8.4.0':
     resolution: {integrity: sha512-K1ZPkQzvRzPEALz9nBdLx5p5nAPzp5fsTYWk7LRiKZeH/NXqjDvqfTv7lrLgrziQNoDeaL6ijg64oBREzXiV+g==}
@@ -4969,6 +4977,10 @@ snapshots:
     dependencies:
       '@capacitor/core': 8.4.0
       '@rdlabo/capacitor-docgen': 0.4.1
+
+  '@capacitor-community/keep-awake@8.0.1(@capacitor/core@8.4.0)':
+    dependencies:
+      '@capacitor/core': 8.4.0
 
   '@capacitor/android@8.4.0(@capacitor/core@8.4.0)':
     dependencies:

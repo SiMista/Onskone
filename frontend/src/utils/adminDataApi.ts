@@ -1,4 +1,4 @@
-import type { AdminLobbySummary, AdminDeckSummary } from '@onskone/shared';
+import type { AdminLobbySummary, AdminDeckSummary, AdminDeckStats } from '@onskone/shared';
 import { adminFetch } from './ticketsApi';
 
 export async function fetchAdminLobbies(): Promise<AdminLobbySummary[]> {
@@ -13,6 +13,13 @@ export async function fetchAdminDecks(): Promise<AdminDeckSummary[]> {
   if (!res.ok) throw new Error('Erreur de chargement des decks.');
   const data = await res.json();
   return data.decks as AdminDeckSummary[];
+}
+
+export async function fetchAdminDeckStats(): Promise<AdminDeckStats> {
+  const res = await adminFetch('/admin/deck-stats');
+  if (!res.ok) throw new Error('Erreur de chargement des stats.');
+  const data = await res.json();
+  return data.stats as AdminDeckStats;
 }
 
 // --- Maj forcée (version gate) ---

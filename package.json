@@ -12,6 +12,7 @@
     "build:shared": "pnpm --filter @onskone/shared build",
     "build:frontend": "pnpm --filter frontend build",
     "build:backend": "pnpm --filter backend build",
+    "bump": "node scripts/bump-version.mjs",
     "clean": "pnpm run --recursive clean && rm -rf node_modules",
     "install:all": "pnpm install",
     "typecheck": "pnpm run --recursive typecheck",

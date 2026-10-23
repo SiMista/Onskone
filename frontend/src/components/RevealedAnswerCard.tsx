@@ -54,9 +54,13 @@ const RevealedAnswerCard = ({
   waitingFor,
 }: RevealedAnswerCardProps) => {
   const { t } = useLocale();
+  // Header par défaut : max-w pour que le texte passe à la ligne AVANT d'atteindre la tête
+  // du stickman (qui dépasse au-dessus de la carte, à ~78 % de sa largeur). Retour à la ligne
+  // naturel (`text-pretty`, pas de `text-balance` : il coupait la phrase pile en deux même
+  // quand elle tenait), qui n'évite que les orphelins d'un mot.
   const resolvedHeader =
     header === undefined ? (
-      <p className="text-gray-900 text-sm tablet:text-xl font-semibold text-center phone-landscape:text-xl shrink-0 -translate-x-4 tablet:-translate-x-8 phone-landscape:-translate-x-1">
+      <p className="text-gray-900 text-sm tablet:text-lg font-semibold text-center text-pretty max-w-[48%] tablet:max-w-[52%] phone-landscape:max-w-none phone-landscape:text-xl shrink-0 -translate-x-4 tablet:-translate-x-8 phone-landscape:-translate-x-1">
         {t.phases.reveal.showYourScreen}
       </p>
     ) : (
@@ -80,7 +84,7 @@ const RevealedAnswerCard = ({
           {showBubble && (
             <div className="shrink-0 self-center w-16 tablet:w-24 phone-landscape:w-14 h-0 relative z-20">
               <div className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 flex flex-col items-center gap-1 tablet:gap-1.5 phone-landscape:gap-0.5">
-                <p className="text-gray-700 text-[10px] tablet:text-xs font-semibold uppercase tracking-wide whitespace-nowrap">
+                <p className="text-gray-700 text-[11px] tablet:text-xs font-semibold uppercase tracking-wide whitespace-nowrap">
                   {t.phases.reveal.writtenBy}
                 </p>
                 <RevealAvatar
@@ -107,6 +111,12 @@ const RevealedAnswerCard = ({
                 aria-hidden
                 draggable={false}
                 className="absolute left-[78%] -translate-x-1/2 -top-16 tablet:-top-20 phone-landscape:-top-16 h-32 tablet:h-40 phone-landscape:h-32 w-auto select-none pointer-events-none animate-float z-0"
+                // Le bas du bonhomme fond dans la carte (la carte cache la moitié basse de l'image,
+                // donc le dégradé démarre au-dessus de son bord pour être visible). Position inchangée.
+                style={{
+                  maskImage: 'linear-gradient(to bottom, #000 35%, transparent 62%)',
+                  WebkitMaskImage: 'linear-gradient(to bottom, #000 35%, transparent 62%)',
+                }}
               />
             )}
             <div className="relative z-10 phone-landscape:h-full">

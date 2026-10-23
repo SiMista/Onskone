@@ -60,6 +60,22 @@ db.exec(`
     value TEXT NOT NULL,
     updated_at INTEGER NOT NULL
   );
+
+  -- Stats de popularité des decks : à chaque tirage, +1 "shown" (proposé au pilier) ;
+  -- à chaque choix, +1 "picked". Taux de choix = picked / shown (un thème tiré plus
+  -- souvent n'est pas pour autant plus apprécié). kind = 'theme' | 'question' ;
+  -- theme/question sont stockés tels quels (par locale), question = '' pour un thème.
+  CREATE TABLE IF NOT EXISTS deck_stats (
+    kind TEXT NOT NULL CHECK(kind IN ('theme', 'question')),
+    locale TEXT NOT NULL,
+    category TEXT NOT NULL,
+    theme TEXT NOT NULL,
+    question TEXT NOT NULL DEFAULT '',
+    shown INTEGER NOT NULL DEFAULT 0,
+    picked INTEGER NOT NULL DEFAULT 0,
+    updated_at INTEGER NOT NULL,
+    PRIMARY KEY (kind, locale, theme, question)
+  );
 `);
 
 export default db;

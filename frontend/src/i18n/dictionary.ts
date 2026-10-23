@@ -85,9 +85,6 @@ export interface Dictionary {
 
   /** Écran d'intro avant le formulaire de consentement pub de Google (cf. ads.ts). */
   ads: {
-    introTitle: string;
-    introBody: string;
-    introContinue: string;
   };
 
   /** Écran de secours quand le rendu plante (cf. AppErrorBoundary). */
@@ -485,6 +482,8 @@ export interface Dictionary {
       rotateForLandscape: string;
       showYourScreen: string;
       writtenBy: string;
+      authorCorrect: string;
+      authorWrong: string;
     };
     similarity: {
       promptPrefix: string;
@@ -505,9 +504,8 @@ export interface Dictionary {
 
   shareCard: {
     eyebrow: string;
-    top3Label: string;
+    rankingLabel: string;
     ctaLine1: string;
-    ctaLine2: string;
   };
 
   apiErrors: {

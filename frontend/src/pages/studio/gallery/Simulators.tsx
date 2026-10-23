@@ -27,11 +27,30 @@ const SHARE_PRESETS = [
   { label: '100% - Onskoné !', pct: 100, title: 'Onskoné !', message: 'Score parfait. Vous êtes la même personne en plusieurs exemplaires.', color: '#b46cff', emoji: '🥳' },
 ];
 
-const SHARE_TOP_PLAYERS = [
-  { name: 'Simi', score: 8, avatarId: 3 },
-  { name: 'Léa', score: 6, avatarId: 9 },
-  { name: 'Thomas', score: 5, avatarId: 16 },
+const SHARE_NAMES = [
+  'Simi', 'Léa', 'Thomas', 'Camille', 'Maxime', 'Inès', 'Julien', 'Sarah', 'Nolwenn-Marguerite', 'Hugo',
+  'Manon', 'Théo', 'Chloé', 'Antoine', 'Zoé', 'Lucas', 'Emma', 'Yanis', 'Jade', 'Ali',
+  'Rose', 'Paul', 'Lina', 'Noé', 'Eva',
 ];
+
+// Presets de nombre de joueurs : couvrent chaque mode d'adaptation de la grille
+// (1 colonne, 2 colonnes, cartes compactes, case "+N" de débordement).
+const SHARE_COUNT_PRESETS = [
+  { label: '3 joueurs', hint: '1 col · grandes cartes', count: 3 },
+  { label: '6 joueurs', hint: '1 col · dernier cas', count: 6 },
+  { label: '7 joueurs', hint: '2 col · bascule (orpheline centrée)', count: 7 },
+  { label: '8 joueurs', hint: '2 col · pair', count: 8 },
+  { label: '11 joueurs', hint: '2 col · orpheline centrée', count: 11 },
+  { label: '12 joueurs', hint: '2 col · cartes moyennes', count: 12 },
+  { label: '20 joueurs', hint: '2 col · max salon', count: 20 },
+]
+
+const makeSharePlayers = (count: number) =>
+  Array.from({ length: count }, (_, i) => ({
+    name: SHARE_NAMES[i % SHARE_NAMES.length],
+    score: Math.max(0, 12 - Math.floor(i / 2)),
+    avatarId: (i * 7 + 3) % 20,
+  }));
 
 // Simulateurs d'état : toasts, modales et aperçus pilotés par du state local.
 export const Simulators = () => {
@@ -66,6 +85,7 @@ export const Simulators = () => {
     setAnimatedIds(new Set());
   };
   const [shareIdx, setShareIdx] = useState(3);
+  const [shareCountIdx, setShareCountIdx] = useState(0);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [shareLoading, setShareLoading] = useState(false);
   const shareBlobRef = useRef<Blob | null>(null);
@@ -81,7 +101,7 @@ export const Simulators = () => {
       verdictMessage: preset.message,
       color: preset.color,
       tierEmoji: preset.emoji,
-      topPlayers: SHARE_TOP_PLAYERS,
+      topPlayers: makeSharePlayers(SHARE_COUNT_PRESETS[shareCountIdx].count),
       texts: fr.shareCard,
     })
       .then(blob => {
@@ -101,7 +121,7 @@ export const Simulators = () => {
     return () => {
       cancelled = true;
     };
-  }, [shareIdx]);
+  }, [shareIdx, shareCountIdx]);
 
   const handleSharePreview = async () => {
     if (!shareBlobRef.current) return;
@@ -384,8 +404,28 @@ export const Simulators = () => {
                 );
               })}
             </div>
+            <span className="font-mono text-[10px] uppercase tracking-wider text-white/35 mt-2">Nombre de joueurs</span>
+            <div className="grid grid-cols-2 gap-2">
+              {SHARE_COUNT_PRESETS.map((p, i) => {
+                const active = i === shareCountIdx;
+                return (
+                  <button
+                    key={p.label}
+                    type="button"
+                    onClick={() => setShareCountIdx(i)}
+                    className={`text-left px-3 py-2 rounded-lg border transition-colors font-mono text-xs flex flex-col gap-0.5 ${active
+                      ? 'border-amber-300/60 bg-amber-300/10 text-amber-100'
+                      : 'border-white/[0.08] bg-[#1a1d28] text-white/70 hover:bg-[#23273a]'
+                      }`}
+                  >
+                    <span>{p.label}</span>
+                    <span className="text-[10px] text-white/40">{p.hint}</span>
+                  </button>
+                );
+              })}
+            </div>
             <p className="font-mono text-[10px] text-white/30 mt-2 leading-relaxed">
-              Format 1080×1920 (story 9:16) · fond bleu site + pattern points d'interrogation + panneau liquid glass + top 3 en cartes blanches style site.
+              Format 1080×1920 (story 9:16) · fond bleu site + pattern points d'interrogation + panneau liquid glass + jauge demi-cercle (piste par palier) + scores en grille adaptative (1 col ≤ 6 joueurs, 2 col au-delà, « +N » en filet de sécurité).
             </p>
           </div>
         </div>

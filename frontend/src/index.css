@@ -824,6 +824,102 @@ button {
   animation: reveal-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
+/* Overlay "qui a écrit ?" (REVEAL, mode local) : fond noir quasi opaque, fondu
+   entrée 150 ms / sortie 400 ms. La durée totale (inline) vient de
+   GAME_CONSTANTS.REVEAL_AUTHOR_OVERLAY_MS = 3500 ; les % ci-dessous sont calés dessus. */
+@keyframes reveal-author-backdrop {
+  0%      { opacity: 0; }
+  4.29%   { opacity: 1; }
+  88.57%  { opacity: 1; }
+  100%    { opacity: 0; }
+}
+.animate-reveal-author-backdrop {
+  animation: reveal-author-backdrop 3.5s linear both;
+}
+
+/* Fond : noir quasi opaque + lueur douce de la couleur du verdict (--burst-color : vert si
+   bien deviné, rouge sinon) au centre. */
+.reveal-author-bg {
+  background:
+    radial-gradient(ellipse at center, color-mix(in srgb, var(--burst-color) 38%, transparent) 0%, transparent 62%),
+    rgb(0 0 0 / 0.92);
+}
+/* Halo autour de la tête : disque flouté, volontairement non animé (comme la lueur du fond,
+   les deux n'apparaissent qu'avec le fade de l'overlay). */
+.reveal-author-halo {
+  background: radial-gradient(circle, var(--burst-color) 0%, transparent 68%);
+  opacity: 0.75;
+  filter: blur(18px);
+}
+
+@keyframes reveal-author-avatar {
+  0%   { opacity: 0; transform: scale(0.3); }
+  60%  { opacity: 1; transform: scale(1.1); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.animate-reveal-author-avatar {
+  animation: reveal-author-avatar 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) 0.15s both;
+}
+
+/* Mauvaise réponse : petite secousse horizontale de la tête, juste après son apparition. */
+@keyframes reveal-author-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-10px) rotate(-2deg); }
+  40% { transform: translateX(9px) rotate(2deg); }
+  60% { transform: translateX(-6px); }
+  80% { transform: translateX(4px); }
+}
+.animate-reveal-author-shake {
+  animation: reveal-author-shake 0.4s ease-out 0.45s both;
+}
+
+/* Confettis : un "paf" tiré des bords du bas de l'écran. Détente brutale vers --x1/--y1 en ~0,35 s (courbe très
+   explosive, freinée net), puis chute lente vers --x2/--y2 en tournoyant (encore en l'air
+   quand l'overlay se ferme, c'est voulu). --rot : rotation totale ; le flip (scaleY) de
+   l'enfant imite le papier qui vrille. */
+@keyframes reveal-author-confetti {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0deg) scale(0.2);
+    animation-timing-function: cubic-bezier(0.05, 0.85, 0.2, 1);
+  }
+  14% {
+    opacity: 1;
+    transform: translate(var(--x1), var(--y1)) rotate(calc(var(--rot) * 0.3)) scale(1);
+    animation-timing-function: cubic-bezier(0.3, 0.05, 0.8, 0.85);
+  }
+  92% { opacity: 1; }
+  100% {
+    opacity: 0;
+    transform: translate(var(--x2), var(--y2)) rotate(var(--rot)) scale(1);
+  }
+}
+.animate-reveal-author-confetti {
+  animation: reveal-author-confetti 2.5s linear both;
+}
+@keyframes reveal-author-flip {
+  from { transform: scaleY(1); }
+  50%  { transform: scaleY(0.15); }
+  to   { transform: scaleY(1); }
+}
+.animate-reveal-author-flip {
+  animation: reveal-author-flip 0.45s ease-in-out 6;
+}
+
+@keyframes reveal-author-name {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-reveal-author-name {
+  animation: reveal-author-name 0.3s ease-out 0.3s both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-reveal-author-avatar,
+  .animate-reveal-author-name,
+  .animate-reveal-author-shake,
+  .reveal-author-confetti { display: none; }
+}
+
 /* Clignotement jaune de la carte à révéler */
 @keyframes card-soft-pulse {
   0%, 100% { background-color: var(--color-warning-50); box-shadow: 4px 4px 0 #000; }
@@ -1288,3 +1384,24 @@ button {
   .premium-glow { animation: none; }
   .text-gold-shine { animation: none; background-position: 105% 0, 0 0; }
 }
+
+/* Barre de durée du bandeau "télécharge l'app" : se vide en linéaire (durée inline). */
+@keyframes app-banner-drain {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
+}
+.animate-app-banner-drain {
+  animation: app-banner-drain 7s linear forwards;
+}
+
+/* Apparition / sortie en fondu du bandeau "télécharge l'app" (durée de sortie = APP_BANNER_EXIT_MS). */
+@keyframes app-banner-in {
+  from { opacity: 0; transform: translateY(-14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes app-banner-out {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-14px); }
+}
+.animate-app-banner-in  { animation: app-banner-in 0.45s ease-out both; }
+.animate-app-banner-out { animation: app-banner-out 0.45s ease-in forwards; pointer-events: none; }

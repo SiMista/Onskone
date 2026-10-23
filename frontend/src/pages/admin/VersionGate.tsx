@@ -69,6 +69,8 @@ export const VersionGatePanel = ({
 
   const blocking = state?.blocking ?? false;
   const deployed = state?.deployedVersion || '?';
+  // Déjà forcé à CETTE version : « Forcer » ne ferait rien, seul « Désactiver » reste actif.
+  const alreadyForced = blocking && state?.minVersion === state?.deployedVersion;
   const appStore = state?.appStore ?? null;
   const appStoreReleasedAt = appStore ? Date.parse(appStore.releasedAt) : NaN;
   // Même délai que les iPhone (versionPolicy.ts) : avant, ils ne sont pas invités à mettre à jour.
@@ -129,13 +131,13 @@ export const VersionGatePanel = ({
             <button
               type="button"
               onClick={() => setConfirm('force')}
-              disabled={busy !== null || !state?.deployedVersion}
+              disabled={busy !== null || !state?.deployedVersion || alreadyForced}
               className="inline-flex items-center gap-2 px-3.5 py-2 rounded-md border font-mono text-[12px] tracking-wider transition-colors
                 border-amber-400/40 bg-amber-500/10 text-amber-100 hover:bg-amber-500/20 hover:border-amber-400/60
                 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
             >
               <Icon icon={busy === 'force' ? 'mdi:loading' : 'mdi:shield-alert-outline'} className={`w-4 h-4 ${busy === 'force' ? 'animate-spin' : ''}`} />
-              Forcer la maj vers {deployed}
+              {alreadyForced ? `Maj forcée vers ${deployed}` : `Forcer la maj vers ${deployed}`}
             </button>
 
             <button

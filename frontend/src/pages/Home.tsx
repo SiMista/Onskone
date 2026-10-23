@@ -46,7 +46,7 @@ import ReclaimPlayerModal from '../components/ReclaimPlayerModal';
 const RECLAIM_POLL_MS = 5_000;
 const RECLAIM_MAX_POLLS = 12;
 import { usePremium } from '../utils/premium';
-import { useAppBannerVisible, topControlsClass } from '../utils/appBanner';
+import { TOP_CONTROLS_CLASS } from '../utils/appBanner';
 
 // Contenu de la modale "Mes succès". Extrait en composant enfant pour que sa
 // lecture localStorage (getStats) + le map sur ACHIEVEMENTS ne s'exécutent que
@@ -449,10 +449,8 @@ const Home = () => {
   useSocketEvent('playerNameValid', handlePlayerNameValid);
   useSocketEvent('error', handleError);
 
-  // Le bandeau app (overlay, web) occupe le haut : on descend juste les boutons
-  // du haut (Premium / langue) sous lui, sans pousser le reste du contenu.
-  const bannerVisible = useAppBannerVisible();
-  const topControls = topControlsClass(bannerVisible);
+  // Le bandeau app (overlay en bas, web) ne déplace rien : boutons du haut fixes.
+  const topControls = TOP_CONTROLS_CLASS;
 
   return (
     <div className="relative h-full flex flex-col overflow-hidden">

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import socket from '../utils/socket';
 import { useSocketEvent } from './useSocketEvent';
-import type { RevealResult, GameMode } from '@onskone/shared';
+import { GAME_CONSTANTS, type RevealResult, type GameMode } from '@onskone/shared';
 
 /** Une entrée est considérée "ciblée Personne" : aucun joueur deviné (skip silencieux). */
 export const isPersonneGuess = (r: RevealResult) =>
@@ -95,15 +95,20 @@ export function useRevealCursor(
   // Le bouton "Suivant" apparaît 1s après la révélation
   const [showNextButton, setShowNextButton] = useState(false);
 
-  // Afficher le bouton Suivant 1s après passage en phase revealed
+  // Afficher le bouton Suivant après passage en phase revealed. En mode local, chaque
+  // révélation déclenche l'overlay "qui a écrit ?" sur le tel du joueur concerné : on
+  // attend sa fin (et l'arbitrage d'une éventuelle similarité, qui retarde l'overlay).
+  // Remote : pas d'overlay, 1s comme avant.
+  const similarityPending = !!similarityModal;
   useEffect(() => {
-    if (pilierPhase !== 'revealed') {
+    if (pilierPhase !== 'revealed' || similarityPending) {
       setShowNextButton(false);
       return;
     }
-    const t = setTimeout(() => setShowNextButton(true), 1000);
+    const delay = gameMode === 'remote' ? 1000 : GAME_CONSTANTS.REVEAL_AUTHOR_OVERLAY_MS;
+    const t = setTimeout(() => setShowNextButton(true), delay);
     return () => clearTimeout(t);
-  }, [pilierPhase, pilierCursor]);
+  }, [pilierPhase, pilierCursor, similarityPending, gameMode]);
 
   // Listeners socket du reveal. Chaque handler voit toujours l'état courant sans
   // réabonner : useSocketEvent rafraîchit le handler via une ref à chaque render.

@@ -188,7 +188,7 @@ export function useStudioBot({ game, currentPlayer, players, lobbyCode }: UseStu
   useEffect(() => {
     if (!isStudioFrame) return;
 
-    const onQuestions = (data: { questions: GameCard[] }) => {
+    const onQuestions = (data: { questions: GameCard[]; usedQuestions?: string[] }) => {
       if (!enabledRef.current) return;
       const g = gameRef.current;
       const cp = currentPlayerRef.current;
@@ -200,8 +200,8 @@ export function useStudioBot({ game, currentPlayer, players, lobbyCode }: UseStu
       const key = `${round.roundNumber}:selectQuestion`;
       if (firedRef.current.has(key)) return;
       if (!data.questions?.length) return;
-      const first = data.questions[0];
-      const q = first.questions[0];
+      const used = new Set(data.usedQuestions ?? []);
+      const q = data.questions.flatMap(c => c.questions).find(x => !used.has(x));
       if (!q) return;
       firedRef.current.add(key);
       socket.emit('selectQuestion', { lobbyCode: code, selectedQuestion: q });

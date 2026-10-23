@@ -9,6 +9,8 @@ import { getSettings } from './settings';
 const SOUNDS = {
   questionSelection: '/sounds/question_selection_phase.mp3',
   answering: '/sounds/answering_phase.mp3',
+  revealWin: '/sounds/reveal_win.mp3',
+  revealLose: '/sounds/reveal_lose.mp3',
 } as const;
 
 type SoundName = keyof typeof SOUNDS;
@@ -85,3 +87,6 @@ export const playSound = (soundName: SoundName, volume: number = 0.5): void => {
   soundManager.play(soundName, volume);
 };
 
+/** Jingle de verdict au reveal : succès si le pilier a bien deviné, trompette d'échec sinon. */
+export const playRevealVerdict = (correct: boolean, volume: number = 0.5): void =>
+  playSound(correct ? 'revealWin' : 'revealLose', volume);

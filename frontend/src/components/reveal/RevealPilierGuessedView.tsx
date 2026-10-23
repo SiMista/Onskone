@@ -1,7 +1,8 @@
-import Button from '../Button';
+import { useEffect, useRef, useState } from 'react';
+import RevealPrimaryButton from './RevealPrimaryButton';
 import RevealedAnswerCard from '../RevealedAnswerCard';
 import SimilarityPopover from '../SimilarityPopover';
-import { useLocale } from '../../i18n';
+import RevealAuthorOverlay from './RevealAuthorOverlay';
 import type { RevealCursorState } from '../../hooks/useRevealCursor';
 
 /**
@@ -18,22 +19,30 @@ const RevealPilierGuessedView = ({
   reveal: RevealCursorState;
   isGameOver: boolean;
 }) => {
-  const { t } = useLocale();
   const {
     currentResult,
     pilierCursor,
     pilierPhase,
     showSimilarity,
-    showEndButton,
     displayablePosition,
     displayableTotal,
     correctedIndices,
     similarityModal,
-    handleReveal: onReveal,
     handleConfirmSimilarity: onConfirmSimilarity,
     handleDismissSimilarity: onDismissSimilarity,
-    handleNextRound: onNextRound,
   } = reveal;
+
+  // Overlay "qui a écrit ?" : même traitement que les autres joueurs, déclenché une
+  // fois par carte, et seulement après l'arbitrage d'une éventuelle similarité.
+  const [authorOverlay, setAuthorOverlay] = useState(false);
+  const overlayShownForRef = useRef<number | null>(null);
+  const overlayReady = pilierPhase === 'revealed' && !showSimilarity;
+  useEffect(() => {
+    if (overlayReady && overlayShownForRef.current !== pilierCursor) {
+      overlayShownForRef.current = pilierCursor;
+      setAuthorOverlay(true);
+    }
+  }, [overlayReady, pilierCursor]);
 
   // Cette vue n'est rendue par RevealPhase que lorsque currentResult est défini.
   if (!currentResult) return null;
@@ -42,6 +51,16 @@ const RevealPilierGuessedView = ({
   const pilierCardCorrect = currentResult.correct || correctedIndices.has(pilierCursor);
 
   return (
+    <>
+    {authorOverlay && currentResult.playerName && (
+      <RevealAuthorOverlay
+        name={currentResult.playerName}
+        avatarId={currentResult.playerAvatarId ?? 0}
+        premium={!!currentResult.playerIsPremium}
+        correct={pilierCardCorrect}
+        onDone={() => setAuthorOverlay(false)}
+      />
+    )}
     <RevealedAnswerCard
       result={currentResult}
       revealed={pilierCardRevealed}
@@ -66,31 +85,12 @@ const RevealPilierGuessedView = ({
           </p>
 
           <div className="mt-3 md:mt-4 flex items-center justify-center">
-            {showEndButton ? (
-              <div className="animate-fade-in">
-                <Button
-                  text={isGameOver ? t.phases.reveal.seeFinalResults : t.phases.reveal.nextRound}
-                  variant="success"
-                  size="lg"
-                  rotateEffect
-                  disabled={showSimilarity}
-                  onClick={onNextRound}
-                />
-              </div>
-            ) : (
-              <Button
-                text={t.phases.reveal.reveal}
-                variant="primary"
-                size="lg"
-                rotateEffect
-                disabled={showSimilarity || pilierPhase === 'revealed'}
-                onClick={onReveal}
-              />
-            )}
+            <RevealPrimaryButton reveal={reveal} isGameOver={isGameOver} />
           </div>
         </>
       }
     />
+    </>
   );
 };
 

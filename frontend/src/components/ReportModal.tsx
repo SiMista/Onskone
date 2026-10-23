@@ -43,7 +43,7 @@ const ReportModal = ({ isOpen, onClose, extraContext, defaultType }: ReportModal
     setIsSubmitting(true);
     try {
       const contextParts = [
-        `Version: ${__APP_VERSION__}`,
+        `Version: ${__APP_VERSION__} (${__APP_BUILD__})`,
         `Appareil: ${await buildDeviceSummary()}`,
         `URL: ${location.pathname}${location.search}`,
       ];
@@ -116,7 +116,7 @@ const ReportModal = ({ isOpen, onClose, extraContext, defaultType }: ReportModal
               cols={1}
               className="block w-full min-w-0 rounded-lg border-2 border-gray-300 px-3 py-2 text-sm text-black placeholder:text-gray-400 focus:outline-none focus:border-black disabled:bg-gray-100 resize-y"
             />
-            <div className="text-[10px] text-gray-500 mt-1 text-right">{message.length} / 2000</div>
+            <div className="text-xs text-gray-600 mt-1 text-right">{message.length} / 2000</div>
           </div>
         )}
 

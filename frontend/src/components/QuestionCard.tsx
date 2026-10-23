@@ -23,7 +23,7 @@ const QuestionCard = ({ question, card, variant = 'full', subtitle, subtitleBadg
         {card && (
           <span
             className={`font-display absolute left-2 ${
-              isCompact ? 'top-1.5 md:top-2 text-[9px] md:text-[10px] px-1.5 py-0.5' : 'top-2 md:top-2.5 text-[10px] md:text-xs px-2 py-0.5'
+              isCompact ? 'top-1.5 md:top-2 text-[10px] md:text-[11px] px-1.5 py-0.5' : 'top-2 md:top-2.5 text-[10px] md:text-xs px-2 py-0.5'
             } font-bold uppercase tracking-[0.08em] rounded-full text-white shadow-[0_2px_0_0_rgba(0,0,0,0.15)]`}
             style={{ backgroundColor: color }}
           >
@@ -63,7 +63,7 @@ const QuestionCard = ({ question, card, variant = 'full', subtitle, subtitleBadg
               />
               {/* Sujet : eyebrow tracké */}
               <p
-                className="text-center !mt-0 uppercase font-semibold tracking-[0.14em] leading-tight text-[10px] md:text-[11px] !mb-2.5 md:!mb-3"
+                className="text-center !mt-0 uppercase font-semibold tracking-[0.14em] leading-tight text-[11px] md:text-xs !mb-2.5 md:!mb-3"
                 style={{ color }}
               >
                 {card.subject}

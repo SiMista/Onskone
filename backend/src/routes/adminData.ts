@@ -13,6 +13,7 @@ import { Lobby } from '../models/Lobby.js';
 import { getMinSupportedVersion, setMinSupportedVersion, broadcastVersionPolicy } from '../utils/versionGate.js';
 import { getDeployedVersion } from '../utils/appVersion.js';
 import { getAppStoreVersion } from '../utils/appStoreVersion.js';
+import { getDeckStats } from '../utils/deckStats.js';
 
 const router: Router = Router();
 
@@ -121,6 +122,12 @@ router.get('/admin/decks', requireAdmin, (req: Request, res: Response) => {
   const locale: Locale = isLocale(raw) ? raw : DEFAULT_LOCALE;
   const decks = loadDecks(locale);
   res.json({ decks, locale, availableLocales: SUPPORTED_LOCALES });
+});
+
+router.get('/admin/deck-stats', requireAdmin, (req: Request, res: Response) => {
+  const raw = req.query.locale ?? req.query.lang;
+  const locale: Locale = isLocale(raw) ? raw : DEFAULT_LOCALE;
+  res.json({ stats: getDeckStats(locale), locale, availableLocales: SUPPORTED_LOCALES });
 });
 
 // --- Maj forcée (version gate) ---

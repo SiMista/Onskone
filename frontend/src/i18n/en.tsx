@@ -30,9 +30,6 @@ export const en: Dictionary = {
   },
 
   ads: {
-    introTitle: 'A word about ads',
-    introBody: 'Onskoné is free thanks to a few ads, shown only between games, never during one. Google will ask whether they can be personalized. You can say no: the game stays the same.',
-    introContinue: 'Continue',
   },
 
   app: {
@@ -130,7 +127,7 @@ export const en: Dictionary = {
       you: '(you)',
       hostOnly: (host) => `Only ${host} can change the options.`,
       estimateLabel: 'Estimated length',
-      estimateHint: 'Game length depends on the number of rounds and the pace.',
+      estimateHint: 'Depends on the number of rounds and their length.',
     },
     notLeaderBadge: 'Not leader',
     atLeastOneLeader: 'You need at least 1 leader to start',
@@ -674,7 +671,7 @@ export const en: Dictionary = {
   },
 
   appBanner: {
-    message: 'Onskoné, the app',
+    message: 'Available as an app!',
     tagline: 'even better on your phone',
     cta: 'Get',
     close: 'Close',
@@ -682,8 +679,8 @@ export const en: Dictionary = {
 
   phases: {
     questionSelection: {
-      leaderIs: 'The leader this round is',
-      waitingSelection: 'Waiting for their question pick…',
+      leaderIs: 'Leader this round',
+      waitingSelection: 'Picking a question…',
       didYouKnow: 'Did you know?',
       swipeHintMobile: 'swipe to change card',
       swipeOverlayTitle: 'Swipe',
@@ -757,8 +754,10 @@ export const en: Dictionary = {
       noAttribution: (leader) => `${leader} didn't give you any answer`,
       remoteAttributedTo: 'Answer attributed to',
       rotateForLandscape: 'Turn your phone for a wider view',
-      showYourScreen: 'Show your screen to everyone!',
+      showYourScreen: 'Show your screen!',
       writtenBy: 'Written by',
+      authorCorrect: 'Nailed it!',
+      authorWrong: 'Missed!',
     },
     similarity: {
       promptPrefix: '',
@@ -779,9 +778,8 @@ export const en: Dictionary = {
 
   shareCard: {
     eyebrow: 'YOU KNOW EACH OTHER',
-    top3Label: 'TOP 3',
-    ctaLine1: 'Download the',
-    ctaLine2: 'Onskoné app!',
+    rankingLabel: 'SCORES',
+    ctaLine1: 'Download the app',
   },
 
   apiErrors: {

@@ -23,9 +23,6 @@ interface Answer {
   ownerId?: string; // fourni uniquement pour les NO_RESPONSE (auto-attribution)
 }
 
-// Valeur sentinelle du dropdown pour retirer l'attribution (Dropdown ne renvoie qu'une string).
-const CLEAR = '__CLEAR__';
-
 const GuessingPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, question, card, initialGuesses, playerCount, roundNumber, gameMode, gameSpeed }: {
   lobbyCode: string;
   isLeader: boolean;
@@ -285,7 +282,7 @@ const GuessingPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, question,
           cardClassName={myAssignedAnswer ? 'animate-card-receive' : ''}
           waitingFor={myAssignedAnswer ? undefined : { name: leader?.name ?? t.phases.guessing.leaderFallback, avatarId: leader?.avatarId ?? 0 }}
           footer={
-            <p className="landscape:hidden flex items-center gap-1.5 text-xs text-gray-500/80 mt-1">
+            <p className="landscape:hidden flex items-center gap-1.5 text-xs text-gray-600 mt-1">
               <Icon icon="mdi:phone-rotate-landscape" width={14} height={14} aria-hidden />
               {t.phases.guessing.rotateForLandscape}
             </p>
@@ -300,32 +297,35 @@ const GuessingPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, question,
   // ============================================================
   return (
     <div className="flex flex-col h-full min-h-0 p-2 md:p-4 overflow-hidden max-w-xl mx-auto w-full">
-      <div className="shrink-0 mb-2 md:mb-3">
-        <QuestionCard question={question} card={card} variant="compact" />
-        {isLeader ? (
-          <h2 className="text-sm md:text-lg font-bold text-gray-800 mt-2 md:mt-3 mb-1 md:mb-2 text-center">
-            {t.phases.guessing.instruction}
-          </h2>
-        ) : (
-          <div className="flex items-center justify-center flex-wrap gap-x-2 gap-y-1 my-4 text-sm leading-none">
-            <Avatar avatarId={leader?.avatarId ?? 0} name={leader?.name ?? ''} size="sm" />
-            {leader?.name && <PremiumName name={leader.name} premium={!!leader.isPremium} className="font-semibold text-gray-900" />}
-            <span className="italic text-gray-500">{t.phases.guessing.assignWaiting}</span>
-          </div>
-        )}
-        <HourglassTimer
-          duration={timerDuration}
-          onExpire={handleTimerExpire}
-          phase={RoundPhase.GUESSING}
-          lobbyCode={lobbyCode}
-          hidden
-        />
-      </div>
-
       {/* Liste verticale unique : une carte par réponse, chacune avec son dropdown joueurs.
           Fade blanc en bas tant qu'il reste des réponses sous le pli. */}
       <div className="relative flex-1 min-h-0 flex flex-col overflow-hidden">
-        <div ref={answersListRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain no-scrollbar space-y-2 md:space-y-3 pr-1">
+        <div ref={answersListRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain no-scrollbar pr-1">
+          {/* Question + consigne DANS la zone scrollable : la molette/le doigt défile
+              partout, pas seulement au-dessus de la liste de réponses. */}
+          <div className="mb-2 md:mb-3">
+            <QuestionCard question={question} card={card} variant="compact" />
+            {isLeader ? (
+              <h2 className="text-sm md:text-lg font-bold text-gray-800 mt-2 md:mt-3 mb-1 md:mb-2 text-center">
+                {t.phases.guessing.instruction}
+              </h2>
+            ) : (
+              <div className="flex items-center justify-center flex-wrap gap-x-2 gap-y-1 my-4 text-sm leading-none">
+                <Avatar avatarId={leader?.avatarId ?? 0} name={leader?.name ?? ''} size="sm" />
+                {leader?.name && <PremiumName name={leader.name} premium={!!leader.isPremium} className="font-semibold text-gray-900" />}
+                <span className="italic text-gray-500">{t.phases.guessing.assignWaiting}</span>
+              </div>
+            )}
+            <HourglassTimer
+              duration={timerDuration}
+              onExpire={handleTimerExpire}
+              phase={RoundPhase.GUESSING}
+              lobbyCode={lobbyCode}
+              hidden
+            />
+          </div>
+
+          <div className="space-y-2 md:space-y-3">
           {answers.map((answer) => {
             const noResponse = isNoResponse(answer.text);
             const currentId = guesses[answer.id] ?? '';
@@ -340,13 +340,6 @@ const GuessingPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, question,
                 label: <PremiumName name={p.name} premium={!!p.isPremium} />,
                 prefix: <Avatar avatarId={p.avatarId} name={p.name} size="sm" />,
               }));
-            if (currentId) {
-              options.push({
-                value: CLEAR,
-                label: t.phases.guessing.removeOption,
-                prefix: <Icon icon="lucide:x" width={20} height={20} className="text-danger-500" aria-hidden />,
-              });
-            }
   
             return (
               <div
@@ -365,7 +358,9 @@ const GuessingPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, question,
                 />
                 <Dropdown
                   value={currentId}
-                  onChange={(v) => handleAssign(answer.id, v === CLEAR ? null : v)}
+                  onChange={(v) => handleAssign(answer.id, v)}
+                  onClear={() => handleAssign(answer.id, null)}
+                  clearLabel={t.phases.guessing.removeOption}
                   options={options}
                   placeholder={t.phases.guessing.choosePlayer}
                   disabled={!isLeader || noResponse}
@@ -374,6 +369,7 @@ const GuessingPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, question,
               </div>
             );
           })}
+          </div>
         </div>
         <ScrollFade scrollRef={answersListRef} />
       </div>

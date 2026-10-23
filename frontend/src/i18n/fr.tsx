@@ -30,9 +30,6 @@ export const fr: Dictionary = {
   },
 
   ads: {
-    introTitle: 'Un mot sur les pubs',
-    introBody: "Onskoné est gratuit grâce à quelques pubs, affichées uniquement entre les parties, jamais pendant. Google va te demander si elles peuvent être personnalisées. Tu peux refuser : le jeu ne change pas.",
-    introContinue: 'Continuer',
   },
 
   app: {
@@ -130,7 +127,7 @@ export const fr: Dictionary = {
       you: '(toi)',
       hostOnly: (host) => `Seul ${host} peut modifier les options.`,
       estimateLabel: 'Durée estimée',
-      estimateHint: 'Le temps de jeu dépend du nombre de manches et du rythme.',
+      estimateHint: 'Dépend du nombre de manches et de leur durée.',
     },
     notLeaderBadge: 'Pas pilier',
     atLeastOneLeader: 'Il faut au moins 1 pilier pour lancer',
@@ -673,16 +670,16 @@ export const fr: Dictionary = {
   },
 
   appBanner: {
-    message: 'Onskoné, l\'appli',
-    tagline: 'encore mieux sur ton tel !',
+    message: 'Dispo en appli !',
+    tagline: 'Encore mieux sur ton tel',
     cta: 'Obtenir',
     close: 'Fermer',
   },
 
   phases: {
     questionSelection: {
-      leaderIs: 'Le pilier de cette manche est',
-      waitingSelection: 'En attente de sa sélection de question…',
+      leaderIs: 'Pilier de la manche',
+      waitingSelection: 'Choisit sa question…',
       didYouKnow: 'Le saviez-vous ?',
       swipeHintMobile: 'swipe pour changer de carte',
       swipeOverlayTitle: 'Swipe',
@@ -743,7 +740,7 @@ export const fr: Dictionary = {
     reveal: {
       gameOver: 'Partie terminée !',
       readyNext: 'Prêt pour la suite ?',
-      waitingPrefix: 'En attente que',
+      waitingPrefix: '',
       waitingLeaderNext: 'lance la manche suivante…',
       waitingLeaderFinal: 'révèle les résultats finaux…',
       seeFinalResults: 'Voir les résultats finaux',
@@ -756,8 +753,10 @@ export const fr: Dictionary = {
       noAttribution: (leader) => `${leader} ne t'a attribué aucune réponse`,
       remoteAttributedTo: 'Réponse attribuée à',
       rotateForLandscape: 'Tourne ton téléphone pour un affichage plus large',
-      showYourScreen: 'Montre ton écran à tout le monde !',
+      showYourScreen: 'Montre ton écran !',
       writtenBy: 'Écrit par',
+      authorCorrect: 'Bien deviné !',
+      authorWrong: 'Raté !',
     },
     similarity: {
       promptPrefix: '',
@@ -778,9 +777,8 @@ export const fr: Dictionary = {
 
   shareCard: {
     eyebrow: 'VOUS VOUS CONNAISSEZ À',
-    top3Label: 'TOP 3',
+    rankingLabel: 'LES SCORES',
     ctaLine1: "Télécharge l'appli",
-    ctaLine2: 'Onskoné !',
   },
 
   apiErrors: {

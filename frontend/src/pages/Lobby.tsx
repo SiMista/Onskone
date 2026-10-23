@@ -20,7 +20,7 @@ import LobbySettingsPanel from '../components/lobby/LobbySettingsPanel';
 import GameOptionsSheet from '../components/lobby/GameOptionsSheet';
 import { IPlayer, ERROR_CODES } from '@onskone/shared';
 import type { ErrorCode } from '@onskone/shared';
-import { useSocketEvent, useLeavePrompt, useReconnectOnVisible } from '../hooks';
+import { useSocketEvent, useLeavePrompt, useReconnectOnVisible, useKeepAwake } from '../hooks';
 import { useLobbyIdentity } from '../hooks/useLobbyIdentity';
 import { useShareInvite } from '../hooks/useShareInvite';
 import { useLobbyState } from '../hooks/useLobbyState';
@@ -40,6 +40,8 @@ const Lobby = () => {
     const navigate = useNavigate();
     const showToast = useToast();
     const { t } = useLocale();
+    // Écran allumé pendant l'attente du salon (on regarde qui rejoint, sans toucher le tel).
+    useKeepAwake();
 
     // Redirige vers l'accueil si aucun code de lobby
     useEffect(() => {

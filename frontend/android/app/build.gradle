@@ -1,12 +1,12 @@
 apply plugin: 'com.android.application'
 
 // Version alignee sur scripts/app-version.mjs (et vite.config.ts), SANS tags git :
-// MAJOR.MINOR = fichier VERSION a la racine du repo ; PATCH = commits depuis le
-// dernier commit ayant modifie VERSION ; versionCode = nb total de commits.
+// versionName = fichier VERSION a la racine du repo (X.Y.Z, bumpe a la main a chaque
+// release store) ; versionCode = nb total de commits.
 // rootDir = frontend/android -> la racine du repo est deux niveaux au-dessus.
 def repoRoot = new File(rootDir, '../..')
 // Garde-fou (meme regle que scripts/app-version.mjs) : sur un clone superficiel,
-// PATCH et versionCode seraient faux EN SILENCE -> on prefere faire echouer le build.
+// versionCode serait faux EN SILENCE -> on prefere faire echouer le build.
 def assertFullHistory = { ->
     def shallow = ''
     try {
@@ -17,19 +17,12 @@ def assertFullHistory = { ->
     }
 }
 def gitVersionName = { ->
-    assertFullHistory()
-    try {
-        // VERSION tel que commite dans HEAD (pas le working tree), comme app-version.mjs.
-        def mv = 'git show HEAD:VERSION'.execute(null, repoRoot).text.trim().replaceFirst('^v', '')
-        def parts = mv.split('\\.')
-        def bump = 'git log -1 --format=%H -- VERSION'.execute(null, repoRoot).text.trim()
-        def count = (bump ? "git rev-list ${bump}..HEAD --count" : 'git rev-list --count HEAD')
-            .execute(null, repoRoot).text.trim()
-        return "${parts[0]}.${parts[1]}.${count}"
-    } catch (ignored) {
-        def count = 'git rev-list --count HEAD'.execute(null, repoRoot).text.trim()
-        return "0.0.${count}"
+    // VERSION tel que commite dans HEAD (pas le working tree), comme app-version.mjs.
+    def mv = 'git show HEAD:VERSION'.execute(null, repoRoot).text.trim().replaceFirst('^v', '')
+    if (!(mv ==~ /\d+\.\d+\.\d+/)) {
+        throw new GradleException("VERSION doit etre au format X.Y.Z (ex: 1.3.24), trouve \"${mv}\".")
     }
+    return mv
 }
 def gitVersionCode = { ->
     assertFullHistory()

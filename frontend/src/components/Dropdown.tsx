@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from '@iconify/react';
+import ScrollFade from './ScrollFade';
+
+// Valeur du token `cream-player` (fond de la liste) : ScrollFade a besoin d'un hex
+// opaque pour que le fondu se fonde dans le papier au lieu de laisser une bande blanche.
+const LISTBOX_FADE_COLOR = '#f9f4ee';
 
 export interface DropdownOption<V extends string = string> {
   value: V;
@@ -23,6 +28,13 @@ interface DropdownProps<V extends string = string> {
    * sans empiler deux surfaces papier.
    */
   variant?: 'paper' | 'flat';
+  /**
+   * Si fourni, l'option déjà sélectionnée affiche une croix (au lieu du check) et
+   * un clic dessus appelle `onClear` plutôt que `onChange` : on retire la sélection.
+   */
+  onClear?: () => void;
+  /** Libellé accessible / infobulle de la croix quand `onClear` est fourni. */
+  clearLabel?: string;
 }
 
 interface TriggerRect {
@@ -40,11 +52,14 @@ function Dropdown<V extends string = string>({
   disabled = false,
   className = '',
   variant = 'paper',
+  onClear,
+  clearLabel,
 }: DropdownProps<V>) {
   const [open, setOpen] = useState(false);
   const [rect, setRect] = useState<TriggerRect | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
-  const listboxRef = useRef<HTMLUListElement | null>(null);
+  const listboxRef = useRef<HTMLDivElement | null>(null);
+  const scrollRef = useRef<HTMLUListElement | null>(null);
 
   const selected = options.find(o => o.value === value);
 
@@ -98,22 +113,26 @@ function Dropdown<V extends string = string>({
   const availableHeight = rect ? Math.max(160, window.innerHeight - rect.bottom - 80) : 280;
 
   const listbox = open && !isEmpty && rect && createPortal(
-    <ul
+    <div
       ref={listboxRef}
-      role="listbox"
-      className="list-none p-1 rounded-[12px] card-paper bg-cream-player stack-shadow overflow-y-auto overscroll-contain animate-menu-open"
+      className="rounded-[12px] card-paper bg-cream-player stack-shadow overflow-hidden animate-menu-open"
       style={{
         position: 'fixed',
         top: rect.bottom + 6,
         left: rect.left,
         width: rect.width,
-        maxHeight: availableHeight,
-        margin: 0,
         zIndex: 100,
       }}
     >
+    <ul
+      ref={scrollRef}
+      role="listbox"
+      className="list-none p-1 overflow-y-auto overscroll-contain"
+      style={{ maxHeight: availableHeight, margin: 0 }}
+    >
       {options.map((option, idx) => {
         const isSelected = option.value === value;
+        const clearsOnClick = isSelected && !!onClear;
         return (
           <li key={option.value} role="option" aria-selected={isSelected}>
             {idx > 0 && (
@@ -122,9 +141,12 @@ function Dropdown<V extends string = string>({
             <button
               type="button"
               onClick={() => {
-                onChange(option.value);
+                if (clearsOnClick) onClear();
+                else onChange(option.value);
                 setOpen(false);
               }}
+              title={clearsOnClick ? clearLabel : undefined}
+              aria-label={clearsOnClick ? clearLabel : undefined}
               className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-[8px] transition-colors duration-150 cursor-pointer ${isSelected ? 'bg-warning-350' : 'hover:bg-black/5'}`}
             >
               {option.prefix}
@@ -132,13 +154,17 @@ function Dropdown<V extends string = string>({
                 {option.label}
               </span>
               {isSelected && (
-                <Icon icon="lucide:check" width={18} height={18} className="text-black shrink-0" aria-hidden />
+                clearsOnClick
+                  ? <Icon icon="lucide:x" width={20} height={20} className="text-danger-500 shrink-0" aria-hidden />
+                  : <Icon icon="lucide:check" width={18} height={18} className="text-black shrink-0" aria-hidden />
               )}
             </button>
           </li>
         );
       })}
-    </ul>,
+    </ul>
+    <ScrollFade scrollRef={scrollRef} color={LISTBOX_FADE_COLOR} className="rounded-b-[9px]" />
+    </div>,
     document.body
   );
 

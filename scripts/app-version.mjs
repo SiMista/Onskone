@@ -1,38 +1,28 @@
-// Source de verite UNIQUE de la version de l'app (web + Android).
+// Source de verite UNIQUE de la version de l'app (web + Android + iOS).
 //
-// Schema actuel (sans tags git, robuste aux reecritures d'historique) :
-//   MAJOR.MINOR  = contenu du fichier `VERSION` a la racine du repo (ex: "1.3"), tel
-//                  que COMMITE dans HEAD (pas le working tree : la version est une
-//                  fonction du commit ; un bump non commite donnait sinon "1.4.32",
-//                  puis "1.4.0" une fois commite -> regression).
-//                  -> source EXPLICITE et versionnee. Pour bumper : edite VERSION
-//                     et commit. C'est le SEUL geste a faire pour passer 1.3 -> 1.4.
-//   PATCH        = nb de commits depuis le dernier commit qui a modifie `VERSION`.
-//                  -> se remet a 0 automatiquement au bump, et ne depend d'aucun tag
-//                     (donc insensible aux amend/force-push/tags orphelins).
-//   versionName  = MAJOR.MINOR.PATCH        (ex: "1.3.0", "1.3.7")
-//   versionCode  = nb total de commits       (entier toujours croissant, exige par le Play Store)
+// Deux numeros distincts, qui ne se melangent JAMAIS (comme dans les stores) :
+//   versionName = contenu du fichier `VERSION` a la racine du repo (ex: "1.3.24"),
+//                 tel que COMMITE dans HEAD (pas le working tree : la version est une
+//                 fonction du commit). C'est le numero de RELEASE STORE : on le bumpe
+//                 A LA MAIN (edite VERSION + commit) a chaque nouvelle version publiee.
+//                 Seul numero compare par la maj forcee (plancher, shared/src/version.ts).
+//   versionCode = nb total de commits (entier toujours croissant, exige par les stores ;
+//                 sert aussi de "build" affiche dans A propos / tickets, jamais compare).
 //
-// Pourquoi pas les tags : `git describe` ne voit que les tags ATTEIGNABLES depuis
-// HEAD ; un force-push qui orphelinne le commit tague faisait regresser la version
-// en silence (1.3 -> 1.2.x). Le fichier VERSION supprime cette dependance.
-//
-// EXIGE l'historique git COMPLET : PATCH et versionCode COMPTENT des commits. Sur un
-// clone superficiel (--depth), le commit frontiere passe pour un commit racine qui
-// "ajoute" VERSION -> PATCH = 0 et versionCode = 1, EN SILENCE (c'est ce qui figeait
-// le VPS en "1.3.0"). Dans ce cas (ou sans git / sans VERSION commite), on LEVE une
-// erreur claire plutot que d'annoncer une fausse version. Remede : `git fetch --unshallow`.
+// EXIGE l'historique git COMPLET pour le versionCode : sur un clone superficiel
+// (--depth) le compte de commits serait faux EN SILENCE. On LEVE alors une erreur
+// claire plutot que d'annoncer un faux build. Remede : `git fetch --unshallow`.
 //
 // Pour CHANGER le schema : touche uniquement buildVersionName() / buildVersionCode().
-// Les briques git en dessous sont neutres et reutilisables.
 //
-// Consomme par : frontend/vite.config.ts (import { getVersionName }) et
-// scripts/release-aab.* (injecte -PappVersionName / -PappVersionCode dans gradlew).
-// build.gradle garde un fallback git autonome (meme logique) pour Android Studio.
+// Consomme par : frontend/vite.config.ts (getVersionName / getVersionCode),
+// backend/src/utils/appVersion.ts, scripts/release-aab.*, scripts/deploy.sh, codemagic.yaml
+// (injectent -PappVersionName / -PappVersionCode, agvtool). build.gradle garde un
+// fallback git autonome (meme logique) pour Android Studio.
 //
 // CLI : `node scripts/app-version.mjs`        -> versionName
 //       `node scripts/app-version.mjs --code` -> versionCode
-//       `node scripts/app-version.mjs --json` -> {"marketingVersion","commitsSinceBump","totalCommits","versionName","versionCode"}
+//       `node scripts/app-version.mjs --json` -> {"versionName","versionCode"}
 import { execSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
@@ -54,30 +44,14 @@ const git = (cmd) => {
   }
 }
 
-// Nb de commits depuis `ref` jusqu'a HEAD. 0 si ref vide ou indisponible.
-export const getCommitsSince = (ref) => {
-  if (!ref) return 0
-  const n = parseInt(git(`rev-list ${ref}..HEAD --count`), 10)
-  return Number.isFinite(n) ? n : 0
-}
-
 // Nb total de commits sur HEAD. 0 si indisponible.
 export const getTotalCommits = () => {
   const n = parseInt(git('rev-list --count HEAD'), 10)
   return Number.isFinite(n) ? n : 0
 }
 
-// Dernier commit ayant modifie le fichier VERSION (= dernier bump). '' si introuvable
-// (fichier pas encore commite, ou clone shallow sans cet historique).
-export const getVersionBumpCommit = () => git('log -1 --format=%H -- VERSION')
-
-// "1.3" / "v1.3" -> { major: '1', minor: '3' }, lu dans HEAD. raw = '' si VERSION
-// absent de HEAD (jamais commite) ou illisible.
-export const readMarketingVersion = () => {
-  const raw = git('show HEAD:VERSION')
-  const [major = '0', minor = '0'] = raw.replace(/^v/, '').split('.')
-  return { major: major || '0', minor: minor || '0', raw }
-}
+// Contenu du fichier VERSION tel que commite dans HEAD ('' si absent de HEAD / illisible).
+export const readVersionFile = () => git('show HEAD:VERSION').replace(/^v/, '')
 
 // Garde-fou : leve si l'historique ne permet pas de compter les commits de facon fiable.
 // `--is-shallow-repository` repond "true"/"false" dans un depot, rien hors depot / sans git.
@@ -96,13 +70,14 @@ export const assertFullHistory = () => {
 // ---------------------------------------------------------------------------
 
 const buildVersionName = () => {
-  assertFullHistory()
-  const { major, minor, raw } = readMarketingVersion()
+  const raw = readVersionFile()
   if (!raw) throw new Error('[app-version] fichier VERSION absent de HEAD (jamais commite) ou vide.')
-  // PATCH = commits depuis le bump de VERSION.
-  const bump = getVersionBumpCommit()
-  if (!bump) throw new Error('[app-version] fichier VERSION jamais commite : commit-le avant de builder.')
-  return `${major}.${minor}.${getCommitsSince(bump)}`
+  // X.Y.Z strict : un VERSION a 2 segments (ancien schema) ou mal forme ferait annoncer
+  // une fausse version aux stores / a la maj forcee.
+  if (!/^\d+\.\d+\.\d+$/.test(raw)) {
+    throw new Error(`[app-version] VERSION doit etre au format X.Y.Z (ex: 1.3.24), trouve "${raw}".`)
+  }
+  return raw
 }
 
 // Le Play Store exige un entier strictement croissant : 1 minimum.
@@ -119,17 +94,10 @@ export const getVersionName = () => buildVersionName()
 export const getVersionCode = () => buildVersionCode()
 
 // Objet complet (debug / affichage / CI).
-export const getVersionInfo = () => {
-  // En premier : valide le contexte git (leve sinon) avant de lire le reste.
-  const versionName = getVersionName()
-  return {
-    marketingVersion: readMarketingVersion().raw,
-    commitsSinceBump: getCommitsSince(getVersionBumpCommit()),
-    totalCommits: getTotalCommits(),
-    versionName,
-    versionCode: getVersionCode(),
-  }
-}
+export const getVersionInfo = () => ({
+  versionName: getVersionName(),
+  versionCode: getVersionCode(),
+})
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   // Erreur -> message lisible sur stderr + code 1 (les `$(...)` sous `set -e` s'arretent).

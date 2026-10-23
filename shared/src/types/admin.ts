@@ -39,3 +39,26 @@ export interface AdminDeckSummary {
   questionCount: number;
   subjects: AdminDeckSubject[];
 }
+
+/** Une ligne de stats de popularité (thème ou question). */
+export interface AdminDeckStatRow {
+  category: string;
+  theme: string;
+  /** Texte de la question ; absent pour une ligne de thème. */
+  question?: string;
+  /** Nombre de fois où l'élément a été proposé au pilier. */
+  shown: number;
+  /** Nombre de fois où le pilier l'a choisi. */
+  picked: number;
+  /** picked / shown, en pourcentage (0-100). */
+  pickRate: number;
+  /** Part de ce thème/cette question dans tous les choix (0-100). */
+  pickShare: number;
+}
+
+export interface AdminDeckStats {
+  totalPicks: number;
+  totalShown: number;
+  themes: AdminDeckStatRow[];
+  questions: AdminDeckStatRow[];
+}

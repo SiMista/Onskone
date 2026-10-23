@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import socket from '../utils/socket';
+import { localTimerEnd } from '../utils/timerClock';
 import { RoundPhase, type TimerStartedPayload, type TimerStatePayload } from '@onskone/shared';
 
 interface UseSyncedTimerOptions {
@@ -37,8 +38,9 @@ export function useSyncedTimer(defaultDuration: number, options: UseSyncedTimerO
         return;
       }
 
-      // Calculer le temps de fin basé sur le timestamp serveur
-      const serverEndTime = data.startedAt + data.duration * 1000;
+      // Échéance sur l'horloge LOCALE, déduite du temps restant côté serveur : la
+      // montre du client (PC mal réglé) ne doit pas décaler le compte à rebours.
+      const serverEndTime = localTimerEnd(data);
       setEndTime(serverEndTime);
       setServerDuration(data.duration);
       setIsRunning(true);
@@ -59,19 +61,25 @@ export function useSyncedTimer(defaultDuration: number, options: UseSyncedTimerO
     socket.on('timerStarted', handleTimerStarted);
     socket.on('timerState', handleTimerState);
 
-    // Demander l'état actuel du timer après un court délai (pour Edge notamment)
-    const requestTimeout = setTimeout(() => {
-      if (!isRunning && phase && lobbyCode) {
-        socket.emit('requestTimerState', { lobbyCode, phase });
-      }
-    }, 100);
+    // Rattrapage d'un `timerStarted` manqué (montage tardif, coupure socket au début
+    // de la phase, Edge) : on demande l'état après un court délai, puis on retente
+    // tant qu'aucun timer n'a jamais démarré. Une seule demande suffisait à laisser
+    // le sablier plein toute la phase si sa réponse était `null` (rate limit, socket
+    // en reconnexion). Une fois le timer reçu (puis expiré), on ne redemande plus.
+    const needsCatchUp = !isRunning && endTime === null && !!phase && !!lobbyCode;
+    const requestState = () => {
+      if (needsCatchUp) socket.emit('requestTimerState', { lobbyCode, phase });
+    };
+    const requestTimeout = setTimeout(requestState, 100);
+    const retryInterval = needsCatchUp ? setInterval(requestState, 2000) : null;
 
     return () => {
       socket.off('timerStarted', handleTimerStarted);
       socket.off('timerState', handleTimerState);
       clearTimeout(requestTimeout);
+      if (retryInterval) clearInterval(retryInterval);
     };
-  }, [phase, isRunning, lobbyCode]);
+  }, [phase, isRunning, endTime, lobbyCode]);
 
   // Mettre à jour le countdown basé sur endTime
   useEffect(() => {

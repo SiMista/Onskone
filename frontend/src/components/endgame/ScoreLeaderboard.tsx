@@ -4,7 +4,6 @@ import type { IPlayer, IRound, LeaderboardEntry } from '@onskone/shared';
 import Avatar from '../Avatar';
 import PremiumName from '../PremiumName';
 import { useLocale } from '../../i18n';
-import ScrollFade from '../ScrollFade';
 
 interface ScoreLeaderboardProps {
   leaderboard: LeaderboardEntry[];
@@ -51,7 +50,6 @@ const ScoreLeaderboard: React.FC<ScoreLeaderboardProps> = ({
   const [renderedPopoverFor, setRenderedPopoverFor] = useState<string | null>(null);
   const [popoverVisible, setPopoverVisible] = useState(false);
   const popoverRef = useRef<HTMLDivElement | null>(null);
-  const listRef = useRef<HTMLDivElement | null>(null);
 
   // Gestion mount/unmount différé pour permettre l'animation de fermeture
   useEffect(() => {
@@ -109,14 +107,11 @@ const ScoreLeaderboard: React.FC<ScoreLeaderboardProps> = ({
       <h2 className="text-base md:text-xl font-display font-bold text-gray-900 mb-2 md:mb-3 text-center uppercase tracking-wider m-0">
         {t.endGame.individualScores}
       </h2>
-      {/* La liste scrolle DANS la carte, avec le fondu blanc des modales en bas :
-          sans lui, la dernière ligne était tranchée net par le bord de la carte et
-          rien n'indiquait que le classement continuait. `pr-1` réserve la place du
-          fondu, `pb-4` évite qu'il mange la dernière ligne une fois en bas. */}
+      {/* Pas de scroll imbriqué : la liste prend sa hauteur naturelle et c'est TOUTE la page
+          de fin qui défile (un 2e scroller dans la carte piégeait la molette/le doigt). */}
       <div className="relative">
         <div
-          ref={listRef}
-          className="space-y-1.5 md:space-y-2 max-h-[38dvh] md:max-h-[44dvh] overflow-y-auto overscroll-contain pr-1 pb-4 pt-1"
+          className="space-y-1.5 md:space-y-2 pt-1"
         >
         {rows.map((entry, index) => {
           const isCurrentPlayer = entry.player.id === currentPlayer?.id;
@@ -232,7 +227,6 @@ const ScoreLeaderboard: React.FC<ScoreLeaderboardProps> = ({
           );
         })}
         </div>
-        <ScrollFade scrollRef={listRef} />
       </div>
     </div>
   );

@@ -89,7 +89,7 @@ const GameOptionsSheet = ({
               {t.lobby.gameSpeed.estimate(estimatedMinutes)}
             </span>
           </div>
-          <p className="m-0 px-3 font-sans text-[11px] text-gray-600 leading-snug">
+          <p className="m-0 px-3 font-sans text-[11px] italic text-gray-600 leading-snug">
             {t.lobby.options.estimateHint}
           </p>
         </div>

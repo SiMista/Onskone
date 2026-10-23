@@ -7,3 +7,4 @@ export { useRafProgress } from './useRafProgress';
 export { useSwipe } from './useSwipe';
 export { useModalChrome } from './useModalChrome';
 export { useAdminResource } from './useAdminResource';
+export { useKeepAwake } from './useKeepAwake';

@@ -166,18 +166,36 @@ export function useGameState(lobbyCode: string | undefined): UseGameStateResult 
     const tick = () => {
       const current = gameRef.current;
       const me = currentPlayerRef.current;
+      // App en arrière-plan : timers gelés/étranglés par l'OS, aucune réponse fiable à
+      // attendre. Le retour au premier plan refait un fetch d'état (useReconnectOnVisible).
+      if (document.visibilityState !== 'visible') return;
       if (!current || !me?.id || !socket.connected) return;
       socket.emit('syncCheck', { lobbyCode, playerId: me.id, fingerprint: gameFingerprint(current) });
       if (ackTimerRef.current) return; // une réponse est déjà attendue
+      const sentAt = Date.now();
       ackTimerRef.current = setTimeout(() => {
         ackTimerRef.current = null;
-        reportClientLog('gameSync', 'Aucune réponse au syncCheck : reconnexion forcée', { lobbyCode }, 'warn');
+        // Timer en retard de plusieurs secondes = l'app était gelée (veille, bascule d'appli),
+        // pas le serveur muet : la réponse est peut-être déjà dans la file. On ne coupe pas
+        // une connexion saine, le prochain tick refera un check avec un délai neuf.
+        const elapsed = Date.now() - sentAt;
+        if (elapsed > SYNC_ACK_TIMEOUT_MS * 2) return;
+        reportClientLog('gameSync', 'Aucune réponse au syncCheck : reconnexion forcée', { lobbyCode, elapsedMs: elapsed }, 'warn');
         forceReconnect();
       }, SYNC_ACK_TIMEOUT_MS);
     };
+    // Passage en arrière-plan : on abandonne l'attente en cours (sinon le timer expire au réveil).
+    // Retour au premier plan : check immédiat (un socket zombie est détecté sans attendre
+    // le prochain tick de 5 s ; le délai d'ack repart à neuf, donc pas de faux positif).
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') clearAckTimer();
+      else tick();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
     const interval = setInterval(tick, SYNC_CHECK_INTERVAL_MS);
     return () => {
       clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
       clearAckTimer();
     };
   }, [lobbyCode, forceReconnect, clearAckTimer]);

@@ -15,7 +15,6 @@ import { initAds } from './utils/ads';
 import { installGlobalErrorLogging } from './utils/clientLog';
 import { BootSplashHold } from './utils/bootSplash';
 import UpdateRequiredModal from './components/UpdateRequiredModal';
-import AdConsentIntroModal from './components/AdConsentIntroModal';
 import AppDownloadBanner from './components/AppDownloadBanner';
 import { AppErrorBoundary } from './components/AppErrorBoundary';
 
@@ -153,7 +152,6 @@ const App = () => {
       <Router>
         <AppShell>
           <UpdateRequiredModal />
-          <AdConsentIntroModal />
           <DeepLinkHandler />
           {/* Page lazy au démarrage : l'écran de chargement reste affiché en attendant. */}
           <Suspense fallback={<BootSplashHold />}>

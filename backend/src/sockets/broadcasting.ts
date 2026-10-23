@@ -291,9 +291,13 @@ function handleQuestionSelectionTimeout(io: IoServer, lobbyCode: string, game: G
 
     // Carte sans question (cas limite du tirage) : on repioche dans le deck de la
     // partie plutôt que de laisser la phase sans issue — la manche DOIT avancer.
+    // La carte initiale (tirée au hasard à la création de la manche) ignore les questions
+    // déjà jouées : si le pilier n'a jamais demandé ses cartes et qu'elle est entièrement
+    // jouée, on repioche aussi (le deck se recycle si plus rien n'est disponible).
     let proposedCard = currentRound.gameCard;
-    if (!proposedCard || proposedCard.questions.length === 0) {
-        const fallback = getRandomQuestions(1, currentRound.shownGameCards ?? [], game.cards)
+    const hasPlayableQuestion = proposedCard?.questions.some(q => !game.usedQuestions.has(q)) ?? false;
+    if (!proposedCard || proposedCard.questions.length === 0 || !hasPlayableQuestion) {
+        const fallback = getRandomQuestions(1, currentRound.shownGameCards ?? [], game.getSelectableCards())
             .find(card => card.questions.length > 0);
         if (!fallback) {
             logger.error('Pas de questions disponibles pour auto-sélection, manche conclue sans question', { lobbyCode });
@@ -304,9 +308,13 @@ function handleQuestionSelectionTimeout(io: IoServer, lobbyCode: string, game: G
         logger.warn('Carte proposée vide : question de secours tirée du deck', { lobbyCode });
     }
 
-    const randomQuestion = proposedCard.questions[randomInt(0, proposedCard.questions.length)];
+    // Jamais une question déjà jouée (sauf carte entièrement jouée : recyclage du deck).
+    const unused = proposedCard.questions.filter(q => !game.usedQuestions.has(q));
+    const candidates = unused.length > 0 ? unused : proposedCard.questions;
+    const randomQuestion = candidates[randomInt(0, candidates.length)];
 
     currentRound.setSelectedQuestion(randomQuestion);
+    game.usedQuestions.add(randomQuestion);
     currentRound.nextPhase();
     io.to(lobbyCode).emit('questionSelected', {
         question: randomQuestion,
@@ -592,7 +600,7 @@ export function armServerTimer(io: IoServer, lobbyCode: string, round: Round, du
         }
     }, duration * 1000);
 
-    io.to(lobbyCode).emit('timerStarted', { phase, duration, startedAt });
+    io.to(lobbyCode).emit('timerStarted', { phase, duration, startedAt, serverNow: Date.now() });
 }
 
 /**

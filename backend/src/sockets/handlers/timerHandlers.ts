@@ -30,7 +30,8 @@ export function registerTimerHandlers(socket: AppSocket, ctx: HandlerContext): v
                     socket.emit('timerStarted', {
                         phase: currentRound.phase,
                         duration: currentRound.timerDuration,
-                        startedAt: currentRound.timerStartedAt
+                        startedAt: currentRound.timerStartedAt,
+                        serverNow: Date.now(),
                     });
                     return;
                 }
@@ -96,7 +97,8 @@ export function registerTimerHandlers(socket: AppSocket, ctx: HandlerContext): v
                     socket.emit('timerState', {
                         phase: game.currentRound.phase,
                         duration: game.currentRound.timerDuration,
-                        startedAt: game.currentRound.timerStartedAt
+                        startedAt: game.currentRound.timerStartedAt,
+                        serverNow: Date.now(),
                     });
                     return;
                 }

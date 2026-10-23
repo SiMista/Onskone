@@ -304,7 +304,11 @@ export function withGuards<TData extends GuardData>(
     try {
         handler({ lobby: lobby as Lobby, game: game as Game | null, host }, data);
     } catch (error) {
-        logger.error('Erreur inattendue dans un handler socket', { error: errMessage(error) });
+        logger.error('Erreur inattendue dans un handler socket', {
+            error: errMessage(error),
+            lobbyCode: data.lobbyCode,
+            stack: error instanceof Error ? error.stack : undefined,
+        });
         reject('Une erreur inattendue est survenue', ERROR_CODES.INTERNAL);
     }
 }

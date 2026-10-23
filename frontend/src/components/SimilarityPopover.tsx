@@ -46,7 +46,7 @@ const SimilarityPopover = ({
             />
           </div>
         ) : (
-          <p className="text-[10px] md:text-xs text-gray-400 text-center italic">
+          <p className="text-xs md:text-sm text-gray-600 text-center italic">
             {t.phases.similarity.waitingLeader}
           </p>
         )}

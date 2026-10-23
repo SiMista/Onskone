@@ -110,7 +110,7 @@ export const formatRelative = (ms: number): string => {
 };
 
 // ---------- Navigation ----------
-export type AdminTab = 'overview' | 'tickets' | 'logs' | 'lobbies' | 'decks' | 'content';
+export type AdminTab = 'overview' | 'tickets' | 'logs' | 'lobbies' | 'stats' | 'catalogue';
 export type TabGroup = 'pilotage' | 'inbox' | 'catalogue';
 
 export interface TabDef {
@@ -128,8 +128,8 @@ export const TABS: TabDef[] = [
   { id: 'lobbies', label: 'Salons live', hint: 'temps réel', enabled: true, group: 'pilotage' },
   { id: 'tickets', icon: 'mdi:ticket-outline', label: 'Tickets', ariaLabel: 'Tickets', hint: 'retours joueurs', enabled: true, group: 'inbox' },
   { id: 'logs', icon: 'mdi:bug-outline', label: 'Logs', ariaLabel: 'Logs d\'erreurs de l\'app', hint: 'erreurs appareils', enabled: true, group: 'inbox' },
-  { id: 'decks', icon: 'mdi:cards-outline', label: 'Decks', ariaLabel: 'Decks de questions', hint: 'catalogue', enabled: true, group: 'catalogue' },
-  { id: 'content', icon: 'mdi:file-document-outline', label: 'Contenu', ariaLabel: 'Contenu du site', hint: 'données fixes', enabled: true, group: 'catalogue' },
+  { id: 'stats', icon: 'mdi:chart-bar', label: 'Stats', ariaLabel: 'Stats des thèmes et questions', hint: 'popularité', enabled: true, group: 'pilotage' },
+  { id: 'catalogue', icon: 'mdi:cards-outline', label: 'Catalogue', ariaLabel: 'Decks et contenu du site', hint: 'decks & contenu', enabled: true, group: 'catalogue' },
 ];
 
 export const GROUP_ORDER: TabGroup[] = ['pilotage', 'inbox', 'catalogue'];
@@ -139,8 +139,8 @@ export const MOBILE_TAB_META: Record<AdminTab, { icon: string; label: string }> 
   lobbies: { icon: 'mdi:broadcast', label: 'Live' },
   tickets: { icon: 'mdi:ticket-outline', label: 'Tickets' },
   logs: { icon: 'mdi:bug-outline', label: 'Logs' },
-  decks: { icon: 'mdi:cards-outline', label: 'Decks' },
-  content: { icon: 'mdi:file-document-outline', label: 'Contenu' },
+  stats: { icon: 'mdi:chart-bar', label: 'Stats' },
+  catalogue: { icon: 'mdi:cards-outline', label: 'Catalogue' },
 };
 
-export const MOBILE_TAB_ORDER: AdminTab[] = ['overview', 'lobbies', 'tickets', 'logs', 'decks', 'content'];
+export const MOBILE_TAB_ORDER: AdminTab[] = ['overview', 'lobbies', 'stats', 'tickets', 'logs', 'catalogue'];

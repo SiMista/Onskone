@@ -10,6 +10,7 @@ import { rateLimiters } from '../../utils/rateLimiter.js';
 import { errMessage } from '../../utils/helpers.js';
 import { isSimilarPair } from '../../utils/similarity.js';
 import logger from '../../utils/logger.js';
+import { recordCardsShown, recordQuestionPicked } from '../../utils/deckStats.js';
 import {
     serializeGame,
     serializeRounds,
@@ -129,12 +130,15 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
             // Hors sélection, la demande (tardive, arrière-plan) écrasait `gameCard`
             // sans la diffuser : les clients resynchronisés voyaient un autre thème.
             requirePhase: RoundPhase.QUESTION_SELECTION,
-        }, ({ game, round: currentRound }, data) => {
+        }, ({ lobby, game, round: currentRound }, data) => {
             // Des cartes existent déjà → c'est une reconnexion : renvoyer les mêmes.
             // (Le tirage n'a lieu qu'une fois par manche : le pilier ne peut plus
             // repiocher, la relance ayant été retirée du jeu.)
             if ((currentRound.proposedCards?.length ?? 0) > 0) {
-                socket.emit('questionsReceived', { questions: currentRound.proposedCards! });
+                socket.emit('questionsReceived', {
+                    questions: currentRound.proposedCards!,
+                    usedQuestions: [...game.usedQuestions],
+                });
                 logger.debug(`Cartes existantes renvoyées au leader (reconnexion)`, { lobbyCode: data.lobbyCode });
                 return;
             }
@@ -144,10 +148,11 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
 
             // Exclure les cartes déjà montrées (manches précédentes) pour éviter les doublons
             const excludeCards = currentRound.shownGameCards || [];
-            const questions = getRandomQuestions(count, excludeCards, game.cards);
+            const questions = getRandomQuestions(count, excludeCards, game.getSelectableCards());
 
             // Stocker les cartes proposées et la première pour l'auto-sélection
             if (questions.length > 0) {
+                recordCardsShown(lobby.locale, questions);
                 currentRound.proposedCards = questions;
                 currentRound.gameCard = questions[0];
                 // Ajouter toutes les nouvelles cartes aux cartes déjà montrées
@@ -157,7 +162,7 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
                 currentRound.shownGameCards.push(...questions);
             }
 
-            socket.emit('questionsReceived', { questions });
+            socket.emit('questionsReceived', { questions, usedQuestions: [...game.usedQuestions] });
             logger.debug(`${questions.length} carte(s) envoyée(s) au leader (${excludeCards.length} exclues)`, { lobbyCode: data.lobbyCode });
         });
     });
@@ -170,7 +175,7 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
             // Guard de phase (silent-return) : ignore les double-soumissions hors
             // QUESTION_SELECTION (client malveillant ou double-tap).
             requirePhase: RoundPhase.QUESTION_SELECTION,
-        }, ({ lobby, round: currentRound }, data) => {
+        }, ({ lobby, game, round: currentRound }, data) => {
             // Valider que la question sélectionnée est bien une des questions proposées
             const validQuestion = typeof data.selectedQuestion === 'string'
                 && data.selectedQuestion.length > 0
@@ -190,14 +195,21 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
                 return;
             }
 
+            if (game.usedQuestions.has(data.selectedQuestion)) {
+                socket.emit('error', { message: 'Cette question a déjà été jouée', code: ERROR_CODES.INVALID });
+                return;
+            }
+
             // Stocker la carte contenant la question sélectionnée
             const selectedCard = proposedCards.find(card => card?.questions?.includes(data.selectedQuestion));
             if (selectedCard) {
                 currentRound.gameCard = selectedCard;
+                recordQuestionPicked(lobby.locale, selectedCard, data.selectedQuestion);
             }
 
             // Enregistrer la question sélectionnée et passer à la phase suivante
             currentRound.setSelectedQuestion(data.selectedQuestion);
+            game.usedQuestions.add(data.selectedQuestion);
             currentRound.nextPhase(); // Passe à ANSWERING
 
             // Broadcast la question à tous les joueurs

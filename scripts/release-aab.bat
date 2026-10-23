@@ -4,7 +4,7 @@
 ::
 :: VITE_SERVER_URL pointe sur le backend de PROD par defaut (un .aab part toujours
 :: pour le store). Pour viser un autre backend : set VITE_SERVER_URL=... avant.
-:: Le versionCode/versionName sont derives de VERSION + commits git (cf scripts/app-version.mjs).
+:: versionName = fichier VERSION (la question posee plus bas peut le monter), versionCode = nb de commits (cf scripts/app-version.mjs).
 :: ATTENTION : jette les modifs locales non commitees (git reset --hard) puis pull.
 :: Chemin absolu du script capture AVANT le cd (%~f0 apres un cd peut se resoudre
 :: depuis le nouveau dossier si le script a ete lance avec un chemin relatif).
@@ -28,6 +28,9 @@ if "%VITE_SERVER_URL%"=="" (
 
 :: Build natif : base d'assets relative (cf vite.config.ts).
 set CAPACITOR_BUILD=1
+
+:: Quelle version store publier ? (garder / monter / saisir ; commit + push si elle change)
+node "%~dp0release-version-prompt.mjs" || exit /b 1
 
 :: Version calculee une seule fois (source de verite), injectee a Gradle via -P.
 for /f "delims=" %%i in ('node "%~dp0app-version.mjs"') do set APP_VNAME=%%i

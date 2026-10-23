@@ -28,8 +28,8 @@ const AboutModal = ({ isOpen, onClose }: AboutModalProps) => {
             )}
           </section>
         ))}
-        <p className="text-xs text-gray-400 text-center pt-4 border-t border-gray-200">
-          {t.footer.versionLabel} {__APP_VERSION__}
+        <p className="text-xs text-gray-500 text-center pt-4 border-t border-gray-200">
+          {t.footer.versionLabel} {__APP_VERSION__} ({__APP_BUILD__})
         </p>
       </div>
     </Modal>

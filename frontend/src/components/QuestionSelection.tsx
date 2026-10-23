@@ -13,6 +13,9 @@ import { useSwipe } from '../hooks/useSwipe';
 import { useSocketEvent } from '../hooks';
 import { useLocale } from '../i18n';
 
+// Assez long pour LIRE le fait avant qu'il ne change.
+const FUN_FACT_ROTATE_MS = 15000;
+
 const QuestionSelection = ({ lobbyCode, isLeader, leader, gameSpeed }: {
   lobbyCode: string;
   isLeader: boolean;
@@ -23,6 +26,8 @@ const QuestionSelection = ({ lobbyCode, isLeader, leader, gameSpeed }: {
   const [cards, setCards] = useState<GameCard[]>([]);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [selectedQuestion, setSelectedQuestion] = useState<string | null>(null);
+  // Questions déjà jouées dans la partie : grisées et non sélectionnables.
+  const [usedQuestions, setUsedQuestions] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(isLeader);
   const [funFact, setFunFact] = useState<string>(() => getRandomFunFact(t.funFacts));
   const [factFading, setFactFading] = useState(false);
@@ -43,7 +48,7 @@ const QuestionSelection = ({ lobbyCode, isLeader, leader, gameSpeed }: {
     playSound('questionSelection');
   }, []);
 
-  // Effet pour changer les faits insolites toutes les 12 secondes (pour les non-leaders)
+  // Effet pour changer les faits insolites toutes les FUN_FACT_ROTATE_MS (pour les non-leaders)
   useEffect(() => {
     if (isLeader) return;
 
@@ -57,7 +62,7 @@ const QuestionSelection = ({ lobbyCode, isLeader, leader, gameSpeed }: {
         setFunFact(prev => getNextFunFact(t.funFacts, prev));
         setFactFading(false);
       }, 300); // Durée du fade out avant de changer
-    }, 12000);
+    }, FUN_FACT_ROTATE_MS);
 
     return () => {
       clearInterval(factInterval);
@@ -82,7 +87,8 @@ const QuestionSelection = ({ lobbyCode, isLeader, leader, gameSpeed }: {
     return () => clearTimeout(startTimerTimeout);
   }, [isLeader, lobbyCode, phaseDuration]);
 
-  useSocketEvent('questionsReceived', (data: { questions: GameCard[] }) => {
+  useSocketEvent('questionsReceived', (data: { questions: GameCard[]; usedQuestions?: string[] }) => {
+    setUsedQuestions(new Set(data.usedQuestions ?? []));
     if (data.questions.length > 0) {
       setCards(data.questions);
       setCurrentCardIndex(0);
@@ -114,7 +120,7 @@ const QuestionSelection = ({ lobbyCode, isLeader, leader, gameSpeed }: {
   const locked = selectedQuestion !== null;
 
   const handleSelectQuestion = (question: string) => {
-    if (!isLeader || selectedQuestion !== null) return;
+    if (!isLeader || selectedQuestion !== null || usedQuestions.has(question)) return;
 
     setSelectedQuestion(question);
     socket.emit('selectQuestion', { lobbyCode, selectedQuestion: question });
@@ -125,7 +131,9 @@ const QuestionSelection = ({ lobbyCode, isLeader, leader, gameSpeed }: {
     // Si pas de sélection, choisir une question au hasard dans la carte active
     // et l'émettre en premier, avant que le serveur ne pioche depuis une autre carte.
     if (selectedQuestion === null && currentCard && currentCard.questions.length > 0) {
-      const q = currentCard.questions[Math.floor(Math.random() * currentCard.questions.length)];
+      const unused = currentCard.questions.filter(q => !usedQuestions.has(q));
+      const pickFrom = unused.length > 0 ? unused : currentCard.questions;
+      const q = pickFrom[Math.floor(Math.random() * pickFrom.length)];
       setSelectedQuestion(q);
       socket.emit('selectQuestion', { lobbyCode, selectedQuestion: q });
       return;
@@ -171,24 +179,21 @@ const QuestionSelection = ({ lobbyCode, isLeader, leader, gameSpeed }: {
 
   if (!isLeader) {
     return (
-      <div className="flex flex-col items-center justify-center h-full w-full gap-2 md:gap-6 px-2 overflow-hidden">
-        <div className="text-center w-full max-w-2xl">
-          <div className="bg-primary-light rounded-lg px-3 md:px-4 py-1.5 md:py-2 max-w-2xl">
-            <div className="flex items-center justify-center flex-wrap gap-x-1.5 gap-y-1">
-              <p className="text-base md:text-2xl m-0">{t.phases.questionSelection.leaderIs}</p>
-              <PlayerBadge player={leader} size="sm" />
-            </div>
-            <p className="text-center text-xs md:text-base mt-1.5">{t.phases.questionSelection.waitingSelection}</p>
-            <Timer duration={phaseDuration} onExpire={handleTimerExpire} phase={RoundPhase.QUESTION_SELECTION} lobbyCode={lobbyCode} hidden />
-          </div>
+      <div className="flex flex-col items-center justify-center h-full w-full gap-5 md:gap-8 px-3 overflow-hidden">
+        {/* Le pilier est la star : avatar + pseudo, une seule ligne d'état dessous. */}
+        <div className="flex flex-col items-center gap-2 text-center">
+          <p className="text-display-xs text-gray-600">{t.phases.questionSelection.leaderIs}</p>
+          <PlayerBadge player={leader} size="md" className="!max-w-[12rem]" />
+          <p className="text-sm md:text-base text-gray-700 font-semibold">{t.phases.questionSelection.waitingSelection}</p>
+          <Timer duration={phaseDuration} onExpire={handleTimerExpire} phase={RoundPhase.QUESTION_SELECTION} lobbyCode={lobbyCode} hidden />
         </div>
 
-        {/* Fait insolite - min-h figée pour que le changement de fait
-            ne décale pas l'emoji situé en dessous. mt-* descend le bloc. */}
-        <div className="w-full max-w-md text-center px-3 mt-4 md:mt-8 min-h-[72px] md:min-h-[88px] flex flex-col justify-start">
-          <p className="text-[10px] md:text-xs text-gray-500 uppercase font-semibold mb-1">{t.phases.questionSelection.didYouKnow}</p>
+        {/* Fait insolite - simple texte italique. min-h figée pour que le changement
+            de fait ne décale rien. */}
+        <div className="w-full max-w-md text-center px-3 min-h-[88px] md:min-h-[104px] flex flex-col justify-start">
+          <p className="text-display-xs text-gray-600 mb-1.5">{t.phases.questionSelection.didYouKnow}</p>
           <p
-            className={`text-gray-700 text-xs md:text-base italic leading-snug transition-opacity duration-300 ${factFading ? 'opacity-0' : 'opacity-100'}`}
+            className={`text-gray-800 text-sm md:text-lg italic leading-snug transition-opacity duration-300 ${factFading ? 'opacity-0' : 'opacity-100'}`}
           >
             {funFact}
           </p>
@@ -213,9 +218,9 @@ const QuestionSelection = ({ lobbyCode, isLeader, leader, gameSpeed }: {
   };
 
   return (
-    <div className="flex flex-col h-full p-2 tablet:p-4 overflow-hidden">
+    <div className="flex flex-col h-full p-2 tablet:p-4 overflow-hidden phone-landscape:overflow-y-auto overscroll-contain no-scrollbar">
       {currentCard && (
-        <div className="flex-1 flex flex-col items-center justify-center">
+        <div className="flex-1 flex flex-col items-center justify-center phone-landscape:justify-start">
           <div className="bg-primary text-base tablet:text-xl px-3 tablet:px-6 py-1 tablet:py-1.5 rounded-2xl mb-0 w-full text-center">
             <p className="font-display text-base tablet:text-2xl m-0 tracking-tight leading-tight">
               {t.phases.questionSelection.chooseQuestion}
@@ -234,6 +239,7 @@ const QuestionSelection = ({ lobbyCode, isLeader, leader, gameSpeed }: {
             currentCardIndex={currentCardIndex}
             locked={locked}
             selectedQuestion={selectedQuestion}
+            usedQuestions={usedQuestions}
             revealedIdx={revealedIdx}
             showSwipeHint={showSwipeHint}
             swipeHandlers={swipeHandlers}

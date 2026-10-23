@@ -9,8 +9,8 @@ import { OverviewPanel } from './Overview';
 import { TicketsPanel } from './Tickets';
 import { LogsPanel } from './Logs';
 import { LobbiesPanel } from './Lobbies';
-import { DecksPanel } from './Decks';
-import { ContentPanel } from './Content';
+import { CataloguePanel } from './Catalogue';
+import { StatsPanel } from './Stats';
 import { VersionGateButton } from './VersionGateButton';
 
 const LOBBY_COUNT_POLL_MS = 5000;
@@ -217,11 +217,11 @@ export const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
         {activeTab === 'lobbies' && (
           <LobbiesPanel active={activeTab === 'lobbies'} refreshKey={refreshKey} />
         )}
-        {activeTab === 'decks' && (
-          <DecksPanel active={activeTab === 'decks'} />
+        {activeTab === 'stats' && (
+          <StatsPanel active={activeTab === 'stats'} refreshKey={refreshKey} />
         )}
-        {activeTab === 'content' && (
-          <ContentPanel />
+        {activeTab === 'catalogue' && (
+          <CataloguePanel active={activeTab === 'catalogue'} />
         )}
       </main>
 

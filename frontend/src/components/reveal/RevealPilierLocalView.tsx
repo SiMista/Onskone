@@ -1,5 +1,6 @@
 import Avatar from '../Avatar';
 import Button from '../Button';
+import RevealPrimaryButton from './RevealPrimaryButton';
 import SimilarityPopover from '../SimilarityPopover';
 import { useLocale } from '../../i18n';
 import type { RevealCursorState } from '../../hooks/useRevealCursor';
@@ -7,9 +8,8 @@ import PremiumName from '../PremiumName';
 
 /**
  * Vue pilier en mode local : une seule carte à la fois (avatar du joueur ciblé),
- * avec le bouton flèche "Suivant" à droite de la carte, la popover de similarité
- * flottant sous la carte, et les boutons "Révéler" / fin de partie. Affichée au
- * pilier hors carte "pilier deviné".
+ * la popover de similarité flottant sous la carte, et le bouton d'action unique
+ * (RevealPrimaryButton). Affichée au pilier hors carte "pilier deviné".
  */
 const RevealPilierLocalView = ({
   reveal,
@@ -24,16 +24,11 @@ const RevealPilierLocalView = ({
   const {
     currentResult,
     pilierCursor,
-    pilierPhase,
-    showNextButton,
     showSimilarity,
     isLastDisplayable,
-    showEndButton,
     displayablePosition,
     displayableTotal,
     similarityModal,
-    handleReveal: onReveal,
-    handleNext: onNext,
     handleConfirmSimilarity: onConfirmSimilarity,
     handleDismissSimilarity: onDismissSimilarity,
     handleNextRound: onNextRound,
@@ -49,9 +44,6 @@ const RevealPilierLocalView = ({
           <>
             <div className="flex flex-col items-center justify-center gap-3 md:gap-4 w-full">
               <div className="relative flex items-center justify-center gap-3 md:gap-5 w-full">
-                {/* Spacer miroir pour que la carte reste centrée */}
-                <div className="w-14 md:w-20 shrink-0" aria-hidden />
-
                 <div className="relative">
                   {/* Tranche d'une "prochaine" carte qui dépasse à droite, inclinée et fondue */}
                   {!isLastDisplayable && (
@@ -86,36 +78,6 @@ const RevealPilierLocalView = ({
                   </div>
                 </div>
 
-                {/* Bouton Suivant à droite de la carte - pilier uniquement */}
-                <div className="relative z-20 w-16 md:w-24 shrink-0 flex justify-start">
-                  {isLeader && showNextButton && !showSimilarity && !isLastDisplayable && (
-                    <button
-                      key={`next-${pilierCursor}`}
-                      type="button"
-                      onClick={onNext}
-                      aria-label={t.phases.reveal.next}
-                      className="animate-next-pop group flex flex-col items-center gap-1 cursor-pointer text-black hover:text-brand-500 transition-colors"
-                    >
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="3.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="w-10 h-10 md:w-12 md:h-12 transition-transform group-hover:translate-x-1 group-active:scale-95"
-                        aria-hidden
-                      >
-                        <path d="M5 12h14" />
-                        <path d="M13 5l7 7-7 7" />
-                      </svg>
-                      <span className="font-display text-[11px] md:text-sm font-bold uppercase tracking-wider">
-                        {t.phases.reveal.next}
-                      </span>
-                    </button>
-                  )}
-                </div>
-
                 {/* Popover similarité - flotte sous la carte, ne pousse rien */}
                 {showSimilarity && (
                   <div className="absolute left-1/2 -translate-x-1/2 top-full z-30 pt-2">
@@ -140,28 +102,13 @@ const RevealPilierLocalView = ({
               </div>
             </div>
 
-            {isLeader && !showEndButton && (
-              <Button
-                text={t.phases.reveal.revealOnPhone}
-                variant="primary"
-                size="lg"
-                rotateEffect
-                disabled={showSimilarity || pilierPhase === 'revealed'}
-                onClick={onReveal}
-                className="!text-sm sm:!text-base whitespace-nowrap"
+            {/* Bouton unique, toujours au même endroit : Révéler → Suivant → Manche suivante */}
+            {isLeader && (
+              <RevealPrimaryButton
+                reveal={reveal}
+                isGameOver={isGameOver}
+                revealLabel={t.phases.reveal.revealOnPhone}
               />
-            )}
-
-            {isLeader && showEndButton && (
-              <div className="animate-fade-in">
-                <Button
-                  text={isGameOver ? t.phases.reveal.seeFinalResults : t.phases.reveal.nextRound}
-                  variant="success"
-                  size="lg"
-                  rotateEffect
-                  onClick={onNextRound}
-                />
-              </div>
             )}
           </>
         ) : (

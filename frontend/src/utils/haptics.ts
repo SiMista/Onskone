@@ -43,3 +43,15 @@ export const hapticSuccess = () => {
     webVibrate([60, 40, 60]);
   }
 };
+
+// Avertissement discret : ta réponse est la PROCHAINE à être révélée (reveal local).
+// Volontairement bien plus léger que hapticAssigned : un seul tap, juste de quoi
+// sentir le téléphone et se préparer à montrer son écran.
+export const hapticNextToReveal = () => {
+  if (vibrationOff()) return;
+  if (isNative) {
+    Haptics.impact({ style: ImpactStyle.Light }).catch(() => { /* haptics best-effort */ });
+  } else {
+    webVibrate(40);
+  }
+};

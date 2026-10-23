@@ -13,7 +13,7 @@ import Spinner from '../components/Spinner';
 import Button from '../components/Button';
 import { getPhaseDuration } from '../constants/game';
 import SettingsButton from '../components/SettingsButton';
-import { useLeavePrompt } from '../hooks';
+import { useLeavePrompt, useKeepAwake } from '../hooks';
 import { useGameState } from '../hooks/useGameState';
 import { useLobbyExitEvents } from '../hooks/useLobbyExitEvents';
 import { RoundPhase, GameStatus, GAME_CONSTANTS } from '@onskone/shared';
@@ -21,14 +21,14 @@ import { isStudioFrame, studioSlotIndex } from '../utils/studioStorage';
 import { useStudioBot } from '../hooks/useStudioBot';
 import { useLocale } from '../i18n';
 import { storeLastGame } from '../utils/playerHelpers';
-import { useAppBannerVisible, topControlsClass } from '../utils/appBanner';
+import { TOP_CONTROLS_CLASS } from '../utils/appBanner';
 
 const GamePage: React.FC = () => {
   const { lobbyCode } = useParams<{ lobbyCode: string }>();
   const navigate = useNavigate();
   const { t } = useLocale();
-  // Bandeau app (web) affiché : la roue des réglages descend sous lui, comme sur l'accueil.
-  const bannerVisible = useAppBannerVisible();
+  // Écran allumé pendant toute la partie (façon appli GPS).
+  useKeepAwake();
 
   // Redirige vers l'accueil si aucun code de lobby
   useEffect(() => {
@@ -209,7 +209,7 @@ const GamePage: React.FC = () => {
     <div className="h-full flex flex-col items-center justify-center overflow-hidden px-2 tablet:px-0 safe-pt relative">
       <ScreenLogo />
       {/* Réglages flottants en haut à droite (hors de la carte), comme sur l'accueil. */}
-      <div className={`absolute ${topControlsClass(bannerVisible)} right-3 z-30 safe-pt transition-[top,translate] duration-200`}>
+      <div className={`absolute ${TOP_CONTROLS_CLASS} right-3 z-30 safe-pt transition-[top,translate] duration-200`}>
         <SettingsButton
           contentLocale={game?.lobby?.locale}
           lobbyCode={lobbyCode}
@@ -219,16 +219,16 @@ const GamePage: React.FC = () => {
           interne a son propre cap dvh pour scroller si la phase dépasse.
           Erreurs et notifs sont remontées via le Toast global (haut centré). */}
       <div
-        className={`w-full max-w-4xl max-h-full min-h-0 mx-auto px-2 ${bannerVisible ? 'pt-[7.25rem]' : 'pt-14'} tablet:pt-4 flex flex-col safe-pb`}
+        className={`w-full max-w-4xl max-h-full min-h-0 mx-auto px-2 pt-14 tablet:pt-4 flex flex-col safe-pb`}
       >
         <div className="min-h-0 max-h-[80dvh] phone-landscape:max-h-none phone-landscape:h-[90dvh] bg-white rounded-xl px-2 py-5 tablet:px-4 tablet:py-7 phone-landscape:!p-2 phone-landscape:tablet:!p-4 flex flex-col overflow-hidden card-paper stack-shadow">
           {/* Game info header : round + host à gauche, sablier à droite */}
           <div className="shrink-0 flex items-center justify-between gap-3 mb-2 tablet:mb-4 pb-2 tablet:pb-3 border-b-[2.5px] border-dashed border-black/30">
             <div className="flex items-center gap-1.5 flex-wrap text-gray-800 text-left">
               <span className="text-xs tablet:text-sm font-display font-bold tracking-wide">
-                Round {game?.currentRound?.roundNumber || 0}<span className="text-gray-400">/{game?.totalRounds ?? players.length}</span>
+                Round {game?.currentRound?.roundNumber || 0}<span className="text-gray-500">/{game?.totalRounds ?? players.length}</span>
               </span>
-              <span className="text-gray-300">•</span>
+              <span className="text-gray-400">•</span>
               <Icon icon="fluent-emoji-flat:crown" width="1.1em" height="1.1em" aria-hidden />
               <span className="text-xs tablet:text-sm font-display font-semibold tracking-wide truncate max-w-[140px] tablet:max-w-[220px]">
                 {game?.currentRound?.leader.name || '...'}
@@ -261,7 +261,7 @@ const GamePage: React.FC = () => {
               (les composants ne lisent les données de reconnexion qu'au montage). */}
           <div
             key={`${game?.currentRound?.roundNumber ?? 0}-${game?.currentRound?.phase ?? 'none'}-${syncEpoch}`}
-            className="flex-1 min-h-0 flex flex-col animate-phase-enter"
+            className="flex-1 min-h-0 flex flex-col overflow-y-auto overscroll-contain no-scrollbar animate-phase-enter"
           >
             {renderPhase()}
           </div>

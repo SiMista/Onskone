@@ -78,5 +78,7 @@ export {
   AdminLobbyPlayer,
   AdminLobbySummary,
   AdminDeckSubject,
-  AdminDeckSummary
+  AdminDeckSummary,
+  AdminDeckStatRow,
+  AdminDeckStats
 } from './types/admin.js';

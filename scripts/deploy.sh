@@ -45,8 +45,8 @@ if [ -z "${CI:-}" ]; then
   git reset --hard origin/main
 fi
 
-# La version COMPTE des commits (cf. scripts/app-version.mjs) : sur un clone
-# superficiel elle tombait en silence a "x.y.0" (la CD fetchait en --depth 1).
+# Le build (versionCode) COMPTE les commits (cf. scripts/app-version.mjs) : sur un clone
+# superficiel il serait faux en silence (la CD fetchait en --depth 1).
 # On restaure l'historique complet si besoin (no-op une fois fait).
 if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then
   echo "==> Clone superficiel détecté : récupération de l'historique complet"

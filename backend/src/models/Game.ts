@@ -10,6 +10,9 @@ export class Game implements IGame {
     currentRound: IRound | null;
     status: GameStatus;
     readonly cards: GameCard[];
+    // Questions déjà choisies par un pilier pendant cette partie : elles ne sont plus
+    // proposées (grisées sur leur carte, qui disparaît quand toutes les siennes sont prises).
+    readonly usedQuestions: Set<string> = new Set();
     // Nombre de piliers possibles au démarrage (joueurs actifs non exclus, fixe) :
     // c'est le nombre de manches de la partie.
     private initialLeaderCount: number = 0;
@@ -74,6 +77,18 @@ export class Game implements IGame {
         }
         // Indexation directe : pas besoin de copier tout le tableau pour un simple tirage.
         return this.cards[randomInt(0, this.cards.length)];
+    }
+
+    /**
+     * Cartes encore proposables : celles qui ont au moins une question non jouée.
+     * Deck épuisé (petit deck / partie longue) : on recycle, `usedQuestions` est vidé
+     * et tout le pool redevient disponible plutôt que de bloquer la manche.
+     */
+    getSelectableCards(): GameCard[] {
+        const selectable = this.cards.filter(card => card.questions.some(q => !this.usedQuestions.has(q)));
+        if (selectable.length > 0) return selectable;
+        this.usedQuestions.clear();
+        return this.cards;
     }
 
     start(): void {

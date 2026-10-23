@@ -1,5 +1,6 @@
 import Avatar from '../Avatar';
 import Button from '../Button';
+import RevealPrimaryButton from './RevealPrimaryButton';
 import PlayerBadge from '../PlayerBadge';
 import RevealedAnswerCard from '../RevealedAnswerCard';
 import SimilarityPopover from '../SimilarityPopover';
@@ -30,16 +31,11 @@ const RevealRemoteView = ({
     currentResult,
     pilierCursor,
     pilierPhase,
-    showNextButton,
     showSimilarity,
-    isLastDisplayable,
-    showEndButton,
     displayablePosition,
     displayableTotal,
     correctedIndices,
     similarityModal,
-    handleReveal: onReveal,
-    handleNext: onNext,
     handleConfirmSimilarity: onConfirmSimilarity,
     handleDismissSimilarity: onDismissSimilarity,
     handleNextRound: onNextRound,
@@ -55,7 +51,7 @@ const RevealRemoteView = ({
             <p className="text-base md:text-lg font-semibold text-center">{t.phases.reveal.readyNext}</p>
           ) : (
             <div className="flex items-center justify-center flex-wrap gap-x-2 gap-y-1 leading-none text-base md:text-lg">
-              <span>{t.phases.reveal.waitingPrefix}</span>
+              {t.phases.reveal.waitingPrefix && <span>{t.phases.reveal.waitingPrefix}</span>}
               <Avatar avatarId={leader?.avatarId ?? 0} name={leader?.name} size="sm" />
               <PremiumName name={leader?.name ?? ''} premium={!!leader?.isPremium} />
               <span>{t.phases.reveal.waitingLeaderNext}</span>
@@ -123,38 +119,7 @@ const RevealRemoteView = ({
 
           {isLeader && (
             <div className="mt-3 md:mt-4 flex items-center justify-center">
-              {showEndButton ? (
-                <div className="animate-fade-in">
-                  <Button
-                    text={isGameOver ? t.phases.reveal.seeFinalResults : t.phases.reveal.nextRound}
-                    variant="success"
-                    size="lg"
-                    rotateEffect
-                    disabled={showSimilarity}
-                    onClick={onNextRound}
-                  />
-                </div>
-              ) : pilierPhase === 'revealed' && showNextButton && !isLastDisplayable ? (
-                <div key={`next-${pilierCursor}`} className="animate-fade-in">
-                  <Button
-                    text={t.phases.reveal.next}
-                    variant="primary"
-                    size="lg"
-                    rotateEffect
-                    disabled={showSimilarity}
-                    onClick={onNext}
-                  />
-                </div>
-              ) : (
-                <Button
-                  text={t.phases.reveal.reveal}
-                  variant="primary"
-                  size="lg"
-                  rotateEffect
-                  disabled={showSimilarity || pilierPhase === 'revealed'}
-                  onClick={onReveal}
-                />
-              )}
+              <RevealPrimaryButton reveal={reveal} isGameOver={isGameOver} />
             </div>
           )}
         </>

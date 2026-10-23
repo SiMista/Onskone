@@ -18,6 +18,8 @@ interface CardHandProps {
   locked: boolean;
   /** Question sélectionnée (mise en avant + dimming des autres). */
   selectedQuestion: string | null;
+  /** Questions déjà jouées dans la partie : grisées, non cliquables. */
+  usedQuestions: Set<string>;
   /** Indices des cartes déjà retournées (stagger reveal au démarrage). */
   revealedIdx: Set<number>;
   /** Affiche l'overlay d'indice de swipe (mobile, pilier inactif). */
@@ -54,6 +56,7 @@ const CardHand = ({
   currentCardIndex,
   locked,
   selectedQuestion,
+  usedQuestions,
   revealedIdx,
   showSwipeHint,
   swipeHandlers,
@@ -99,14 +102,14 @@ const CardHand = ({
 
   return (
     <div className="flex flex-col items-center gap-0 w-full">
-      <span className="flex md:hidden items-center justify-center gap-1 text-[10px] text-gray-500 italic font-sans mt-0.5 mb-2">
+      <span className="flex md:hidden items-center justify-center gap-1 text-xs text-gray-600 italic font-sans mt-0.5 mb-2">
         <Icon icon="ph:hand-swipe-left-duotone" className="text-sm animate-wiggle" aria-hidden />
         {t.phases.questionSelection.swipeHintMobile}
       </span>
 
       {/* Main de cartes - hauteur stable, indépendante du contenu */}
       <div
-        className="card-hand relative w-full max-w-xl mx-auto pt-3 tablet:pt-10 min-h-[min(340px,60dvh)] tablet:min-h-[min(480px,70dvh)] touch-pan-y select-none"
+        className="card-hand relative w-full max-w-xl mx-auto pt-3 tablet:pt-10 min-h-[min(340px,60dvh)] tablet:min-h-[min(480px,70dvh)] phone-landscape:min-h-0 touch-pan-y select-none"
         {...swipeHandlers.touchHandlers}
         {...swipeHandlers.mouseHandlers}
       >
@@ -179,7 +182,7 @@ const CardHand = ({
           return (
             <div
               key={`${card.theme}-${idx}`}
-              className={`card-hand-item w-[78%] sm:w-[68%] tablet:w-[60%] absolute top-6 tablet:top-14 left-1/2 ${isActive ? 'is-active' : 'is-side'} ${isActive && locked ? 'animate-card-lift' : ''}`}
+              className={`card-hand-item w-[78%] sm:w-[68%] tablet:w-[60%] absolute top-6 tablet:top-14 left-1/2 ${isActive ? 'is-active phone-landscape:!relative phone-landscape:!left-0 phone-landscape:!top-0 phone-landscape:!transform-none phone-landscape:mx-auto' : 'is-side'} ${isActive && locked ? 'animate-card-lift phone-landscape:!animate-none' : ''}`}
               style={{
                 transform: transformStyle,
                 pointerEvents: locked ? 'none' : 'auto',
@@ -213,7 +216,7 @@ const CardHand = ({
                   />
                   {/* Sujet : eyebrow tracké, couleur catégorie */}
                   <p
-                    className="text-center !mt-0 !mb-2 tablet:!mb-4 text-[10px] tablet:text-[11px] uppercase font-semibold tracking-[0.14em] leading-tight"
+                    className="text-center !mt-0 !mb-2 tablet:!mb-4 text-[11px] tablet:text-xs uppercase font-semibold tracking-[0.14em] leading-tight"
                     style={{ color }}
                   >
                     {card.subject}
@@ -222,6 +225,7 @@ const CardHand = ({
                   <div className="flex flex-col gap-1.5 tablet:gap-3 justify-start pb-3 tablet:pb-8">
                     {card.questions.map((question, qi) => {
                       const isSelected = selectedQuestion === question;
+                      const isUsed = usedQuestions.has(question);
                       const dimmed = locked && !isSelected;
                       const len = question.length;
                       const questionTextClass =
@@ -235,20 +239,22 @@ const CardHand = ({
                           onClick={(e) => {
                             if (!isActive) return;
                             e.stopPropagation();
+                            if (isUsed) return;
                             onSelectQuestion(question);
                           }}
                           className={`
-                            relative bg-white rounded-lg px-3 tablet:px-4 py-2 tablet:py-3 border-2
+                            relative ${isUsed ? 'bg-gray-200' : 'bg-white'} rounded-lg px-3 tablet:px-4 py-2 tablet:py-3 border-2
                             min-h-[48px] tablet:min-h-[68px] flex items-center
                             transition-all duration-300 ease-in-out
-                            ${isActive && !locked ? 'cursor-pointer hover:-translate-y-0.5 hover:border-primary hover:shadow-lg' : ''}
+                            ${isUsed ? 'cursor-not-allowed opacity-70' : ''}
+                            ${isActive && !locked && !isUsed ? 'cursor-pointer hover:-translate-y-0.5 hover:border-primary hover:shadow-lg' : ''}
                             ${isSelected
                               ? 'scale-[1.02] border-green-500 shadow-[0_0_0_3px_var(--color-success-500)]'
                               : 'border-gray-300 shadow-md'}
-                            ${dimmed ? 'opacity-50' : 'opacity-100'}
+                            ${dimmed ? 'opacity-50' : isUsed ? '' : 'opacity-100'}
                           `}
                         >
-                          <p className={`${questionTextClass} font-medium text-gray-800 leading-snug w-full`}>
+                          <p className={`${questionTextClass} font-medium ${isUsed ? 'text-gray-500' : 'text-gray-800'} leading-snug w-full`}>
                             {question}
                           </p>
                         </div>

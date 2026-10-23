@@ -5,13 +5,16 @@
 # VITE_SERVER_URL pointe sur le backend de PROD par defaut (un .aab part toujours
 # pour le store). Pour viser un autre backend :
 #   VITE_SERVER_URL=http://192.168.1.10:8080 ./scripts/release-aab.sh
-# Le versionCode/versionName sont derives des tags/commits git (cf build.gradle).
+# versionName = fichier VERSION (la question posee ci-dessous peut le monter), versionCode = nb de commits.
 set -e
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 export VITE_SERVER_URL="${VITE_SERVER_URL:-https://onskone.fr}"
 # Build natif : base d'assets relative (cf vite.config.ts).
 export CAPACITOR_BUILD=1
+
+# Quelle version store publier ? (garder / monter / saisir ; commit + push si elle change)
+node "$ROOT/scripts/release-version-prompt.mjs"
 
 # Version calculee une seule fois (source de verite), injectee a Gradle via -P.
 VNAME="$(node "$ROOT/scripts/app-version.mjs")"

@@ -84,6 +84,11 @@ export const GAME_CONSTANTS = {
   // même avec un pilier connecté mais parti (téléphone posé, appli en arrière-plan
   // sans coupure de socket).
   REVEAL_BACKSTOP_MS: 4 * 60 * 1000,
+  // Overlay "qui a écrit ?" plein écran, affiché sur le tel du joueur dont la carte
+  // vient d'être révélée (mode local). Le "Suivant" du pilier attend la fin de cet
+  // overlay pour ne pas enchaîner par-dessus. À garder aligné avec les keyframes
+  // `reveal-author-backdrop` (index.css, fades calés sur cette durée).
+  REVEAL_AUTHOR_OVERLAY_MS: 3500,
 } as const;
 
 /**

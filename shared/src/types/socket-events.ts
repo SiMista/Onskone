@@ -216,8 +216,9 @@ export interface ServerToClientEvents {
     reason: 'leader_disconnected' | 'leader_idle';
   }) => void;
 
-  /** Réception des 3 questions pour le pilier (tirage unique par manche). */
-  questionsReceived: (data: { questions: GameCard[] }) => void;
+  /** Réception des 3 questions pour le pilier (tirage unique par manche).
+   *  `usedQuestions` : questions déjà jouées dans la partie (à griser, non cliquables). */
+  questionsReceived: (data: { questions: GameCard[]; usedQuestions?: string[] }) => void;
 
   /** Une question a été sélectionnée par le pilier */
   questionSelected: (data: {
@@ -311,6 +312,8 @@ export interface ServerToClientEvents {
     phase: RoundPhase;
     duration: number; // Durée en secondes
     startedAt: number; // Timestamp de démarrage (pour sync)
+    /** Horloge serveur à l'émission : le client en déduit sa propre échéance sans dépendre de sa montre. */
+    serverNow?: number;
   }) => void;
 
   /** État actuel du timer (réponse à requestTimerState) */
@@ -318,6 +321,7 @@ export interface ServerToClientEvents {
     phase: RoundPhase;
     duration: number;
     startedAt: number;
+    serverNow?: number; // cf. timerStarted
   } | null) => void;
 
   /** Fin de la partie */

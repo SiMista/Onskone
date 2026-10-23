@@ -16,6 +16,7 @@ import { useLocale } from '../i18n';
 import VerdictRing from '../components/endgame/VerdictRing';
 import ShareSection from '../components/endgame/ShareSection';
 import ScoreLeaderboard from '../components/endgame/ScoreLeaderboard';
+import { showAppBanner } from '../utils/appBanner';
 
 const getTierIndex = (pct: number) => {
   const idx = TIERS.findIndex(t => pct <= t.max);
@@ -50,6 +51,12 @@ const EndGame: React.FC = () => {
   const preparedBlobRef = useRef<Blob | null>(null);
   const showToast = useToast();
   const { t, locale } = useLocale();
+
+  // Notification « télécharge l'app » (web) une fois le suspense passé et le classement affiché,
+  // pour ne pas gâcher la révélation du score.
+  useEffect(() => {
+    if (showLeaderboard) showAppBanner(1500);
+  }, [showLeaderboard]);
 
   // Pour chaque joueur, retrouver le round où il a été pilier (sa question)
   const roundByLeaderId = useMemo(() => {
@@ -276,8 +283,8 @@ const EndGame: React.FC = () => {
       verdictMessage: verdictMessage,
       color: verdict.color,
       tierEmoji: verdict.emoji,
-      // Podium de l'image partagée : seuls les joueurs classés (qui ont été piliers).
-      topPlayers: leaderboard.filter(e => roundByLeaderId.size === 0 || roundByLeaderId.has(e.player.id)).slice(0, 3).map(e => ({
+      // Scores de l'image partagée : seuls les joueurs classés (qui ont été piliers), tous affichés.
+      topPlayers: leaderboard.filter(e => roundByLeaderId.size === 0 || roundByLeaderId.has(e.player.id)).map(e => ({
         name: e.player.name,
         score: e.score,
         avatarId: e.player.avatarId,
@@ -329,7 +336,7 @@ const EndGame: React.FC = () => {
   }, []);
 
   return (
-    <div className="h-full p-3 md:p-6 relative overflow-hidden flex flex-col items-center justify-center safe-pt">
+    <div className="h-full relative overflow-hidden flex flex-col items-center justify-center safe-pt">
       <ScreenLogo z="z-20" />
       <div
         className="pointer-events-none fixed inset-0 z-10 transition-opacity duration-1000"
@@ -359,7 +366,10 @@ const EndGame: React.FC = () => {
         </div>
       )}
 
-      <div className="h-full max-h-[820px] desktop-short:max-h-none min-h-0 max-w-3xl mx-auto w-full overflow-y-auto overscroll-contain no-scrollbar relative z-20">
+      {/* Zone de scroll = tout l'écran (la molette marche même dans les marges) ; la colonne
+          centrée est dedans, `my-auto` la centre à la verticale tant qu'elle tient. */}
+      <div className="flex-1 min-h-0 w-full overflow-y-auto overscroll-contain no-scrollbar relative z-20 flex p-3 md:p-6">
+      <div className="max-w-3xl mx-auto w-full my-auto">
         <VerdictRing
           displayPct={displayPct}
           liveVerdict={liveVerdict}
@@ -385,9 +395,10 @@ const EndGame: React.FC = () => {
           showLeaderboard={showLeaderboard}
         />
       </div>
+      </div>
 
       <div
-        className={`shrink-0 relative z-20 w-full text-center pt-2 pb-2 text-white/60 text-[10px] md:text-xs safe-pb transition-all duration-500 ${showLeaderboard ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}
+        className={`shrink-0 relative z-20 w-full text-center pt-2 pb-2 text-white/75 text-[11px] md:text-xs safe-pb transition-all duration-500 ${showLeaderboard ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}
       >
         <ReportTrigger variant="footer" label={t.endGame.reportLabel} />
       </div>

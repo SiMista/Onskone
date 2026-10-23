@@ -103,7 +103,6 @@ const updateMemory = (patch: Partial<Omit<AdMemory, 'version'>>): void => {
 };
 
 // --- Store réactif (même pattern que premium.ts) -----------------------------
-let consentIntroOpen = false;
 let privacyOptionsRequired = false;
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());
@@ -112,32 +111,9 @@ const subscribe = (fn: () => void) => {
   return () => { listeners.delete(fn); };
 };
 
-/** Hook React : true pendant l'écran d'intro qui précède le formulaire de Google. */
-export const useAdConsentIntro = (): boolean =>
-  useSyncExternalStore(subscribe, () => consentIntroOpen, () => consentIntroOpen);
-
 /** Hook React : true si le RGPD impose un point d'entrée "Choix publicitaires" (Réglages). */
 export const useAdPrivacyOptions = (): boolean =>
   useSyncExternalStore(subscribe, () => privacyOptionsRequired, () => privacyOptionsRequired);
-
-let resolveConsentIntro: (() => void) | null = null;
-
-const askConsentIntro = (): Promise<void> =>
-  new Promise<void>((resolve) => {
-    resolveConsentIntro = resolve;
-    consentIntroOpen = true;
-    emit();
-  });
-
-/** Bouton "Continuer" (ou fermeture) de l'écran d'intro : enchaîne sur le formulaire de Google. */
-export const continueConsentIntro = (): void => {
-  if (!consentIntroOpen) return;
-  consentIntroOpen = false;
-  emit();
-  const resolve = resolveConsentIntro;
-  resolveConsentIntro = null;
-  resolve?.();
-};
 
 // --- SDK ---------------------------------------------------------------------
 // Import dynamique : le web ne charge jamais le plugin.
@@ -236,10 +212,7 @@ const runInit = async (): Promise<boolean> => {
   ) {
     releaseSplash();
     launchSkip = 'prompted';
-    await askConsentIntro();
-    // Partie lancée pendant l'intro : pas de formulaire Google en pleine manche
-    // (redemandé au prochain lancement).
-    if (!inGame()) consent = await AdMob.showConsentForm();
+    consent = await AdMob.showConsentForm();
   }
 
   // ATT : normalement présenté par UMP via le message IDFA publié dans AdMob. Filet
