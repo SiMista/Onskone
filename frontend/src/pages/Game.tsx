@@ -1,10 +1,13 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import QuestionSelection from '../components/QuestionSelection';
 import AnswerPhase from '../components/AnswerPhase';
 import GuessingPhase from '../components/GuessingPhase';
 import RevealPhase from '../components/RevealPhase';
+import GuessingIntroOverlay from '../components/GuessingIntroOverlay';
+import { SectionErrorBoundary } from '../components/SectionErrorBoundary';
+import { StudioCrashProbe, clearStudioCrash } from '../utils/studioCrash';
 import SubstituteSelection from '../components/SubstituteSelection';
 import SubstituteAnsweringPhase from '../components/SubstituteAnsweringPhase';
 import HourglassTimer from '../components/HourglassTimer';
@@ -43,6 +46,27 @@ const GamePage: React.FC = () => {
     game, players, currentPlayer, revealResults, reconnectionData, isLeader, syncEpoch, loadingSlow, retrySync,
   } = useGameState(lobbyCode);
 
+  // Overlay d'intro GUESSING : seulement sur une transition vue en direct
+  // (réponses → devinettes, même manche), jamais à un (re)montage direct dans la
+  // phase (reconnexion, resync) : sinon il rejouerait au milieu de la phase.
+  const [guessingIntroRound, setGuessingIntroRound] = useState<number | null>(null);
+  const prevPhaseRef = useRef<{ round: number; phase: RoundPhase } | null>(null);
+  const curRound = game?.currentRound?.roundNumber;
+  const curPhase = game?.currentRound?.phase;
+  useEffect(() => {
+    if (curRound === undefined || curPhase === undefined) return;
+    const prev = prevPhaseRef.current;
+    prevPhaseRef.current = { round: curRound, phase: curPhase };
+    if (
+      curPhase === RoundPhase.GUESSING && prev && prev.round === curRound &&
+      (prev.phase === RoundPhase.ANSWERING || prev.phase === RoundPhase.SUBSTITUTE_ANSWERING)
+    ) {
+      setGuessingIntroRound(curRound);
+    }
+  }, [curRound, curPhase]);
+  const showGuessingIntro =
+    curPhase === RoundPhase.GUESSING && guessingIntroRound !== null && guessingIntroRound === curRound;
+
   // Confirmation avant de quitter pendant une partie en cours
   useLeavePrompt(game?.status === GameStatus.IN_PROGRESS);
 
@@ -79,6 +103,9 @@ const GamePage: React.FC = () => {
   // home (sinon il resterait bloqué sur l'écran de jeu). Logique partagée avec
   // Lobby.
   useLobbyExitEvents(navigate, t);
+
+  // Clé de l'écran courant : sert aux sondes de crash simulé du Studio.
+  const screenKey = `${curRound ?? 0}-${curPhase ?? 'none'}`;
 
   const renderPhase = () => {
     if (!game || !game.currentRound || !currentPlayer) {
@@ -180,6 +207,7 @@ const GamePage: React.FC = () => {
             roundNumber={game.currentRound.roundNumber}
             gameMode={gameMode}
             gameSpeed={gameSpeed}
+            intro={showGuessingIntro}
           />
         );
 
@@ -207,9 +235,17 @@ const GamePage: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col items-center justify-center overflow-hidden px-2 tablet:px-0 safe-pt relative">
+      {/* Studio : crash simulé HORS boundary local -> écran global (AppErrorBoundary). */}
+      <StudioCrashProbe target="global" crashKey={screenKey} />
       <ScreenLogo />
+      {/* Overlay purement décoratif : s'il plante on le saute, la phase dessous continue. */}
+      {showGuessingIntro && (
+        <SectionErrorBoundary name="game.guessingIntro" fallback="silent">
+          <GuessingIntroOverlay isLeader={isLeader} gameMode={game?.lobby?.gameMode ?? 'local'} onDone={() => setGuessingIntroRound(null)} />
+        </SectionErrorBoundary>
+      )}
       {/* Réglages flottants en haut à droite (hors de la carte), comme sur l'accueil. */}
-      <div className={`absolute ${TOP_CONTROLS_CLASS} right-3 z-30 safe-pt transition-[top,translate] duration-200`}>
+      <div className={`absolute ${TOP_CONTROLS_CLASS} right-3 z-30 safe-pt transition-[top,translate] duration-200 short-landscape:top-1.5 short-landscape:[&_button]:!text-gray-600 short-landscape:[&_button]:hover:!bg-black/5`}>
         <SettingsButton
           contentLocale={game?.lobby?.locale}
           lobbyCode={lobbyCode}
@@ -219,11 +255,11 @@ const GamePage: React.FC = () => {
           interne a son propre cap dvh pour scroller si la phase dépasse.
           Erreurs et notifs sont remontées via le Toast global (haut centré). */}
       <div
-        className={`w-full max-w-4xl max-h-full min-h-0 mx-auto px-2 pt-14 tablet:pt-4 flex flex-col safe-pb`}
+        className={`w-full max-w-4xl max-h-full min-h-0 mx-auto px-2 pt-14 tablet:pt-4 short-landscape:pt-1 flex flex-col safe-pb`}
       >
-        <div className="min-h-0 max-h-[80dvh] phone-landscape:max-h-none phone-landscape:h-[90dvh] bg-white rounded-xl px-2 py-5 tablet:px-4 tablet:py-7 phone-landscape:!p-2 phone-landscape:tablet:!p-4 flex flex-col overflow-hidden card-paper stack-shadow">
+        <div className="min-h-0 max-h-[80dvh] phone-landscape:max-h-none phone-landscape:h-[90dvh] short-landscape:h-[calc(100dvh-0.5rem)] bg-white rounded-xl px-2 py-5 tablet:px-4 tablet:py-7 phone-landscape:!p-2 phone-landscape:tablet:!p-4 short-landscape:!p-1.5 flex flex-col overflow-hidden card-paper stack-shadow">
           {/* Game info header : round + host à gauche, sablier à droite */}
-          <div className="shrink-0 flex items-center justify-between gap-3 mb-2 tablet:mb-4 pb-2 tablet:pb-3 border-b-[2.5px] border-dashed border-black/30">
+          <div className="shrink-0 flex items-center justify-between gap-3 mb-2 tablet:mb-4 pb-2 tablet:pb-3 short-landscape:mb-1 short-landscape:pb-1 short-landscape:pr-10 border-b-[2.5px] border-dashed border-black/30">
             <div className="flex items-center gap-1.5 flex-wrap text-gray-800 text-left">
               <span className="text-xs tablet:text-sm font-display font-bold tracking-wide">
                 Round {game?.currentRound?.roundNumber || 0}<span className="text-gray-500">/{game?.totalRounds ?? players.length}</span>
@@ -246,25 +282,36 @@ const GamePage: React.FC = () => {
               // sablier ne fait que 24px → décalage visuel marqué entre phases.
               if (!phase || phaseDuration === null) return <div className="w-[24px] tablet:w-14" aria-hidden />;
               return (
-                <HourglassTimer
-                  key={`top-timer-${game?.currentRound?.roundNumber}-${phase}`}
-                  duration={phaseDuration}
-                  phase={phase}
-                  lobbyCode={lobbyCode}
-                  size="sm"
-                />
+                <SectionErrorBoundary name="game.timer" fallback="silent" resetKeys={[game?.currentRound?.roundNumber, phase]}>
+                  <StudioCrashProbe target="timer" crashKey={screenKey} />
+                  <HourglassTimer
+                    key={`top-timer-${game?.currentRound?.roundNumber}-${phase}`}
+                    duration={phaseDuration}
+                    phase={phase}
+                    lobbyCode={lobbyCode}
+                    size="sm"
+                  />
+                </SectionErrorBoundary>
               );
             })()}
           </div>
 
           {/* syncEpoch : une resynchronisation qui change l'écran remonte la phase
               (les composants ne lisent les données de reconnexion qu'au montage). */}
-          <div
-            key={`${game?.currentRound?.roundNumber ?? 0}-${game?.currentRound?.phase ?? 'none'}-${syncEpoch}`}
-            className="flex-1 min-h-0 flex flex-col overflow-y-auto overscroll-contain no-scrollbar animate-phase-enter"
+          <SectionErrorBoundary
+            name="game.phase"
+            fallback="card"
+            resetKeys={[game?.currentRound?.roundNumber, game?.currentRound?.phase, syncEpoch]}
+            onRetry={() => { clearStudioCrash(); retrySync(); }}
           >
-            {renderPhase()}
-          </div>
+            <div
+              key={`${game?.currentRound?.roundNumber ?? 0}-${game?.currentRound?.phase ?? 'none'}-${syncEpoch}`}
+              className="flex-1 min-h-0 flex flex-col overflow-y-auto overscroll-contain no-scrollbar animate-phase-enter"
+            >
+              <StudioCrashProbe target="phase" crashKey={screenKey} />
+              {renderPhase()}
+            </div>
+          </SectionErrorBoundary>
         </div>
       </div>
 

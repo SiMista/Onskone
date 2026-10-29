@@ -2,18 +2,22 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
 import { useToast } from '../../components/Toast';
 import { Ticket, TicketStatus, TicketType, fetchTickets } from '../../utils/ticketsApi';
-import { fetchAdminLobbies } from '../../utils/adminDataApi';
-import { AdminTab, TABS, GROUP_ORDER } from './shared';
+import { fetchAdminLobbies, fetchMaintenance, fetchVersionGate, type VersionGateState } from '../../utils/adminDataApi';
+import { AdminTab, TABS, GROUP_ORDER, NAV_MENUS } from './shared';
 import { MobileBottomNav } from './MobileNav';
 import { OverviewPanel } from './Overview';
 import { TicketsPanel } from './Tickets';
 import { LogsPanel } from './Logs';
 import { LobbiesPanel } from './Lobbies';
-import { CataloguePanel } from './Catalogue';
+import { DecksPanel } from './Decks';
+import { ContentPanel } from './Content';
 import { StatsPanel } from './Stats';
-import { VersionGateButton } from './VersionGateButton';
+import { DangerPanel } from './Danger';
+import { NavDropdown } from './NavDropdown';
 
 const LOBBY_COUNT_POLL_MS = 5000;
+// Maintenance / maj forcée changent rarement, mais peuvent l'être depuis un autre appareil.
+const DANGER_POLL_MS = 15000;
 
 export const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -21,6 +25,9 @@ export const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
   const [lobbyCount, setLobbyCount] = useState<number | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  // Pastille rouge sur Système : maintenance active OU maj forcée posée.
+  const [maintenanceActive, setMaintenanceActive] = useState(false);
+  const [gateBlocking, setGateBlocking] = useState(false);
   // Filtres transférés au panel Tickets lors d'un jump depuis l'Overview.
   const [jumpFilter, setJumpFilter] = useState<{ status?: TicketStatus; type?: TicketType }>({});
   const showToast = useToast();
@@ -68,6 +75,26 @@ export const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
     return () => { cancelled = true; clearInterval(id); };
   }, []);
 
+  const onGateChange = useCallback((s: VersionGateState) => setGateBlocking(s.blocking), []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const tick = async () => {
+      const [m, g] = await Promise.all([
+        fetchMaintenance().catch(() => null),
+        fetchVersionGate().catch(() => null),
+      ]);
+      if (cancelled) return;
+      if (m) setMaintenanceActive(m.active);
+      if (g) setGateBlocking(g.blocking);
+    };
+    tick();
+    const id = setInterval(tick, DANGER_POLL_MS);
+    return () => { cancelled = true; clearInterval(id); };
+  }, []);
+
+  const dangerActive = maintenanceActive || gateBlocking;
+
   // Pastille : ne compte que les tickets non résolus.
   const openTicketCount = tickets.filter((t) => t.status !== 'resolved').length;
 
@@ -109,9 +136,6 @@ export const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
               admin
             </span>
 
-            <span className="ml-2 sm:ml-3">
-              <VersionGateButton />
-            </span>
 
             <button
               onClick={() => setActiveTab('lobbies')}
@@ -152,6 +176,17 @@ export const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
             {GROUP_ORDER.map((group) => {
               const groupTabs = TABS.filter((t) => t.group === group && t.id !== 'lobbies');
               if (groupTabs.length === 0) return null;
+              if (NAV_MENUS[group]) {
+                return (
+                  <NavDropdown
+                    key={group}
+                    group={group}
+                    activeTab={activeTab}
+                    setActiveTab={setActiveTab}
+                    dangerActive={group === 'system' && dangerActive}
+                  />
+                );
+              }
               return (
                 <div key={group} className="flex items-stretch shrink-0">
                   {groupTabs.map((tab) => {
@@ -199,6 +234,18 @@ export const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
       </div>
 
       <main className="relative max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6 pb-24 md:pb-6">
+        {activeTab === 'overview' && dangerActive && (
+          <button
+            onClick={() => setActiveTab('danger')}
+            className="cursor-pointer mb-4 w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-rose-400/40 bg-rose-500/10 text-left text-rose-100 hover:bg-rose-500/20 transition-colors"
+          >
+            <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-rose-500 animate-pulse" />
+            <span className="font-mono text-[12px] uppercase tracking-[0.12em]">
+              {[maintenanceActive && 'maintenance active', gateBlocking && 'maj forcée active'].filter(Boolean).join(' · ')}
+            </span>
+            <Icon icon="mdi:chevron-right" className="w-5 h-5 ml-auto opacity-70" />
+          </button>
+        )}
         {activeTab === 'overview' && (
           <OverviewPanel tickets={tickets} onJumpToTickets={jumpToTickets} />
         )}
@@ -220,12 +267,14 @@ export const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
         {activeTab === 'stats' && (
           <StatsPanel active={activeTab === 'stats'} refreshKey={refreshKey} />
         )}
-        {activeTab === 'catalogue' && (
-          <CataloguePanel active={activeTab === 'catalogue'} />
+        {activeTab === 'decks' && <DecksPanel active />}
+        {activeTab === 'content' && <ContentPanel />}
+        {activeTab === 'danger' && (
+          <DangerPanel onMaintenanceChange={setMaintenanceActive} onGateChange={onGateChange} />
         )}
       </main>
 
-      <MobileBottomNav activeTab={activeTab} setActiveTab={setActiveTab} lobbyCount={lobbyCount} ticketCount={openTicketCount} />
+      <MobileBottomNav activeTab={activeTab} setActiveTab={setActiveTab} lobbyCount={lobbyCount} ticketCount={openTicketCount} dangerActive={dangerActive} />
 
       <style>{`
         .no-scrollbar::-webkit-scrollbar { display: none; }

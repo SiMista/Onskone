@@ -34,7 +34,7 @@ const Legal = ({ kind }: LegalProps) => {
           <LanguageSwitcher />
         </div>
 
-        <div className="bg-white rounded-[28px] border-[3px] border-black texture-paper stack-shadow-lg p-5 md:p-7 mb-4">
+        <div className="bg-white rounded-[28px] border-[3px] border-black texture-paper stack-shadow-lg p-5 md:p-7 mb-4 break-words">
           <h1 className="marker-highlight text-lg md:text-xl font-display font-bold text-gray-900 tracking-tight mb-5">{section.title}</h1>
           <div className="space-y-5 text-gray-800">
             {section.sections.map((s, i) => (

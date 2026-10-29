@@ -33,6 +33,9 @@ import { studioStorage, isStudioFrame, getStudioBotFlag } from '../utils/studioS
 import { getCurrentPlayerFromStorage, storeReconnectToken, getReconnectToken } from '../utils/playerHelpers';
 
 const RECOMMENDED_PLAYERS = 4;
+// Helper texts sous l'action row : texte blanc posé sur le fond clair,
+// ombre nette + halo sombre pour rester lisible.
+const HELPER_TEXT_CLASS = 'mt-2 text-[11px] md:text-xs text-white italic text-center [text-shadow:0_1px_2px_rgba(0,0,0,0.85),0_0_8px_rgba(0,0,0,0.6)]';
 
 const Lobby = () => {
     const { lobbyCode } = useParams<{ lobbyCode: string }>();
@@ -447,17 +450,17 @@ const Lobby = () => {
 
                             {/* Helper text sous l'action row */}
                             {currentPlayer?.isHost && !enoughPlayers && (
-                                <small className="text-[11px] md:text-xs text-white/85 italic drop-shadow text-center">
+                                <small className={HELPER_TEXT_CLASS}>
                                     {t.lobby.minPlayers(GAME_CONFIG.MIN_PLAYERS)}
                                 </small>
                             )}
                             {currentPlayer?.isHost && enoughPlayers && !hasThemeSelected && (
-                                <small className="text-[11px] md:text-xs text-white/85 italic drop-shadow text-center">
+                                <small className={HELPER_TEXT_CLASS}>
                                     {decksLoading ? t.lobby.loadingThemes : t.lobby.selectAtLeastOneTheme}
                                 </small>
                             )}
                             {currentPlayer?.isHost && enoughPlayers && hasThemeSelected && !hasLeader && (
-                                <small className="text-[11px] md:text-xs text-white/85 italic drop-shadow text-center">
+                                <small className={HELPER_TEXT_CLASS}>
                                     {t.lobby.atLeastOneLeader}
                                 </small>
                             )}

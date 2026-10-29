@@ -337,7 +337,8 @@ const EndGame: React.FC = () => {
 
   return (
     <div className="h-full relative overflow-hidden flex flex-col items-center justify-center safe-pt">
-      <ScreenLogo z="z-20" />
+      {/* Dans le flux : la zone de scroll démarre sous le logo, le score ne passe plus dessous. */}
+      <ScreenLogo z="z-20" inFlow />
       <div
         className="pointer-events-none fixed inset-0 z-10 transition-opacity duration-1000"
         style={{

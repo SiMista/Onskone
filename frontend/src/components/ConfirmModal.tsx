@@ -11,6 +11,8 @@ interface ConfirmModalProps {
   confirmText?: string;
   cancelText?: string;
   confirmVariant?: 'primary' | 'success' | 'warning' | 'danger';
+  /** Reste ouverte au retour de l'app au premier plan (cf. useModalChrome). */
+  keepOnResume?: boolean;
 }
 
 const ConfirmModal = ({
@@ -21,7 +23,8 @@ const ConfirmModal = ({
   message,
   confirmText,
   cancelText,
-  confirmVariant = 'primary'
+  confirmVariant = 'primary',
+  keepOnResume = false,
 }: ConfirmModalProps) => {
   const { t } = useLocale();
 
@@ -32,6 +35,7 @@ const ConfirmModal = ({
       title={title}
       maxWidth="md"
       scrollable={false}
+      keepOnResume={keepOnResume}
       footer={
         <div className="flex flex-row gap-3 justify-center">
           <Button

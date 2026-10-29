@@ -72,9 +72,10 @@ const LobbyCard = ({ lobby }: { lobby: AdminLobbySummary }) => {
 
       <div className="mt-2 flex items-center gap-2 text-[12px]">
         <span className="font-mono text-[11px] uppercase tracking-wider text-white/35">joueurs</span>
-        <span className="font-mono tabular-nums text-white/75">
+        <span className="font-mono tabular-nums text-white/75" title="connectés / total dans le salon">
           {lobby.activePlayerCount}/{lobby.playerCount}
         </span>
+        <span className="font-mono text-[11px] text-white/35">connectés</span>
         {lobby.phase === 'playing' && lobby.currentRound !== null && (
           <>
             <span className="text-white/15">·</span>
@@ -90,16 +91,18 @@ const LobbyCard = ({ lobby }: { lobby: AdminLobbySummary }) => {
         {lobby.players.map((p, i) => (
           <span
             key={`${p.name}-${i}`}
-            className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border font-mono text-[11px] ${!p.isActive
-              ? 'border-white/[0.06] bg-white/[0.02] text-white/30 line-through'
+            className={`inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded border font-mono text-[11px] ${!p.isActive
+              ? 'border-white/[0.06] bg-white/[0.02] text-white/35'
               : p.isHost
                 ? 'border-amber-300/30 bg-amber-400/[0.08] text-amber-100/90'
                 : 'border-white/15 bg-white/[0.04] text-white/80'
               }`}
-            title={p.isActive ? (p.isHost ? 'hôte' : 'actif') : 'déconnecté'}
+            title={`${p.name} · ${p.isHost ? 'hôte, ' : ''}${p.isActive ? 'connecté' : 'déconnecté (garde sa place, peut revenir)'}`}
           >
+            <span className={`w-1.5 h-1.5 rounded-full ${p.isActive ? 'bg-emerald-400' : 'bg-white/25'}`} />
             {p.isHost && <Icon icon="mdi:crown" className="w-3 h-3 text-amber-300/90" />}
             <span>{p.name}</span>
+            {!p.isActive && <Icon icon="mdi:wifi-off" className="w-3 h-3 text-white/35" />}
           </span>
         ))}
       </div>
@@ -167,6 +170,15 @@ export const LobbiesPanel = ({ active, refreshKey }: { active: boolean; refreshK
             {lastFetch ? `maj ${formatAge(lastFetch)}` : '…'} · refresh 5s
           </span>
         </div>
+      </div>
+
+      <div className="flex items-center gap-x-4 gap-y-1 flex-wrap font-mono text-[11px] text-white/45">
+        <span className="inline-flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />connecté</span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-white/25" />
+          <Icon icon="mdi:wifi-off" className="w-3 h-3" />déconnecté (garde sa place en partie, retiré après 30 s au salon)
+        </span>
+        <span className="inline-flex items-center gap-1.5"><Icon icon="mdi:crown" className="w-3 h-3 text-amber-300/90" />hôte</span>
       </div>
 
       {isLoading && lobbies.length === 0 ? (

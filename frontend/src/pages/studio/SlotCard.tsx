@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { getAvatarUrl } from '../../constants/game';
 import {
   SlotConfig, SlotRuntimeState,
-  VIEWPORT_PRESETS, SLOT_PLATFORMS, presetById, viewportDims,
+  VIEWPORT_PRESETS, SLOT_PLATFORMS, presetById, viewportDims, freeDimsPatch, FREE_MIN, FREE_MAX,
   PILL_ICON, SELECT_CLS,
 } from './shared';
 
@@ -77,6 +77,25 @@ export const SlotCard = ({
 
   const fitZoom = availableWidth > 0 ? availableWidth / dims.w : zoom;
   const effectiveZoom = Math.min(zoom, fitZoom);
+
+  // Format « Libre » : poignée en coin bas-droit. Le delta écran est converti en px du
+  // cadre avec le zoom FIGÉ au début du geste (le shrink-to-fit bougerait sous le doigt).
+  const isFree = slot.viewportId === 'free';
+  const dragRef = useRef<{ x: number; y: number; w: number; h: number; zoom: number } | null>(null);
+  const onResizeStart = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    dragRef.current = { x: e.clientX, y: e.clientY, w: dims.w, h: dims.h, zoom: effectiveZoom };
+  };
+  const onResizeMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const d = dragRef.current;
+    if (!d) return;
+    onUpdateSlot(slot.id, freeDimsPatch(slot, d.w + (e.clientX - d.x) / d.zoom, d.h + (e.clientY - d.y) / d.zoom));
+  };
+  const onResizeEnd = (e: React.PointerEvent<HTMLDivElement>) => {
+    dragRef.current = null;
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+  };
 
   const phaseLabel = !running
     ? 'idle'
@@ -230,12 +249,23 @@ export const SlotCard = ({
         </div>
 
         <div
+          className="relative"
           style={{
             width: dims.w * effectiveZoom,
             height: dims.h * effectiveZoom,
             flexShrink: 0,
           }}
         >
+          {isFree && (
+            <div
+              onPointerDown={onResizeStart}
+              onPointerMove={onResizeMove}
+              onPointerUp={onResizeEnd}
+              onPointerCancel={onResizeEnd}
+              className="absolute -bottom-1 -right-1 z-10 w-6 h-6 rounded-md bg-amber-400/90 border border-amber-200 shadow-lg flex items-center justify-center text-black/70 text-[13px] leading-none cursor-nwse-resize touch-none select-none hover:bg-amber-300"
+              title={`Glisse pour redimensionner (${FREE_MIN}–${FREE_MAX}px)`}
+            >⤡</div>
+          )}
         <div
           style={{
             width: dims.w,
@@ -294,7 +324,35 @@ export const SlotCard = ({
         <span className="text-white/15">·</span>
         <span>{preset.short}</span>
         <span className="text-white/15">·</span>
-        <span>{dims.w}×{dims.h}</span>
+        {isFree ? (
+          <span className="flex items-center gap-1 text-white/70">
+            {([['w', 'Largeur'], ['h', 'Hauteur']] as const).map(([axis, label], i) => (
+              <span key={axis} className="flex items-center gap-1">
+                {i === 1 && <span className="text-white/30">×</span>}
+                {/* Non contrôlé + validé au blur / Entrée : clamper à chaque frappe rendrait « 500 » intapable. */}
+                <input
+                  key={`${axis}-${dims[axis]}`}
+                  type="number"
+                  min={FREE_MIN}
+                  max={FREE_MAX}
+                  step={10}
+                  defaultValue={dims[axis]}
+                  aria-label={label}
+                  title={`${label} (${FREE_MIN}–${FREE_MAX}px) - Entrée pour valider`}
+                  onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                  onBlur={(e) => {
+                    const n = Number(e.target.value);
+                    if (!Number.isFinite(n) || n <= 0) { e.target.value = String(dims[axis]); return; }
+                    onUpdateSlot(slot.id, freeDimsPatch(slot, axis === 'w' ? n : dims.w, axis === 'h' ? n : dims.h));
+                  }}
+                  className="w-14 bg-white/[0.06] border border-white/10 focus:border-amber-300/50 rounded px-1 py-0.5 text-[10px] text-white tabular-nums focus:outline-none"
+                />
+              </span>
+            ))}
+          </span>
+        ) : (
+          <span>{dims.w}×{dims.h}</span>
+        )}
         <span className="text-white/15">·</span>
         <span>slot{index}</span>
         {slot.bot && (

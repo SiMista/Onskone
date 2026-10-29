@@ -26,7 +26,10 @@
     "socket.io-client": "^4.8.1"
   },
   "scripts": {
+    "emojis": "node scripts/build-emoji-subset.mjs",
+    "predev": "pnpm emojis",
     "dev": "vite",
+    "prebuild": "pnpm emojis",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "assets": "capacitor-assets generate",
@@ -36,6 +39,8 @@
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^8.4.0",
+    "@iconify-json/fluent-emoji-flat": "^1.2.6",
+    "@iconify/utils": "^3.1.7",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/react": "^18.3.12",

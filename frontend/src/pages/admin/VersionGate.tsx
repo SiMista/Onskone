@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from '@iconify/react';
 import { useToast } from '../../components/Toast';
-import { SectionHeader } from './content/SectionHeader';
+import { DangerCard, DangerButton } from './DangerCard';
 import { ConfirmDialog } from './ConfirmDialog';
 import {
   fetchVersionGate,
@@ -78,91 +78,75 @@ export const VersionGatePanel = ({
 
   return (
     <div>
-      <SectionHeader title="Mise à jour forcée" />
-      <p className="text-[13px] text-white/55 mb-4 max-w-2xl">
-        Un joueur sous le plancher voit l'écran « Mise à jour requise » seulement si une version
-        plus récente lui est réellement disponible : son store sur mobile, un rechargement sur le web.
-        Celui qui a déjà la dernière version qu'il peut obtenir n'est jamais bloqué. Appliqué à la
-        prochaine connexion <strong>ou reconnexion</strong> de chaque joueur — y compris une reconnexion
-        automatique en pleine partie (téléphone verrouillé, réseau) : à faire quand personne ne joue.
-        Survit aux restarts.
-      </p>
-
-      {loading ? (
-        <div className="rounded-lg surface-glass py-10 text-center font-mono text-[11px] uppercase tracking-[0.22em] text-white/30">
-          chargement…
-        </div>
-      ) : (
-        <div className="space-y-4 max-w-2xl">
-          {/* État courant */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            <div className="rounded-lg surface-glass p-3">
-              <p className="text-[12px] text-white/55">Version déployée</p>
-              <p className="mt-1 text-[20px] font-semibold tabular-nums text-white">{deployed}</p>
-            </div>
-            <div className="rounded-lg surface-glass p-3">
-              <p className="text-[12px] text-white/55">Statut</p>
-              <p className={`mt-1 text-[16px] font-semibold flex items-center gap-2 ${blocking ? 'text-amber-300' : 'text-emerald-300'}`}>
-                <span className={`inline-block h-2 w-2 rounded-full ${blocking ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'}`} />
-                {blocking ? `Blocage actif (< ${state?.minVersion})` : 'Aucun blocage'}
-              </p>
-            </div>
-            <div className="rounded-lg surface-glass p-3 sm:col-span-2">
-              <p className="text-[12px] text-white/55">En ligne sur l'App Store</p>
-              <p className="mt-1 text-[20px] font-semibold tabular-nums text-white">{appStore?.version || '?'}</p>
-              {appStore && Number.isFinite(appStoreReleasedAt) && (
-                <p className="mt-0.5 text-[11px] text-white/40">
-                  depuis le {formatDate(appStoreReleasedAt)} · iOS {appStore.minimumOsVersion} minimum
-                </p>
-              )}
-              {appStoreInGrace && (
-                <p className="mt-1 text-[11px] text-amber-200/80">
-                  Sortie il y a moins de 24 h : les iPhone ne seront invités à la prendre qu'après ce délai.
-                </p>
-              )}
-              <p className="mt-1.5 text-[11px] text-white/35">
-                Play Store : chaque téléphone Android interroge Google lui-même (pas de version publique côté Google).
-              </p>
-            </div>
+      <DangerCard
+        tone="violet"
+        icon="mdi:cellphone-arrow-down"
+        title="Mise à jour forcée"
+        summary="Oblige les joueurs sous la dernière version à se mettre à jour, seulement s'ils le peuvent."
+        status={state ? { tone: blocking ? 'alert' : 'ok', label: blocking ? `Active (< ${state.minVersion})` : 'Aucun blocage' } : null}
+        loading={loading}
+        details={(
+          <>
+            <p>
+              Un joueur sous le plancher voit l'écran « Mise à jour requise » seulement si une version plus récente
+              lui est réellement disponible : son store sur mobile, un rechargement sur le web. Celui qui a déjà la
+              dernière version qu'il peut obtenir n'est jamais bloqué.
+            </p>
+            <p>
+              Appliqué à la prochaine connexion <strong className="text-white/70">ou reconnexion</strong> de chaque
+              joueur, y compris une reconnexion automatique en pleine partie (téléphone verrouillé, réseau) : à faire
+              quand personne ne joue. Survit aux restarts.
+            </p>
+            <p>
+              « Forcer » pose le plancher = version déployée. Chaque appareil vérifie lui-même son store : si le store
+              est en retard (review Apple, rollout progressif, hotfix d'une seule plateforme), ses joueurs ne sont pas
+              bloqués. Les anciennes apps mobiles, sans cette vérification, ne sont jamais bloquées. « Désactiver »
+              libère tout le monde en direct.
+            </p>
+            <p>Play Store : chaque téléphone Android interroge Google lui-même (pas de version publique côté Google).</p>
+          </>
+        )}
+      >
+        <dl className="grid grid-cols-2 gap-2.5">
+          <div className="rounded-xl surface-glass p-3">
+            <dt className="text-[12px] text-white/55">Version déployée</dt>
+            <dd className="mt-1 text-[20px] font-semibold tabular-nums text-white">{deployed}</dd>
           </div>
-
-          {/* Actions 1-clic : le serveur décide le numéro (= version déployée) */}
-          <div className="flex flex-wrap items-center gap-2.5">
-            <button
-              type="button"
-              onClick={() => setConfirm('force')}
-              disabled={busy !== null || !state?.deployedVersion || alreadyForced}
-              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-md border font-mono text-[12px] tracking-wider transition-colors
-                border-amber-400/40 bg-amber-500/10 text-amber-100 hover:bg-amber-500/20 hover:border-amber-400/60
-                disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-            >
-              <Icon icon={busy === 'force' ? 'mdi:loading' : 'mdi:shield-alert-outline'} className={`w-4 h-4 ${busy === 'force' ? 'animate-spin' : ''}`} />
-              {alreadyForced ? `Maj forcée vers ${deployed}` : `Forcer la maj vers ${deployed}`}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setConfirm('disable')}
-              disabled={busy !== null || !blocking}
-              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-md border font-mono text-[12px] tracking-wider transition-colors
-                border-white/[0.08] bg-transparent text-white/60 hover:text-white/90 hover:border-white/20
-                disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
-            >
-              <Icon icon={busy === 'disable' ? 'mdi:loading' : 'mdi:lock-open-variant-outline'} className={`w-4 h-4 ${busy === 'disable' ? 'animate-spin' : ''}`} />
-              Désactiver le blocage
-            </button>
+          <div className="rounded-xl surface-glass p-3">
+            <dt className="text-[12px] text-white/55">App Store</dt>
+            <dd className="mt-1 text-[20px] font-semibold tabular-nums text-white">{appStore?.version || '?'}</dd>
+            {appStore && Number.isFinite(appStoreReleasedAt) && (
+              <p className="mt-0.5 text-[11px] text-white/40">depuis le {formatDate(appStoreReleasedAt)}</p>
+            )}
           </div>
-
-          <p className="text-[11px] text-white/35">
-            « Forcer » pose le plancher = version déployée. Chaque appareil vérifie lui-même son
-            store : si le store est en retard (review Apple, rollout progressif, hotfix d'une seule
-            plateforme), ses joueurs ne sont pas bloqués. Les anciennes apps mobiles, sans cette
-            vérification, ne sont jamais bloquées. « Désactiver » libère tout le monde en direct.
+        </dl>
+        {appStoreInGrace && (
+          <p className="text-[12px] text-amber-200/80">
+            Sortie il y a moins de 24 h : les iPhone ne seront invités à la prendre qu'après ce délai.
           </p>
+        )}
 
-          {import.meta.env.DEV && <TestZone deployed={deployed} />}
+        {/* Actions 1-clic : le serveur décide le numéro (= version déployée).
+            Bloqué => « Désactiver » devient l'action principale. */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          {blocking && (
+            <DangerButton variant="safe" icon="mdi:lock-open-variant-outline" busy={busy === 'disable'} disabled={busy !== null} onClick={() => setConfirm('disable')}>
+              Désactiver le blocage
+            </DangerButton>
+          )}
+          <DangerButton
+            variant={blocking ? 'ghost' : 'warning'}
+            icon="mdi:shield-alert-outline"
+            busy={busy === 'force'}
+            disabled={busy !== null || !state?.deployedVersion || alreadyForced}
+            onClick={() => setConfirm('force')}
+          >
+            {alreadyForced ? `Maj forcée vers ${deployed}` : `Forcer la maj vers ${deployed}`}
+          </DangerButton>
         </div>
-      )}
+
+        {import.meta.env.DEV && <TestZone deployed={deployed} />}
+      </DangerCard>
 
       {/* Portal vers <body> : la confirmation échappe au sous-arbre de la popover
           (qui est masquée pendant ce temps) et se centre sur tout l'écran. */}

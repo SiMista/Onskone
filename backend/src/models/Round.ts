@@ -22,6 +22,9 @@ export class Round implements IRound {
     gameCard: GameCard;
     phase: RoundPhase;
     selectedQuestion: string | null;
+    // Question tapée par le pilier mais pas encore confirmée : sert d'auto-sélection
+    // si le timer expire avant la confirmation (jamais diffusée aux autres joueurs).
+    pendingQuestion: string | null;
     answers: Record<string, string>; // Réponses des joueurs (clé = ID du joueur, valeur = réponse)
     currentGuesses: Record<string, string>; // État intermédiaire du drag & drop
     guesses: Record<string, string>; // Attributions finales du pilier
@@ -61,6 +64,7 @@ export class Round implements IRound {
         this.gameCard = gameCard;
         this.phase = RoundPhase.QUESTION_SELECTION;
         this.selectedQuestion = null;
+        this.pendingQuestion = null;
         this.answers = {};
         this.currentGuesses = {};
         this.guesses = {};

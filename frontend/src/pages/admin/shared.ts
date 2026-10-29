@@ -110,8 +110,8 @@ export const formatRelative = (ms: number): string => {
 };
 
 // ---------- Navigation ----------
-export type AdminTab = 'overview' | 'tickets' | 'logs' | 'lobbies' | 'stats' | 'catalogue';
-export type TabGroup = 'pilotage' | 'inbox' | 'catalogue';
+export type AdminTab = 'overview' | 'tickets' | 'logs' | 'lobbies' | 'stats' | 'decks' | 'content' | 'danger';
+export type TabGroup = 'pilotage' | 'inbox' | 'catalogue' | 'system';
 
 export interface TabDef {
   id: AdminTab;
@@ -127,12 +127,23 @@ export const TABS: TabDef[] = [
   { id: 'overview', icon: 'mdi:home', ariaLabel: 'Accueil', hint: 'accueil', enabled: true, group: 'pilotage' },
   { id: 'lobbies', label: 'Salons live', hint: 'temps réel', enabled: true, group: 'pilotage' },
   { id: 'tickets', icon: 'mdi:ticket-outline', label: 'Tickets', ariaLabel: 'Tickets', hint: 'retours joueurs', enabled: true, group: 'inbox' },
-  { id: 'logs', icon: 'mdi:bug-outline', label: 'Logs', ariaLabel: 'Logs d\'erreurs de l\'app', hint: 'erreurs appareils', enabled: true, group: 'inbox' },
+  { id: 'logs', icon: 'mdi:bug-outline', label: 'Logs', ariaLabel: 'Logs d\'erreurs de l\'app', hint: 'erreurs appareils', enabled: true, group: 'system' },
+  { id: 'danger', icon: 'mdi:alert-octagon-outline', label: 'Danger', ariaLabel: 'Maintenance et mise à jour forcée', hint: 'maintenance, maj forcée', enabled: true, group: 'system' },
   { id: 'stats', icon: 'mdi:chart-bar', label: 'Stats', ariaLabel: 'Stats des thèmes et questions', hint: 'popularité', enabled: true, group: 'pilotage' },
-  { id: 'catalogue', icon: 'mdi:cards-outline', label: 'Catalogue', ariaLabel: 'Decks et contenu du site', hint: 'decks & contenu', enabled: true, group: 'catalogue' },
+  { id: 'decks', icon: 'mdi:cards-outline', label: 'Decks', ariaLabel: 'Decks : thèmes, sujets et questions', hint: 'thèmes et questions', enabled: true, group: 'catalogue' },
+  { id: 'content', icon: 'mdi:text-box-outline', label: 'Contenu', ariaLabel: 'Contenu du site', hint: 'paliers, succès, avatars, légal…', enabled: true, group: 'catalogue' },
 ];
 
-export const GROUP_ORDER: TabGroup[] = ['pilotage', 'inbox', 'catalogue'];
+export const GROUP_ORDER: TabGroup[] = ['pilotage', 'inbox', 'catalogue', 'system'];
+
+// Groupes rendus en menu déroulant (dropdown desktop / bottom sheet mobile) : leurs
+// onglets ne sont pas des entrées de nav à part entière. Les autres groupes restent à plat.
+export const NAV_MENUS: Partial<Record<TabGroup, { label: string; icon: string }>> = {
+  catalogue: { label: 'Catalogue', icon: 'mdi:cards-outline' },
+  system: { label: 'Système', icon: 'mdi:shield-alert-outline' },
+};
+export const NAV_MENU_ORDER = GROUP_ORDER.filter((g) => NAV_MENUS[g]);
+export const tabsOfGroup = (group: TabGroup): TabDef[] => TABS.filter((t) => t.group === group);
 
 export const MOBILE_TAB_META: Record<AdminTab, { icon: string; label: string }> = {
   overview: { icon: 'mdi:home-variant-outline', label: 'Accueil' },
@@ -140,7 +151,10 @@ export const MOBILE_TAB_META: Record<AdminTab, { icon: string; label: string }> 
   tickets: { icon: 'mdi:ticket-outline', label: 'Tickets' },
   logs: { icon: 'mdi:bug-outline', label: 'Logs' },
   stats: { icon: 'mdi:chart-bar', label: 'Stats' },
-  catalogue: { icon: 'mdi:cards-outline', label: 'Catalogue' },
+  decks: { icon: 'mdi:cards-outline', label: 'Decks' },
+  content: { icon: 'mdi:text-box-outline', label: 'Contenu' },
+  danger: { icon: 'mdi:alert-octagon-outline', label: 'Danger' },
 };
 
-export const MOBILE_TAB_ORDER: AdminTab[] = ['overview', 'lobbies', 'stats', 'tickets', 'logs', 'catalogue'];
+// Les 2 derniers slots de la barre mobile sont les menus (Catalogue, Système), rendus à part.
+export const MOBILE_TAB_ORDER: AdminTab[] = ['overview', 'lobbies', 'stats', 'tickets'];

@@ -1,5 +1,5 @@
 import { jest, describe, it, expect, beforeEach, afterEach } from '@jest/globals';
-import { RoundPhase } from '@onskone/shared';
+import { RoundPhase, GAME_CONSTANTS } from '@onskone/shared';
 import * as GameManager from '../src/managers/GameManager';
 import { TestHelper } from '../src/utils/TestHelper';
 import { Round } from '../src/models/Round';
@@ -90,6 +90,27 @@ describe('transitions interactives : le serveur arme lui-même le timer de la no
         expect(round.phase).toBe(RoundPhase.GUESSING);
         expect(round.serverTimerHandle).not.toBeNull();
         expect(round.timerPhase).toBe(RoundPhase.GUESSING);
+    });
+
+    it("transitionToGuessing décale le départ du timer de la durée de l'intro", () => {
+        const { lobby, round } = startedGame();
+        const { io, emitted } = fakeIo();
+        round.nextPhase(); // QUESTION_SELECTION -> ANSWERING (Classique)
+        for (const p of lobby.players) {
+            if (p.id !== round.leader.id) round.answers[p.id] = `réponse ${p.name}`;
+        }
+        const now = Date.now();
+
+        transitionToGuessing(io, lobby.code, lobby, round, false);
+
+        const [, payload] = emitted('timerStarted')[0] as [string, { startedAt: number; duration: number }];
+        expect(payload.startedAt).toBe(now + GAME_CONSTANTS.GUESSING_INTRO_MS);
+        expect(round.timerEnd?.getTime()).toBe(payload.startedAt + payload.duration * 1000);
+        // Le temps imparti entier reste dispo APRÈS l'intro : pas d'expiration avant.
+        jest.advanceTimersByTime(payload.duration * 1000);
+        expect(round.serverTimerHandle).not.toBeNull();
+        jest.advanceTimersByTime(GAME_CONSTANTS.GUESSING_INTRO_MS);
+        expect(round.serverTimerHandle).toBeNull();
     });
 
     it('finishAnsweringPhase (Devine ma réponse) arme un timer SUBSTITUTE_ANSWERING', () => {

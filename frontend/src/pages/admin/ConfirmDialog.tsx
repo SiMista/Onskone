@@ -1,22 +1,27 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 export const ConfirmDialog = ({
-  title, message, confirmLabel, onConfirm, onCancel,
+  title, message, confirmLabel, onConfirm, onCancel, requireText,
 }: {
   title: string;
   message: string;
   confirmLabel: string;
   onConfirm: () => void;
   onCancel: () => void;
+  // Action lourde : le bouton reste grisé tant que ce mot n'est pas saisi (et Entrée n'y peut rien).
+  requireText?: string;
 }) => {
+  const [typed, setTyped] = useState('');
+  const unlocked = !requireText || typed.trim().toUpperCase() === requireText.toUpperCase();
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onCancel();
-      if (e.key === 'Enter') onConfirm();
+      if (e.key === 'Enter' && unlocked) onConfirm();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onCancel, onConfirm]);
+  }, [onCancel, onConfirm, unlocked]);
 
   return (
     <div
@@ -35,6 +40,21 @@ export const ConfirmDialog = ({
           <h3 className="text-[16px] font-semibold tracking-tight text-white">{title}</h3>
           <p className="mt-1 text-[13px] text-white/55">{message}</p>
         </div>
+        {requireText && (
+          <input
+            type="text"
+            value={typed}
+            onChange={(e) => setTyped(e.target.value)}
+            autoFocus
+            autoCapitalize="characters"
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
+            placeholder={`Tape ${requireText} pour confirmer`}
+            className="w-full bg-[#0f1117] text-white/90 border border-red-400/30 rounded-md px-3 py-2.5 text-[14px] font-mono
+              focus:outline-none focus:border-red-400/70 placeholder:text-white/25"
+          />
+        )}
         <div className="flex items-center gap-2 justify-end pt-1">
           <button
             onClick={onCancel}
@@ -44,8 +64,9 @@ export const ConfirmDialog = ({
           </button>
           <button
             onClick={onConfirm}
-            autoFocus
-            className="px-3 py-1.5 rounded-md border border-red-400/50 bg-red-500/20 hover:bg-red-500/35 text-red-100 font-mono text-[11px] font-bold uppercase tracking-wider transition-colors"
+            disabled={!unlocked}
+            autoFocus={!requireText}
+            className="px-3 py-1.5 rounded-md border border-red-400/50 bg-red-500/20 hover:bg-red-500/35 text-red-100 font-mono text-[11px] font-bold uppercase tracking-wider transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           >
             ✕ {confirmLabel}
           </button>

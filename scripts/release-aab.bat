@@ -29,6 +29,14 @@ if "%VITE_SERVER_URL%"=="" (
 :: Build natif : base d'assets relative (cf vite.config.ts).
 set CAPACITOR_BUILD=1
 
+:: Controle qualite AVANT tout (shared est build d'abord : les tests l'importent). Un test rouge
+:: arrete le release ici, avant que la version soit bumpee/commitee/poussee.
+:: Deps a jour apres le pull (une devDep ajoutee manquerait au prebuild du front, APRES le bump).
+call pnpm install --frozen-lockfile || exit /b 1
+echo Building shared package...
+call pnpm build:shared || exit /b 1
+node "%~dp0run-tests.mjs" || exit /b 1
+
 :: Quelle version store publier ? (garder / monter / saisir ; commit + push si elle change)
 node "%~dp0release-version-prompt.mjs" || exit /b 1
 
@@ -39,9 +47,6 @@ echo Version %APP_VNAME% (code %APP_VCODE%)
 
 :: Cle RevenueCat Google : sans elle les achats sont morts dans l'AAB (cf check-rc-key).
 node "%~dp0check-rc-key.mjs" android || exit /b 1
-
-echo Building shared package...
-call pnpm build:shared || exit /b 1
 
 echo Building frontend (VITE_SERVER_URL=%VITE_SERVER_URL%)...
 call pnpm build:frontend || exit /b 1

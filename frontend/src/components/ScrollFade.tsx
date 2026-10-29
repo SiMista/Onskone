@@ -1,4 +1,4 @@
-import { RefObject } from 'react';
+import { RefObject, useRef } from 'react';
 import { useScrollFade } from '../hooks/useScrollFade';
 
 interface ScrollFadeProps {
@@ -28,7 +28,9 @@ const WHITE_GRADIENT = {
  * qui épouse le scroll container (le fade du haut se cale sur le haut du parent).
  */
 const ScrollFade = ({ scrollRef, className = '', color }: ScrollFadeProps) => {
-  const { top, bottom } = useScrollFade(scrollRef);
+  const topRef = useRef<HTMLDivElement | null>(null);
+  const bottomRef = useRef<HTMLDivElement | null>(null);
+  useScrollFade(scrollRef, topRef, bottomRef);
   const base = 'pointer-events-none absolute inset-x-0 transition-opacity duration-150';
   // Même profil que le dégradé blanc : plein, 85 % (alpha d9) à mi-hauteur, transparent.
   const colorStyle = (direction: 'to top' | 'to bottom') =>
@@ -36,15 +38,18 @@ const ScrollFade = ({ scrollRef, className = '', color }: ScrollFadeProps) => {
   return (
     <>
       {/* Haut : plus court que celui du bas, pour ne pas masquer la première ligne visible. */}
+      {/* L'opacité est pilotée en direct par useScrollFade (cachés tant que non mesurés). */}
       <div
+        ref={topRef}
         aria-hidden
-        className={`${base} top-0 h-8 md:h-10 ${color ? '' : WHITE_GRADIENT.top} ${top ? 'opacity-100' : 'opacity-0'}`}
-        style={colorStyle('to bottom')}
+        className={`${base} top-0 h-8 md:h-10 ${color ? '' : WHITE_GRADIENT.top}`}
+        style={{ opacity: 0, ...colorStyle('to bottom') }}
       />
       <div
+        ref={bottomRef}
         aria-hidden
-        className={`${base} bottom-0 h-12 md:h-14 ${color ? '' : WHITE_GRADIENT.bottom} ${bottom ? 'opacity-100' : 'opacity-0'} ${className}`}
-        style={colorStyle('to top')}
+        className={`${base} bottom-0 h-12 md:h-14 ${color ? '' : WHITE_GRADIENT.bottom} ${className}`}
+        style={{ opacity: 0, ...colorStyle('to top') }}
       />
     </>
   );

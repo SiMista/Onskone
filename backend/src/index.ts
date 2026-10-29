@@ -8,6 +8,8 @@ import { SocketHandler } from './sockets/SocketHandler';
 import * as LobbyManager from './managers/LobbyManager.js';
 import { stopAllRateLimiters } from './utils/rateLimiter.js';
 import { attachVersionGate, getMinSupportedVersion } from './utils/versionGate.js';
+import { attachMaintenance } from './utils/maintenance.js';
+import maintenanceRouter from './routes/maintenance.js';
 import { CAPACITOR_ORIGINS } from './utils/origins.js';
 import { FRONTEND_DIST } from './utils/frontendDist.js';
 import ticketsRouter from './routes/tickets.js';
@@ -99,6 +101,9 @@ logger.info(bootFloor
   ? `Maj forcée active au boot: version minimale requise = ${bootFloor}`
   : 'Maj forcée inactive au boot (aucun plancher posé).');
 
+// Mode maintenance (cf. utils/maintenance.ts) : état envoyé à chaque connexion.
+attachMaintenance(io);
+
 // Instancier le gestionnaire de sockets avec l'instance 'io'
 new SocketHandler(io);
 
@@ -134,6 +139,7 @@ app.use(express.json({ limit: '128kb' }));
 app.use('/api', ticketsRouter);
 app.use('/api', clientLogsRouter);
 app.use('/api', adminDataRouter);
+app.use('/api', maintenanceRouter);
 
 // En production, servir le frontend statique. Le dossier est resolu via
 // FRONTEND_DIST si présent, sinon frontend/build (cf. utils/frontendDist.ts).

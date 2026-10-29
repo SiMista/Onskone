@@ -7,7 +7,7 @@ import RevealedAnswerCard from './RevealedAnswerCard';
 import AnswerText from './AnswerText';
 import Avatar from './Avatar';
 import Dropdown, { type DropdownOption } from './Dropdown';
-import { IPlayer, RoundPhase, GameCard, GameMode, RevealResult, isNoResponse } from '@onskone/shared';
+import { IPlayer, RoundPhase, GameCard, GameMode, RevealResult, isNoResponse, GAME_CONSTANTS } from '@onskone/shared';
 import type { GameSpeed } from '@onskone/shared';
 import { getPhaseDuration } from '../constants/game';
 import { useStartTimerDelayed, useSocketEvent } from '../hooks';
@@ -23,7 +23,7 @@ interface Answer {
   ownerId?: string; // fourni uniquement pour les NO_RESPONSE (auto-attribution)
 }
 
-const GuessingPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, question, card, initialGuesses, playerCount, roundNumber, gameMode, gameSpeed }: {
+const GuessingPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, question, card, initialGuesses, playerCount, roundNumber, gameMode, gameSpeed, intro = false }: {
   lobbyCode: string;
   isLeader: boolean;
   leader: IPlayer;
@@ -35,6 +35,8 @@ const GuessingPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, question,
   roundNumber: number;
   gameMode: GameMode;
   gameSpeed: GameSpeed;
+  /** Overlay d'intro affiché par-dessus : le timer démarre après lui. */
+  intro?: boolean;
 }) => {
   const { t } = useLocale();
   const [answers, setAnswers] = useState<Answer[]>([]);
@@ -58,7 +60,7 @@ const GuessingPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, question,
     [playerCount, gameSpeed]
   );
 
-  useStartTimerDelayed(isLeader, lobbyCode, timerDuration);
+  useStartTimerDelayed(isLeader, lobbyCode, timerDuration, 500 + (intro ? GAME_CONSTANTS.GUESSING_INTRO_MS : 0));
 
   // Resynchronise les attributions quand initialGuesses change (reconnexion en phase GUESSING)
   useEffect(() => {

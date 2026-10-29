@@ -9,7 +9,7 @@ import interrogationBg from '../assets/images/interrogation_bg_transparent.png';
 // d'interrogation" tuilée + dégradé bleu -> cyan. L'overlay étant bloquant, on
 // ajoute par-dessus un léger voile sombre (1re couche) pour donner de la
 // profondeur et signaler que l'écran est "fermé" sans casser l'identité bleue.
-const BRAND_BACKDROP: React.CSSProperties = {
+export const BRAND_BACKDROP: React.CSSProperties = {
   background: [
     'linear-gradient(rgba(8,26,46,0.34), rgba(8,26,46,0.34))',
     `url(${interrogationBg}) repeat`,

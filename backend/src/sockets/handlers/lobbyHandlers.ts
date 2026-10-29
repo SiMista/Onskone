@@ -10,6 +10,7 @@ import { validatePlayerName, validateAvatarId, sanitizeInput } from '../../utils
 import { rateLimiters } from '../../utils/rateLimiter.js';
 import { errMessage } from '../../utils/helpers.js';
 import { speedFromLegacyMultiplier, legacyMultiplierFromSpeed } from '../../utils/legacyTimeMultiplier.js';
+import { isNewGameBlocked } from '../../utils/maintenance.js';
 import logger from '../../utils/logger.js';
 import { serializeGame, serializeRound, serializePlayer, serializePlayers, emitLobbyDecksState, armServerTimerForPhase } from '../broadcasting.js';
 import { scheduleLeaderSkipTimeout, armLeaderSkipIfDisconnected } from './disconnectHandler.js';
@@ -71,6 +72,10 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
         withGuards(socket, data, {
             limiter: rateLimiters.createLobby,
         }, (_resolved, data) => {
+            if (isNewGameBlocked()) {
+                socket.emit('error', { message: 'Maintenance en cours : impossible de créer un salon pour le moment.', code: ERROR_CODES.MAINTENANCE });
+                return;
+            }
             // Sanitize PUIS valider le résultat : un nom vidé/raccourci par la sanitisation
             // ne doit pas passer une validation faite sur l'input brut.
             const sanitizedName = sanitizeInput(data.playerName);
@@ -655,6 +660,10 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
             requireLobby: true,
             requireHostAction: 'lancer la partie',
         }, ({ lobby }, data) => {
+            if (isNewGameBlocked()) {
+                socket.emit('error', { message: 'Maintenance en cours : impossible de lancer la partie pour le moment.', code: ERROR_CODES.MAINTENANCE });
+                return;
+            }
             // Vérifier qu'il y a assez de joueurs
             const activePlayers = lobby.players.filter(p => p.isActive);
             if (activePlayers.length < 3) {

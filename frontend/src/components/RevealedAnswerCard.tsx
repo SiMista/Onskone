@@ -60,18 +60,18 @@ const RevealedAnswerCard = ({
   // quand elle tenait), qui n'évite que les orphelins d'un mot.
   const resolvedHeader =
     header === undefined ? (
-      <p className="text-gray-900 text-sm tablet:text-lg font-semibold text-center text-pretty max-w-[48%] tablet:max-w-[52%] phone-landscape:max-w-none phone-landscape:text-xl shrink-0 -translate-x-4 tablet:-translate-x-8 phone-landscape:-translate-x-1">
+      <p className="text-gray-900 text-sm tablet:text-lg font-semibold text-center text-pretty max-w-[48%] tablet:max-w-[52%] phone-landscape:max-w-none phone-landscape:text-xl short-landscape:text-base shrink-0 -translate-x-4 tablet:-translate-x-8 phone-landscape:-translate-x-1">
         {t.phases.reveal.showYourScreen}
       </p>
     ) : (
       header
     );
   return (
-    <div className="flex flex-col h-full p-2 tablet:p-4 max-w-3xl mx-auto landscape:max-w-5xl w-full">
+    <div className="flex flex-col h-full p-2 tablet:p-4 short-landscape:p-0 max-w-3xl mx-auto landscape:max-w-5xl w-full">
       {/* En paysage phone, on prend la pleine hauteur (flex-1 min-h-0) pour que
           la carte remplisse la frame. En portrait/desktop, layout content-sized
           comme avant - le wrapper sort en hauteur naturelle. */}
-      <div className="phone-landscape:flex-1 phone-landscape:min-h-0 flex flex-col items-center gap-3 tablet:gap-4 pt-6 tablet:pt-12 pb-3 px-2 phone-landscape:gap-2 phone-landscape:pt-2 phone-landscape:pb-2">
+      <div className="phone-landscape:flex-1 phone-landscape:min-h-0 flex flex-col items-center gap-3 tablet:gap-4 pt-6 tablet:pt-12 pb-3 px-2 phone-landscape:gap-2 phone-landscape:pt-2 phone-landscape:pb-2 short-landscape:gap-1 short-landscape:pt-1 short-landscape:pb-1">
         <div className="shrink-0 w-full flex justify-center">
           {resolvedHeader}
         </div>
@@ -110,7 +110,7 @@ const RevealedAnswerCard = ({
                 alt=""
                 aria-hidden
                 draggable={false}
-                className="absolute left-[78%] -translate-x-1/2 -top-16 tablet:-top-20 phone-landscape:-top-16 h-32 tablet:h-40 phone-landscape:h-32 w-auto select-none pointer-events-none animate-float z-0"
+                className="absolute left-[78%] -translate-x-1/2 -top-16 tablet:-top-20 phone-landscape:-top-16 short-landscape:-top-9 h-32 tablet:h-40 phone-landscape:h-32 short-landscape:h-20 w-auto select-none pointer-events-none animate-float z-0"
                 // Le bas du bonhomme fond dans la carte (la carte cache la moitié basse de l'image,
                 // donc le dégradé démarre au-dessus de son bord pour être visible). Position inchangée.
                 style={{

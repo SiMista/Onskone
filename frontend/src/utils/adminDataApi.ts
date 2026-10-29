@@ -1,4 +1,4 @@
-import type { AdminLobbySummary, AdminDeckSummary, AdminDeckStats } from '@onskone/shared';
+import type { AdminLobbySummary, AdminDeckSummary, AdminDeckStats, MaintenanceMode, MaintenanceState } from '@onskone/shared';
 import { adminFetch } from './ticketsApi';
 
 export async function fetchAdminLobbies(): Promise<AdminLobbySummary[]> {
@@ -51,6 +51,22 @@ export async function setVersionGate(action: 'force_latest' | 'disable'): Promis
   });
   if (!res.ok) throw new Error('Erreur de mise à jour de la maj forcée.');
   return (await res.json()) as VersionGateState;
+}
+
+/** Mode maintenance (cf. shared/src/maintenance.ts). */
+export async function fetchMaintenance(): Promise<MaintenanceState> {
+  const res = await adminFetch('/admin/maintenance');
+  if (!res.ok) throw new Error('Erreur de chargement de la maintenance.');
+  return (await res.json()) as MaintenanceState;
+}
+
+export async function setMaintenanceMode(active: boolean, mode?: MaintenanceMode): Promise<MaintenanceState> {
+  const res = await adminFetch('/admin/maintenance', {
+    method: 'POST',
+    body: JSON.stringify({ active, mode }),
+  });
+  if (!res.ok) throw new Error('Erreur de mise à jour de la maintenance.');
+  return (await res.json()) as MaintenanceState;
 }
 
 /** Log d'erreur remonté par l'app (table `client_logs`, cf backend/src/routes/clientLogs.ts). */

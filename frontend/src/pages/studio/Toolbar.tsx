@@ -1,5 +1,6 @@
 import { GameMode, GAME_CONSTANTS } from '@onskone/shared';
 import type { GameSpeed } from '@onskone/shared';
+import type { StudioCrashTarget } from '../../utils/studioCrash';
 import { Layout, SlotConfig, SELECT_CLS } from './shared';
 
 // Variants compacts (locaux) pour la Toolbar, plus denses que le PILL_ICON
@@ -27,10 +28,9 @@ interface ToolbarProps {
   allBots: boolean;
   premium: boolean;
   onTogglePremium: () => void;
-  burstCount: number;
-  setBurstCount: (n: number) => void;
-  limitBreaker: boolean;
-  onToggleLimitBreaker: () => void;
+  crashTarget: StudioCrashTarget;
+  setCrashTarget: (t: StudioCrashTarget) => void;
+  onCrash: () => void;
   onAddSlot: () => void;
   onRemoveLastSlot: () => void;
   onToggleAllBots: () => void;
@@ -44,8 +44,8 @@ export const Toolbar = ({
   slots, layout, setLayout, zoom, setZoom, debugTimers, setDebugTimers,
   gameMode, setGameMode,
   gameSpeed, setGameSpeed,
-  running, allBots, premium, onTogglePremium, burstCount, setBurstCount,
-  limitBreaker, onToggleLimitBreaker,
+  running, allBots, premium, onTogglePremium, crashTarget, setCrashTarget,
+  onCrash,
   onAddSlot, onRemoveLastSlot, onToggleAllBots,
   onReloadAll, onStart, onReset,
 }: ToolbarProps) => (
@@ -171,34 +171,26 @@ export const Toolbar = ({
 
           <div
             className={COMPACT_CLUSTER}
-            title="Limit Breakers - à chaque phase, chaque iframe émet son action N fois en rafale."
+            title="Crash simulé - plante le slot 1 uniquement, pour voir le comportement des error boundaries pendant que les autres slots continuent."
           >
-            <input
-              type="number"
-              min={1}
-              max={200}
-              value={burstCount}
-              onChange={(e) => setBurstCount(Math.max(1, Math.min(200, parseInt(e.target.value, 10) || 1)))}
+            <select
+              value={crashTarget}
+              onChange={(e) => setCrashTarget(e.target.value as StudioCrashTarget)}
               disabled={!running}
-              className={`${SELECT_CLS} !px-1 !py-0.5 !text-[10px] w-10 tabular-nums disabled:opacity-25 disabled:cursor-not-allowed`}
-              title="Nombre d'émissions par phase et par iframe"
-            />
+              className={`${SELECT_CLS} !px-1.5 !py-0.5 !text-[10px] disabled:opacity-25 disabled:cursor-not-allowed`}
+              title="Ce qui plante dans le slot 1"
+            >
+              <option value="phase">Phase → carte</option>
+              <option value="timer">Chrono → disparaît</option>
+              <option value="global">Global → écran OUPS</option>
+            </select>
             <button
               type="button"
-              role="switch"
-              aria-checked={limitBreaker}
-              onClick={onToggleLimitBreaker}
+              onClick={onCrash}
               disabled={!running}
-              className={`${COMPACT_BTN} disabled:opacity-25 disabled:cursor-not-allowed ${limitBreaker
-                ? '!bg-red-500/20 !border-red-400/60 !text-red-100 shadow-[0_0_10px_rgba(248,113,113,0.25)]'
-                : '!bg-red-500/[0.06] !border-red-400/25 !text-red-200/80 hover:!bg-red-500/15 hover:!border-red-400/50'
-                }`}
-              title={running
-                ? limitBreaker
-                  ? `Mode ON - burst ${burstCount}× à chaque phase. Clic pour stopper.`
-                  : `Activer le mode : burst ${burstCount}× à chaque phase.`
-                : 'Lance la session pour activer'}
-            >{limitBreaker ? '● ON' : 'Break'}</button>
+              className={`${COMPACT_BTN} disabled:opacity-25 disabled:cursor-not-allowed !bg-red-500/[0.06] !border-red-400/25 !text-red-200/80 hover:!bg-red-500/15 hover:!border-red-400/50`}
+              title={running ? 'Planter le slot 1' : 'Lance la session pour activer'}
+            >💥 Crash</button>
           </div>
 
           <div className="flex items-center gap-1 justify-end">

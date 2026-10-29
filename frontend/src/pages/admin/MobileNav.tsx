@@ -1,59 +1,145 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Icon } from '@iconify/react';
-import { AdminTab, MOBILE_TAB_META, MOBILE_TAB_ORDER } from './shared';
+import { AdminTab, MOBILE_TAB_META, MOBILE_TAB_ORDER, NAV_MENUS, NAV_MENU_ORDER, TabGroup, tabsOfGroup } from './shared';
 
 export const MobileBottomNav = ({
-  activeTab, setActiveTab, lobbyCount, ticketCount,
+  activeTab, setActiveTab, lobbyCount, ticketCount, dangerActive,
 }: {
   activeTab: AdminTab;
   setActiveTab: (t: AdminTab) => void;
   lobbyCount: number | null;
   ticketCount: number;
-}) => (
-  <nav
-    aria-label="Navigation"
-    className="md:hidden fixed bottom-0 left-0 right-0 z-40 backdrop-blur-xl bg-[#12151e]/92 border-t border-white/10"
-    style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
-  >
-    <div className="grid grid-cols-6">
-      {MOBILE_TAB_ORDER.map((id) => {
-        const meta = MOBILE_TAB_META[id];
-        const active = activeTab === id;
-        const showLive = id === 'lobbies' && (lobbyCount ?? 0) > 0;
-        const showTickets = id === 'tickets' && ticketCount > 0;
-        return (
-          <button
-            key={id}
-            onClick={() => setActiveTab(id)}
-            aria-label={meta.label}
-            className={`relative flex flex-col items-center justify-center gap-0.5 py-2 px-0.5 transition-colors ${active ? 'text-amber-300' : 'text-white/55 active:text-white/85'
-              }`}
-          >
-            <span className="relative">
-              <Icon icon={meta.icon} className="w-[22px] h-[22px]" />
-              {showLive && (
-                <span className="absolute -top-1.5 -right-2 inline-flex items-center justify-center min-w-[14px] h-[14px] px-1 rounded-full bg-emerald-400 text-[8.5px] font-bold leading-none text-[#0a0c12] tabular-nums ring-1 ring-[#12151e] animate-pulse">
-                  {lobbyCount ?? 0}
+  // Maintenance ou maj forcée en cours : pastille rouge sur le slot Système.
+  dangerActive: boolean;
+}) => {
+  const [openMenu, setOpenMenu] = useState<TabGroup | null>(null);
+
+  useEffect(() => {
+    if (!openMenu) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpenMenu(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [openMenu]);
+
+  return (
+    <>
+      <nav
+        aria-label="Navigation"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-40 backdrop-blur-xl bg-[#12151e]/92 border-t border-white/10"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        <div className="grid grid-cols-6">
+          {MOBILE_TAB_ORDER.map((id) => {
+            const meta = MOBILE_TAB_META[id];
+            const active = activeTab === id;
+            const showLive = id === 'lobbies' && (lobbyCount ?? 0) > 0;
+            const showTickets = id === 'tickets' && ticketCount > 0;
+            return (
+              <button
+                key={id}
+                onClick={() => setActiveTab(id)}
+                aria-label={meta.label}
+                className={`relative flex flex-col items-center justify-center gap-0.5 py-2 px-0.5 transition-colors ${active ? 'text-amber-300' : 'text-white/55 active:text-white/85'
+                  }`}
+              >
+                <span className="relative">
+                  <Icon icon={meta.icon} className="w-[22px] h-[22px]" />
+                  {showLive && (
+                    <span className="absolute -top-1.5 -right-2 inline-flex items-center justify-center min-w-[14px] h-[14px] px-1 rounded-full bg-emerald-400 text-[8.5px] font-bold leading-none text-[#0a0c12] tabular-nums ring-1 ring-[#12151e] animate-pulse">
+                      {lobbyCount ?? 0}
+                    </span>
+                  )}
+                  {showTickets && (
+                    <span className="absolute -top-1.5 -right-2 inline-flex items-center justify-center min-w-[14px] h-[14px] px-1 rounded-full bg-amber-400 text-[8.5px] font-bold leading-none text-[#0a0c12] tabular-nums ring-1 ring-[#12151e]">
+                      {ticketCount}
+                    </span>
+                  )}
                 </span>
-              )}
-              {showTickets && (
-                <span className="absolute -top-1.5 -right-2 inline-flex items-center justify-center min-w-[14px] h-[14px] px-1 rounded-full bg-amber-400 text-[8.5px] font-bold leading-none text-[#0a0c12] tabular-nums ring-1 ring-[#12151e]">
-                  {ticketCount}
+                <span className="font-mono text-[9.5px] uppercase tracking-[0.05em] leading-none">
+                  {meta.label}
                 </span>
-              )}
-            </span>
-            <span className="font-mono text-[9.5px] uppercase tracking-[0.05em] leading-none">
-              {meta.label}
-            </span>
-            {active && (
-              <span className="absolute top-0 left-1/2 -translate-x-1/2 w-7 h-[2px] bg-amber-400 rounded-b-full" />
-            )}
-          </button>
-        );
-      })}
-    </div>
-  </nav>
-);
+                {active && (
+                  <span className="absolute top-0 left-1/2 -translate-x-1/2 w-7 h-[2px] bg-amber-400 rounded-b-full" />
+                )}
+              </button>
+            );
+          })}
+
+          {NAV_MENU_ORDER.map((group) => {
+            const menu = NAV_MENUS[group]!;
+            const tabs = tabsOfGroup(group);
+            const menuActive = tabs.some((t) => t.id === activeTab);
+            const isOpen = openMenu === group;
+            const showAlert = group === 'system' && dangerActive;
+            return (
+              <div key={group} className="relative">
+                <button
+                  onClick={() => setOpenMenu(isOpen ? null : group)}
+                  aria-label={menu.label}
+                  aria-haspopup="menu"
+                  aria-expanded={isOpen}
+                  className={`relative w-full h-full flex flex-col items-center justify-center gap-0.5 py-2 px-0.5 transition-colors ${menuActive || isOpen ? 'text-amber-300' : 'text-white/55 active:text-white/85'
+                    }`}
+                >
+                  <span className="relative">
+                    <Icon icon={menu.icon} className="w-[22px] h-[22px]" />
+                    {showAlert && (
+                      <span className="absolute -top-1 -right-1.5 h-2.5 w-2.5 rounded-full bg-rose-500 ring-1 ring-[#12151e] animate-pulse" />
+                    )}
+                  </span>
+                  <span className="font-mono text-[9.5px] uppercase tracking-[0.05em] leading-none flex items-center gap-0.5">
+                    {menu.label}
+                    <Icon icon="mdi:chevron-up" className={`w-2.5 h-2.5 opacity-70 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                  </span>
+                  {menuActive && (
+                    <span className="absolute top-0 left-1/2 -translate-x-1/2 w-7 h-[2px] bg-amber-400 rounded-b-full" />
+                  )}
+                </button>
+
+                {isOpen && (
+                  // Menu ancré au slot (pas de fond assombri, pas de poignée) : un vrai dropdown.
+                  <div
+                    role="menu"
+                    aria-label={menu.label}
+                    className="absolute bottom-full right-0 mb-2.5 z-50 w-[210px] rounded-xl border border-white/10 bg-[#1b1f2a] shadow-[0_12px_40px_-8px_rgba(0,0,0,0.75)] p-1.5 animate-fade-in"
+                  >
+                    {tabs.map(({ id }) => {
+                      const meta = MOBILE_TAB_META[id];
+                      const active = activeTab === id;
+                      const isDanger = id === 'danger';
+                      return (
+                        <button
+                          key={id}
+                          role="menuitem"
+                          onClick={() => { setActiveTab(id); setOpenMenu(null); }}
+                          className={`w-full min-h-[48px] flex items-center gap-3 px-3 rounded-lg text-left transition-colors ${active
+                            ? 'bg-amber-400/10 text-amber-100'
+                            : 'text-white/80 active:bg-white/[0.08]'
+                            }`}
+                        >
+                          <Icon icon={meta.icon} className={`w-5 h-5 ${isDanger ? 'text-rose-300' : ''}`} />
+                          <span className="font-mono text-[12px] uppercase tracking-[0.1em] font-bold">{meta.label}</span>
+                          {isDanger && dangerActive && (
+                            <span className="ml-auto h-2 w-2 rounded-full bg-rose-500 animate-pulse" aria-label="actif" />
+                          )}
+                        </button>
+                      );
+                    })}
+                    {/* Caret pointant le slot (centre du slot = 30px du bord droit) */}
+                    <span aria-hidden className="absolute -bottom-[5px] right-[24px] w-2.5 h-2.5 rotate-45 bg-[#1b1f2a] border-r border-b border-white/10" />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </nav>
+
+      {/* Capteur de clic extérieur, transparent (pas de scrim : ce n'est pas une modale). */}
+      {openMenu && <div className="md:hidden fixed inset-0 z-30" onClick={() => setOpenMenu(null)} />}
+    </>
+  );
+};
 
 // Bottom sheet générique (mobile).
 export const BottomSheet = ({

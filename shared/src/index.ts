@@ -25,6 +25,10 @@ export {
 } from './version.js';
 export type { VersionPolicy } from './version.js';
 
+// Mode maintenance (activable depuis l'admin)
+export { MAINTENANCE_OFF, isMaintenanceMode } from './maintenance.js';
+export type { MaintenanceMode, MaintenanceState } from './maintenance.js';
+
 // Synchronisation de l'état de partie (empreinte + cadence des syncCheck)
 export { gameFingerprint, SYNC_CHECK_INTERVAL_MS, SYNC_ACK_TIMEOUT_MS } from './sync.js';
 export type { GameFingerprintSource } from './sync.js';

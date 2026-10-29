@@ -18,6 +18,12 @@ interface CardHandProps {
   locked: boolean;
   /** Question sélectionnée (mise en avant + dimming des autres). */
   selectedQuestion: string | null;
+  /** Question tapée, en attente de ✅/❌ (mise en avant, pas encore envoyée). */
+  pendingQuestion: string | null;
+  /** ✅ sur la question en attente : l'envoie au serveur. */
+  onConfirmQuestion: () => void;
+  /** ❌ sur la question en attente : la désélectionne. */
+  onCancelQuestion: () => void;
   /** Questions déjà jouées dans la partie : grisées, non cliquables. */
   usedQuestions: Set<string>;
   /** Indices des cartes déjà retournées (stagger reveal au démarrage). */
@@ -50,12 +56,17 @@ interface CardHandProps {
  */
 /** Durée du fondu de sortie du rappel de swipe (doit matcher `.animate-fade-out`). */
 const HINT_FADE_OUT_MS = 260;
+/** Durée de la sortie de la popup ✅/❌ (doit matcher `.animate-confirm-pop-out`). */
+const CONFIRM_POP_OUT_MS = 100;
 
 const CardHand = ({
   cards,
   currentCardIndex,
   locked,
   selectedQuestion,
+  pendingQuestion,
+  onConfirmQuestion,
+  onCancelQuestion,
   usedQuestions,
   revealedIdx,
   showSwipeHint,
@@ -99,6 +110,24 @@ const CardHand = ({
   // touchstart, sinon l'overlay se démonte et le touchend ne déclenche plus la
   // navigation.
   const overlaySwipe = useSwipe({ onPrev, onNext });
+
+  // Popup ✅/❌ : on garde la question « affichée » montée le temps de la sortie
+  // (sinon elle disparaissait d'un coup quand pendingQuestion repasse à null).
+  const [popupQuestion, setPopupQuestion] = useState<string | null>(pendingQuestion);
+  const [popupClosing, setPopupClosing] = useState(false);
+  useEffect(() => {
+    if (pendingQuestion !== null) {
+      setPopupQuestion(pendingQuestion);
+      setPopupClosing(false);
+      return;
+    }
+    setPopupClosing(true);
+    const timeout = setTimeout(() => {
+      setPopupQuestion(null);
+      setPopupClosing(false);
+    }, CONFIRM_POP_OUT_MS);
+    return () => clearTimeout(timeout);
+  }, [pendingQuestion]);
 
   return (
     <div className="flex flex-col items-center gap-0 w-full">
@@ -193,7 +222,7 @@ const CardHand = ({
               aria-label={!isActive ? t.phases.questionSelection.goToCard(card.theme) : undefined}
             >
               <div
-                className={`bg-cream-question border-4 tablet:border-[6px] rounded-2xl tablet:rounded-3xl p-2.5 tablet:p-5 relative overflow-hidden min-h-[min(290px,52dvh)] tablet:min-h-[min(400px,60dvh)] flex flex-col transition-shadow duration-500 ${revealedIdx.has(idx) ? 'animate-card-deal-in' : 'opacity-0'}`}
+                className={`bg-cream-question border-4 tablet:border-[6px] rounded-2xl tablet:rounded-3xl p-2.5 tablet:p-5 relative min-h-[min(290px,52dvh)] tablet:min-h-[min(400px,60dvh)] flex flex-col transition-shadow duration-500 ${revealedIdx.has(idx) ? 'animate-card-deal-in' : 'opacity-0'}`}
                 style={{ borderColor: color, boxShadow: cardShadow }}
               >
                 <div
@@ -225,6 +254,8 @@ const CardHand = ({
                   <div className="flex flex-col gap-1.5 tablet:gap-3 justify-start pb-3 tablet:pb-8">
                     {card.questions.map((question, qi) => {
                       const isSelected = selectedQuestion === question;
+                      const isPending = isActive && !locked && pendingQuestion === question;
+                      const showPopup = isActive && popupQuestion === question;
                       const isUsed = usedQuestions.has(question);
                       const dimmed = locked && !isSelected;
                       const len = question.length;
@@ -250,13 +281,42 @@ const CardHand = ({
                             ${isActive && !locked && !isUsed ? 'cursor-pointer hover:-translate-y-0.5 hover:border-primary hover:shadow-lg' : ''}
                             ${isSelected
                               ? 'scale-[1.02] border-green-500 shadow-[0_0_0_3px_var(--color-success-500)]'
-                              : 'border-gray-300 shadow-md'}
+                              : isPending
+                                ? 'border-black/70 shadow-[0_0_5px_1px_rgba(0,0,0,0.2),2px_3px_6px_0_rgba(0,0,0,0.22)] -translate-y-0.5'
+                                : 'border-gray-300 shadow-md'}
                             ${dimmed ? 'opacity-50' : isUsed ? '' : 'opacity-100'}
                           `}
                         >
                           <p className={`${questionTextClass} font-medium ${isUsed ? 'text-gray-500' : 'text-gray-800'} leading-snug w-full`}>
                             {question}
                           </p>
+
+                          {/* Mini popup ✅/❌ à droite de la question en attente : à cheval
+                              sur le bord de la carte, dans la marge laissée par les cartes
+                              latérales. */}
+                          {showPopup && (
+                            <div
+                              className={`absolute left-full top-1/2 -translate-y-1/2 ml-0.5 tablet:ml-3.5 z-10 flex flex-col gap-2 ${popupClosing ? 'animate-confirm-pop-out' : 'animate-confirm-pop-in'}`}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <button
+                                type="button"
+                                onClick={onConfirmQuestion}
+                                aria-label={t.phases.questionSelection.confirmQuestion}
+                                className="relative flex items-center justify-center w-9 h-9 rounded-full border-[2.5px] border-black text-black texture-paper stack-shadow-sm cursor-pointer select-none hover:-translate-y-0.5 active:[box-shadow:none!important] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-150 ease-[cubic-bezier(0.34,1.56,0.64,1)] bg-success-500 hover:bg-success-400"
+                              >
+                                <Icon icon="ph:check-bold" className="text-xl" aria-hidden />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={onCancelQuestion}
+                                aria-label={t.phases.questionSelection.cancelQuestion}
+                                className="relative flex items-center justify-center w-9 h-9 rounded-full border-[2.5px] border-black text-black texture-paper stack-shadow-sm cursor-pointer select-none hover:-translate-y-0.5 active:[box-shadow:none!important] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-150 ease-[cubic-bezier(0.34,1.56,0.64,1)] bg-danger-500 hover:bg-danger-400"
+                              >
+                                <Icon icon="ph:x-bold" className="text-xl" aria-hidden />
+                              </button>
+                            </div>
+                          )}
                         </div>
                       );
                     })}

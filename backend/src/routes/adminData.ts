@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { GameStatus, SUPPORTED_LOCALES, DEFAULT_LOCALE, isLocale } from '@onskone/shared';
+import { GameStatus, SUPPORTED_LOCALES, DEFAULT_LOCALE, isLocale, isMaintenanceMode } from '@onskone/shared';
 import type {
   AdminLobbySummary,
   AdminLobbyPhase,
@@ -14,6 +14,7 @@ import { getMinSupportedVersion, setMinSupportedVersion, broadcastVersionPolicy 
 import { getDeployedVersion } from '../utils/appVersion.js';
 import { getAppStoreVersion } from '../utils/appStoreVersion.js';
 import { getDeckStats } from '../utils/deckStats.js';
+import { getMaintenance, setMaintenance } from '../utils/maintenance.js';
 
 const router: Router = Router();
 
@@ -169,6 +170,28 @@ router.post('/admin/version-gate', requireAdmin, async (req: Request, res: Respo
   broadcastVersionPolicy();
   const state = await versionGateState();
   logger.info(`Maj forcée: action=${action} -> plancher=${state.minVersion || '(désactivé)'}`);
+  res.json(state);
+});
+
+// --- Maintenance ---
+// Active / change / lève le mode maintenance (rediffusé en direct à tous les clients).
+// `mode` n'est lu qu'à l'activation ; une levée ne l'exige pas.
+router.get('/admin/maintenance', requireAdmin, (_req: Request, res: Response) => {
+  res.json(getMaintenance());
+});
+
+router.post('/admin/maintenance', requireAdmin, (req: Request, res: Response) => {
+  const active = req.body?.active;
+  if (typeof active !== 'boolean') {
+    res.status(400).json({ error: 'invalid_active' });
+    return;
+  }
+  if (active && !isMaintenanceMode(req.body?.mode)) {
+    res.status(400).json({ error: 'invalid_mode' });
+    return;
+  }
+  const state = setMaintenance(active, req.body?.mode);
+  logger.info(`Maintenance: ${state.active ? `ACTIVE (mode=${state.mode})` : 'levée'}`);
   res.json(state);
 });
 

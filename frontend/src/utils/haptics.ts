@@ -44,14 +44,14 @@ export const hapticSuccess = () => {
   }
 };
 
-// Avertissement discret : ta réponse est la PROCHAINE à être révélée (reveal local).
-// Volontairement bien plus léger que hapticAssigned : un seul tap, juste de quoi
-// sentir le téléphone et se préparer à montrer son écran.
+// Avertissement : ta réponse est la PROCHAINE à être révélée (reveal local). Plus
+// léger que hapticAssigned (un seul tap), mais Medium : un Light passait inaperçu
+// sur un téléphone posé à plat.
 export const hapticNextToReveal = () => {
   if (vibrationOff()) return;
   if (isNative) {
-    Haptics.impact({ style: ImpactStyle.Light }).catch(() => { /* haptics best-effort */ });
+    Haptics.impact({ style: ImpactStyle.Medium }).catch(() => { /* haptics best-effort */ });
   } else {
-    webVibrate(40);
+    webVibrate(80);
   }
 };

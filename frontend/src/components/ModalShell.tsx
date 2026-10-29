@@ -152,7 +152,7 @@ const ModalShell = ({
             <div className="relative flex-1 min-h-0 flex flex-col">
               <div
                 ref={scrollRef}
-                className="relative flex-1 min-h-0 px-5 py-4 text-gray-800 overflow-y-auto overscroll-contain"
+                className="relative flex-1 min-h-0 px-5 py-4 text-gray-800 overflow-y-auto overscroll-contain break-words"
               >
                 {children}
               </div>

@@ -5,6 +5,7 @@ import { DecksCatalog, DecksCatalogWithMeta, SelectedDecks } from './decks.js';
 import { GameMode, GameSpeed } from './lobby.js';
 import { Locale } from './locale.js';
 import type { VersionPolicy } from '../version.js';
+import type { MaintenanceState } from '../maintenance.js';
 
 /**
  * Données envoyées sur reconnexion pour restaurer l'état local du joueur
@@ -78,6 +79,12 @@ export interface ServerToClientEvents {
    * `shouldBlockForUpdate` en croisant avec SON store (cf. frontend versionGate.ts).
    */
   versionPolicy: (policy: VersionPolicy) => void;
+
+  /**
+   * État du mode maintenance : envoyé à chaque connexion, puis rediffusé à tous les
+   * connectés quand l'admin l'active, le change ou le lève.
+   */
+  maintenance: (state: MaintenanceState) => void;
 
   // ===== LOBBY EVENTS =====
 
@@ -373,6 +380,8 @@ export const ERROR_CODES = {
   KICKED: 'KICKED',
   /** Conflit d'état (reconnexion en cours, déjà soumis, etc.) */
   CONFLICT: 'CONFLICT',
+  /** Serveur en maintenance : création de salon / lancement de partie refusés */
+  MAINTENANCE: 'MAINTENANCE',
   /** Erreur serveur inattendue */
   INTERNAL: 'INTERNAL',
 } as const;
@@ -539,6 +548,17 @@ export interface ClientToServerEvents {
   selectQuestion: (data: {
     lobbyCode: string;
     selectedQuestion: string;
+  }) => void;
+
+  /**
+   * Question tapée mais pas encore confirmée (réservé au pilier ; `null` = aucune).
+   * Mémorisée côté serveur uniquement pour que l'auto-sélection de fin de timer
+   * retienne CE choix au lieu d'un tirage au hasard (le timer serveur expire avant
+   * que le client ne puisse envoyer `selectQuestion`). Aucun broadcast.
+   */
+  setPendingQuestion: (data: {
+    lobbyCode: string;
+    question: string | null;
   }) => void;
 
   /** Soumettre une réponse */

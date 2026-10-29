@@ -36,6 +36,10 @@ export const en: Dictionary = {
     crashTitle: 'Oops, something broke!',
     crashBody: 'A display error occurred. Go back to the home screen to start fresh.',
     crashHome: 'Back to home',
+    sectionRecovering: 'Something went wrong, retrying…',
+    sectionCrashTitle: "This screen won't load",
+    sectionCrashBody: 'The game goes on for the other players.',
+    sectionCrashRetry: 'Try again',
   },
 
   update: {
@@ -43,6 +47,15 @@ export const en: Dictionary = {
     message: 'A new version is available. Update Onskoné to keep playing.',
     cta: 'Update',
     ctaWeb: 'Reload',
+  },
+
+  maintenance: {
+    title: 'Down for maintenance',
+    message: "We're tinkering with Onskoné, it shouldn't take long.",
+    downTitle: 'Server unavailable',
+    downMessage: "Onskoné is having trouble on our side and we're on it. It's not your connection.",
+    autoResume: "No need to reload: you'll be back automatically as soon as it's fixed.",
+    gameKept: 'Your ongoing game is kept.',
   },
 
   home: {
@@ -690,9 +703,10 @@ export const en: Dictionary = {
       goToCardIdx: (idx) => `Go to card ${idx}`,
       prevCard: 'Previous card',
       nextCard: 'Next card',
-      reportQuestion: 'Report a question',
       loading: 'Loading questions...',
       selected: 'Question picked! Moving to next phase…',
+      confirmQuestion: 'Confirm',
+      cancelQuestion: 'Cancel',
     },
     answering: {
       questionAskedToOthers: 'Question asked to the other players',
@@ -728,7 +742,7 @@ export const en: Dictionary = {
     },
     guessing: {
       loading: 'Loading answers...',
-      instruction: 'Tap each answer to assign it to a player',
+      instruction: 'Assign each answer to a player',
       choosePlayer: 'Choose a player',
       removeOption: 'Clear assignment',
       assignWaiting: 'is assigning the answers…',
@@ -737,6 +751,14 @@ export const en: Dictionary = {
       validate: 'Confirm my picks',
       rotateForLandscape: 'Turn your phone for a wider view',
       leaderFallback: 'the leader',
+      intro: {
+        youAre: 'You are',
+        roleLeader: 'LEADER',
+        rolePlayer: 'PLAYER',
+        leaderText: 'Read the answers out loud and guess who wrote what!',
+        playerLocalText: 'Turn your phone sideways and show your screen to everyone!',
+        playerRemoteText: 'The leader is assigning the answers. Watch the screen and cross your fingers!',
+      },
     },
     reveal: {
       gameOver: 'Game over!',

@@ -123,6 +123,9 @@ export const rateLimiters = {
   // Question selection: 10 per minute
   selectQuestion: new RateLimiter({ windowMs: 60000, maxRequests: 10 }),
 
+  // Question tapée en attente de confirmation (un tap par changement d'avis): 60 per minute
+  setPendingQuestion: new RateLimiter({ windowMs: 60000, maxRequests: 60 }),
+
   // Request questions (tirage initial + resync de reconnexion): 20 per minute
   requestQuestions: new RateLimiter({ windowMs: 60000, maxRequests: 20 }),
 

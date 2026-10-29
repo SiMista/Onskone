@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { GameMode, GAME_CONSTANTS } from '@onskone/shared';
 import type { GameSpeed } from '@onskone/shared';
+import type { StudioCrashTarget } from '../utils/studioCrash';
 import { AVATARS } from '../constants/game';
 import { useDocumentMeta } from '../hooks/useDocumentMeta';
 import { purgeStudioSlot } from '../utils/studioStorage';
@@ -45,8 +46,7 @@ const Studio = () => {
 
   const [reloadKey, setReloadKey] = useState(0);
   const [slotReloadKeys, setSlotReloadKeys] = useState<Record<string, number>>({});
-  const [burstCount, setBurstCount] = useState<number>(10);
-  const [limitBreaker, setLimitBreaker] = useState<boolean>(false);
+  const [crashTarget, setCrashTarget] = useState<StudioCrashTarget>('phase');
 
   const iframeRefs = useRef<Record<string, HTMLIFrameElement | null>>({});
 
@@ -214,19 +214,11 @@ const Studio = () => {
     else slots.forEach((s) => send(iframeRefs.current[s.id]));
   }, [slots]);
 
-  // Limit Breakers : propage l'état + le count vers chaque iframe à chaque
-  // changement, et désactive auto à la fin de la session.
-  useEffect(() => {
-    broadcast({ type: 'studio:setLimitBreaker', enabled: limitBreaker && running, count: burstCount });
-  }, [limitBreaker, burstCount, running, broadcast]);
-
-  const toggleLimitBreaker = () => {
-    if (!running) return;
-    const next = !limitBreaker;
-    setLimitBreaker(next);
-    // Lors de l'activation, on déclenche aussi un burst immédiat sur la phase
-    // courante - sinon il faudrait attendre la prochaine transition.
-    if (next) broadcast({ type: 'studio:stress', count: burstCount });
+  // Crash simulé : plante UNIQUEMENT le slot 1 pour comparer avec les autres,
+  // restés normaux (cf. utils/studioCrash.ts).
+  const crashFirstSlot = () => {
+    if (!running || !slots[0]) return;
+    broadcast({ type: 'studio:crash', target: crashTarget }, slots[0].id);
   };
   const reloadSlot = (id: string) =>
     setSlotReloadKeys((m) => ({ ...m, [id]: (m[id] ?? 0) + 1 }));
@@ -320,10 +312,9 @@ const Studio = () => {
         allBots={allBots}
         premium={allPremium}
         onTogglePremium={toggleAllPremium}
-        burstCount={burstCount}
-        setBurstCount={setBurstCount}
-        limitBreaker={limitBreaker}
-        onToggleLimitBreaker={toggleLimitBreaker}
+        crashTarget={crashTarget}
+        setCrashTarget={setCrashTarget}
+        onCrash={crashFirstSlot}
         onAddSlot={addSlot}
         onRemoveLastSlot={removeLastSlot}
         onToggleAllBots={toggleAllBots}

@@ -46,6 +46,7 @@ import ReclaimPlayerModal from '../components/ReclaimPlayerModal';
 const RECLAIM_POLL_MS = 5_000;
 const RECLAIM_MAX_POLLS = 12;
 import { usePremium } from '../utils/premium';
+import { setResumeOffered } from '../utils/maintenance';
 import { TOP_CONTROLS_CLASS } from '../utils/appBanner';
 
 // Contenu de la modale "Mes succès". Extrait en composant enfant pour que sa
@@ -146,6 +147,13 @@ const Home = () => {
   // Partie en cours dont des joueurs sont déconnectés : « tu étais qui ? » permet
   // de reprendre sa place avec le seul code du salon (session perdue).
   const [reclaim, setReclaim] = useState<{ lobbyCode: string; players: ReclaimablePlayer[] } | null>(null);
+  // Maintenance 'new_games' : l'écran s'efface tant qu'une reprise est proposée,
+  // sinon il recouvrait ces deux popups (seul chemin de retour en partie).
+  const resumeOffered = resumeGame !== null || reclaim !== null;
+  useEffect(() => {
+    setResumeOffered(resumeOffered);
+    return () => setResumeOffered(false);
+  }, [resumeOffered]);
   // Code saisi dans la popup "Rejoindre" en cours de validation (getLobbyInfo).
   // Tant qu'il est posé, la réponse lobbyInfo concerne la popup (pas l'URL).
   const [pendingJoinCode, setPendingJoinCode] = useState<string | null>(null);
@@ -518,9 +526,11 @@ const Home = () => {
       />
 
       {/* Reprise d'une partie en cours (app tuée en arrière-plan). Fermer ne
-          l'oublie PAS : un retour au premier plan referme toutes les modales, et
-          l'offre doit survivre à ce cas. La mémoire s'efface en fin de partie. */}
+          l'oublie PAS (la mémoire s'efface en fin de partie). keepOnResume : en
+          maintenance 'new_games', c'est le seul chemin de retour en partie ; un
+          aller-retour dans une autre app ne doit pas la refermer. */}
       <ConfirmModal
+        keepOnResume
         isOpen={resumeGame !== null}
         onClose={() => setResumeGame(null)}
         onConfirm={() => { if (resumeGame) navigate(`/game/${resumeGame.lobbyCode}`); }}
@@ -658,7 +668,7 @@ const Home = () => {
           <div className="hidden md:block md:col-span-6">
             <Frame textAlign="left">
               <div className="w-full border-b-2 border-dashed border-gray-300 pb-3 mb-4 desktop-short:pb-1 desktop-short:mb-1 flex items-center gap-2">
-                <Icon icon="fluent-emoji-flat:direct-hit" className="desktop-short:w-5 desktop-short:h-5" width={26} height={26} aria-hidden />
+                <Icon icon="fluent-emoji-flat:bullseye" className="desktop-short:w-5 desktop-short:h-5" width={26} height={26} aria-hidden />
                 <h2 className="marker-highlight font-accent text-display-lg desktop-short:text-display-md phone-landscape:text-display-md text-gray-900 m-0">
                   {t.home.howToPlayHeading}
                 </h2>

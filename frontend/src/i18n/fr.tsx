@@ -36,6 +36,10 @@ export const fr: Dictionary = {
     crashTitle: 'Oups, ça a planté !',
     crashBody: "Un problème d'affichage est survenu. Reviens à l'accueil pour repartir sur de bonnes bases.",
     crashHome: "Retour à l'accueil",
+    sectionRecovering: 'Une erreur est survenue, on réessaie…',
+    sectionCrashTitle: 'Cet écran ne veut pas se charger',
+    sectionCrashBody: 'La partie continue pour les autres joueurs.',
+    sectionCrashRetry: 'Réessayer',
   },
 
   update: {
@@ -43,6 +47,15 @@ export const fr: Dictionary = {
     message: 'Une nouvelle version est disponible. Mets à jour Onskoné pour continuer à jouer.',
     cta: 'Mettre à jour',
     ctaWeb: 'Recharger',
+  },
+
+  maintenance: {
+    title: 'Maintenance en cours',
+    message: 'On bricole un truc sur Onskoné, ça ne devrait pas durer longtemps.',
+    downTitle: 'Serveur indisponible',
+    downMessage: "Onskoné a un souci de son côté, on s'en occupe. Ce n'est pas ta connexion.",
+    autoResume: "Pas besoin de recharger : tu reviens automatiquement dès que c'est réglé.",
+    gameKept: 'Ta partie en cours est conservée.',
   },
 
   home: {
@@ -689,9 +702,10 @@ export const fr: Dictionary = {
       goToCardIdx: (idx) => `Aller à la carte ${idx}`,
       prevCard: 'Carte précédente',
       nextCard: 'Carte suivante',
-      reportQuestion: 'Signaler une question',
       loading: 'Chargement des questions...',
       selected: 'Question sélectionnée ! Passage à la phase suivante…',
+      confirmQuestion: 'Valider',
+      cancelQuestion: 'Annuler',
     },
     answering: {
       questionAskedToOthers: 'Question posée aux autres joueurs',
@@ -727,7 +741,7 @@ export const fr: Dictionary = {
     },
     guessing: {
       loading: 'Chargement des réponses...',
-      instruction: 'Clique sur chaque réponse pour l\'attribuer à un joueur',
+      instruction: 'Attribue chaque réponse à un joueur',
       choosePlayer: 'Choisir un joueur',
       removeOption: 'Retirer l\'attribution',
       assignWaiting: 'assigne les réponses…',
@@ -736,6 +750,14 @@ export const fr: Dictionary = {
       validate: 'Valider mes choix',
       rotateForLandscape: 'Tourne ton téléphone pour un affichage plus large',
       leaderFallback: 'le pilier',
+      intro: {
+        youAre: 'Tu es',
+        roleLeader: 'PILIER',
+        rolePlayer: 'JOUEUR',
+        leaderText: 'Lis les réponses à voix haute et devine qui a écrit quoi !',
+        playerLocalText: 'Tourne ton téléphone et montre ton écran à tout le monde !',
+        playerRemoteText: 'Le pilier attribue les réponses. Regarde l\'écran et croise les doigts !',
+      },
     },
     reveal: {
       gameOver: 'Partie terminée !',

@@ -60,6 +60,10 @@ pnpm --filter backend test -- -t "name of test"
 pnpm --filter frontend test                        # vitest run (utils, hooks, composants)
 pnpm --filter frontend test -- src/utils/gameSync.test.ts
 
+# Contrôle qualité complet (types backend + tests front + back), rendu interactif ; lancé automatiquement
+# par release-aab.* AVANT le bump de version (un rouge stoppe le release). `--only front|back|types`, `--ci` = sans menu.
+node scripts/run-tests.mjs
+
 # Regenerate the question deck from the Excel source (génère questions_fr.json + questions_en.json)
 node backend/src/data/build-questions.mjs
 ```
@@ -97,6 +101,10 @@ The game runs entirely in-memory; SQLite is only used for the tickets table (`ba
 La version de l'app vient de `scripts/app-version.mjs` et se compose de **deux numéros qui ne se mélangent jamais** : `versionName` = contenu du fichier `VERSION` commité à la racine (**`X.Y.Z` strict**, numéro de release store, bumpé à chaque nouvelle version publiée avec `pnpm bump` [patch par défaut, `minor`, `major` ou `X.Y.Z`], qui édite `VERSION` ; puis on commit) ; `versionCode` / build = nombre total de commits (entier croissant exigé par les stores, affiché en « Build » dans À propos et dans les tickets, **jamais comparé**). Seul `versionName` entre dans la maj forcée. Source unique pour `__APP_VERSION__` / `__APP_BUILD__` (vite `define`), `/version.json` (`{version, build}`) (émis au build, servi par nginx, relu en live par le backend via `utils/appVersion.ts`), Gradle (`-PappVersionName` / `-PappVersionCode`) et Codemagic. **Un clone shallow ou sans `.git` fait échouer `vite build`** (le build = nb de commits serait faux) — d'où les `git fetch --unshallow` dans CI, Codemagic et `deploy.sh`. Le build Docker (`Dockerfile`) a donc besoin de `.git`, que `.dockerignore` exclut aujourd'hui (la prod tourne en pm2 via `scripts/deploy.sh`).
 
 Maj forcée : règle unique dans `shared/src/version.ts` (`shouldBlockForUpdate` : bloqué SSI version < plancher ET une version plus récente lui est réellement obtenable). Le plancher vient de l'admin (`POST /admin/version-gate`, SQLite `app_config`) ou du seed `MIN_SUPPORTED_VERSION` (env, sinon fichier racine). Le serveur l'envoie dans l'event `versionPolicy` à chaque connexion (`backend/src/utils/versionGate.ts`) et le client tranche lui-même (`frontend/src/utils/versionGate.ts` : `/version.json` sur le web, Play Core / App Store lookup en natif) ; seuls les anciens clients sans `handshake.auth.versionPolicy` sont refusés au handshake (`VERSION_TOO_OLD`).
+
+### Maintenance (onglet admin Danger)
+
+Interrupteur d'urgence piloté depuis `/admin` → Système → Danger (avec la maj forcée). État `{active, mode, since}` dans SQLite `app_config` (clé `maintenance`, survit aux restarts), source unique `shared/src/maintenance.ts`, logique dans `backend/src/utils/maintenance.ts`. Envoyé en `maintenance` à chaque connexion socket et rediffusé en direct au changement (la levée libère donc les clients sans rechargement) ; `GET /api/maintenance` est public. Deux modes : `new_games` (refuse `createLobby`/`startGame` avec `ERROR_CODES.MAINTENANCE`, les parties en cours finissent ; ne sont pas couvertes que la route `/game/` et la popup de reprise de l'accueil — reprise après app tuée ou « Tu étais qui ? », signalée par `setResumeOffered`) et `all` (écran pour tout le monde, **simple rideau : rien n'est mis en pause côté serveur**, les timers de phase et le filet REVEAL continuent, les manches s'enchaînent sans les joueurs et la partie peut finir avant la levée). L'écran (`MaintenanceOverlay`) épargne `/admin`, `/studio` et les pages légales. **nginx sert le front en statique** : si le back crashe, la SPA se charge quand même ; le filet « serveur indisponible » est donc côté client (`utils/maintenance.ts` : socket muette 15 s + sonde HTTP en échec + appareil en ligne), sans toggle.
 
 ### Frontend routing
 

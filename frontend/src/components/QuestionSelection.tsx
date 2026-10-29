@@ -7,7 +7,6 @@ import { getPhaseDuration } from '../constants/game';
 import { getRandomFunFact, getNextFunFact } from '../constants/funFacts';
 import { playSound } from '../utils/sounds';
 import PlayerBadge from './PlayerBadge';
-import ReportTrigger from './ReportTrigger';
 import CardHand from './CardHand';
 import { useSwipe } from '../hooks/useSwipe';
 import { useSocketEvent } from '../hooks';
@@ -26,6 +25,9 @@ const QuestionSelection = ({ lobbyCode, isLeader, leader, gameSpeed }: {
   const [cards, setCards] = useState<GameCard[]>([]);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [selectedQuestion, setSelectedQuestion] = useState<string | null>(null);
+  // Question tapée, en attente de ✅/❌ : rien n'est envoyé au serveur tant que
+  // le pilier n'a pas confirmé (ou que le timer n'a pas expiré).
+  const [pendingQuestion, setPendingQuestion] = useState<string | null>(null);
   // Questions déjà jouées dans la partie : grisées et non sélectionnables.
   const [usedQuestions, setUsedQuestions] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(isLeader);
@@ -80,6 +82,10 @@ const QuestionSelection = ({ lobbyCode, isLeader, leader, gameSpeed }: {
         timerStartedRef.current = true;
         // Le pilier demande 3 cartes
         socket.emit('requestQuestions', { lobbyCode, count: 3 });
+        // (Re)montage = aucune bulle affichée : on oublie une éventuelle question en
+        // attente d'un montage précédent (resync, reconnexion), sinon le serveur la
+        // retiendrait à l'expiration alors que le pilier ne la voit plus sélectionnée.
+        socket.emit('setPendingQuestion', { lobbyCode, question: null });
         socket.emit('startTimer', { lobbyCode, duration: phaseDuration });
       }
     }, 500);
@@ -119,23 +125,50 @@ const QuestionSelection = ({ lobbyCode, isLeader, leader, gameSpeed }: {
 
   const locked = selectedQuestion !== null;
 
-  const handleSelectQuestion = (question: string) => {
-    if (!isLeader || selectedQuestion !== null || usedQuestions.has(question)) return;
-
+  const submitQuestion = (question: string) => {
+    setPendingQuestion(null);
     setSelectedQuestion(question);
     socket.emit('selectQuestion', { lobbyCode, selectedQuestion: question });
   };
 
+  // Un tap n'envoie rien au serveur de jeu : il met la question en avant, le ✅ de la
+  // popup l'envoie. Re-taper la même question l'annule ; taper à côté ne fait rien,
+  // et taper une autre question remplace la sélection (ou changer de carte, cf. goToCard).
+  const handleSelectQuestion = (question: string) => {
+    if (!isLeader || selectedQuestion !== null || usedQuestions.has(question)) return;
+    if (pendingQuestion === question) {
+      handleCancelQuestion();
+      return;
+    }
+    setPendingQuestion(question);
+    // Le serveur expire avant le client : il doit connaître le choix pour l'auto-sélection.
+    socket.emit('setPendingQuestion', { lobbyCode, question });
+  };
+
+  const handleCancelQuestion = () => {
+    setPendingQuestion(null);
+    socket.emit('setPendingQuestion', { lobbyCode, question: null });
+  };
+
+  const handleConfirmQuestion = () => {
+    if (pendingQuestion === null || selectedQuestion !== null) return;
+    submitQuestion(pendingQuestion);
+  };
+
   const handleTimerExpire = () => {
     if (!isLeader) return;
+    // Question en attente à l'expiration : elle EST la question choisie.
+    if (selectedQuestion === null && pendingQuestion !== null && !usedQuestions.has(pendingQuestion)) {
+      submitQuestion(pendingQuestion);
+      return;
+    }
     // Si pas de sélection, choisir une question au hasard dans la carte active
     // et l'émettre en premier, avant que le serveur ne pioche depuis une autre carte.
     if (selectedQuestion === null && currentCard && currentCard.questions.length > 0) {
       const unused = currentCard.questions.filter(q => !usedQuestions.has(q));
       const pickFrom = unused.length > 0 ? unused : currentCard.questions;
       const q = pickFrom[Math.floor(Math.random() * pickFrom.length)];
-      setSelectedQuestion(q);
-      socket.emit('selectQuestion', { lobbyCode, selectedQuestion: q });
+      submitQuestion(q);
       return;
     }
     socket.emit('timerExpired', { lobbyCode, phase: RoundPhase.QUESTION_SELECTION });
@@ -146,6 +179,10 @@ const QuestionSelection = ({ lobbyCode, isLeader, leader, gameSpeed }: {
     const total = cards.length;
     if (total === 0) return;
     const next = ((idx % total) + total) % total;
+    // La bulle est ancrée à une question de la carte quittée : on la ferme.
+    // Seulement s'il y a une bulle : chaque swipe émettait sinon un `setPendingQuestion`
+    // (rate-limité, le dépassement remonte en toast d'erreur au pilier).
+    if (next !== currentCardIndex && pendingQuestion !== null) handleCancelQuestion();
     setCurrentCardIndex(next);
   };
 
@@ -218,9 +255,12 @@ const QuestionSelection = ({ lobbyCode, isLeader, leader, gameSpeed }: {
   };
 
   return (
-    <div className="flex flex-col h-full p-2 tablet:p-4 overflow-hidden phone-landscape:overflow-y-auto overscroll-contain no-scrollbar">
+    <div className="relative flex flex-col h-full p-2 tablet:p-4 overflow-hidden phone-landscape:overflow-y-auto overscroll-contain no-scrollbar">
       {currentCard && (
-        <div className="flex-1 flex flex-col items-center justify-center phone-landscape:justify-start">
+        <>
+        {/* Zone cartes : scrollable si l'écran est trop court (iPhone SE). */}
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain no-scrollbar flex flex-col items-center">
+          <div className="my-auto w-full flex flex-col items-center phone-landscape:my-0">
           <div className="bg-primary text-base tablet:text-xl px-3 tablet:px-6 py-1 tablet:py-1.5 rounded-2xl mb-0 w-full text-center">
             <p className="font-display text-base tablet:text-2xl m-0 tracking-tight leading-tight">
               {t.phases.questionSelection.chooseQuestion}
@@ -239,6 +279,9 @@ const QuestionSelection = ({ lobbyCode, isLeader, leader, gameSpeed }: {
             currentCardIndex={currentCardIndex}
             locked={locked}
             selectedQuestion={selectedQuestion}
+            pendingQuestion={pendingQuestion}
+            onConfirmQuestion={handleConfirmQuestion}
+            onCancelQuestion={handleCancelQuestion}
             usedQuestions={usedQuestions}
             revealedIdx={revealedIdx}
             showSwipeHint={showSwipeHint}
@@ -251,34 +294,18 @@ const QuestionSelection = ({ lobbyCode, isLeader, leader, gameSpeed }: {
             onGoToCard={goToCard}
           />
 
-
-          {/* Signaler une question pourrie (pilier uniquement, tant que pas verrouillé) */}
-          {!locked && currentCard && (
-            <div className="text-center mt-2">
-              <ReportTrigger
-                variant="discreet"
-                label={t.phases.questionSelection.reportQuestion}
-                defaultType="question_report"
-                extraContext={[
-                  `Catégorie: ${currentCard.category}`,
-                  `Thème: ${currentCard.theme}`,
-                  `Sujet: ${currentCard.subject}`,
-                  `Questions affichées:`,
-                  ...currentCard.questions.map((q, i) => `  ${i + 1}. ${q}`),
-                ].join('\n')}
-              />
-            </div>
-          )}
-
-          {/* Message de confirmation */}
-          {locked && (
-            <div className="text-center mt-3 md:mt-4">
-              <p className="text-white text-base md:text-xl font-semibold drop-shadow">
-                {t.phases.questionSelection.selected}
-              </p>
-            </div>
-          )}
+          </div>
         </div>
+
+        {/* Message de confirmation */}
+        {locked && (
+          <div className="shrink-0 text-center pt-2 pb-1 md:pt-3">
+            <p className="text-white text-base md:text-xl font-semibold drop-shadow">
+              {t.phases.questionSelection.selected}
+            </p>
+          </div>
+        )}
+        </>
       )}
     </div>
   );

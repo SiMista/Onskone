@@ -69,9 +69,11 @@ export function useRafProgress({ duration, endTime, timeLeft, active = true, emi
     // cleanup de la frame précédente). Évite le re-render à 60fps d'un timer masqué.
     if (!active) return;
     const tick = () => {
+      // Borné à la durée : un timer peut démarrer dans le futur (GUESSING est décalé
+      // de l'intro côté serveur), le sablier reste alors plein au lieu d'afficher 64 s sur 60.
       const remainingMs = endTime === null
         ? timeLeft * 1000
-        : Math.max(0, endTime - Date.now());
+        : Math.min(duration * 1000, Math.max(0, endTime - Date.now()));
       // Ne pousser `progress` (et donc re-render à chaque frame) que si le
       // consommateur en a besoin ; sinon la RAF ne sert qu'à rafraîchir la seconde.
       if (emitProgressRef.current) {

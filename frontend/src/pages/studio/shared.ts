@@ -32,7 +32,7 @@ export const VIEWPORT_PRESETS: ViewportPreset[] = [
   { id: 'ipad-pro', label: 'iPad Pro - 1024×1366', short: 'iPadP', w: 1024, h: 1366 },
   { id: 'desktop-sm', label: 'Laptop - 1280×800', short: 'LT', w: 1280, h: 800 },
   { id: 'desktop-lg', label: 'Desktop - 1536×960', short: 'DT', w: 1536, h: 960 },
-  { id: 'free', label: 'Libre - 480×720', short: 'Free', w: 480, h: 720 },
+  { id: 'free', label: 'Libre (redimensionnable)', short: 'Free', w: 480, h: 720 },
 ];
 
 export const presetById = (id: string): ViewportPreset =>
@@ -49,6 +49,9 @@ export interface SlotConfig {
   premium: boolean;
   /** Plateforme simulée (paywall natif, achat factice). Changer recharge le slot. */
   platform: SlotPlatform;
+  /** Dimensions du format « Libre » (portrait). Ignorées pour les autres presets. */
+  freeW?: number;
+  freeH?: number;
 }
 
 export interface SlotRuntimeState {
@@ -104,12 +107,26 @@ export const loadSavedConfig = (): SavedConfig | null => {
   } catch { return null; }
 };
 
+/** Bornes du format « Libre » (px) : assez petit pour un vieux mobile, assez grand pour un écran 4K. */
+export const FREE_MIN = 240;
+export const FREE_MAX = 2400;
+const clampFree = (n: number): number => Math.round(Math.min(FREE_MAX, Math.max(FREE_MIN, n)));
+
 export const viewportDims = (slot: SlotConfig): { w: number; h: number } => {
   const base = presetById(slot.viewportId);
-  return slot.orientation === 'landscape'
-    ? { w: base.h, h: base.w }
-    : { w: base.w, h: base.h };
+  const w = slot.viewportId === 'free' ? clampFree(slot.freeW ?? base.w) : base.w;
+  const h = slot.viewportId === 'free' ? clampFree(slot.freeH ?? base.h) : base.h;
+  return slot.orientation === 'landscape' ? { w: h, h: w } : { w, h };
 };
+
+/**
+ * Patch de slot pour que le cadre AFFICHÉ (après rotation) mesure `w`×`h`. En paysage, les
+ * dimensions stockées sont celles du portrait : on les ré-inverse.
+ */
+export const freeDimsPatch = (slot: SlotConfig, w: number, h: number): Partial<SlotConfig> =>
+  slot.orientation === 'landscape'
+    ? { freeW: clampFree(h), freeH: clampFree(w) }
+    : { freeW: clampFree(w), freeH: clampFree(h) };
 
 // ---------- Unified control styles ----------
 const PILL = 'bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 rounded-md transition-colors';

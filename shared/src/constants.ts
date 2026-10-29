@@ -89,6 +89,10 @@ export const GAME_CONSTANTS = {
   // overlay pour ne pas enchaîner par-dessus. À garder aligné avec les keyframes
   // `reveal-author-backdrop` (index.css, fades calés sur cette durée).
   REVEAL_AUTHOR_OVERLAY_MS: 3500,
+  // Overlay d'intro plein écran à l'entrée en GUESSING (« Tu es PILIER / JOUEUR »).
+  // Le serveur décale d'autant le départ du timer GUESSING : le sablier reste plein
+  // pendant l'intro et ne coule qu'à sa fin (sinon le pilier perdait ce temps-là).
+  GUESSING_INTRO_MS: 4000,
 } as const;
 
 /**

@@ -11,7 +11,7 @@ import { Game } from '../models/Game';
 // `IRound` (shared) = vue publique projetée vers les clients ; `ServerRound` = contrat
 // serveur complet (méthodes métier + bookkeeping) porté par la classe Round.
 import type { IRound as ServerRound } from '../types/IRound';
-import type { ServerToClientEvents, ClientToServerEvents, IGame, IRound, IPlayer } from '@onskone/shared';
+import type { ServerToClientEvents, ClientToServerEvents, IGame, IRound, IPlayer, GameCard, Locale } from '@onskone/shared';
 import { RoundPhase, GameStatus, GAME_CONSTANTS, formatNoResponse, getPhaseDuration } from '@onskone/shared';
 import { getRandomQuestions } from '../data/questionsRepository.js';
 import { errMessage } from '../utils/helpers.js';
@@ -242,7 +242,9 @@ export function transitionToGuessing(io: IoServer, lobbyCode: string, lobby: Lob
     // Timer serveur autoritatif pour GUESSING : sans ça, seul le `startTimer` du
     // pilier (émis une fois au montage de son écran) armait un timeout, et la phase
     // figeait pour toute la table si le pilier était en arrière-plan à cet instant.
-    armServerTimerForPhase(io, lobbyCode, lobby, currentRound);
+    // Départ décalé de l'overlay d'intro : il bloque l'écran, le temps ne doit pas
+    // couler dessous.
+    armServerTimerForPhase(io, lobbyCode, lobby, currentRound, GAME_CONSTANTS.GUESSING_INTRO_MS);
 }
 
 /**
@@ -283,11 +285,47 @@ export function finishAnsweringPhase(io: IoServer, lobbyCode: string, lobby: Lob
 // ===== EXPIRATION DES TIMERS DE PHASE =====
 
 /**
+ * Branchement optionnel appelé quand le serveur retient la question en attente du
+ * pilier. Posé par SocketHandler (stats de cartes) : importer deckStats ici tirerait
+ * SQLite dans tous les tests qui chargent ce module.
+ */
+type QuestionPickedHook = (locale: Locale, card: GameCard, question: string) => void;
+let questionPickedHook: QuestionPickedHook | null = null;
+export function setQuestionPickedHook(hook: QuestionPickedHook | null): void {
+    questionPickedHook = hook;
+}
+
+/**
  * Expiration du timer en phase QUESTION_SELECTION : auto-sélectionne une question
  * au hasard si le pilier n'a pas choisi.
  */
 function handleQuestionSelectionTimeout(io: IoServer, lobbyCode: string, game: Game, currentRound: Round): void {
     if (currentRound.selectedQuestion) return;
+
+    // Le pilier avait tapé une question sans confirmer : c'est elle qui est choisie.
+    const pending = currentRound.pendingQuestion;
+    if (pending && !game.usedQuestions.has(pending)) {
+        const proposedCards = currentRound.proposedCards || [currentRound.gameCard];
+        const pendingCard = proposedCards.find(card => card?.questions?.includes(pending));
+        if (pendingCard) {
+            currentRound.gameCard = pendingCard;
+            // Vrai choix du pilier (juste pas confirmé à temps) : compté comme un pick
+            // manuel dans les stats, contrairement au tirage au hasard plus bas.
+            questionPickedHook?.(game.lobby.locale, pendingCard, pending);
+            currentRound.setSelectedQuestion(pending);
+            game.usedQuestions.add(pending);
+            currentRound.nextPhase();
+            io.to(lobbyCode).emit('questionSelected', {
+                question: pending,
+                phase: currentRound.phase,
+                auto: true,
+                card: pendingCard,
+                roundNumber: currentRound.roundNumber,
+            });
+            logger.info(`Question en attente retenue à l'expiration du timer`, { lobbyCode });
+            return;
+        }
+    }
 
     // Carte sans question (cas limite du tirage) : on repioche dans le deck de la
     // partie plutôt que de laisser la phase sans issue — la manche DOIT avancer.
@@ -542,8 +580,9 @@ export function getServerPhaseDuration(phase: RoundPhase, lobby: Lobby): number 
  * `startTimer` (timerHandlers.ts) — champs de timer + garde anti-double-traitement — et
  * reste idempotent : un `startTimer` ultérieur du pilier pour la même phase voit le timer
  * encore actif et ne le réinitialise pas.
+ * `leadInMs` : délai avant que le temps commence à couler (cf. `armServerTimer`).
  */
-export function armServerTimerForPhase(io: IoServer, lobbyCode: string, lobby: Lobby, currentRound: Round): void {
+export function armServerTimerForPhase(io: IoServer, lobbyCode: string, lobby: Lobby, currentRound: Round, leadInMs = 0): void {
     // Idempotent : un timer déjà armé pour la phase courante est conservé. Permet
     // d'appeler cette fonction à CHAQUE transition (interactive ou auto) sans
     // se soucier d'un double armement.
@@ -557,7 +596,7 @@ export function armServerTimerForPhase(io: IoServer, lobbyCode: string, lobby: L
     }
     const duration = getServerPhaseDuration(currentRound.phase, lobby);
     if (duration <= 0) return; // REVEAL : rien à armer
-    armServerTimer(io, lobbyCode, currentRound, duration);
+    armServerTimer(io, lobbyCode, currentRound, duration, leadInMs);
     logger.debug(`Timer serveur armé pour la phase: ${duration}s`, { lobbyCode, phase: currentRound.phase });
 }
 
@@ -569,10 +608,13 @@ export function armServerTimerForPhase(io: IoServer, lobbyCode: string, lobby: L
  * `startTimer` (démarrage explicite du pilier) et `armServerTimerForPhase` (ré-armement
  * après auto-transition). Idempotent : un `startTimer` ultérieur du pilier pour la même
  * phase voit le timer encore actif (côté handler) et ne le réinitialise pas.
+ * `leadInMs` > 0 : le timer démarre dans le futur (`startedAt` = maintenant + leadInMs),
+ * le temps imparti reste `duration` entier après ce délai. Les clients bornent
+ * l'affichage à `duration` : le sablier reste plein jusqu'au départ.
  */
-export function armServerTimer(io: IoServer, lobbyCode: string, round: Round, duration: number): void {
+export function armServerTimer(io: IoServer, lobbyCode: string, round: Round, duration: number, leadInMs = 0): void {
     const phase = round.phase;
-    const startedAt = Date.now();
+    const startedAt = Date.now() + leadInMs;
     round.timerEnd = new Date(startedAt + duration * 1000);
     round.timerStartedAt = startedAt;
     round.timerDuration = duration;
@@ -598,7 +640,7 @@ export function armServerTimer(io: IoServer, lobbyCode: string, round: Round, du
         } catch (error) {
             logger.error('Error in server timer expiration', { error: errMessage(error) });
         }
-    }, duration * 1000);
+    }, duration * 1000 + leadInMs);
 
     io.to(lobbyCode).emit('timerStarted', { phase, duration, startedAt, serverNow: Date.now() });
 }

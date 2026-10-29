@@ -15,6 +15,7 @@ import { initAds } from './utils/ads';
 import { installGlobalErrorLogging } from './utils/clientLog';
 import { BootSplashHold } from './utils/bootSplash';
 import UpdateRequiredModal from './components/UpdateRequiredModal';
+import MaintenanceOverlay from './components/MaintenanceOverlay';
 import AppDownloadBanner from './components/AppDownloadBanner';
 import { AppErrorBoundary } from './components/AppErrorBoundary';
 
@@ -148,10 +149,12 @@ const App = () => {
   return (
     <ToastProvider>
       <LocaleProvider>
-      <AppErrorBoundary>
+      {/* Router AU-DESSUS du boundary : l'écran de crash embarque le signalement (ReportModal lit la route). */}
       <Router>
+      <AppErrorBoundary>
         <AppShell>
           <UpdateRequiredModal />
+          <MaintenanceOverlay />
           <DeepLinkHandler />
           {/* Page lazy au démarrage : l'écran de chargement reste affiché en attendant. */}
           <Suspense fallback={<BootSplashHold />}>
@@ -178,8 +181,8 @@ const App = () => {
             </Routes>
           </Suspense>
         </AppShell>
-      </Router>
       </AppErrorBoundary>
+      </Router>
       </LocaleProvider>
     </ToastProvider>
   );

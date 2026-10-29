@@ -92,6 +92,11 @@ export interface Dictionary {
     crashTitle: string;
     crashBody: string;
     crashHome: string;
+    /** Crash local d'une zone de jeu (cf. SectionErrorBoundary). */
+    sectionRecovering: string;
+    sectionCrashTitle: string;
+    sectionCrashBody: string;
+    sectionCrashRetry: string;
   };
 
   /** Écran bloquant "maj forcée" (version trop vieille refusée par le serveur) */
@@ -100,6 +105,16 @@ export interface Dictionary {
     message: string;
     cta: string;
     ctaWeb: string;
+  };
+
+  /** Écran de maintenance (mode admin ou serveur injoignable) */
+  maintenance: {
+    title: string;
+    message: string;
+    downTitle: string;
+    downMessage: string;
+    autoResume: string;
+    gameKept: string;
   };
 
   home: {
@@ -416,9 +431,10 @@ export interface Dictionary {
       goToCardIdx: (idx: number) => string;
       prevCard: string;
       nextCard: string;
-      reportQuestion: string;
       loading: string;
       selected: string;
+      confirmQuestion: string;
+      cancelQuestion: string;
     };
     answering: {
       questionAskedToOthers: string;
@@ -463,6 +479,14 @@ export interface Dictionary {
       validate: string;
       rotateForLandscape: string;
       leaderFallback: string;
+      intro: {
+        youAre: string;
+        roleLeader: string;
+        rolePlayer: string;
+        leaderText: string;
+        playerLocalText: string;
+        playerRemoteText: string;
+      };
     };
     reveal: {
       gameOver: string;

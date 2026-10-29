@@ -7,7 +7,8 @@ import { registerLobbyHandlers } from './handlers/lobbyHandlers.js';
 import { registerRoundHandlers } from './handlers/roundHandlers.js';
 import { registerTimerHandlers } from './handlers/timerHandlers.js';
 import { registerDisconnectHandler, armLeaderSkipIfDisconnected } from './handlers/disconnectHandler.js';
-import { setRoundStartedHook } from './broadcasting.js';
+import { setRoundStartedHook, setQuestionPickedHook } from './broadcasting.js';
+import { recordQuestionPicked } from '../utils/deckStats.js';
 
 /**
  * Coquille mince qui câble les modules socket cohérents :
@@ -34,6 +35,8 @@ export class SocketHandler {
         // Manche démarrée par le serveur (nextRound du pilier, filet REVEAL) : armer le
         // saut de pilier si le pilier tiré est déjà déconnecté (cf. broadcasting).
         setRoundStartedHook((io, lobbyCode, round) => armLeaderSkipIfDisconnected(io, this.registry, lobbyCode, round));
+        // Question en attente retenue à l'expiration du timer : comptée comme un pick.
+        setQuestionPickedHook(recordQuestionPicked);
 
         this.io.on('connection', (socket: Socket<ClientToServerEvents, ServerToClientEvents>) => {
             logger.socket.connect(socket.id);

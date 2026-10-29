@@ -369,20 +369,13 @@ const PremiumModal = ({ isOpen, onClose, lockOnOpen = false, previewName: previe
                   <LuCrown size={20} strokeWidth={2.5} />
                   <span>{busy ? t.premium.purchasing : price ? `${t.premium.unlock} · ${price}` : t.premium.unlock}</span>
                 </button>
-                {/* Sticker « À vie ! » collé sur le coin du CTA. Deux spans : la
-                    rotation sur l'externe, le pop (qui anime transform) sur
-                    l'interne, sinon l'animation écrasait la rotation. One-shot :
-                    l'idle de l'écran reste le reflet doré. */}
+                {/* Sticker « À vie ! » collé sur le coin du CTA. Statique, visible
+                    dès l'ouverture : l'idle de l'écran reste le reflet doré. */}
                 <span
                   aria-hidden
-                  className="pointer-events-none absolute -top-3 -right-1.5 rotate-[8deg]"
+                  className="pointer-events-none absolute -top-3 -right-1.5 rotate-[8deg] block px-2 py-0.5 rounded-md border-2 border-black bg-premium-100 stack-shadow-sm font-display font-extrabold text-[11px] sm:text-xs uppercase tracking-wide text-black whitespace-nowrap"
                 >
-                  <span
-                    className="animate-player-pop block px-2 py-0.5 rounded-md border-2 border-black bg-premium-100 stack-shadow-sm font-display font-extrabold text-[11px] sm:text-xs uppercase tracking-wide text-black whitespace-nowrap"
-                    style={{ animationDelay: '350ms' }}
-                  >
-                    {t.premium.lifetimeSticker}
-                  </span>
+                  {t.premium.lifetimeSticker}
                 </span>
               </div>
               <p className="m-0 -mt-1 font-sans font-semibold text-[11px] text-black/60 text-center">

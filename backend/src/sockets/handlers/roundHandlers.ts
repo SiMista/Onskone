@@ -225,6 +225,26 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
         });
     });
 
+    // Question en attente (le pilier a tapé une question sans encore confirmer) : le
+    // serveur la retient pour l'auto-sélection de fin de timer. Silencieux, sans broadcast.
+    socket.on('setPendingQuestion', (data) => {
+        withLeaderGuards(socket, data, {
+            limiter: rateLimiters.setPendingQuestion,
+            requireLeaderAction: 'choisir une question',
+            requirePhase: RoundPhase.QUESTION_SELECTION,
+        }, ({ game, round: currentRound }, data) => {
+            if (data.question === null) {
+                currentRound.pendingQuestion = null;
+                return;
+            }
+            if (typeof data.question !== 'string' || data.question.length === 0 || data.question.length > 500) return;
+            const proposedCards = currentRound.proposedCards || [currentRound.gameCard];
+            const questionExists = proposedCards.some(card => card?.questions?.includes(data.question as string));
+            if (!questionExists || game.usedQuestions.has(data.question)) return;
+            currentRound.pendingQuestion = data.question;
+        });
+    });
+
     // Next Round
     socket.on('nextRound', (data) => {
         // requireGame garantit game non-null ; le custom leader-check ci-dessous
