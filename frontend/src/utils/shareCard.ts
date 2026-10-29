@@ -217,7 +217,7 @@ export async function buildShareCard(opts: ShareCardOptions): Promise<Blob> {
   ctx.fillRect(0, 0, W, H);
 
   // Logo : dessiné dans le post-it en haut (chargé ici pour que le canvas l'ait prêt)
-  let logoImg: HTMLImageElement | null = null;
+  let logoImg: HTMLImageElement | null;
   try {
     logoImg = await loadImage(LOGO_BY_LOCALE[opts.locale ?? 'fr'] ?? logoFr);
   } catch {

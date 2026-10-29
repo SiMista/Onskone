@@ -29,9 +29,6 @@ export const fr: Dictionary = {
     adChoices: 'Choix publicitaires',
   },
 
-  ads: {
-  },
-
   app: {
     crashTitle: 'Oups, ça a planté !',
     crashBody: "Un problème d'affichage est survenu. Reviens à l'accueil pour repartir sur de bonnes bases.",

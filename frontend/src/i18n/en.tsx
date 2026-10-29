@@ -29,9 +29,6 @@ export const en: Dictionary = {
     adChoices: 'Ad choices',
   },
 
-  ads: {
-  },
-
   app: {
     crashTitle: 'Oops, something broke!',
     crashBody: 'A display error occurred. Go back to the home screen to start fresh.',

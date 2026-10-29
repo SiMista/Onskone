@@ -33,6 +33,7 @@ export default tseslint.config(
       '**/*.config.mjs',
       '**/*.config.cjs',
       'scripts/**',
+      'frontend/scripts/**',
       'eslint.config.js',
     ],
   },

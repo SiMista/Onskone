@@ -83,10 +83,6 @@ export interface Dictionary {
     adChoices: string;
   };
 
-  /** Écran d'intro avant le formulaire de consentement pub de Google (cf. ads.ts). */
-  ads: {
-  };
-
   /** Écran de secours quand le rendu plante (cf. AppErrorBoundary). */
   app: {
     crashTitle: string;
