@@ -81,18 +81,22 @@ export const AdminBackdrop = () => (
   </div>
 );
 
-// Marque de l'admin (masthead d'origine) : « ▍ onskoné / ADMIN ».
-export const AdminBrand = ({ large = false }: { large?: boolean }) => {
-  const size = large ? 'text-[14px]' : 'text-[13px] sm:text-[14px]';
-  return (
-    <span className="inline-flex items-center gap-2">
-      <span className="text-amber-400 text-[15px] leading-none">▍</span>
-      <span className={`font-mono ${size} text-white/85 lowercase tracking-tight leading-none`}>onskoné</span>
-      <span className={`font-mono ${size} text-white/25 leading-none`}>/</span>
-      <span className={`font-mono ${size} font-bold text-amber-200 uppercase tracking-[0.12em] leading-none`}>admin</span>
+// Marque de l'admin, en typo pure (pas le logo officiel) : carré jaune « ? » (le motif du jeu,
+// dans l'accent de l'admin), nom en Fredoka (la typo des titres du jeu) et étiquette Admin.
+export const AdminBrand = ({ large = false }: { large?: boolean }) => (
+  <span className="inline-flex items-center gap-2.5">
+    <span
+      aria-hidden
+      className={`shrink-0 flex items-center justify-center rounded-lg bg-amber-400 text-[#0d1018] font-display font-bold leading-none shadow-[inset_0_-2px_0_rgba(0,0,0,0.18)] ${large ? 'w-10 h-10 text-[24px]' : 'w-8 h-8 text-[19px]'}`}
+    >
+      ?
     </span>
-  );
-};
+    <span className={`font-display font-bold tracking-tight leading-none text-white ${large ? 'text-[26px]' : 'text-[20px]'}`}>Onskoné</span>
+    <span className="rounded-md border border-amber-300/40 bg-amber-400/10 px-1.5 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] leading-none text-amber-200">
+      Admin
+    </span>
+  </span>
+);
 
 // Barre de couleur sur le bord gauche : le repère de catégorie / type / niveau / état de l'admin
 // (comme les decks). Le parent doit être `relative` (+ overflow-hidden s'il est arrondi).
