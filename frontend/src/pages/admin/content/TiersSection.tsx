@@ -5,6 +5,7 @@ import { buildShareCard } from '../../../utils/shareCard';
 import { fr } from '../../../i18n/fr';
 import { SectionHeader } from './SectionHeader';
 import { TIER_TEXTS, PREVIEW_TOP_PLAYERS } from './shared';
+import { PANEL, btn, iconBtn } from '../ui';
 
 export const TiersSection = () => {
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
@@ -59,19 +60,20 @@ export const TiersSection = () => {
 
   return (
     <div>
-      <SectionHeader title="Paliers de score" count={TIERS.length} />
-      <p className="text-[13px] text-white/55 mb-3 max-w-2xl">
-        Le verdict affiché en fin de partie selon le pourcentage de l'équipe. Un message est tiré au sort dans la liste du palier atteint. <span className="text-amber-200/80">Clique sur "Aperçu"</span> pour voir la ShareCard générée.
+      <SectionHeader title="Paliers de score" />
+      <p className="text-[13px] text-white/55 mb-4 max-w-2xl">
+        Le verdict affiché en fin de partie selon le score de l'équipe (en %). Un message est tiré au sort dans la liste du palier atteint. <span className="text-amber-200/80">Clique sur « Aperçu »</span> pour voir l'image de partage générée, celle que les joueurs partagent en fin de partie.
       </p>
       <div className="flex items-center gap-2 mb-3">
         <button
           type="button"
           onClick={() => setOpenAll((v) => !v)}
-          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-white/75 hover:text-white font-mono text-[11px] uppercase tracking-wider transition-colors"
+          className={btn('secondary', 'sm')}
         >
           <Icon
             icon={openAll ? 'mdi:unfold-less-horizontal' : 'mdi:unfold-more-horizontal'}
-            className="w-3.5 h-3.5"
+            className="w-4 h-4"
+            aria-hidden
           />
           {openAll ? 'Tout fermer' : 'Tout ouvrir'}
         </button>
@@ -79,23 +81,25 @@ export const TiersSection = () => {
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
         {/* Mobile: aperçu en haut si sélection */}
         {previewTier && (
-          <div className="lg:hidden order-first rounded-xl surface-glass p-4">
+          <div className={`lg:hidden order-first ${PANEL} p-4`}>
             <div className="flex items-center gap-2 mb-3">
-              <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-white/45">
-                Aperçu ShareCard
+              <p className="text-[14px] font-semibold text-white/85">
+                Aperçu de l'image de partage
               </p>
-              <span className="ml-auto font-mono text-[14px] tabular-nums font-bold" style={{ color: previewTier.color }}>
+              <span className="ml-auto text-[14px] tabular-nums font-bold" style={{ color: previewTier.color }} title="Score simulé">
                 {previewTier.midPct}%
               </span>
               <button
                 type="button"
                 onClick={() => setPreviewIdx(null)}
-                className="w-6 h-6 rounded-md border border-white/10 bg-white/[0.04] hover:bg-white/[0.1] text-white/55 hover:text-white flex items-center justify-center text-[12px] transition-colors"
+                className={iconBtn()}
                 aria-label="Fermer l'aperçu"
                 title="Fermer l'aperçu"
-              >✕</button>
+              >
+                <Icon icon="mdi:close" className="w-4 h-4" aria-hidden />
+              </button>
             </div>
-            <div className="rounded-lg border border-white/[0.08] bg-[#0a0c12] p-2 flex items-center justify-center">
+            <div className="rounded-lg bg-black/25 border border-white/[0.06] p-2 flex items-center justify-center">
               {shareUrl ? (
                 <img
                   src={shareUrl}
@@ -103,8 +107,8 @@ export const TiersSection = () => {
                   className="block w-full max-w-[260px] aspect-[9/16] object-contain rounded-md"
                 />
               ) : (
-                <div className="w-full max-w-[260px] aspect-[9/16] flex items-center justify-center text-white/40 font-mono text-xs">
-                  {shareLoading ? 'Génération…' : '—'}
+                <div className="w-full max-w-[260px] aspect-[9/16] flex items-center justify-center text-white/55 text-[13px]">
+                  {shareLoading ? 'Génération…' : 'Aperçu indisponible'}
                 </div>
               )}
             </div>
@@ -123,66 +127,60 @@ export const TiersSection = () => {
             return (
               <div
                 key={idx}
-                className={`rounded-lg border bg-slate-400/[0.10] overflow-hidden transition-colors ${isPreviewed ? 'border-amber-300/40' : 'border-white/[0.07]'}`}
+                className={`${PANEL} overflow-hidden ${isPreviewed ? 'outline -outline-offset-1 outline-amber-300/50' : ''}`}
               >
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (openAll) {
-                      setExpandedIdx(idx);
-                      setMessageIdx(0);
-                    } else if (isExpanded) {
-                      setExpandedIdx(null);
-                    } else {
-                      setExpandedIdx(idx);
-                      setMessageIdx(0);
-                    }
-                  }}
-                  className={`w-full relative px-4 py-3 flex items-center gap-3 text-left hover:bg-white/[0.03] transition-colors cursor-pointer ${isOpen ? 'border-b border-white/[0.05]' : ''}`}
-                >
+                <div className={`relative flex items-center gap-2 pr-3 ${isOpen ? 'border-b border-white/[0.06]' : ''}`}>
                   <div
                     aria-hidden
                     className="absolute left-0 top-0 bottom-0 w-[3px]"
                     style={{ backgroundColor: tier.color }}
                   />
-                  <Icon
-                    icon="mdi:chevron-right"
-                    className={`w-4 h-4 shrink-0 text-white/45 transition-transform ${isOpen ? 'rotate-90 text-amber-300' : ''}`}
-                  />
-                  <Icon icon={tier.icon} className="w-7 h-7 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[15px] font-semibold tracking-tight text-white truncate">
-                      {tierTitle}
-                    </p>
-                    <p className="text-[12px] text-white/45">
-                      de {prev}% à {tier.max}%
-                    </p>
-                  </div>
-                  <span
-                    role="button"
-                    tabIndex={0}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openPreview(idx, localMessageIdx);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        openPreview(idx, localMessageIdx);
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (openAll) {
+                        setExpandedIdx(idx);
+                        setMessageIdx(0);
+                      } else if (isExpanded) {
+                        setExpandedIdx(null);
+                      } else {
+                        setExpandedIdx(idx);
+                        setMessageIdx(0);
                       }
                     }}
-                    className={`font-mono text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded border transition-colors cursor-pointer ${isPreviewed ? 'text-amber-200 bg-amber-400/10 border-amber-300/40' : 'text-white/55 hover:text-amber-200 border-white/15 hover:border-amber-300/40 hover:bg-amber-400/5'}`}
-                    title="Générer l'aperçu ShareCard"
+                    aria-expanded={isOpen}
+                    className="flex-1 min-w-0 pl-4 py-3 flex items-center gap-3 text-left hover:bg-white/[0.03] transition-colors cursor-pointer"
                   >
-                    aperçu
-                  </span>
+                    <Icon
+                      icon="mdi:chevron-right"
+                      className={`w-4 h-4 shrink-0 text-white/45 transition-transform ${isOpen ? 'rotate-90 text-amber-300' : ''}`}
+                      aria-hidden
+                    />
+                    <Icon icon={tier.icon} className="w-7 h-7 shrink-0" aria-hidden />
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-[14px] font-semibold tracking-tight text-white truncate">
+                        {tierTitle}
+                      </span>
+                      <span className="block text-[12px] text-white/60">
+                        de {prev}% à {tier.max}%
+                      </span>
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openPreview(idx, localMessageIdx)}
+                    aria-pressed={isPreviewed}
+                    className={`${btn(isPreviewed ? 'primary' : 'secondary', 'sm')} shrink-0`}
+                    title="Générer l'image de partage de ce palier"
+                  >
+                    Aperçu
+                  </button>
                   <span
                     aria-hidden
                     className="w-5 h-5 rounded-full border border-white/15 shrink-0"
                     style={{ backgroundColor: tier.color }}
                   />
-                </button>
+                </div>
                 {isOpen && (
                   <ol className="px-4 py-3 space-y-1.5 animate-fade-in">
                     {tierMessages.map((m, i) => {
@@ -195,10 +193,11 @@ export const TiersSection = () => {
                               setExpandedIdx(idx);
                               setMessageIdx(i);
                             }}
-                            className={`w-full flex gap-2 text-[13px] leading-snug text-left rounded px-1 py-0.5 transition-colors cursor-pointer ${messageActive ? 'bg-amber-400/10 text-amber-100' : 'text-white/85 hover:bg-white/[0.03]'}`}
-                            title="Sélectionner ce message (clique sur Aperçu pour le générer)"
+                            aria-pressed={messageActive}
+                            className={`w-full flex gap-2 text-[13px] leading-snug text-left rounded-md px-1.5 py-1 transition-colors cursor-pointer ${messageActive ? 'bg-amber-400/15 text-amber-100 font-medium' : 'text-white/85 hover:bg-white/[0.04]'}`}
+                            title="Choisir ce message pour l'aperçu (puis clique sur « Aperçu »)"
                           >
-                            <span className={`font-mono text-[11px] tabular-nums mt-0.5 shrink-0 w-5 text-right ${messageActive ? 'text-amber-300' : 'text-white/25'}`}>
+                            <span className={`text-[12px] tabular-nums shrink-0 w-5 text-right ${messageActive ? 'text-amber-300' : 'text-white/45'}`}>
                               {i + 1}.
                             </span>
                             <span className="whitespace-pre-wrap break-words">{m}</span>
@@ -216,24 +215,26 @@ export const TiersSection = () => {
         {/* Sticky preview - desktop */}
         <aside className="hidden lg:block">
           <div className="sticky top-[180px]">
-            <div className="rounded-xl surface-glass p-4">
+            <div className={`${PANEL} p-4`}>
               <div className="flex items-center gap-2 mb-3">
-                <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-white/45">
-                  Aperçu ShareCard
+                <p className="text-[14px] font-semibold text-white/85">
+                  Aperçu de l'image de partage
                 </p>
                 {previewTier && (
                   <button
                     type="button"
                     onClick={() => setPreviewIdx(null)}
-                    className="ml-auto w-6 h-6 rounded-md border border-white/10 bg-white/[0.04] hover:bg-white/[0.1] text-white/55 hover:text-white flex items-center justify-center text-[12px] transition-colors"
+                    className={`${iconBtn()} ml-auto`}
                     aria-label="Fermer l'aperçu"
                     title="Fermer l'aperçu"
-                  >✕</button>
+                  >
+                    <Icon icon="mdi:close" className="w-4 h-4" aria-hidden />
+                  </button>
                 )}
               </div>
               {previewTier ? (
                 <div className="space-y-3">
-                  <div className="rounded-lg border border-white/[0.08] bg-[#0a0c12] p-2 flex items-center justify-center">
+                  <div className="rounded-lg bg-black/25 border border-white/[0.06] p-2 flex items-center justify-center">
                     {shareUrl ? (
                       <img
                         src={shareUrl}
@@ -241,24 +242,15 @@ export const TiersSection = () => {
                         className="block w-full max-w-[260px] aspect-[9/16] object-contain rounded-md"
                       />
                     ) : (
-                      <div className="w-full max-w-[260px] aspect-[9/16] flex items-center justify-center text-white/40 font-mono text-xs">
-                        {shareLoading ? 'Génération…' : '—'}
+                      <div className="w-full max-w-[260px] aspect-[9/16] flex items-center justify-center text-white/55 text-[13px]">
+                        {shareLoading ? 'Génération…' : 'Aperçu indisponible'}
                       </div>
                     )}
                   </div>
-                  <div className="flex items-baseline gap-2">
-                    <span className="font-mono text-[10px] uppercase tracking-wider text-white/35">à</span>
-                    <span className="font-mono text-[14px] tabular-nums font-bold" style={{ color: previewTier.color }}>
-                      {previewTier.midPct}%
-                    </span>
-                    <span className="ml-auto font-mono text-[10px] text-white/35">
-                      message {previewMessageIdx + 1}/{previewTexts?.messages.length ?? 0}
-                    </span>
-                  </div>
                 </div>
               ) : (
-                <p className="text-center py-10 font-mono text-[11px] uppercase tracking-[0.22em] text-white/30">
-                  clique sur "Aperçu" d'un palier
+                <p className="text-center py-10 px-2 text-[13px] text-white/55">
+                  Clique sur « Aperçu » d'un palier pour générer son image de partage.
                 </p>
               )}
             </div>

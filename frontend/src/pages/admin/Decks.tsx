@@ -1,10 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Icon } from '@iconify/react';
 import type { AdminDeckSummary } from '@onskone/shared';
 import { useAdminResource } from '../../hooks';
 import { fetchAdminDecks } from '../../utils/adminDataApi';
-import { CLUSTER } from './shared';
-import { StatTile } from '../../components/admin/StatTile';
+import { EmptyState, KpiCell, LoadingState, PANEL, SearchField, Segmented } from './ui';
 import { categoryStyle, deckKey } from './decks/shared';
 import { DeckRailItem, DeckDetail } from './decks/DeckDetail';
 
@@ -101,107 +99,51 @@ export const DecksPanel = ({ active }: { active: boolean }) => {
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatTile label="Catégories" value={totals.categories} accent="amber" />
-        <StatTile label="Thèmes" value={totals.themes} accent="sky" />
-        <StatTile label="Sujets" value={totals.subjects} accent="violet" />
-        <StatTile label="Questions" value={totals.questions} accent="emerald" />
+        <KpiCell compact label="Catégories" value={totals.categories} />
+        <KpiCell compact label="Thèmes" value={totals.themes} />
+        <KpiCell compact label="Sujets" value={totals.subjects} />
+        <KpiCell compact label="Questions" value={totals.questions} />
       </div>
 
-      <div className="flex flex-col md:flex-row md:flex-wrap md:items-center gap-2 md:gap-2.5">
-        <div className={`${CLUSTER} w-full md:flex-1 md:min-w-[200px] md:max-w-md`}>
-          <Icon icon="mdi:magnify" className="w-4 h-4 text-white/35 ml-0.5" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="rechercher sujet ou question"
-            className="flex-1 min-w-0 bg-transparent border-0 outline-0 text-[12px] text-white/85 placeholder:text-white/25 font-mono"
-          />
-          {search && (
-            <button
-              onClick={() => setSearch('')}
-              className="text-white/30 hover:text-white text-[12px] px-1"
-            >×</button>
-          )}
-        </div>
+      <div className="flex flex-col md:flex-row md:flex-wrap md:items-center gap-2">
+        <SearchField value={search} onChange={setSearch} placeholder="Chercher un sujet ou une question" />
 
         {categories.length > 0 && (
-          <div className={`${CLUSTER} hidden md:flex flex-wrap`}>
-            <button
-              onClick={() => setCategoryFilter('')}
-              className={`px-2 py-0.5 rounded font-mono text-[11px] uppercase tracking-wider transition-colors ${!categoryFilter ? 'bg-white/[0.08] text-white' : 'text-white/45 hover:text-white/80'
-                }`}
-            >toutes</button>
-            {categories.map((c) => {
-              const palette = categoryStyle(c);
-              const isActive = categoryFilter === c;
-              return (
-                <button
-                  key={c}
-                  onClick={() => setCategoryFilter(c)}
-                  className={`inline-flex items-center px-2 py-0.5 rounded font-mono text-[11px] uppercase tracking-wider transition-colors ${isActive
-                    ? `bg-white/[0.08] ${palette.text}`
-                    : `${palette.text} opacity-50 hover:opacity-90`
-                    }`}
-                >
-                  {c}
-                </button>
-              );
-            })}
-          </div>
+          <Segmented
+            ariaLabel="Filtrer par catégorie"
+            value={categoryFilter}
+            onChange={setCategoryFilter}
+            className="flex-wrap"
+            options={[
+              { value: '', label: <>Toutes <span className="tabular-nums opacity-70">{decks.length}</span></> },
+              ...categories.map((c) => ({
+                value: c,
+                accent: categoryStyle(c).strip,
+                label: <>{c} <span className="tabular-nums opacity-70">{decks.filter((d) => d.category === c).length}</span></>,
+              })),
+            ]}
+          />
         )}
       </div>
 
-      {categories.length > 0 && (
-        <div className="md:hidden grid grid-cols-4 gap-1.5">
-          <button
-            onClick={() => setCategoryFilter('')}
-            className={`flex flex-col items-center justify-center gap-1 px-1 py-2 rounded-lg border transition-colors ${!categoryFilter
-              ? 'bg-white/[0.08] border-white/20 text-white'
-              : 'bg-white/[0.02] border-white/[0.07] text-white/55'
-              }`}
-          >
-            <span className="font-mono text-[10px] uppercase tracking-wider">Toutes</span>
-            <span className="tabular-nums font-bold text-[13px] leading-none text-white/85">
-              {decks.length}
-            </span>
-          </button>
-          {categories.map((c) => {
-            const palette = categoryStyle(c);
-            const isActive = categoryFilter === c;
-            const count = decks.filter((d) => d.category === c).length;
-            return (
-              <button
-                key={c}
-                onClick={() => setCategoryFilter(c)}
-                className={`relative flex flex-col items-center justify-center gap-1 px-1 py-2 rounded-lg border transition-colors overflow-hidden ${isActive
-                  ? `bg-white/[0.08] border-white/20`
-                  : 'bg-white/[0.02] border-white/[0.07]'
-                  }`}
-              >
-                <span className={`absolute top-0 left-0 right-0 h-[3px] ${palette.strip} ${isActive ? '' : 'opacity-50'}`} />
-                <span className={`font-mono text-[10px] uppercase tracking-wider ${isActive ? palette.text : 'text-white/55'}`}>
-                  {c}
-                </span>
-                <span className={`tabular-nums font-bold text-[13px] leading-none ${isActive ? 'text-white' : 'text-white/65'}`}>
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      )}
-
       {isLoading && decks.length === 0 ? (
-        <div className="text-center py-20 font-mono text-[11px] uppercase tracking-[0.3em] text-white/30">
-          chargement…
-        </div>
+        <LoadingState label="Chargement des decks…" />
       ) : filtered.length === 0 ? (
-        <div className="text-center py-20 font-mono text-[11px] uppercase tracking-[0.3em] text-white/30">
-          {decks.length === 0 ? 'aucun deck' : 'aucun résultat'}
-        </div>
+        decks.length === 0 ? (
+          <EmptyState
+            icon="mdi:cards-outline"
+            title="Aucun deck trouvé"
+            hint="Le serveur n'a renvoyé aucun thème : vérifie que les fichiers de questions sont bien présents."
+          />
+        ) : (
+          <EmptyState
+            icon="mdi:magnify"
+            title="Aucun sujet ni question ne correspond"
+            hint="Essaie un autre mot, ou repasse sur « Toutes » les catégories."
+          />
+        )
       ) : (
         <div className="flex flex-col md:flex-row gap-3">
           <div className="md:hidden space-y-3">
@@ -210,11 +152,11 @@ export const DecksPanel = ({ active }: { active: boolean }) => {
               return (
                 <div key={category} className="space-y-2">
                   <div className="flex items-center gap-2 px-1">
-                    <span className={`font-mono text-[10px] uppercase tracking-[0.22em] font-bold ${palette.text}`}>
+                    <span className={`text-[12px] font-semibold ${palette.text}`}>
                       {category}
                     </span>
-                    <span className="font-mono text-[10px] tabular-nums text-white/30">
-                      {items.length}
+                    <span className="text-[12px] tabular-nums text-white/50">
+                      {items.length} thème{items.length > 1 ? 's' : ''}
                     </span>
                     <span className="flex-1 h-px bg-white/[0.05]" />
                   </div>
@@ -225,17 +167,19 @@ export const DecksPanel = ({ active }: { active: boolean }) => {
                       return (
                         <button
                           key={k}
+                          type="button"
                           onClick={() => setSelectedKey(k)}
-                          className={`relative overflow-hidden rounded-md border text-left transition-colors flex items-center gap-1.5 px-2 py-1.5 pl-2.5 ${selected
-                            ? `bg-white/[0.08] border-white/15 ring-1 ${palette.ring}`
-                            : 'bg-white/[0.02] border-white/[0.07] active:bg-white/[0.05]'
+                          aria-pressed={selected}
+                          className={`cursor-pointer relative overflow-hidden rounded-lg border text-left transition-colors flex items-center gap-1.5 px-2 py-2 pl-3 min-h-[40px] ${selected
+                            ? 'bg-amber-400/10 border-amber-300/40'
+                            : 'bg-black/25 border-white/[0.06] active:bg-white/[0.05]'
                             }`}
                         >
-                          <span className={`absolute left-0 top-0 bottom-0 w-[2px] ${palette.strip}`} />
-                          <span className={`text-[12px] leading-tight truncate flex-1 ${selected ? 'text-white' : 'text-white/80'}`}>
+                          <span className={`absolute left-0 top-0 bottom-0 w-[3px] ${palette.strip}`} />
+                          <span className={`text-[13px] leading-tight truncate flex-1 ${selected ? 'text-white' : 'text-white/80'}`}>
                             {d.theme}
                           </span>
-                          <span className="font-mono text-[10px] tabular-nums text-white/45 shrink-0">
+                          <span className="text-[12px] tabular-nums text-white/55 shrink-0" title={`${d.subjectCount} sujet${d.subjectCount > 1 ? 's' : ''}`}>
                             {d.subjectCount}
                           </span>
                         </button>
@@ -248,18 +192,18 @@ export const DecksPanel = ({ active }: { active: boolean }) => {
           </div>
 
           <aside className="hidden md:block md:w-72 shrink-0">
-            <div className="rounded-xl border border-white/[0.07] bg-gradient-to-b from-white/[0.02] to-transparent overflow-hidden">
+            <div className={`${PANEL} overflow-hidden`}>
               <div className="max-h-[calc(100vh-300px)] overflow-y-auto custom-scroll p-2 space-y-3">
                 {grouped.map(([category, items]) => {
                   const palette = categoryStyle(category);
                   return (
                     <div key={category} className="space-y-1">
-                      <div className="sticky top-0 z-10 -mx-2 px-3 py-1.5 bg-[#161a24]/95 backdrop-blur flex items-center gap-2 border-b border-white/[0.05]">
-                        <span className={`font-mono text-[11px] uppercase tracking-[0.22em] font-bold ${palette.text}`}>
+                      <div className="sticky top-0 z-10 -mx-2 px-3 py-1.5 bg-[#1b202d]/95 backdrop-blur flex items-center gap-2 border-b border-white/[0.06]">
+                        <span className={`text-[12px] font-semibold ${palette.text}`}>
                           {category}
                         </span>
-                        <span className="ml-auto font-mono text-[11px] tabular-nums text-white/30">
-                          {items.length}
+                        <span className="ml-auto text-[12px] tabular-nums text-white/50">
+                          {items.length} thème{items.length > 1 ? 's' : ''}
                         </span>
                       </div>
                       <div className="space-y-0.5">
@@ -291,8 +235,8 @@ export const DecksPanel = ({ active }: { active: boolean }) => {
                 onToggleCollapse={() => setQuestionsCollapsed((v) => !v)}
               />
             ) : (
-              <div className="rounded-xl border border-white/[0.07] bg-gradient-to-b from-white/[0.02] to-transparent text-center py-20 font-mono text-[11px] uppercase tracking-[0.3em] text-white/30">
-                sélectionne un thème
+              <div className={`${PANEL} text-center py-20 px-4 text-[13px] text-white/55`}>
+                Choisis un thème dans la liste pour voir ses sujets.
               </div>
             )}
           </section>

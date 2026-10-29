@@ -668,7 +668,7 @@ const Home = () => {
           <div className="hidden md:block md:col-span-6">
             <Frame textAlign="left">
               <div className="w-full border-b-2 border-dashed border-gray-300 pb-3 mb-4 desktop-short:pb-1 desktop-short:mb-1 flex items-center gap-2">
-                <Icon icon="fluent-emoji-flat:bullseye" className="desktop-short:w-5 desktop-short:h-5" width={26} height={26} aria-hidden />
+                <Icon icon="fluent-emoji-flat:bullseye" className="desktop-short:w-5 desktop-short:h-5" width={26} height={26} style={{ filter: STICKER_FILTER }} aria-hidden />
                 <h2 className="marker-highlight font-accent text-display-lg desktop-short:text-display-md phone-landscape:text-display-md text-gray-900 m-0">
                   {t.home.howToPlayHeading}
                 </h2>

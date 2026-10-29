@@ -8,7 +8,20 @@ import { useToast } from './Toast';
 import { submitTicket, TicketsApiError } from '../utils/ticketsApi';
 import { TICKET_CATEGORIES, TicketType } from '../constants/ticketCategories';
 import { buildDeviceSummary } from '../utils/deviceInfo';
+import { studioStorage } from '../utils/studioStorage';
+import { getStats } from '../utils/playerStats';
 import { useLocale } from '../i18n';
+
+// Pseudo joint au ticket : celui du salon courant (cf. storeLobbyIdentity), sinon le
+// dernier saisi à l'accueil. Lu à l'envoi, pas au montage : le joueur a pu en changer.
+const resolvePseudo = (lobbyCode: string | undefined): string | undefined => {
+  try {
+    const inLobby = lobbyCode ? studioStorage.getItem(`playerName_${lobbyCode}`) : null;
+    return inLobby || getStats().lastPseudo || undefined;
+  } catch {
+    return undefined;
+  }
+};
 
 interface ReportModalProps {
   isOpen: boolean;
@@ -52,6 +65,7 @@ const ReportModal = ({ isOpen, onClose, extraContext, defaultType }: ReportModal
         type: selectedType,
         message: message.trim(),
         context: contextParts.join('\n'),
+        pseudo: resolvePseudo(lobbyCode),
         lobbyCode,
       });
       showToast(t.report.success, 'success');

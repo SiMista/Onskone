@@ -1,6 +1,6 @@
 import logoFr from '../assets/logos/logo-fr.png';
 import logoEn from '../assets/logos/logo-en.png';
-import bgImg from '../assets/images/interrogation_bg_transparent.png';
+import bgImg from '../assets/images/bg-question-marks.svg';
 import { getAvatarUrl } from '../constants/game';
 import { TIERS } from '../constants/tiers';
 import type { Locale } from '@onskone/shared';
@@ -179,16 +179,21 @@ export async function buildShareCard(opts: ShareCardOptions): Promise<Blob> {
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
 
-  // === Pattern points d'interrogation bien visible ===
+  // === Pattern points d'interrogation (même tile SVG que le fond de l'app) ===
+  // Un tile par largeur, comme sur un téléphone. Redessiné à cette taille dans un canvas
+  // intermédiaire : un pattern agrandi étirerait le bitmap de l'SVG, d'où des « ? » flous.
   try {
-    const pattern = await loadImage(bgImg);
-    const p = ctx.createPattern(pattern, 'repeat');
+    const svg = await loadImage(bgImg);
+    const tileW = W;
+    const tileH = Math.round(tileW * ((svg.naturalHeight || 560) / (svg.naturalWidth || 440)));
+    const tile = document.createElement('canvas');
+    tile.width = tileW;
+    tile.height = tileH;
+    tile.getContext('2d')?.drawImage(svg, 0, 0, tileW, tileH);
+    const p = ctx.createPattern(tile, 'repeat');
     if (p) {
-      ctx.save();
-      ctx.globalAlpha = 0.42;
       ctx.fillStyle = p;
       ctx.fillRect(0, 0, W, H);
-      ctx.restore();
     }
   } catch {
     /* ignore */

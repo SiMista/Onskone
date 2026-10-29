@@ -4,11 +4,12 @@ import type { AdminDeckStatRow, AdminDeckStats } from '@onskone/shared';
 import { useAdminResource } from '../../hooks';
 import { fetchAdminDeckStats } from '../../utils/adminDataApi';
 import { categoryStyle } from './decks/shared';
+import { EmptyState, LoadingState, PANEL, SearchField, Segmented, Strip, Tabs, btn } from './ui';
 
 // Trafic, visiteurs et sources : suivis par Umami (script dans index.html).
 const UMAMI_DASHBOARD_URL = 'https://stats.onskone.fr/';
 
-/** Une question proposée moins de fois que ça n'a pas assez de recul pour être classée. */
+/** Une question montrée moins de fois que ça n'a pas assez de recul pour être classée. */
 const MIN_SHOWN_QUESTIONS = 5;
 const MIN_SHOWN_THEMES = 5;
 const QUESTIONS_LIMIT = 15;
@@ -16,50 +17,53 @@ const QUESTIONS_LIMIT = 15;
 const LOW_DATA_SHOWN = 3;
 
 type Order = 'best' | 'worst';
+type StatsTab = 'themes' | 'questions';
+
+const TABS: { value: StatsTab; label: string }[] = [
+  { value: 'themes', label: 'Thèmes' },
+  { value: 'questions', label: 'Questions' },
+];
+const ORDERS: { value: Order; label: string }[] = [
+  { value: 'best', label: 'Les plus choisis' },
+  { value: 'worst', label: 'Les moins choisis' },
+];
 
 const pct = (n: number): string => `${n.toFixed(n >= 10 ? 0 : 1)}%`;
 
-const KpiCell = ({ label, value, hint }: { label: string; value: number | string; hint?: string }) => (
-  <div className="rounded-lg surface-glass p-3">
-    <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/40">{label}</p>
-    <p className="mt-1 text-[26px] font-semibold tracking-tight tabular-nums text-white leading-tight">{value}</p>
-    {hint && <p className="mt-0.5 font-mono text-[10px] text-white/35">{hint}</p>}
-  </div>
-);
+// « Choisie 1 fois sur 2 » : lisible sans connaître le vocabulaire choisi / proposé.
+const pickedLabel = (picked: number, shown: number, feminine: boolean): string => {
+  const e = feminine ? 'e' : '';
+  return picked === 0
+    ? `Jamais choisi${e} (montré${e} ${shown} fois)`
+    : `Choisi${e} ${picked} fois sur ${shown}`;
+};
 
-const SectionLabel = ({ children, right }: { children: React.ReactNode; right?: React.ReactNode }) => (
-  <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
-    <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-white/55 font-bold">{children}</p>
-    {right}
-  </div>
-);
-
-const OrderToggle = ({ value, onChange }: { value: Order; onChange: (o: Order) => void }) => (
-  <div className="inline-flex items-center gap-0.5 p-0.5 rounded-md bg-black/30 border border-white/[0.06]">
-    {([['best', 'Meilleurs'], ['worst', 'Pires']] as const).map(([id, label]) => (
-      <button
-        key={id}
-        onClick={() => onChange(id)}
-        className={`cursor-pointer px-2.5 py-1 rounded font-mono text-[10px] font-bold uppercase tracking-[0.12em] transition-colors ${value === id
-          ? (id === 'best' ? 'bg-emerald-400/15 text-emerald-200' : 'bg-rose-400/15 text-rose-200')
-          : 'text-white/45 hover:text-white/80'
-          }`}
-      >
-        {label}
-      </button>
-    ))}
-  </div>
-);
-
-// Barre de taux de choix : vert au-dessus de la moyenne globale, rouge en dessous.
+// Barre de taux de choix : verte au-dessus de la moyenne globale, grise en dessous (pas de
+// rouge : il se confondrait avec la barre de catégorie DEEP à gauche). Décorative : la flèche
+// de RateValue porte la même info sans passer par la couleur.
 const RateBar = ({ rate, avg }: { rate: number; avg: number }) => (
-  <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+  <div aria-hidden className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
     <div
-      className={`h-full rounded-full ${rate >= avg ? 'bg-emerald-400/80' : 'bg-rose-400/70'}`}
+      className={`h-full rounded-full ${rate >= avg ? 'bg-emerald-400/80' : 'bg-white/35'}`}
       style={{ width: `${Math.min(100, rate)}%` }}
     />
   </div>
 );
+
+const RateValue = ({ rate, avg, dim = false, className = 'text-[13px]' }: { rate: number; avg: number; dim?: boolean; className?: string }) => {
+  const above = rate >= avg;
+  const label = above ? 'au-dessus de la moyenne' : 'sous la moyenne';
+  return (
+    <span
+      className={`inline-flex items-center font-bold tabular-nums whitespace-nowrap ${dim ? 'text-white/55' : 'text-white'} ${className}`}
+      title={`${pct(rate)}, ${label} (${pct(avg)})`}
+    >
+      <Icon icon={above ? 'mdi:arrow-up-thin' : 'mdi:arrow-down-thin'} className={`w-4 h-4 ${above ? 'text-emerald-300' : 'text-rose-300'}`} aria-hidden />
+      {pct(rate)}
+      <span className="sr-only">, {label}</span>
+    </span>
+  );
+};
 
 const sortRows = (rows: AdminDeckStatRow[], order: Order): AdminDeckStatRow[] =>
   [...rows].sort((a, b) => {
@@ -74,8 +78,8 @@ export const StatsPanel = ({ active, refreshKey }: { active: boolean; refreshKey
     active,
     refreshKey,
   });
-  const [themeOrder, setThemeOrder] = useState<Order>('best');
-  const [questionOrder, setQuestionOrder] = useState<Order>('best');
+  const [tab, setTab] = useState<StatsTab>('themes');
+  const [order, setOrder] = useState<Order>('best');
   const [search, setSearch] = useState('');
   const [openThemes, setOpenThemes] = useState<Set<string>>(new Set());
 
@@ -106,162 +110,215 @@ export const StatsPanel = ({ active, refreshKey }: { active: boolean; refreshKey
   // sur le nom du thème OU le texte d'une de ses questions.
   const themes = useMemo(() => {
     const rows = data?.themes ?? [];
-    if (!query) return sortRows(rows.filter((t) => t.shown >= MIN_SHOWN_THEMES), themeOrder);
+    if (!query) return sortRows(rows.filter((t) => t.shown >= MIN_SHOWN_THEMES), order);
     return sortRows(rows.filter((t) =>
       t.theme.toLowerCase().includes(query) ||
       (questionsByTheme.get(`${t.category}/${t.theme}`) ?? []).some((q) => q.question?.toLowerCase().includes(query)),
-    ), themeOrder);
-  }, [data, themeOrder, query, questionsByTheme]);
-  const questions = useMemo(
-    () => sortRows((data?.questions ?? []).filter((q) => q.shown >= MIN_SHOWN_QUESTIONS), questionOrder)
-      .slice(0, QUESTIONS_LIMIT),
-    [data, questionOrder],
-  );
+    ), order);
+  }, [data, order, query, questionsByTheme]);
+  // Même règle côté questions : une recherche lève le seuil de recul et la limite du top.
+  const questions = useMemo(() => {
+    const rows = data?.questions ?? [];
+    if (query) return sortRows(rows.filter((q) => q.question?.toLowerCase().includes(query)), order);
+    return sortRows(rows.filter((q) => q.shown >= MIN_SHOWN_QUESTIONS), order).slice(0, QUESTIONS_LIMIT);
+  }, [data, order, query]);
+
+  // « En bref » : ce qu'il faut retenir, en phrases, plutôt que des compteurs bruts.
+  // Seuls les thèmes avec assez de recul comptent (un thème montré 2 fois ne dit rien).
+  const insights = useMemo(() => {
+    const ranked = sortRows((data?.themes ?? []).filter((t) => t.shown >= MIN_SHOWN_THEMES), 'best');
+    const picked = ranked.filter((t) => t.picked > 0);
+    return {
+      best: picked[0] ?? null,
+      worst: picked.length > 1 ? picked[picked.length - 1] : null,
+      neverPicked: ranked.filter((t) => t.picked === 0).map((t) => t.theme),
+    };
+  }, [data]);
 
   const empty = !!data && data.totalShown === 0;
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <p className="text-[12px] text-white/45 max-w-xl">
-          Taux de choix = combien de fois le pilier a pris l'élément quand il lui était proposé.
-          Un thème tiré plus souvent n'est pas forcément plus aimé, d'où ce ratio.
-        </p>
+    <div className="space-y-5">
+      <div className="flex justify-end">
         <a
           href={UMAMI_DASHBOARD_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-sky-400/30 bg-sky-500/[0.06] text-sky-200 hover:bg-sky-500/15 font-mono text-[11px] uppercase tracking-wider transition-colors whitespace-nowrap"
+          aria-label="Visites du site sur Umami (nouvel onglet)"
+          className={btn('secondary', 'sm')}
         >
-          <Icon icon="mdi:chart-line" className="w-3.5 h-3.5" />
-          dashboard umami
-          <Icon icon="mdi:open-in-new" className="w-3 h-3 opacity-60" />
+          <Icon icon="mdi:chart-line" className="w-4 h-4" aria-hidden />
+          Visites du site (Umami)
+          <Icon icon="mdi:open-in-new" className="w-3.5 h-3.5 opacity-70" aria-hidden />
         </a>
       </div>
 
       {isLoading && !data ? (
-        <div className="text-center py-20 font-mono text-[11px] uppercase tracking-[0.3em] text-white/30">chargement…</div>
+        <LoadingState label="Chargement des stats…" />
       ) : empty ? (
-        <div className="text-center py-20 space-y-2">
-          <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-white/30">pas encore de données</p>
-          <p className="text-[12px] text-white/40">Les stats se remplissent à chaque question choisie par un pilier, à partir de maintenant.</p>
-        </div>
+        <EmptyState
+          icon="mdi:chart-bar"
+          title="Pas encore de données"
+          hint="Les stats se remplissent à chaque question choisie par un pilier, à partir de maintenant."
+        />
       ) : data && (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <KpiCell label="Questions choisies" value={data.totalPicks} />
-            <KpiCell label="Cartes proposées" value={data.totalShown} hint="3 cartes max par manche" />
-            <KpiCell label="Taux de choix moyen" value={pct(avgRate)} hint="choisis / proposés" />
-            <KpiCell label="Thèmes jamais choisis" value={data.themes.filter((t) => t.picked === 0).length} hint={`sur ${data.themes.length} proposés`} />
-          </div>
-
-          <div className="flex items-center gap-2 rounded-lg surface-glass px-3 py-2">
-            <Icon icon="mdi:magnify" className="w-4 h-4 text-white/35" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="chercher un thème ou une question"
-              className="flex-1 min-w-0 bg-transparent border-0 outline-0 text-[12px] text-white/85 placeholder:text-white/25 font-mono"
-            />
-            {search && (
-              <button onClick={() => setSearch('')} className="cursor-pointer text-white/30 hover:text-white text-[12px] px-1">×</button>
-            )}
-          </div>
-
-          <section>
-            <SectionLabel right={<OrderToggle value={themeOrder} onChange={setThemeOrder} />}>
-              Thèmes · taux de choix
-            </SectionLabel>
-            <p className="-mt-1 mb-3 text-[11px] text-white/35">Clique sur un thème pour voir ses questions.</p>
-            {themes.length === 0 ? (
-              <p className="text-[12px] text-white/40">
-                {query ? 'Aucun résultat.' : `Aucun thème proposé au moins ${MIN_SHOWN_THEMES} fois pour l'instant.`}
-              </p>
-            ) : (
-              <div className="rounded-lg surface-glass divide-y divide-white/[0.05]">
-                {themes.map((t, i) => {
-                  const cat = categoryStyle(t.category);
-                  const key = `${t.category}/${t.theme}`;
-                  const themeQuestions = questionsByTheme.get(key) ?? [];
-                  const isOpen = openThemes.has(key) || (!!query && themeQuestions.some((q) => q.question?.toLowerCase().includes(query)));
-                  return (
-                    <div key={key}>
-                      <button
-                        type="button"
-                        onClick={() => toggleTheme(key)}
-                        aria-expanded={isOpen}
-                        className="cursor-pointer w-full text-left px-3 py-2.5 space-y-1.5 hover:bg-white/[0.03] transition-colors"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="w-5 font-mono text-[10px] text-white/30 tabular-nums">{i + 1}</span>
-                          <span className={`w-1.5 h-1.5 rounded-full ${cat.dot}`} title={t.category} />
-                          <span className="flex-1 min-w-0 truncate text-[13px] text-white/90">{t.theme}</span>
-                          <span className="font-mono text-[13px] font-bold tabular-nums text-white">{pct(t.pickRate)}</span>
-                          <Icon icon="mdi:chevron-down" className={`w-4 h-4 text-white/40 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-                        </div>
-                        <RateBar rate={t.pickRate} avg={avgRate} />
-                        <p className="font-mono text-[10px] text-white/35">
-                          {t.picked} choisi{t.picked > 1 ? 's' : ''} / {t.shown} proposé{t.shown > 1 ? 's' : ''} · {pct(t.pickShare)} de tous les choix
-                        </p>
-                      </button>
-                      {isOpen && (
-                        <div className="bg-black/20 border-t border-white/[0.05] divide-y divide-white/[0.04]">
-                          {themeQuestions.length === 0 ? (
-                            <p className="px-3 py-2.5 text-[11px] text-white/40">Aucune question proposée pour l'instant.</p>
-                          ) : themeQuestions.map((q) => {
-                            const highlighted = !!query && !!q.question?.toLowerCase().includes(query);
-                            return (
-                              <div key={q.question} className={`pl-10 pr-3 py-2 space-y-1 ${highlighted ? 'bg-amber-400/[0.06]' : ''}`}>
-                                <div className="flex items-start gap-2">
-                                  <span className="flex-1 min-w-0 text-[12px] text-white/80 leading-snug">{q.question}</span>
-                                  <span className={`font-mono text-[12px] font-bold tabular-nums ${q.shown < LOW_DATA_SHOWN ? 'text-white/35' : 'text-white'}`}>
-                                    {pct(q.pickRate)}
-                                  </span>
-                                </div>
-                                <RateBar rate={q.pickRate} avg={avgRate} />
-                                <p className="font-mono text-[10px] text-white/35">
-                                  {q.picked} choisie{q.picked > 1 ? 's' : ''} / {q.shown} proposée{q.shown > 1 ? 's' : ''}
-                                  {q.shown < LOW_DATA_SHOWN && ' · peu de recul'}
-                                </p>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+          <section aria-labelledby="stats-insights" className={`${PANEL} p-4`}>
+            <h2 id="stats-insights" className="text-[16px] font-semibold tracking-tight text-white mb-3">En bref</h2>
+            <ul className="space-y-2.5 text-[13px] leading-snug text-white/75">
+              <li className="flex gap-2.5">
+                <Icon icon="mdi:gamepad-variant-outline" className="w-[18px] h-[18px] shrink-0 text-white/50" aria-hidden />
+                <span>
+                  <strong className="font-semibold text-white">{data.totalPicks} manche{data.totalPicks > 1 ? 's' : ''}</strong> jouée{data.totalPicks > 1 ? 's' : ''} depuis le début du suivi.
+                </span>
+              </li>
+              {insights.best ? (
+                <li className="flex gap-2.5">
+                  <Icon icon="mdi:heart-outline" className="w-[18px] h-[18px] shrink-0 text-emerald-300" aria-hidden />
+                  <span>
+                    Thème préféré : <strong className="font-semibold text-white">{insights.best.theme}</strong>, choisi {pct(insights.best.pickRate)} du temps quand il sort.
+                  </span>
+                </li>
+              ) : (
+                <li className="flex gap-2.5">
+                  <Icon icon="mdi:timer-sand" className="w-[18px] h-[18px] shrink-0 text-white/50" aria-hidden />
+                  <span>Pas encore assez de parties pour désigner un thème préféré.</span>
+                </li>
+              )}
+              {insights.worst && (
+                <li className="flex gap-2.5">
+                  <Icon icon="mdi:thumb-down-outline" className="w-[18px] h-[18px] shrink-0 text-rose-300" aria-hidden />
+                  <span>
+                    Thème le moins choisi : <strong className="font-semibold text-white">{insights.worst.theme}</strong>, choisi {pct(insights.worst.pickRate)} du temps quand il sort.
+                  </span>
+                </li>
+              )}
+              {insights.neverPicked.length > 0 && (
+                <li className="flex gap-2.5">
+                  <Icon icon="mdi:eye-off-outline" className="w-[18px] h-[18px] shrink-0 text-rose-300" aria-hidden />
+                  <span>
+                    Jamais choisi alors qu'il est sorti au moins {MIN_SHOWN_THEMES} fois :{' '}
+                    <strong className="font-semibold text-white">{insights.neverPicked.join(', ')}</strong>. À retravailler ?
+                  </span>
+                </li>
+              )}
+            </ul>
           </section>
 
-          <section>
-            <SectionLabel right={<OrderToggle value={questionOrder} onChange={setQuestionOrder} />}>
-              Questions · top {QUESTIONS_LIMIT}
-            </SectionLabel>
-            {questions.length === 0 ? (
-              <p className="text-[12px] text-white/40">
-                Aucune question proposée au moins {MIN_SHOWN_QUESTIONS} fois pour l'instant : il faut un peu de recul pour classer.
-              </p>
-            ) : (
-              <div className="rounded-lg surface-glass divide-y divide-white/[0.05]">
-                {questions.map((q, i) => (
-                  <div key={`${q.theme}/${q.question}`} className="px-3 py-2.5 space-y-1.5">
-                    <div className="flex items-start gap-2">
-                      <span className="w-5 pt-0.5 font-mono text-[10px] text-white/30 tabular-nums">{i + 1}</span>
-                      <span className="flex-1 min-w-0 text-[13px] text-white/90 leading-snug">{q.question}</span>
-                      <span className="font-mono text-[13px] font-bold tabular-nums text-white">{pct(q.pickRate)}</span>
-                    </div>
-                    <RateBar rate={q.pickRate} avg={avgRate} />
-                    <p className="font-mono text-[10px] text-white/35">
-                      {q.theme} · {q.picked} choisie{q.picked > 1 ? 's' : ''} / {q.shown} proposée{q.shown > 1 ? 's' : ''}
-                    </p>
+          <div>
+            <Tabs value={tab} onChange={setTab} tabs={TABS} ariaLabel="Classement" />
+
+            <div className="flex flex-col md:flex-row md:flex-wrap md:items-center gap-2 mt-3 mb-3">
+              <SearchField
+                value={search}
+                onChange={setSearch}
+                placeholder={tab === 'themes' ? 'Chercher un thème ou une question' : 'Chercher une question'}
+              />
+              <Segmented value={order} onChange={setOrder} options={ORDERS} ariaLabel="Ordre du classement" />
+            </div>
+
+            {tab === 'themes' && (
+              <div role="tabpanel">
+                {themes.length === 0 ? (
+                  query ? (
+                    <EmptyState icon="mdi:magnify" title="Aucun thème ni question ne correspond" hint="Essaie un autre mot." />
+                  ) : (
+                    <EmptyState
+                      icon="mdi:timer-sand"
+                      title="Pas encore assez de parties"
+                      hint={`Un thème doit avoir été montré au moins ${MIN_SHOWN_THEMES} fois pour être classé.`}
+                    />
+                  )
+                ) : (
+                  <div className={`${PANEL} divide-y divide-white/[0.06]`}>
+                    {themes.map((t, i) => {
+                      const cat = categoryStyle(t.category);
+                      const key = `${t.category}/${t.theme}`;
+                      const themeQuestions = questionsByTheme.get(key) ?? [];
+                      const isOpen = openThemes.has(key) || (!!query && themeQuestions.some((q) => q.question?.toLowerCase().includes(query)));
+                      return (
+                        <div key={key}>
+                          <button
+                            type="button"
+                            onClick={() => toggleTheme(key)}
+                            aria-expanded={isOpen}
+                            className="relative cursor-pointer w-full text-left px-3 pl-4 py-2.5 space-y-1.5 hover:bg-white/[0.03] transition-colors"
+                          >
+                            <Strip color={cat.strip} row />
+                            <div className="flex items-center gap-2">
+                              <span className="w-6 text-[12px] text-white/50 tabular-nums">{i + 1}</span>
+                              <span className="flex-1 min-w-0 truncate text-[14px] font-medium text-white/90" title={`${t.theme} (${t.category})`}>{t.theme}</span>
+                              <RateValue rate={t.pickRate} avg={avgRate} />
+                              <Icon icon="mdi:chevron-down" className={`w-4 h-4 text-white/50 transition-transform ${isOpen ? 'rotate-180' : ''}`} aria-hidden />
+                            </div>
+                            <RateBar rate={t.pickRate} avg={avgRate} />
+                            <p className="text-[12px] text-white/55">
+                              {pickedLabel(t.picked, t.shown, false)} · {pct(t.pickShare)} de toutes les questions choisies
+                            </p>
+                          </button>
+                          {isOpen && (
+                            <div className="bg-black/25 border-t border-white/[0.06] divide-y divide-white/[0.06]">
+                              {themeQuestions.length === 0 ? (
+                                <p className="px-3 py-2.5 text-[12px] text-white/50">Aucune question montrée pour l'instant.</p>
+                              ) : themeQuestions.map((q) => {
+                                const highlighted = !!query && !!q.question?.toLowerCase().includes(query);
+                                return (
+                                  <div key={q.question} className={`pl-10 pr-3 py-2 space-y-1 ${highlighted ? 'bg-amber-400/[0.06]' : ''}`}>
+                                    <div className="flex items-start gap-2">
+                                      <span className="flex-1 min-w-0 text-[12px] text-white/80 leading-snug">{q.question}</span>
+                                      <RateValue rate={q.pickRate} avg={avgRate} dim={q.shown < LOW_DATA_SHOWN} className="text-[12px]" />
+                                    </div>
+                                    <RateBar rate={q.pickRate} avg={avgRate} />
+                                    <p className="text-[12px] text-white/55">
+                                      {pickedLabel(q.picked, q.shown, true)}
+                                      {q.shown < LOW_DATA_SHOWN && ' · trop tôt pour juger'}
+                                    </p>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
-                ))}
+                )}
               </div>
             )}
-          </section>
+
+            {tab === 'questions' && (
+              <div role="tabpanel">
+                {questions.length === 0 ? (
+                  query ? (
+                    <EmptyState icon="mdi:magnify" title="Aucune question ne correspond" hint="Essaie un autre mot." />
+                  ) : (
+                    <EmptyState
+                      icon="mdi:timer-sand"
+                      title="Pas encore assez de parties"
+                      hint={`Une question doit avoir été montrée au moins ${MIN_SHOWN_QUESTIONS} fois pour être classée.`}
+                    />
+                  )
+                ) : (
+                  <div className={`${PANEL} divide-y divide-white/[0.06]`}>
+                    {questions.map((q, i) => (
+                      <div key={`${q.theme}/${q.question}`} className="relative px-3 pl-4 py-2.5 space-y-1.5">
+                        <Strip color={categoryStyle(q.category).strip} row />
+                        <div className="flex items-start gap-2">
+                          <span className="w-6 text-[12px] text-white/50 tabular-nums">{i + 1}</span>
+                          <span className="flex-1 min-w-0 text-[13px] text-white/90 leading-snug">{q.question}</span>
+                          <RateValue rate={q.pickRate} avg={avgRate} />
+                        </div>
+                        <RateBar rate={q.pickRate} avg={avgRate} />
+                        <p className="text-[12px] text-white/55">
+                          <span className={`font-medium ${categoryStyle(q.category).text}`}>{q.theme}</span> · {pickedLabel(q.picked, q.shown, true)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </>
       )}
     </div>

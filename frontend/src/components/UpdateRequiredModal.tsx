@@ -3,20 +3,6 @@ import { useLocale } from '../i18n';
 import { useVersionBlock, openUpdate, isNativeUpdate } from '../utils/versionGate';
 import { getTestVersionOverride, setTestVersionOverride } from '../utils/socket';
 import { UpdateRequiredCard } from './UpdateRequiredCard';
-import interrogationBg from '../assets/images/interrogation_bg_transparent.png';
-
-// Reprend le fond signature du site (cf. body dans index.css) : texture "points
-// d'interrogation" tuilée + dégradé bleu -> cyan. L'overlay étant bloquant, on
-// ajoute par-dessus un léger voile sombre (1re couche) pour donner de la
-// profondeur et signaler que l'écran est "fermé" sans casser l'identité bleue.
-export const BRAND_BACKDROP: React.CSSProperties = {
-  background: [
-    'linear-gradient(rgba(8,26,46,0.34), rgba(8,26,46,0.34))',
-    `url(${interrogationBg}) repeat`,
-    'linear-gradient(to bottom, rgba(31,93,144,1), rgba(24,187,237,1))',
-  ].join(', '),
-  backgroundSize: 'auto, 280px 340px, auto',
-};
 
 // Écran bloquant non-fermable affiché quand le serveur a refusé la connexion
 // parce que l'app est trop vieille (maj forcée). Couvre toute l'UI : tant que le
@@ -38,7 +24,7 @@ const UpdateRequiredModal = () => {
   const testOverride = import.meta.env.DEV ? getTestVersionOverride() : null;
 
   return (
-    <div className="fixed inset-0 z-[1000] flex flex-col items-center justify-center gap-4 p-6" style={BRAND_BACKDROP}>
+    <div className="fixed inset-0 z-[1000] flex flex-col items-center justify-center gap-4 p-6 bg-brand-backdrop">
       <UpdateRequiredCard
         title={t.update.title}
         message={t.update.message}

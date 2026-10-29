@@ -3,21 +3,21 @@ import { adminFetch } from './ticketsApi';
 
 export async function fetchAdminLobbies(): Promise<AdminLobbySummary[]> {
   const res = await adminFetch('/admin/lobbies');
-  if (!res.ok) throw new Error('Erreur de chargement des lobbies.');
+  if (!res.ok) throw new Error('Impossible de charger les salons. Réessaie dans un instant.');
   const data = await res.json();
   return data.lobbies as AdminLobbySummary[];
 }
 
 export async function fetchAdminDecks(): Promise<AdminDeckSummary[]> {
   const res = await adminFetch('/admin/decks');
-  if (!res.ok) throw new Error('Erreur de chargement des decks.');
+  if (!res.ok) throw new Error('Impossible de charger les decks. Réessaie dans un instant.');
   const data = await res.json();
   return data.decks as AdminDeckSummary[];
 }
 
 export async function fetchAdminDeckStats(): Promise<AdminDeckStats> {
   const res = await adminFetch('/admin/deck-stats');
-  if (!res.ok) throw new Error('Erreur de chargement des stats.');
+  if (!res.ok) throw new Error('Impossible de charger les stats. Réessaie dans un instant.');
   const data = await res.json();
   return data.stats as AdminDeckStats;
 }
@@ -39,7 +39,7 @@ export interface VersionGateState {
 
 export async function fetchVersionGate(): Promise<VersionGateState> {
   const res = await adminFetch('/admin/version-gate');
-  if (!res.ok) throw new Error('Erreur de chargement de la maj forcée.');
+  if (!res.ok) throw new Error('Impossible de charger la mise à jour obligatoire. Réessaie dans un instant.');
   return (await res.json()) as VersionGateState;
 }
 
@@ -49,14 +49,14 @@ export async function setVersionGate(action: 'force_latest' | 'disable'): Promis
     method: 'POST',
     body: JSON.stringify({ action }),
   });
-  if (!res.ok) throw new Error('Erreur de mise à jour de la maj forcée.');
+  if (!res.ok) throw new Error('La mise à jour obligatoire n\'a pas pu être modifiée. Réessaie.');
   return (await res.json()) as VersionGateState;
 }
 
 /** Mode maintenance (cf. shared/src/maintenance.ts). */
 export async function fetchMaintenance(): Promise<MaintenanceState> {
   const res = await adminFetch('/admin/maintenance');
-  if (!res.ok) throw new Error('Erreur de chargement de la maintenance.');
+  if (!res.ok) throw new Error('Impossible de charger l\'état de la maintenance. Réessaie dans un instant.');
   return (await res.json()) as MaintenanceState;
 }
 
@@ -65,7 +65,7 @@ export async function setMaintenanceMode(active: boolean, mode?: MaintenanceMode
     method: 'POST',
     body: JSON.stringify({ active, mode }),
   });
-  if (!res.ok) throw new Error('Erreur de mise à jour de la maintenance.');
+  if (!res.ok) throw new Error('La maintenance n\'a pas pu être modifiée. Réessaie.');
   return (await res.json()) as MaintenanceState;
 }
 
@@ -86,14 +86,14 @@ export interface ClientLog {
 
 export async function fetchClientLogs(): Promise<ClientLog[]> {
   const res = await adminFetch('/admin/client-logs');
-  if (!res.ok) throw new Error('Erreur de chargement des logs.');
+  if (!res.ok) throw new Error('Impossible de charger les logs. Réessaie dans un instant.');
   const data = await res.json();
   return data.logs as ClientLog[];
 }
 
 export async function clearClientLogs(): Promise<number> {
   const res = await adminFetch('/admin/client-logs', { method: 'DELETE' });
-  if (!res.ok) throw new Error('Erreur de suppression des logs.');
+  if (!res.ok) throw new Error('Impossible d\'effacer les logs. Réessaie.');
   const data = await res.json();
   return Number(data.deleted) || 0;
 }

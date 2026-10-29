@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
+import type { AdminLobbySummary, MaintenanceState } from '@onskone/shared';
 import { useToast } from '../../components/Toast';
 import { Ticket, TicketStatus, TicketType, fetchTickets } from '../../utils/ticketsApi';
 import { fetchAdminLobbies, fetchMaintenance, fetchVersionGate, type VersionGateState } from '../../utils/adminDataApi';
@@ -12,22 +13,26 @@ import { LobbiesPanel } from './Lobbies';
 import { DecksPanel } from './Decks';
 import { ContentPanel } from './Content';
 import { StatsPanel } from './Stats';
-import { DangerPanel } from './Danger';
+import { DangerPanel, RestrictionsBanner, activeRestrictions } from './Danger';
 import { NavDropdown } from './NavDropdown';
+import { AdminBackdrop, AdminBrand, PAGE_BG } from './ui';
 
 const LOBBY_COUNT_POLL_MS = 5000;
-// Maintenance / maj forcée changent rarement, mais peuvent l'être depuis un autre appareil.
+// Maintenance / mise à jour obligatoire changent rarement, mais peuvent l'être depuis un autre appareil.
 const DANGER_POLL_MS = 15000;
+
+const countPlaying = (lobbies: AdminLobbySummary[]): number => lobbies.filter((l) => l.phase === 'playing').length;
 
 export const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
   const [lobbyCount, setLobbyCount] = useState<number | null>(null);
+  const [playingCount, setPlayingCount] = useState<number | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
-  // Pastille rouge sur Système : maintenance active OU maj forcée posée.
-  const [maintenanceActive, setMaintenanceActive] = useState(false);
-  const [gateBlocking, setGateBlocking] = useState(false);
+  // Restrictions temporaires (bandeau clignotant, pastille rouge sur Système, titre de l'onglet).
+  const [maintenance, setMaintenance] = useState<MaintenanceState | null>(null);
+  const [gate, setGate] = useState<VersionGateState | null>(null);
   // Filtres transférés au panel Tickets lors d'un jump depuis l'Overview.
   const [jumpFilter, setJumpFilter] = useState<{ status?: TicketStatus; type?: TicketType }>({});
   const showToast = useToast();
@@ -45,7 +50,10 @@ export const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
         minDelay,
       ]);
       setTickets(ticketsData);
-      if (lobbiesData) setLobbyCount(lobbiesData.length);
+      if (lobbiesData) {
+        setLobbyCount(lobbiesData.length);
+        setPlayingCount(countPlaying(lobbiesData));
+      }
     } catch (err) {
       await minDelay;
       showToast(err instanceof Error ? err.message : 'Erreur', 'error');
@@ -61,21 +69,21 @@ export const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
     load();
   }, [load]);
 
-  // Compteur de salons live affiché dans le masthead (poll 5s, silencieux).
+  // Compteur de salons en direct affiché dans le masthead (poll 5s, silencieux).
   useEffect(() => {
     let cancelled = false;
     const tick = async () => {
       try {
         const data = await fetchAdminLobbies();
-        if (!cancelled) setLobbyCount(data.length);
+        if (cancelled) return;
+        setLobbyCount(data.length);
+        setPlayingCount(countPlaying(data));
       } catch { /* silent */ }
     };
     tick();
     const id = setInterval(tick, LOBBY_COUNT_POLL_MS);
     return () => { cancelled = true; clearInterval(id); };
   }, []);
-
-  const onGateChange = useCallback((s: VersionGateState) => setGateBlocking(s.blocking), []);
 
   useEffect(() => {
     let cancelled = false;
@@ -85,18 +93,28 @@ export const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
         fetchVersionGate().catch(() => null),
       ]);
       if (cancelled) return;
-      if (m) setMaintenanceActive(m.active);
-      if (g) setGateBlocking(g.blocking);
+      if (m) setMaintenance(m);
+      if (g) setGate(g);
     };
     tick();
     const id = setInterval(tick, DANGER_POLL_MS);
     return () => { cancelled = true; clearInterval(id); };
   }, []);
 
-  const dangerActive = maintenanceActive || gateBlocking;
+  const restrictions = activeRestrictions(maintenance, gate);
+  const dangerActive = restrictions.length > 0;
+  const restrictionsTitle = restrictions.join(' · ');
 
-  // Pastille : ne compte que les tickets non résolus.
-  const openTicketCount = tickets.filter((t) => t.status !== 'resolved').length;
+  // Titre de l'onglet du navigateur : la restriction se voit même avec l'admin en arrière-plan.
+  useEffect(() => {
+    if (!restrictionsTitle) return;
+    const prev = document.title;
+    document.title = `🔴 ${restrictionsTitle} | ${prev}`;
+    return () => { document.title = prev; };
+  }, [restrictionsTitle]);
+
+  // Pastille : ne compte que les nouveaux tickets (ni « en cours », ni « pas de fix »).
+  const newTicketCount = tickets.filter((t) => t.status === 'new').length;
 
   const jumpToTickets = useCallback((status?: TicketStatus, type?: TicketType) => {
     setJumpFilter({ status, type });
@@ -104,69 +122,45 @@ export const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
   }, []);
 
   return (
-    <div
-      className="min-h-screen text-white relative"
-      style={{
-        background:
-          'radial-gradient(1200px 600px at 20% -10%, rgba(255,199,0,0.06), transparent 60%),' +
-          'radial-gradient(900px 500px at 100% 0%, rgba(125,211,240,0.05), transparent 55%),' +
-          'linear-gradient(180deg, #12151e 0%, #161a24 100%)',
-      }}
-    >
-      <div
-        aria-hidden
-        className="pointer-events-none fixed inset-0 opacity-[0.18]"
-        style={{
-          backgroundImage: 'radial-gradient(rgba(255,255,255,0.35) 1px, transparent 1px)',
-          backgroundSize: '22px 22px',
-          maskImage: 'radial-gradient(ellipse at top, black 30%, transparent 75%)',
-        }}
-      />
+    <div className={`min-h-screen text-white relative ${PAGE_BG}`}>
+      <AdminBackdrop />
 
-      {/* Sticky header - masthead éditorial */}
-      <div className="sticky top-0 z-30 backdrop-blur-xl bg-[#12151e]/85 border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 pt-3 sm:pt-5 pb-2 sm:pb-3">
+      {/* Header collant : logo du jeu + navigation */}
+      <div className="sticky top-0 z-30 backdrop-blur-xl bg-[#0d1018]/80 border-b border-white/10">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 pt-3 sm:pt-4 pb-2 sm:pb-3">
           <div className="flex items-center gap-2">
-            <span className="text-amber-400 text-[15px] leading-none">▍</span>
-            <span className="font-mono text-[13px] sm:text-[14px] text-white/85 lowercase tracking-tight leading-none">
-              onskoné
-            </span>
-            <span className="font-mono text-[13px] sm:text-[14px] text-white/25 leading-none">/</span>
-            <span className="font-mono text-[13px] sm:text-[14px] font-bold text-amber-200 uppercase tracking-[0.12em] leading-none">
-              admin
-            </span>
-
+            <AdminBrand />
 
             <button
               onClick={() => setActiveTab('lobbies')}
-              className={`ml-auto hidden md:flex cursor-pointer items-center gap-2 px-2.5 py-1 rounded-md border transition-colors font-mono text-[10px] uppercase tracking-[0.22em] ${activeTab === 'lobbies'
+              className={`ml-auto hidden md:flex cursor-pointer items-center gap-2 px-3 min-h-[32px] rounded-lg border transition-colors text-[13px] font-medium ${activeTab === 'lobbies'
                 ? 'border-emerald-400/50 bg-emerald-500/10 text-emerald-100'
                 : 'border-emerald-400/25 bg-emerald-500/[0.04] text-emerald-200 hover:bg-emerald-500/10 hover:border-emerald-400/50'
                 }`}
-              title="Voir les salons live"
+              title="Voir les salons ouverts en ce moment"
             >
-              <span className="inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full bg-emerald-400 text-[9px] font-bold leading-none text-[#0a0c12] tabular-nums animate-pulse">
+              <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-emerald-400 text-[11px] font-bold leading-none text-[#0a0c12] tabular-nums">
                 {lobbyCount ?? 0}
               </span>
-              voir salons live
+              {lobbyCount === 1 ? 'salon en direct' : 'salons en direct'}
             </button>
 
             <button
               onClick={load}
               disabled={isLoading}
-              className="cursor-pointer ml-auto md:ml-2 w-8 h-8 sm:w-7 sm:h-7 flex items-center justify-center rounded-md text-white/45 hover:text-white hover:bg-white/[0.05] transition-colors"
-              title="Rafraîchir"
-              aria-label="Rafraîchir"
+              className="cursor-pointer ml-auto md:ml-2 w-10 h-10 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg text-white/60 hover:text-white hover:bg-white/[0.06] transition-colors"
+              title="Rafraîchir les données"
+              aria-label="Rafraîchir les données"
             >
-              <Icon icon="mdi:refresh" className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+              <Icon icon="mdi:refresh" className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
             </button>
             <button
               onClick={onLogout}
-              className="cursor-pointer w-8 h-8 sm:w-7 sm:h-7 flex items-center justify-center rounded-md text-white/45 hover:text-white hover:bg-white/[0.05] transition-colors"
-              title="Déconnexion"
-              aria-label="Déconnexion"
+              className="cursor-pointer w-10 h-10 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg text-white/60 hover:text-white hover:bg-white/[0.06] transition-colors"
+              title="Se déconnecter"
+              aria-label="Se déconnecter"
             >
-              <Icon icon="mdi:logout" className="w-4 h-4" />
+              <Icon icon="mdi:logout" className="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -197,16 +191,16 @@ export const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
                         onClick={() => setActiveTab(tab.id)}
                         aria-label={tab.ariaLabel ?? tab.label}
                         title={tab.ariaLabel ?? tab.label}
-                        className={`relative px-3 lg:px-5 py-2.5 lg:py-3 flex items-center gap-1.5 whitespace-nowrap text-[11px] lg:text-[12px] font-mono font-bold uppercase tracking-[0.08em] lg:tracking-[0.12em] transition-colors ${active
+                        className={`cursor-pointer relative px-3 lg:px-4 py-3 flex items-center gap-1.5 whitespace-nowrap text-[13px] lg:text-[14px] font-semibold transition-colors ${active
                           ? 'text-white'
-                          : 'text-white/40 hover:text-white/75'
+                          : 'text-white/55 hover:text-white/85'
                           }`}
                       >
                         {tab.icon && <Icon icon={tab.icon} className="w-4 h-4" />}
                         {tab.label && <span>{tab.label}</span>}
-                        {tab.id === 'tickets' && openTicketCount > 0 && (
-                          <span className="inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full bg-amber-400 text-[9px] font-bold leading-none text-[#0a0c12] tabular-nums">
-                            {openTicketCount}
+                        {tab.id === 'tickets' && newTicketCount > 0 && (
+                          <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-amber-400 text-[11px] font-bold leading-none text-[#0a0c12] tabular-nums" title="nouveaux tickets">
+                            {newTicketCount}
                           </span>
                         )}
                         {!tab.enabled && (
@@ -224,6 +218,11 @@ export const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
           </div>
         </div>
 
+        {/* Pas sur la page Accès joueurs elle-même : son résumé dit déjà la même chose. */}
+        {activeTab !== 'danger' && (
+          <RestrictionsBanner maintenance={maintenance} gate={gate} onOpen={() => setActiveTab('danger')} />
+        )}
+
         <div
           aria-hidden
           className={`absolute left-0 right-0 bottom-[-1px] h-[2px] overflow-hidden pointer-events-none transition-opacity duration-200 ${isLoading ? 'opacity-100' : 'opacity-0'}`}
@@ -234,18 +233,6 @@ export const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
       </div>
 
       <main className="relative max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6 pb-24 md:pb-6">
-        {activeTab === 'overview' && dangerActive && (
-          <button
-            onClick={() => setActiveTab('danger')}
-            className="cursor-pointer mb-4 w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-rose-400/40 bg-rose-500/10 text-left text-rose-100 hover:bg-rose-500/20 transition-colors"
-          >
-            <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-rose-500 animate-pulse" />
-            <span className="font-mono text-[12px] uppercase tracking-[0.12em]">
-              {[maintenanceActive && 'maintenance active', gateBlocking && 'maj forcée active'].filter(Boolean).join(' · ')}
-            </span>
-            <Icon icon="mdi:chevron-right" className="w-5 h-5 ml-auto opacity-70" />
-          </button>
-        )}
         {activeTab === 'overview' && (
           <OverviewPanel tickets={tickets} onJumpToTickets={jumpToTickets} />
         )}
@@ -270,15 +257,21 @@ export const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
         {activeTab === 'decks' && <DecksPanel active />}
         {activeTab === 'content' && <ContentPanel />}
         {activeTab === 'danger' && (
-          <DangerPanel onMaintenanceChange={setMaintenanceActive} onGateChange={onGateChange} />
+          <DangerPanel
+            playingCount={playingCount}
+            onMaintenanceChange={setMaintenance}
+            onGateChange={setGate}
+          />
         )}
       </main>
 
-      <MobileBottomNav activeTab={activeTab} setActiveTab={setActiveTab} lobbyCount={lobbyCount} ticketCount={openTicketCount} dangerActive={dangerActive} />
+      <MobileBottomNav activeTab={activeTab} setActiveTab={setActiveTab} lobbyCount={lobbyCount} ticketCount={newTicketCount} dangerActive={dangerActive} />
 
       <style>{`
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        /* Champs de recherche : on a déjà notre bouton « Effacer », pas de croix native en double. */
+        input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; display: none; }
         @keyframes sheet-up {
           from { transform: translateY(100%); }
           to { transform: translateY(0); }
@@ -368,8 +361,15 @@ export const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
           background: linear-gradient(90deg, transparent, rgba(251,191,36,0.55), transparent);
           animation: admin-progress-slide 1200ms ease-in-out infinite;
         }
+        /* Bandeau des restrictions temporaires : clignote pour ne pas oublier de les lever. */
+        @keyframes admin-alert-blink {
+          0%, 100% { background-color: rgba(244,63,94,0.14); }
+          50%      { background-color: rgba(244,63,94,0.34); }
+        }
+        .admin-alert-blink { animation: admin-alert-blink 1.6s ease-in-out infinite; }
         @media (prefers-reduced-motion: reduce) {
           .admin-progress-bar { animation: none !important; }
+          .admin-alert-blink { animation: none; background-color: rgba(244,63,94,0.24); }
         }
       `}</style>
     </div>

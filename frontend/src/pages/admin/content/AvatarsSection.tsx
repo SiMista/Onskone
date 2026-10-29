@@ -1,17 +1,18 @@
 import { AVATARS, getAvatarUrl } from '../../../constants/game';
 import { SectionHeader } from './SectionHeader';
+import { PANEL } from '../ui';
 
 export const AvatarsSection = () => (
   <div>
-    <SectionHeader title="Avatars" count={AVATARS.length} />
+    <SectionHeader title="Avatars" />
     <p className="text-[13px] text-white/55 mb-4 max-w-2xl">
-      Le casting visuel disponible pour les joueurs.
+      Les images que les joueurs peuvent choisir comme avatar avant d'entrer dans un salon.
     </p>
     <div className="grid grid-cols-4 md:grid-cols-7 gap-2.5">
       {AVATARS.map((a) => (
         <div
           key={a.id}
-          className="rounded-lg surface-glass overflow-hidden"
+          className={`${PANEL} overflow-hidden`}
         >
           <div className="aspect-square bg-black/30 flex items-center justify-center">
             <img
@@ -21,7 +22,7 @@ export const AvatarsSection = () => (
               loading="lazy"
             />
           </div>
-          <div className="px-2 py-1.5 border-t border-white/[0.05] flex items-center justify-between">
+          <div className="px-2 py-1.5 border-t border-white/[0.06] flex items-center justify-between">
             <span className="text-[12px] text-white/65">Avatar {a.id + 1}</span>
           </div>
         </div>

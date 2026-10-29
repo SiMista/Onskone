@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { Icon } from '@iconify/react';
 import { SectionHeader } from './SectionHeader';
 import { LEGAL_CONTENT, LEGAL_LABELS_FR } from './shared';
+import { PANEL } from '../ui';
 
 export const LegalSection = () => {
   const entries = Object.entries(LEGAL_CONTENT).filter(
@@ -10,9 +12,9 @@ export const LegalSection = () => {
   const [openKey, setOpenKey] = useState<string | null>(null);
   return (
     <div>
-      <SectionHeader title="Contenu légal" count={entries.length} />
+      <SectionHeader title="Pages légales" />
       <p className="text-[13px] text-white/55 mb-4 max-w-2xl">
-        Textes affichés depuis le pied de page du site : À propos, Mentions légales, Confidentialité et Contact.
+        Textes ouverts depuis le pied de page du site : À propos, Mentions légales, Confidentialité et Contact.
       </p>
       <div className="space-y-3">
         {entries.map(([key, block]) => {
@@ -21,37 +23,34 @@ export const LegalSection = () => {
           return (
             <div
               key={key}
-              className="rounded-lg surface-glass overflow-hidden"
+              className={`${PANEL} overflow-hidden`}
             >
               <button
                 type="button"
                 onClick={() => setOpenKey(isOpen ? null : key)}
                 aria-expanded={isOpen}
-                className={`w-full px-4 py-2.5 flex items-center gap-2 text-left hover:bg-white/[0.03] transition-colors ${isOpen ? 'border-b border-white/[0.05]' : ''}`}
+                className={`cursor-pointer w-full px-4 py-2.5 flex items-center gap-2 text-left hover:bg-white/[0.03] transition-colors ${isOpen ? 'border-b border-white/[0.06]' : ''}`}
               >
-                <svg
-                  className={`w-3.5 h-3.5 text-white/50 transition-transform ${isOpen ? 'rotate-90' : ''}`}
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  aria-hidden="true"
-                >
-                  <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 0 1 .02-1.06L11.168 10 7.23 6.29a.75.75 0 1 1 1.04-1.08l4.5 4.25a.75.75 0 0 1 0 1.08l-4.5 4.25a.75.75 0 0 1-1.06-.02Z" clipRule="evenodd" />
-                </svg>
-                <p className="text-[15px] font-semibold tracking-tight text-white">
+                <Icon
+                  icon="mdi:chevron-right"
+                  className={`w-4 h-4 shrink-0 text-white/50 transition-transform ${isOpen ? 'rotate-90 text-amber-300' : ''}`}
+                  aria-hidden
+                />
+                <span className="text-[14px] font-semibold tracking-tight text-white">
                   {LEGAL_LABELS_FR[key] ?? block.title}
-                </p>
+                </span>
                 {sections.length > 0 && (
-                  <span className="ml-auto text-[12px] text-white/40">
+                  <span className="ml-auto text-[12px] text-white/55">
                     {sections.length} rubrique{sections.length > 1 ? 's' : ''}
                   </span>
                 )}
               </button>
               {!isOpen ? null : sections.length === 0 ? (
-                <p className="px-4 py-3 text-[12.5px] text-white/40 italic">
-                  Aucun texte (la page renvoie vers un formulaire de contact).
+                <p className="px-4 py-3 text-[13px] text-white/55">
+                  Pas de texte : cette page renvoie vers le formulaire de contact.
                 </p>
               ) : (
-                <div className="divide-y divide-white/[0.04]">
+                <div className="divide-y divide-white/[0.06]">
                   {sections.map((s, i) => (
                     <div key={i} className="px-4 py-3">
                       <p className="text-[13px] font-semibold text-amber-200/90 mb-1.5">
@@ -64,7 +63,7 @@ export const LegalSection = () => {
                       {'list' in s && Array.isArray(s.list) && (
                         <ul className="mt-2 space-y-1">
                           {s.list.map((li, j) => (
-                            <li key={j} className="flex gap-2 text-[12.5px] text-white/70 leading-snug">
+                            <li key={j} className="flex gap-2 text-[13px] text-white/70 leading-snug">
                               <span className="text-white/30 shrink-0">·</span>
                               <span>{li}</span>
                             </li>
@@ -73,7 +72,7 @@ export const LegalSection = () => {
                       )}
                       {'extra' in s && s.extra && (
                         <div
-                          className="mt-2 text-[12.5px] text-white/60 leading-snug [&_a]:text-sky-300 [&_a]:underline"
+                          className="mt-2 text-[13px] text-white/60 leading-snug [&_a]:text-sky-300 [&_a]:underline"
                           dangerouslySetInnerHTML={{ __html: s.extra }}
                         />
                       )}

@@ -21,11 +21,11 @@ const Admin = () => {
   if (isAuth === null) {
     return (
       <div
-        className="min-h-screen flex items-center justify-center font-mono text-[11px] uppercase tracking-[0.3em] text-white/40"
-        style={{ background: 'linear-gradient(180deg, #12151e 0%, #161a24 100%)' }}
+        role="status"
+        className="min-h-screen flex items-center justify-center text-[13px] text-white/60 bg-[#0d1018]"
       >
         <span className="w-2 h-2 rounded-full bg-amber-400/70 animate-pulse mr-2" />
-        chargement…
+        Chargement…
       </div>
     );
   }

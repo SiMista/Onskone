@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Icon } from '@iconify/react';
 import { AdminTab, MOBILE_TAB_META, MOBILE_TAB_ORDER, NAV_MENUS, NAV_MENU_ORDER, TabGroup, tabsOfGroup } from './shared';
+import { FLOATING, iconBtn } from './ui';
 
 export const MobileBottomNav = ({
   activeTab, setActiveTab, lobbyCount, ticketCount, dangerActive,
@@ -9,7 +10,7 @@ export const MobileBottomNav = ({
   setActiveTab: (t: AdminTab) => void;
   lobbyCount: number | null;
   ticketCount: number;
-  // Maintenance ou maj forcée en cours : pastille rouge sur le slot Système.
+  // Maintenance ou mise à jour obligatoire en cours : pastille rouge sur le slot Système.
   dangerActive: boolean;
 }) => {
   const [openMenu, setOpenMenu] = useState<TabGroup | null>(null);
@@ -25,7 +26,7 @@ export const MobileBottomNav = ({
     <>
       <nav
         aria-label="Navigation"
-        className="md:hidden fixed bottom-0 left-0 right-0 z-40 backdrop-blur-xl bg-[#12151e]/92 border-t border-white/10"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-40 backdrop-blur-xl bg-[#0d1018]/92 border-t border-white/10"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         <div className="grid grid-cols-6">
@@ -39,23 +40,23 @@ export const MobileBottomNav = ({
                 key={id}
                 onClick={() => setActiveTab(id)}
                 aria-label={meta.label}
-                className={`relative flex flex-col items-center justify-center gap-0.5 py-2 px-0.5 transition-colors ${active ? 'text-amber-300' : 'text-white/55 active:text-white/85'
+                className={`relative min-h-[56px] flex flex-col items-center justify-center gap-1 py-2 px-0.5 transition-colors ${active ? 'text-amber-300' : 'text-white/65 active:text-white'
                   }`}
               >
                 <span className="relative">
                   <Icon icon={meta.icon} className="w-[22px] h-[22px]" />
                   {showLive && (
-                    <span className="absolute -top-1.5 -right-2 inline-flex items-center justify-center min-w-[14px] h-[14px] px-1 rounded-full bg-emerald-400 text-[8.5px] font-bold leading-none text-[#0a0c12] tabular-nums ring-1 ring-[#12151e] animate-pulse">
+                    <span className="absolute -top-1.5 -right-2.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-emerald-400 text-[11px] font-bold leading-none text-[#0a0c12] tabular-nums ring-1 ring-[#0d1018]">
                       {lobbyCount ?? 0}
                     </span>
                   )}
                   {showTickets && (
-                    <span className="absolute -top-1.5 -right-2 inline-flex items-center justify-center min-w-[14px] h-[14px] px-1 rounded-full bg-amber-400 text-[8.5px] font-bold leading-none text-[#0a0c12] tabular-nums ring-1 ring-[#12151e]">
+                    <span className="absolute -top-1.5 -right-2.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-amber-400 text-[11px] font-bold leading-none text-[#0a0c12] tabular-nums ring-1 ring-[#0d1018]">
                       {ticketCount}
                     </span>
                   )}
                 </span>
-                <span className="font-mono text-[9.5px] uppercase tracking-[0.05em] leading-none">
+                <span className="text-[11px] font-medium leading-none">
                   {meta.label}
                 </span>
                 {active && (
@@ -78,16 +79,16 @@ export const MobileBottomNav = ({
                   aria-label={menu.label}
                   aria-haspopup="menu"
                   aria-expanded={isOpen}
-                  className={`relative w-full h-full flex flex-col items-center justify-center gap-0.5 py-2 px-0.5 transition-colors ${menuActive || isOpen ? 'text-amber-300' : 'text-white/55 active:text-white/85'
+                  className={`relative w-full h-full min-h-[56px] flex flex-col items-center justify-center gap-1 py-2 px-0.5 transition-colors ${menuActive || isOpen ? 'text-amber-300' : 'text-white/65 active:text-white'
                     }`}
                 >
                   <span className="relative">
                     <Icon icon={menu.icon} className="w-[22px] h-[22px]" />
                     {showAlert && (
-                      <span className="absolute -top-1 -right-1.5 h-2.5 w-2.5 rounded-full bg-rose-500 ring-1 ring-[#12151e] animate-pulse" />
+                      <span className="absolute -top-1 -right-1.5 h-2.5 w-2.5 rounded-full bg-rose-500 ring-1 ring-[#0d1018] animate-pulse" />
                     )}
                   </span>
-                  <span className="font-mono text-[9.5px] uppercase tracking-[0.05em] leading-none flex items-center gap-0.5">
+                  <span className="text-[11px] font-medium leading-none flex items-center gap-0.5">
                     {menu.label}
                     <Icon icon="mdi:chevron-up" className={`w-2.5 h-2.5 opacity-70 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                   </span>
@@ -101,7 +102,7 @@ export const MobileBottomNav = ({
                   <div
                     role="menu"
                     aria-label={menu.label}
-                    className="absolute bottom-full right-0 mb-2.5 z-50 w-[210px] rounded-xl border border-white/10 bg-[#1b1f2a] shadow-[0_12px_40px_-8px_rgba(0,0,0,0.75)] p-1.5 animate-fade-in"
+                    className={`absolute bottom-full right-0 mb-2.5 z-50 w-[210px] ${FLOATING} p-1.5 animate-fade-in`}
                   >
                     {tabs.map(({ id }) => {
                       const meta = MOBILE_TAB_META[id];
@@ -118,15 +119,18 @@ export const MobileBottomNav = ({
                             }`}
                         >
                           <Icon icon={meta.icon} className={`w-5 h-5 ${isDanger ? 'text-rose-300' : ''}`} />
-                          <span className="font-mono text-[12px] uppercase tracking-[0.1em] font-bold">{meta.label}</span>
+                          <span className="text-[14px] font-semibold">{meta.label}</span>
                           {isDanger && dangerActive && (
-                            <span className="ml-auto h-2 w-2 rounded-full bg-rose-500 animate-pulse" aria-label="actif" />
+                            <span className="ml-auto inline-flex items-center gap-1.5 text-[12px] font-medium text-rose-200">
+                              <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" aria-hidden />
+                              Actif
+                            </span>
                           )}
                         </button>
                       );
                     })}
                     {/* Caret pointant le slot (centre du slot = 30px du bord droit) */}
-                    <span aria-hidden className="absolute -bottom-[5px] right-[24px] w-2.5 h-2.5 rotate-45 bg-[#1b1f2a] border-r border-b border-white/10" />
+                    <span aria-hidden className="absolute -bottom-[5px] right-[24px] w-2.5 h-2.5 rotate-45 bg-[#1f2433] border-r border-b border-white/10" />
                   </div>
                 )}
               </div>
@@ -163,21 +167,25 @@ export const BottomSheet = ({
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in" />
       <div
         onClick={(e) => e.stopPropagation()}
-        className="absolute bottom-0 left-0 right-0 rounded-t-2xl border-t border-white/10 bg-gradient-to-b from-[#1b1f2a] to-[#161a24] shadow-[0_-20px_60px_-10px_rgba(0,0,0,0.7)] animate-sheet-up max-h-[85vh] flex flex-col"
+        className="absolute bottom-0 left-0 right-0 rounded-t-xl border-t border-white/10 bg-[#1f2433] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08),0_-20px_60px_-15px_rgba(0,0,0,0.8)] animate-sheet-up max-h-[85vh] flex flex-col"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         <div className="pt-2.5 flex justify-center">
           <span className="w-10 h-1 rounded-full bg-white/15" />
         </div>
         <div className="px-4 pt-2 pb-3 flex items-center justify-between">
-          <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-white/65 font-bold">
+          <p className="text-[16px] font-semibold text-white">
             {title}
           </p>
           <button
+            type="button"
             onClick={onClose}
-            className="w-7 h-7 rounded-md border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-white/70 hover:text-white flex items-center justify-center transition-colors text-[12px]"
+            className={iconBtn()}
             aria-label="Fermer"
-          >✕</button>
+            title="Fermer"
+          >
+            <Icon icon="mdi:close" className="w-5 h-5" />
+          </button>
         </div>
         <div className="overflow-y-auto custom-scroll px-4 pb-5 space-y-5">
           {children}

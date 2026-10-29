@@ -403,7 +403,7 @@ export const fr: Dictionary = {
             "Ma soeur, Mimi, qui m'a encouragé à continuer l'appli tout au long du développement",
             "Mon frère Sylvain, pour m'avoir fait entièrement confiance pour réaliser l'appli de son jeu",
             "Brinda et Sathya, vous m'avez donné de l'ambition sans hésiter dès le début du projet",
-            "Merci à Sujee, le créateur de l'appli Gigglz, le GOAT des jeux : allez installer son appli !!",
+            "Merci à Sujee, le créateur de l'appli Gigglz : allez installer son appli !!",
             "Et enfin tous mes amis, mes cousins avec qui j'ai pu tester le jeu et avoir des supers retours !",
           ],
         },

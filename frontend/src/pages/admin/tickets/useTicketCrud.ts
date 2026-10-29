@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useToast } from '../../../components/Toast';
 import { Ticket, TicketStatus, updateTicketStatus, deleteTicket } from '../../../utils/ticketsApi';
+import { STATUS_META } from '../shared';
 
 type PendingDelete =
   | { kind: 'single'; id: number }
@@ -57,7 +58,7 @@ export const useTicketCrud = ({
       await updateTicketStatus(id, status);
       onChangeTickets((prev) => prev.map((t) => (t.id === id ? { ...t, status } : t)));
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Erreur', 'error');
+      showToast(err instanceof Error ? err.message : 'Une erreur est survenue, réessaie.', 'error');
     }
   }, [onChangeTickets, showToast]);
 
@@ -83,7 +84,7 @@ export const useTicketCrud = ({
       onDeleted?.(ids);
       showToast(`${ids.length} ticket${ids.length > 1 ? 's' : ''} supprimé${ids.length > 1 ? 's' : ''}`, 'success');
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Erreur', 'error');
+      showToast(err instanceof Error ? err.message : 'Une erreur est survenue, réessaie.', 'error');
     }
   }, [pendingDelete, onChangeTickets, removeFromSelection, onDeleted, showToast]);
 
@@ -94,10 +95,10 @@ export const useTicketCrud = ({
       await Promise.all(ids.map((id) => updateTicketStatus(id, status)));
       const idSet = new Set(ids);
       onChangeTickets((prev) => prev.map((t) => (idSet.has(t.id) ? { ...t, status } : t)));
-      showToast(`${ids.length} ticket${ids.length > 1 ? 's' : ''} déplacé${ids.length > 1 ? 's' : ''}`, 'success');
+      showToast(`${ids.length} ticket${ids.length > 1 ? 's' : ''} passé${ids.length > 1 ? 's' : ''} en « ${STATUS_META[status].label} »`, 'success');
       clearSelection();
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Erreur', 'error');
+      showToast(err instanceof Error ? err.message : 'Une erreur est survenue, réessaie.', 'error');
     }
   }, [selectedIds, onChangeTickets, clearSelection, showToast]);
 

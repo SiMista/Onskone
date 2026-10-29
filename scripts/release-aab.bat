@@ -59,17 +59,20 @@ echo Generation du bundle signe (gradlew bundleRelease)...
 cd android
 call gradlew.bat bundleRelease -PappVersionName=%APP_VNAME% -PappVersionCode=%APP_VCODE% || exit /b 1
 
-:: Chemin absolu (on est dans frontend\android) pour copier-coller direct.
+:: Chemin absolu (on est dans frontend\android) : explorer /select l'exige.
 set AAB_DIR=%CD%\app\build\outputs\bundle\release
 set AAB_PATH=%AAB_DIR%\app-release.aab
 
 echo.
 echo ============================================================
-echo  .aab pret a uploader sur la Play Console (v%APP_VNAME%, code %APP_VCODE%), dans le dossier :
-echo  %AAB_DIR%
+echo  .aab pret a uploader sur la Play Console (v%APP_VNAME%, code %APP_VCODE%)
 echo ============================================================
 if exist "%AAB_PATH%" (
-  echo  ^(fichier OK^)
+  echo  Ouverture de l'explorateur sur le fichier...
+  rem explorer rend un code 1 meme quand il s'ouvre : on ne le propage pas.
+  explorer /select,"%AAB_PATH%"
+  exit /b 0
 ) else (
   echo  [ATTENTION] fichier introuvable - le build a peut-etre echoue plus haut.
+  echo  Dossier attendu : %AAB_DIR%
 )

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Icon } from '@iconify/react';
 import { LuMinus, LuPlus } from 'react-icons/lu';
 import { GAME_CONSTANTS } from '@onskone/shared';
 import { RoundPhase } from '@onskone/shared';
@@ -6,6 +7,7 @@ import type { GameSpeed } from '@onskone/shared';
 import { getPhaseDuration, estimateGameMinutes, maxGameMinutes } from '../../../constants/game';
 import { SectionHeader } from './SectionHeader';
 import { PHASE_LABELS_FR } from './shared';
+import { KpiCell, PANEL, btn, iconBtn } from '../ui';
 
 // Vitesses proposées dans le lobby + libellés admin.
 const SPEED_LABELS: Partial<Record<GameSpeed, string>> = { fast: 'Rapide', normal: 'Normal' };
@@ -13,12 +15,14 @@ const SPEED_LABELS: Partial<Record<GameSpeed, string>> = { fast: 'Rapide', norma
 const TIMED_PHASES = Object.keys(GAME_CONSTANTS.TIMERS.normal)
   .filter((k) => k !== 'GUESSING_EXTRA_PER_PLAYER') as RoundPhase[];
 
-// Boutons − / + du simulateur de joueurs (36px, palette sombre de l'admin).
-const STEP_BUTTON = 'shrink-0 w-9 h-9 flex items-center justify-center rounded-md border border-white/15 bg-white/[0.06] text-white/80 cursor-pointer transition-colors hover:bg-white/[0.12] hover:text-white disabled:opacity-30 disabled:cursor-not-allowed';
+// Boutons − / + du simulateur de joueurs : bouton carré de la charte.
+const STEP_BUTTON = `${iconBtn('secondary')} shrink-0`;
 
 // Vitesse mise en avant sur les cartes de phase ; les autres s'affichent dessous.
 const MAIN_SPEED = GAME_CONSTANTS.GAME_SPEED_DEFAULT;
 const OTHER_SPEEDS = GAME_CONSTANTS.GAME_SPEEDS.filter((sp) => sp !== MAIN_SPEED);
+
+const SUB_TITLE = 'text-[14px] font-semibold text-white/85 mb-2';
 
 export const ConstantsSection = () => {
   // Simulation : nombre de joueurs + mode. Toutes les vitesses sont affichées côte à côte.
@@ -39,49 +43,52 @@ export const ConstantsSection = () => {
   };
   return (
     <div>
-      <SectionHeader title="Réglages de jeu" />
+      <SectionHeader title="Durées et limites" />
       <p className="text-[13px] text-white/55 mb-4 max-w-2xl">
-        Les durées de chaque phase et les limites appliquées aux parties.
+        Le temps laissé pour chaque phase d'une manche et les limites des parties, tels que le jeu les applique.
+        Le simulateur ne change rien pour les joueurs : il sert juste à estimer la durée d'une partie.
       </p>
 
-      <div className="space-y-4">
+      <div className="space-y-5">
         <div>
-          <p className="text-[12px] uppercase tracking-[0.18em] text-white/40 mb-2 font-semibold">
+          <h3 className={SUB_TITLE}>
             Durée de chaque phase
-          </p>
+          </h3>
 
           {/* Simulateur : le nombre de joueurs et le mode recalculent toutes les
               durées affichées en direct (mêmes constantes que le lobby). */}
-          <div className="rounded-lg surface-glass p-3 mb-2.5">
+          <div className={`${PANEL} p-3 mb-2.5`}>
             <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-              <span className="text-[12px] uppercase tracking-[0.18em] text-white/40 font-semibold">
-                Estimation d'une partie
+              <span className="text-[14px] font-semibold text-white/85">
+                Durée estimée d'une partie
               </span>
               <div className="flex items-center gap-3">
                 <button
                   type="button"
                   onClick={() => setGuessMyAnswerMode((v) => !v)}
                   aria-pressed={guessMyAnswerMode}
-                  className={`px-2.5 py-1 rounded-md border font-mono text-[11px] tracking-wider transition-colors ${guessMyAnswerMode
-                    ? 'bg-white/[0.08] border-white/15 text-white'
-                    : 'bg-transparent border-white/[0.06] text-white/45 hover:text-white/85 hover:border-white/15'
-                    }`}
-                  title="Mode Devine ma réponse (ajoute les phases pilier)"
+                  className={btn(guessMyAnswerMode ? 'primary' : 'secondary', 'sm')}
+                  title="Ajoute les 2 phases du mode Devine ma réponse : le pilier choisit qui répond à sa place, puis ce joueur écrit sa réponse"
                 >
-                  Devine ma réponse
+                  <Icon
+                    icon={guessMyAnswerMode ? 'mdi:checkbox-marked-outline' : 'mdi:checkbox-blank-outline'}
+                    className="w-4 h-4"
+                    aria-hidden
+                  />
+                  Mode Devine ma réponse
                 </button>
                 <span className="flex flex-col items-end gap-0.5">
                   {estimates.map(({ speed, total, max }) => (
                     <span key={speed} className="flex items-baseline gap-2">
-                      <span className="text-[11px] uppercase tracking-[0.14em] text-white/40 font-semibold">
+                      <span className="text-[12px] font-medium text-white/60">
                         {SPEED_LABELS[speed] ?? speed}
                       </span>
-                      <span className="text-[18px] font-semibold tabular-nums text-white">~{total} min</span>
+                      <span className="text-[23px] leading-tight font-semibold tracking-tight tabular-nums text-white">~{total} min</span>
                       <span
-                        className="text-[12px] tabular-nums text-white/40"
-                        title="Tous les timers vont au bout (révélation comptée 20 s, elle n'a pas de timer)"
+                        className="text-[12px] tabular-nums text-white/55"
+                        title="Si tous les chronos vont au bout (la révélation, sans chrono, est comptée 20 s)"
                       >
-                        max {max} min
+                        jusqu'à {max} min
                       </span>
                     </span>
                   ))}
@@ -90,10 +97,10 @@ export const ConstantsSection = () => {
             </div>
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[11px] uppercase tracking-[0.14em] text-white/40 font-semibold">
-                Joueurs
+              <span className="text-[13px] font-medium text-white/65">
+                Nombre de joueurs simulé
               </span>
-              <span className="text-[13px] font-semibold tabular-nums text-white/80">
+              <span className="text-[14px] font-semibold tabular-nums text-white/85">
                 {guessPlayers} joueur{guessPlayers > 1 ? 's' : ''}
               </span>
             </div>
@@ -135,8 +142,10 @@ export const ConstantsSection = () => {
 
           {/* Durée max (timer) de chaque phase. Les phases substitut ne sont
               affichées qu'en mode "Devine ma réponse", comme dans le total. */}
-          <p className="text-[11px] text-white/35 mb-2">
-            Durée max par phase (timer) en Normal, le Rapide en dessous. Le total ci-dessus est l'estimation ressentie côté lobby, plus courte (les joueurs répondent avant la fin).
+          <p className="text-[12px] text-white/55 mb-2 max-w-2xl">
+            Temps maximum (chrono) de chaque phase à la vitesse « {SPEED_LABELS[MAIN_SPEED] ?? MAIN_SPEED} », les
+            autres vitesses en dessous. La durée estimée au-dessus est plus courte : c'est celle affichée aux joueurs dans le
+            salon, car on répond souvent avant la fin du chrono.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
             {TIMED_PHASES
@@ -146,15 +155,15 @@ export const ConstantsSection = () => {
               return (
                 <div
                   key={phase}
-                  className="rounded-lg surface-glass p-3"
+                  className={`${PANEL} p-3`}
                 >
-                  <p className="text-[12px] text-white/55">
+                  <p className="text-[13px] font-medium text-white/65">
                     {PHASE_LABELS_FR[phase] ?? phase}
                   </p>
-                  <p className="mt-1 text-[20px] font-semibold tabular-nums text-white">
+                  <p className="mt-1 text-[23px] leading-tight font-semibold tracking-tight tabular-nums text-white">
                     {seconds} secondes
                     {toMinSec(seconds) && (
-                      <span className="ml-2 text-[13px] font-normal text-white/40">
+                      <span className="ml-2 text-[13px] font-normal text-white/55">
                         ({toMinSec(seconds)})
                       </span>
                     )}
@@ -162,7 +171,7 @@ export const ConstantsSection = () => {
                   {OTHER_SPEEDS.map((sp) => {
                     const other = getPhaseDuration(phase, sp, guessPlayers);
                     return (
-                      <p key={sp} className="mt-0.5 text-[12px] tabular-nums text-white/45">
+                      <p key={sp} className="mt-0.5 text-[12px] tabular-nums text-white/55">
                         {SPEED_LABELS[sp] ?? sp} : {other} s
                         {toMinSec(other) && ` (${toMinSec(other)})`}
                       </p>
@@ -175,9 +184,9 @@ export const ConstantsSection = () => {
         </div>
 
         <div>
-          <p className="text-[12px] uppercase tracking-[0.18em] text-white/40 mb-2 font-semibold">
-            Limites
-          </p>
+          <h3 className={SUB_TITLE}>
+            Limites des parties
+          </h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
             {[
               { label: 'Nombre de joueurs', value: `${GAME_CONSTANTS.MIN_PLAYERS} à ${GAME_CONSTANTS.MAX_PLAYERS}` },
@@ -186,17 +195,7 @@ export const ConstantsSection = () => {
               { label: 'Avatars disponibles', value: `${GAME_CONSTANTS.AVATAR_COUNT}` },
               { label: 'Longueur du code de salon', value: `${GAME_CONSTANTS.LOBBY_CODE_LENGTH} caractères` },
             ].map((row) => (
-              <div
-                key={row.label}
-                className="rounded-lg surface-glass p-3"
-              >
-                <p className="text-[12px] text-white/55">
-                  {row.label}
-                </p>
-                <p className="mt-1 text-[16px] font-semibold tabular-nums text-white">
-                  {row.value}
-                </p>
-              </div>
+              <KpiCell key={row.label} compact label={row.label} value={row.value} />
             ))}
           </div>
         </div>

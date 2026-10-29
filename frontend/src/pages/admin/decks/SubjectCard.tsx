@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { AdminDeckSummary } from '@onskone/shared';
 import type { CategoryStyle } from './shared';
+import { FLOATING } from '../ui';
 
 export const SubjectCard = ({
   subject, palette, collapsed,
@@ -11,7 +12,7 @@ export const SubjectCard = ({
   collapsed: boolean;
 }) => {
   const hasQuestions = subject.questions.length > 0;
-  const cardRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLButtonElement>(null);
   const [preview, setPreview] = useState<{ top: number; left: number; placement: 'top' | 'bottom' } | null>(null);
 
   const openPreview = useCallback(() => {
@@ -29,20 +30,20 @@ export const SubjectCard = ({
 
   if (!collapsed) {
     return (
-      <div className="relative rounded-lg border border-white/[0.07] bg-black/20 overflow-hidden">
+      <div className="relative rounded-lg border border-white/[0.06] bg-black/25 overflow-hidden">
         <span className={`absolute left-0 top-0 bottom-0 w-[3px] ${palette.strip}`} />
-        <div className="flex items-center gap-2 px-3 py-2 pl-4 bg-white/[0.015] border-b border-white/[0.05]">
+        <div className="flex items-center gap-2 px-3 py-2 pl-4 border-b border-white/[0.06]">
           <span className="text-[13px] text-white/90 font-medium truncate" title={subject.subject}>
             {subject.subject}
           </span>
         </div>
         {!hasQuestions ? (
-          <p className="px-3 py-3 text-[11px] text-white/25 italic">aucune question</p>
+          <p className="px-3 py-3 text-[12px] text-white/50 italic">Aucune question</p>
         ) : (
           <ol className="px-3 py-2.5 space-y-1.5">
             {subject.questions.map((q, i) => (
-              <li key={i} className="flex gap-2 text-[12.5px] text-white/80 leading-snug">
-                <span className="font-mono text-[11px] tabular-nums text-white/25 mt-0.5 shrink-0 w-5 text-right">
+              <li key={i} className="flex gap-2 text-[13px] text-white/80 leading-snug">
+                <span className="text-[12px] tabular-nums text-white/50 shrink-0 w-5 text-right">
                   {i + 1}.
                 </span>
                 <span className="whitespace-pre-wrap break-words">{q}</span>
@@ -56,22 +57,26 @@ export const SubjectCard = ({
 
   return (
     <>
-      <div
+      <button
         ref={cardRef}
+        type="button"
         onClick={openPreview}
+        onBlur={closePreview}
         onPointerEnter={(e) => { if (e.pointerType === 'mouse') openPreview(); }}
         onPointerLeave={(e) => { if (e.pointerType === 'mouse') closePreview(); }}
         onContextMenu={(e) => { e.preventDefault(); }}
+        aria-expanded={hasQuestions ? !!preview : undefined}
+        title={hasQuestions ? `${subject.subject} : ${subject.questions.length} question${subject.questions.length > 1 ? 's' : ''}` : `${subject.subject} : aucune question`}
         style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
-        className={`relative w-full h-full text-left rounded-md border border-white/[0.07] hover:border-white/20 bg-black/20 transition-all overflow-hidden ${hasQuestions ? 'cursor-pointer' : ''}`}
+        className={`relative block w-full h-full min-h-[40px] text-left rounded-lg border border-white/[0.06] hover:border-white/20 bg-black/25 transition-colors overflow-hidden ${hasQuestions ? 'cursor-pointer' : 'cursor-default'}`}
       >
-        <span className={`absolute left-0 top-0 bottom-0 w-[2px] ${palette.strip}`} />
-        <div className="px-2 py-1.5 pl-2.5 bg-white/[0.015] h-full flex items-center">
-          <span className="block text-[12px] text-white/85 leading-snug truncate" title={subject.subject}>
+        <span className={`absolute left-0 top-0 bottom-0 w-[3px] ${palette.strip}`} />
+        <span className="px-2 py-1.5 pl-3 h-full flex items-center">
+          <span className="block text-[13px] text-white/85 leading-snug truncate">
             {subject.subject}
           </span>
-        </div>
-      </div>
+        </span>
+      </button>
 
       {preview && hasQuestions && createPortal(
         <>
@@ -96,17 +101,17 @@ export const SubjectCard = ({
               return { top: preview.top, left: 12, right: 12, transform: baseTransform };
             })()}
           >
-            <div className="relative rounded-xl border border-white/20 bg-[#1b1f2a]/98 backdrop-blur-md shadow-[0_24px_60px_-10px_rgba(0,0,0,0.85)] overflow-hidden">
+            <div className={`relative ${FLOATING} overflow-hidden`}>
               <span className={`absolute left-0 top-0 bottom-0 w-[3px] ${palette.strip}`} />
               <div className="px-3 py-2 pl-4 border-b border-white/[0.06] flex items-center">
-                <span className="text-[12.5px] text-white/90 font-medium truncate">
+                <span className="text-[13px] text-white/90 font-medium truncate">
                   {subject.subject}
                 </span>
               </div>
               <ol className="px-3 py-2.5 space-y-1.5 max-h-[55vh] overflow-y-auto custom-scroll">
                 {subject.questions.map((q, i) => (
-                  <li key={i} className="flex gap-2 text-[12.5px] text-white/85 leading-snug">
-                    <span className="font-mono text-[11px] tabular-nums text-white/30 mt-0.5 shrink-0 w-5 text-right">
+                  <li key={i} className="flex gap-2 text-[13px] text-white/85 leading-snug">
+                    <span className="text-[12px] tabular-nums text-white/50 shrink-0 w-5 text-right">
                       {i + 1}.
                     </span>
                     <span className="whitespace-pre-wrap break-words">{q}</span>

@@ -9,17 +9,20 @@ const TICKET_TYPE_LABELS_FR: Record<TicketType, string> = {
 };
 
 // Classes partagées, style Studio (palette sombre du dev tooling)
-export const CLUSTER = 'flex items-center gap-1.5 bg-black/30 border border-white/[0.06] rounded-lg px-2 py-1';
+export const CLUSTER = 'flex items-center gap-1 bg-black/30 border border-white/10 rounded-lg px-1.5 py-1';
 export const INPUT_CLS =
-  'bg-[#0f1117] text-white/85 border border-white/10 rounded-md px-2.5 py-1.5 text-[12px] font-mono ' +
-  'focus:outline-none focus:border-amber-400/60 hover:border-white/20 transition-colors ' +
-  'placeholder:text-white/25';
+  'bg-black/25 text-white/85 border border-white/15 rounded-lg px-2.5 py-1.5 text-[13px] ' +
+  'focus:outline-none focus:border-amber-400/60 hover:border-white/25 transition-colors ' +
+  'placeholder:text-white/40';
 
 interface TicketTypeStyle {
   dot: string;
   chip: string;
   bar: string;
   ring: string;
+  // Icône monochrome (teintée par `text`) : l'admin ne mélange pas les emojis couleur de ReportModal.
+  icon: string;
+  text: string;
 }
 
 // Styles admin-only (palette tickets - distincte des decks). Le label/glyph
@@ -30,18 +33,24 @@ const TYPE_STYLES: Record<TicketType, TicketTypeStyle> = {
     chip: 'bg-rose-500/10 border-rose-400/40 text-rose-100',
     bar: 'bg-rose-400/70',
     ring: 'ring-rose-300/30',
+    icon: 'mdi:bug-outline',
+    text: 'text-rose-300',
   },
   question_report: {
     dot: 'bg-cyan-400',
     chip: 'bg-cyan-500/10 border-cyan-400/40 text-cyan-100',
     bar: 'bg-cyan-400/70',
     ring: 'ring-cyan-300/30',
+    icon: 'mdi:comment-question-outline',
+    text: 'text-cyan-300',
   },
   suggestion: {
     dot: 'bg-fuchsia-400',
     chip: 'bg-fuchsia-500/10 border-fuchsia-400/40 text-fuchsia-100',
     bar: 'bg-fuchsia-400/70',
     ring: 'ring-fuchsia-300/30',
+    icon: 'mdi:lightbulb-on-outline',
+    text: 'text-fuchsia-300',
   },
 };
 
@@ -54,9 +63,10 @@ export const TYPE_META: Record<TicketType, TicketTypeMeta> = (Object.keys(TYPE_S
     return acc;
   }, {} as Record<TicketType, TicketTypeMeta>);
 
-export const STATUS_META: Record<TicketStatus, { label: string; accent: string; bar: string; pill: string; dot: string; text: string }> = {
+export const STATUS_META: Record<TicketStatus, { label: string; icon: string; accent: string; bar: string; pill: string; dot: string; text: string }> = {
   new: {
     label: 'Nouveau',
+    icon: 'mdi:inbox-arrow-down-outline',
     accent: 'border-amber-300/40',
     bar: 'from-amber-400/60 via-amber-400/20 to-transparent',
     pill: 'bg-amber-400/10 border-amber-300/40 text-amber-100',
@@ -65,6 +75,7 @@ export const STATUS_META: Record<TicketStatus, { label: string; accent: string; 
   },
   in_progress: {
     label: 'En cours',
+    icon: 'mdi:progress-wrench',
     accent: 'border-violet-300/40',
     bar: 'from-violet-400/60 via-violet-400/20 to-transparent',
     pill: 'bg-violet-400/10 border-violet-300/40 text-violet-100',
@@ -73,6 +84,7 @@ export const STATUS_META: Record<TicketStatus, { label: string; accent: string; 
   },
   resolved: {
     label: 'Résolu',
+    icon: 'mdi:check-circle-outline',
     accent: 'border-emerald-300/40',
     bar: 'from-emerald-400/60 via-emerald-400/20 to-transparent',
     pill: 'bg-emerald-400/10 border-emerald-300/40 text-emerald-100',
@@ -80,7 +92,8 @@ export const STATUS_META: Record<TicketStatus, { label: string; accent: string; 
     text: 'text-emerald-200/85',
   },
   wont_fix: {
-    label: 'Pas de fix',
+    label: 'Sans suite',
+    icon: 'mdi:minus-circle-outline',
     accent: 'border-white/15',
     bar: 'from-white/30 via-white/10 to-transparent',
     pill: 'bg-white/[0.05] border-white/15 text-white/60',
@@ -124,14 +137,14 @@ export interface TabDef {
 }
 
 export const TABS: TabDef[] = [
-  { id: 'overview', icon: 'mdi:home', ariaLabel: 'Accueil', hint: 'accueil', enabled: true, group: 'pilotage' },
-  { id: 'lobbies', label: 'Salons live', hint: 'temps réel', enabled: true, group: 'pilotage' },
-  { id: 'tickets', icon: 'mdi:ticket-outline', label: 'Tickets', ariaLabel: 'Tickets', hint: 'retours joueurs', enabled: true, group: 'inbox' },
-  { id: 'logs', icon: 'mdi:bug-outline', label: 'Logs', ariaLabel: 'Logs d\'erreurs de l\'app', hint: 'erreurs appareils', enabled: true, group: 'system' },
-  { id: 'danger', icon: 'mdi:alert-octagon-outline', label: 'Danger', ariaLabel: 'Maintenance et mise à jour forcée', hint: 'maintenance, maj forcée', enabled: true, group: 'system' },
-  { id: 'stats', icon: 'mdi:chart-bar', label: 'Stats', ariaLabel: 'Stats des thèmes et questions', hint: 'popularité', enabled: true, group: 'pilotage' },
-  { id: 'decks', icon: 'mdi:cards-outline', label: 'Decks', ariaLabel: 'Decks : thèmes, sujets et questions', hint: 'thèmes et questions', enabled: true, group: 'catalogue' },
-  { id: 'content', icon: 'mdi:text-box-outline', label: 'Contenu', ariaLabel: 'Contenu du site', hint: 'paliers, succès, avatars, légal…', enabled: true, group: 'catalogue' },
+  { id: 'overview', icon: 'mdi:home', label: 'Accueil', ariaLabel: 'Accueil', hint: 'Résumé des tickets', enabled: true, group: 'pilotage' },
+  { id: 'lobbies', label: 'Salons en direct', hint: 'Salons ouverts en ce moment', enabled: true, group: 'pilotage' },
+  { id: 'tickets', icon: 'mdi:ticket-outline', label: 'Tickets', ariaLabel: 'Tickets', hint: 'Retours des joueurs', enabled: true, group: 'inbox' },
+  { id: 'logs', icon: 'mdi:bug-outline', label: 'Logs', ariaLabel: 'Logs : erreurs remontées par l\'app', hint: 'Plantages et erreurs sur les appareils', enabled: true, group: 'system' },
+  { id: 'danger', icon: 'mdi:alert-octagon-outline', label: 'Accès joueurs', ariaLabel: 'Maintenance et mise à jour obligatoire', hint: 'Maintenance et mise à jour obligatoire', enabled: true, group: 'system' },
+  { id: 'stats', icon: 'mdi:chart-bar', label: 'Stats', ariaLabel: 'Stats des thèmes et questions', hint: 'Thèmes et questions préférés', enabled: true, group: 'pilotage' },
+  { id: 'decks', icon: 'mdi:cards-outline', label: 'Decks', ariaLabel: 'Decks : thèmes, sujets et questions', hint: 'Thèmes, sujets et questions', enabled: true, group: 'catalogue' },
+  { id: 'content', icon: 'mdi:text-box-outline', label: 'Contenu', ariaLabel: 'Contenu du site', hint: 'Paliers, succès, avatars, pages légales…', enabled: true, group: 'catalogue' },
 ];
 
 export const GROUP_ORDER: TabGroup[] = ['pilotage', 'inbox', 'catalogue', 'system'];
@@ -147,13 +160,13 @@ export const tabsOfGroup = (group: TabGroup): TabDef[] => TABS.filter((t) => t.g
 
 export const MOBILE_TAB_META: Record<AdminTab, { icon: string; label: string }> = {
   overview: { icon: 'mdi:home-variant-outline', label: 'Accueil' },
-  lobbies: { icon: 'mdi:broadcast', label: 'Live' },
+  lobbies: { icon: 'mdi:broadcast', label: 'Salons' },
   tickets: { icon: 'mdi:ticket-outline', label: 'Tickets' },
   logs: { icon: 'mdi:bug-outline', label: 'Logs' },
   stats: { icon: 'mdi:chart-bar', label: 'Stats' },
   decks: { icon: 'mdi:cards-outline', label: 'Decks' },
   content: { icon: 'mdi:text-box-outline', label: 'Contenu' },
-  danger: { icon: 'mdi:alert-octagon-outline', label: 'Danger' },
+  danger: { icon: 'mdi:alert-octagon-outline', label: 'Accès' },
 };
 
 // Les 2 derniers slots de la barre mobile sont les menus (Catalogue, Système), rendus à part.

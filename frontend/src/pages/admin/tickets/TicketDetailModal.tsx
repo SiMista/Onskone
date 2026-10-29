@@ -1,7 +1,13 @@
 import { useEffect } from 'react';
 import { Icon } from '@iconify/react';
+import { useToast } from '../../../components/Toast';
 import { Ticket, TicketStatus } from '../../../utils/ticketsApi';
 import { TYPE_META, STATUS_META, STATUS_ORDER, formatDate } from '../shared';
+import { FLOATING, btn } from '../ui';
+
+const FieldLabel = ({ children }: { children: React.ReactNode }) => (
+  <p className="text-[12px] font-medium text-white/55 mb-0.5">{children}</p>
+);
 
 export const TicketDetailModal = ({
   ticket, onClose, onStatusChange, onDelete,
@@ -17,11 +23,17 @@ export const TicketDetailModal = ({
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
+  const showToast = useToast();
   const type = TYPE_META[ticket.type];
   const status = STATUS_META[ticket.status];
 
-  const copy = (text: string) => {
-    try { navigator.clipboard?.writeText(text); } catch { /* silent */ }
+  const copy = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast('Copié dans le presse-papiers', 'success');
+    } catch {
+      showToast('Copie impossible sur ce navigateur', 'error');
+    }
   };
 
   return (
@@ -30,73 +42,91 @@ export const TicketDetailModal = ({
       onClick={onClose}
     >
       <div
-        className="relative w-full sm:max-w-2xl h-full sm:h-auto sm:max-h-[85vh] overflow-y-auto custom-scroll sm:rounded-xl border-0 sm:border border-white/[0.1] bg-gradient-to-b from-[#1b1f2a] to-[#161a24] shadow-[0_30px_80px_-20px_rgba(0,0,0,0.7)]"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Ticket #${ticket.id}`}
+        className={`relative w-full sm:max-w-2xl h-full sm:h-auto sm:max-h-[85vh] overflow-y-auto custom-scroll ${FLOATING} max-sm:rounded-none max-sm:border-0`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="sticky top-0 bg-[#1b1f2a]/95 backdrop-blur px-4 sm:px-5 py-3 border-b border-white/[0.06] flex items-center gap-2 z-10 flex-wrap">
-          <span className={`px-2 py-0.5 rounded border font-mono text-[11px] uppercase tracking-wider ${type.chip}`}>
+        <div className="sticky top-0 bg-[#1f2433]/95 backdrop-blur px-4 sm:px-5 py-3 border-b border-white/[0.06] flex items-center gap-2 z-10 flex-wrap">
+          <span className={`inline-flex items-center gap-1 text-[13px] font-semibold ${type.text}`}>
+            <Icon icon={type.icon} className="w-4 h-4" aria-hidden />
             {type.label}
           </span>
-          <span className={`px-2 py-0.5 rounded border font-mono text-[11px] uppercase tracking-wider ${status.pill}`}>
+          <span aria-hidden className="text-white/20">·</span>
+          <span className={`inline-flex items-center gap-1 text-[13px] font-medium ${status.text}`}>
+            <Icon icon={status.icon} className="w-4 h-4" aria-hidden />
             {status.label}
           </span>
-          <span className="font-mono text-[12px] text-white/40 tabular-nums">#{ticket.id}</span>
+          <span className="font-mono text-[12px] text-white/50 tabular-nums">#{ticket.id}</span>
           <button
+            type="button"
             onClick={onClose}
-            className="ml-auto w-7 h-7 rounded-md border border-white/10 bg-white/[0.04] hover:bg-white/[0.1] text-white/70 hover:text-white flex items-center justify-center transition-colors"
-            title="Fermer (Esc)"
-          >✕</button>
+            className="cursor-pointer ml-auto w-10 h-10 sm:w-8 sm:h-8 inline-flex items-center justify-center rounded-lg text-white/60 hover:text-white hover:bg-white/[0.06] transition-colors"
+            title="Fermer (Échap)"
+            aria-label="Fermer"
+          >
+            <Icon icon="mdi:close" className="w-4 h-4" aria-hidden />
+          </button>
         </div>
 
         <div className="p-4 sm:p-5 space-y-5">
           <div>
-            <p className="font-mono text-[11px] uppercase tracking-wider text-white/35 mb-1.5">Message</p>
-            <p className="text-[14px] text-white/90 leading-relaxed whitespace-pre-wrap break-words">
+            <FieldLabel>Message du joueur</FieldLabel>
+            <p className="text-[14px] text-white/90 leading-relaxed whitespace-pre-wrap break-words mt-1">
               {ticket.message}
             </p>
           </div>
 
           <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-[13px]">
             <div>
-              <p className="font-mono text-[11px] uppercase tracking-wider text-white/35 mb-0.5">Pseudo</p>
-              <p className="text-white/85">{ticket.pseudo || <span className="text-white/30">-</span>}</p>
+              <FieldLabel>Pseudo</FieldLabel>
+              <p className="text-white/85">{ticket.pseudo || <span className="text-white/50">Non renseigné</span>}</p>
             </div>
             <div>
-              <p className="font-mono text-[11px] uppercase tracking-wider text-white/35 mb-0.5">Lobby</p>
+              <FieldLabel>Salon</FieldLabel>
               {ticket.lobby_code ? (
                 <button
+                  type="button"
                   onClick={() => copy(ticket.lobby_code!)}
-                  className="font-mono font-bold tracking-widest text-white/85 hover:text-amber-200 transition-colors"
-                  title="Copier"
+                  className="font-mono font-bold tracking-widest text-white/85 hover:text-amber-200 transition-colors cursor-pointer"
+                  title="Copier le code du salon"
                 >
                   <span className="inline-flex items-center gap-1">
                     {ticket.lobby_code}
-                    <Icon icon="mdi:content-copy" className="w-3 h-3 text-white/30" />
+                    <Icon icon="mdi:content-copy" className="w-3.5 h-3.5 text-white/40" aria-hidden />
                   </span>
                 </button>
-              ) : <p className="text-white/30">-</p>}
+              ) : <p className="text-white/50">Hors salon</p>}
             </div>
             <div>
-              <p className="font-mono text-[11px] uppercase tracking-wider text-white/35 mb-0.5">Reçu</p>
-              <p className="font-mono text-white/85">{formatDate(ticket.created_at)}</p>
+              <FieldLabel>Reçu le</FieldLabel>
+              <p className="text-white/85 tabular-nums">{formatDate(ticket.created_at)}</p>
             </div>
             <div>
-              <p className="font-mono text-[11px] uppercase tracking-wider text-white/35 mb-0.5">Mis à jour</p>
-              <p className="font-mono text-white/85">{formatDate(ticket.updated_at)}</p>
+              <FieldLabel>Dernière modification</FieldLabel>
+              <p className="text-white/85 tabular-nums">{formatDate(ticket.updated_at)}</p>
             </div>
           </div>
 
           {ticket.context && (
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <p className="font-mono text-[11px] uppercase tracking-wider text-white/35">Contexte</p>
+                <div>
+                  <FieldLabel>Détails techniques</FieldLabel>
+                  <p className="text-[12px] text-white/50">Version de l'app, appareil, page où le joueur était.</p>
+                </div>
                 <button
+                  type="button"
                   onClick={() => copy(ticket.context!)}
-                  className="font-mono text-[11px] text-white/40 hover:text-white transition-colors"
-                  title="Copier le contexte"
-                >copier ⧉</button>
+                  className={btn('ghost', 'sm')}
+                  title="Copier les détails techniques"
+                >
+                  <Icon icon="mdi:content-copy" className="w-3.5 h-3.5" aria-hidden />
+                  Copier
+                </button>
               </div>
-              <pre className="rounded-md border border-white/[0.06] bg-black/30 p-3 font-mono text-[12px] text-white/75 whitespace-pre-wrap break-all max-h-48 overflow-y-auto custom-scroll">
+              <pre className="rounded-lg border border-white/[0.06] bg-black/25 p-3 font-mono text-[12px] text-white/75 whitespace-pre-wrap break-all max-h-48 overflow-y-auto custom-scroll">
                 {ticket.context}
               </pre>
             </div>
@@ -104,24 +134,28 @@ export const TicketDetailModal = ({
 
         </div>
 
-        <div className="sticky bottom-0 bg-[#1b1f2a]/95 backdrop-blur px-4 sm:px-5 py-3 border-t border-white/[0.06] space-y-2 sm:space-y-0 sm:flex sm:flex-wrap sm:items-center sm:gap-2">
+        <div className="sticky bottom-0 bg-[#1f2433]/95 backdrop-blur px-4 sm:px-5 py-3 border-t border-white/[0.06] space-y-2 sm:space-y-0 sm:flex sm:flex-wrap sm:items-center sm:gap-2">
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 sm:contents">
-            <span className="shrink-0 font-mono text-[11px] uppercase tracking-wider text-white/35 sm:mr-1 whitespace-nowrap">déplacer vers</span>
+            <span className="shrink-0 text-[13px] text-white/60 sm:mr-1 whitespace-nowrap">Passer en</span>
             {STATUS_ORDER.filter((s) => s !== ticket.status).map((s) => (
               <button
+                type="button"
                 key={s}
                 onClick={() => onStatusChange(s)}
-                className={`shrink-0 whitespace-nowrap px-2 py-1 rounded border font-mono text-[11px] uppercase tracking-wider transition-colors ${STATUS_META[s].pill} hover:brightness-125`}
+                className={`shrink-0 ${btn('secondary')}`}
               >
-                → {STATUS_META[s].label}
+                <Icon icon={STATUS_META[s].icon} className={`w-4 h-4 ${STATUS_META[s].text}`} aria-hidden />
+                {STATUS_META[s].label}
               </button>
             ))}
           </div>
           <button
+            type="button"
             onClick={onDelete}
-            className="w-full sm:w-auto sm:ml-auto px-3 py-1.5 sm:py-1 rounded border border-red-400/40 bg-red-500/10 hover:bg-red-500/25 hover:border-red-400/70 text-red-200 font-mono text-[11px] uppercase tracking-wider transition-colors"
+            className={`w-full sm:w-auto sm:ml-auto ${btn('danger')}`}
           >
-            ✕ supprimer
+            <Icon icon="mdi:trash-can-outline" className="w-4 h-4" aria-hidden />
+            Supprimer le ticket
           </button>
         </div>
       </div>

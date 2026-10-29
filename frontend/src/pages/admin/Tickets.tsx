@@ -7,6 +7,7 @@ import { ConfirmDialog } from './ConfirmDialog';
 import { TicketCard } from './tickets/TicketCard';
 import { TicketDetailModal } from './tickets/TicketDetailModal';
 import { useTicketCrud } from './tickets/useTicketCrud';
+import { EmptyState, LoadingState, PANEL, SearchField, Segmented, Tabs, badge, btn } from './ui';
 
 export const TicketsPanel = ({
   tickets, isLoading, onChangeTickets,
@@ -102,109 +103,68 @@ export const TicketsPanel = ({
   const openTicket = openTicketId !== null ? tickets.find((t) => t.id === openTicketId) ?? null : null;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className="md:hidden flex items-center gap-2">
-        <div className={`${CLUSTER} flex-1 min-w-0`}>
-          <Icon icon="mdi:magnify" className="w-4 h-4 text-white/35 ml-0.5" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="rechercher"
-            className="flex-1 min-w-0 bg-transparent border-0 outline-0 text-[12px] text-white/85 placeholder:text-white/25 font-mono"
-          />
-          {search && (
-            <button
-              onClick={() => setSearch('')}
-              className="text-white/30 hover:text-white text-[12px] px-1"
-            >×</button>
-          )}
-        </div>
+        <SearchField value={search} onChange={setSearch} placeholder="Rechercher un ticket" className="flex-1 min-w-0" />
         <button
+          type="button"
           onClick={() => setFiltersOpen(true)}
-          className={`relative shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border bg-black/30 text-[11px] font-mono uppercase tracking-wider transition-colors ${typeFilter || groupByLobby
-            ? 'border-amber-300/40 text-amber-100'
-            : 'border-white/[0.08] text-white/65'
-            }`}
+          className={`relative shrink-0 ${btn(typeFilter || groupByLobby ? 'primary' : 'secondary')}`}
         >
           <Icon icon="mdi:tune-variant" className="w-4 h-4" />
           Filtres
           {(typeFilter || groupByLobby) && (
-            <span className="ml-0.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-400 text-black text-[10px] font-bold tabular-nums">
+            <span className="ml-0.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-400 text-black text-[11px] font-bold tabular-nums">
               {(typeFilter ? 1 : 0) + (groupByLobby ? 1 : 0)}
             </span>
           )}
         </button>
       </div>
 
-      <div className="hidden md:flex flex-wrap items-center gap-2.5">
-        <div className={`${CLUSTER} flex-1 min-w-[200px] max-w-md`}>
-          <Icon icon="mdi:magnify" className="w-4 h-4 text-white/35 ml-0.5" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="rechercher dans message, pseudo, lobby, #id"
-            className="flex-1 bg-transparent border-0 outline-0 text-[12px] text-white/85 placeholder:text-white/25 font-mono"
-          />
-          {search && (
-            <button
-              onClick={() => setSearch('')}
-              className="text-white/30 hover:text-white text-[12px] px-1"
-              title="Effacer"
-            >×</button>
-          )}
-        </div>
+      <div className="hidden md:flex md:flex-wrap md:items-center gap-2">
+        <SearchField value={search} onChange={setSearch} placeholder="Rechercher : message, pseudo, code salon, n° de ticket" />
+
+        <Segmented<TicketType | ''>
+          ariaLabel="Type de ticket"
+          value={typeFilter}
+          onChange={setTypeFilter}
+          options={(['', 'bug', 'question_report', 'suggestion'] as const).map((t) => (
+            t === '' ? { value: t, label: 'Tous les types' } : { value: t, label: TYPE_META[t].label, accent: TYPE_META[t].dot }
+          ))}
+        />
 
         <div className={CLUSTER}>
-          {(['', 'bug', 'question_report', 'suggestion'] as const).map((t) => {
-            const active = typeFilter === t;
-            const label = t === '' ? 'tous' : TYPE_META[t].label.toLowerCase();
-            return (
-              <button
-                key={t || 'all'}
-                onClick={() => setTypeFilter(t)}
-                className={`px-2 py-0.5 rounded font-mono text-[11px] uppercase tracking-wider transition-colors ${active
-                  ? 'bg-white/[0.08] text-white'
-                  : 'text-white/45 hover:text-white/80'
-                  }`}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
-
-        <div className={CLUSTER}>
-          <label className="flex items-center gap-1.5 cursor-pointer select-none text-[11px] font-mono uppercase tracking-wider text-white/70 hover:text-white px-1">
+          <label className="flex items-center gap-1.5 cursor-pointer select-none text-[13px] font-medium text-white/70 hover:text-white px-1.5 py-1">
             <input
               type="checkbox"
               checked={groupByLobby}
               onChange={(e) => setGroupByLobby(e.target.checked)}
               className="accent-amber-400"
             />
-            <span>Group by lobby</span>
+            <span>Grouper par salon</span>
           </label>
         </div>
       </div>
 
       <BottomSheet open={filtersOpen} onClose={() => setFiltersOpen(false)} title="Filtres">
         <div>
-          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/45 mb-2">Type de ticket</p>
+          <p className="text-[13px] font-medium text-white/65 mb-2">Type de ticket</p>
           <div className="grid grid-cols-2 gap-1.5">
             {(['', 'bug', 'question_report', 'suggestion'] as const).map((t) => {
               const active = typeFilter === t;
               const label = t === '' ? 'Tous' : TYPE_META[t].label;
               return (
                 <button
+                  type="button"
                   key={t || 'all'}
                   onClick={() => setTypeFilter(t)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-[13px] transition-colors ${active
-                    ? 'border-amber-300/40 bg-amber-400/[0.08] text-white'
-                    : 'border-white/[0.08] bg-white/[0.02] text-white/70'
+                  aria-pressed={active}
+                  className={`flex items-center gap-2 px-3 min-h-[44px] rounded-lg border text-[13px] font-medium cursor-pointer transition-colors ${active
+                    ? 'border-amber-300/50 bg-amber-400/15 text-amber-100'
+                    : 'border-white/15 bg-white/[0.04] text-white/70'
                     }`}
                 >
-                  {t !== '' && <span aria-hidden className="text-[13px] leading-none">{TYPE_META[t].glyph}</span>}
+                  {t !== '' && <Icon icon={TYPE_META[t].icon} className={`w-4 h-4 ${TYPE_META[t].text}`} aria-hidden />}
                   <span>{label}</span>
                 </button>
               );
@@ -213,17 +173,20 @@ export const TicketsPanel = ({
         </div>
 
         <div>
-          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/45 mb-2">Affichage</p>
+          <p className="text-[13px] font-medium text-white/65 mb-2">Affichage</p>
           <button
+            type="button"
+            role="switch"
+            aria-checked={groupByLobby}
             onClick={() => setGroupByLobby((v) => !v)}
-            className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg border transition-colors ${groupByLobby
-              ? 'border-amber-300/40 bg-amber-400/[0.08]'
-              : 'border-white/[0.08] bg-white/[0.02]'
+            className={`cursor-pointer w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg border transition-colors ${groupByLobby
+              ? 'border-amber-300/50 bg-amber-400/15'
+              : 'border-white/15 bg-white/[0.04]'
               }`}
           >
             <div className="text-left">
-              <p className="text-[13px] text-white">Grouper par lobby</p>
-              <p className="text-[11px] text-white/45 mt-0.5">Regroupe les tickets d'un même salon</p>
+              <p className="text-[13px] text-white">Grouper par salon</p>
+              <p className="text-[12px] text-white/55 mt-0.5">Rassemble les tickets venus d'une même partie</p>
             </div>
             <span
               className={`relative w-9 h-5 rounded-full transition-colors shrink-0 ${groupByLobby ? 'bg-amber-400' : 'bg-white/15'}`}
@@ -237,96 +200,102 @@ export const TicketsPanel = ({
 
         {(typeFilter || groupByLobby) && (
           <button
+            type="button"
             onClick={() => { setTypeFilter(''); setGroupByLobby(false); }}
-            className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/[0.04] text-white/70 text-[12px] font-mono uppercase tracking-wider"
+            className={`w-full ${btn('secondary')}`}
           >
-            Réinitialiser
+            Réinitialiser les filtres
           </button>
         )}
       </BottomSheet>
 
-      <div className="md:hidden grid grid-cols-4 gap-1.5">
-        {STATUS_ORDER.map((s) => {
-          const meta = STATUS_META[s];
-          const count = filtered.filter((t) => t.status === s).length;
-          const active = mobileStatus === s;
-          return (
-            <button
-              key={s}
-              onClick={() => setMobileStatus(s)}
-              className={`flex flex-col items-center justify-center gap-0.5 px-1.5 py-2 rounded-lg border transition-colors min-w-0 ${active
-                ? `${meta.pill} ring-1 ring-white/10`
-                : 'border-white/[0.07] bg-white/[0.02] text-white/55'
-                }`}
-            >
-              <span className="font-mono text-[10px] uppercase tracking-wider truncate max-w-full">
-                {meta.label}
+      <div className="md:hidden">
+        <Tabs<TicketStatus>
+          ariaLabel="Statut des tickets"
+          value={mobileStatus}
+          onChange={setMobileStatus}
+          tabs={STATUS_ORDER.map((s) => ({
+            value: s,
+            label: (
+              <span className="inline-flex items-center gap-1.5">
+                <Icon icon={STATUS_META[s].icon} className={`w-4 h-4 ${STATUS_META[s].text}`} aria-hidden />
+                {STATUS_META[s].label}
+                <span className="text-[12px] tabular-nums text-white/50">{columns[s].length}</span>
               </span>
-              <span className="tabular-nums font-bold text-[13px] leading-none">{count}</span>
-            </button>
-          );
-        })}
+            ),
+          }))}
+        />
       </div>
 
       <div
-        className={`overflow-hidden transition-all duration-200 ${selected.size > 0 ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0'
+        className={`overflow-hidden transition-all duration-200 ${selected.size > 0 ? 'max-h-28 opacity-100' : 'max-h-0 opacity-0'
           }`}
       >
-        <div className="rounded-lg border border-amber-300/30 bg-amber-400/[0.06] px-3 py-2">
+        <div className="rounded-xl border border-amber-300/30 bg-amber-400/[0.06] px-3 py-2">
           <div className="flex items-center justify-between gap-2 mb-1.5 md:mb-0 md:hidden">
-            <span className="font-mono text-[11px] uppercase tracking-wider text-amber-200">
-              {selected.size} sélectionné{selected.size > 1 ? 's' : ''}
+            <span className="text-[13px] font-medium text-amber-200">
+              {selected.size} ticket{selected.size > 1 ? 's' : ''} sélectionné{selected.size > 1 ? 's' : ''}
             </span>
             <button
+              type="button"
               onClick={clearSelection}
-              className="text-white/50 hover:text-white font-mono text-[11px] uppercase tracking-wider"
+              className={btn('ghost', 'sm')}
             >
-              annuler
+              Annuler
             </button>
           </div>
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-3 px-3 md:mx-0 md:px-0 md:flex-wrap">
-            <span className="hidden md:inline font-mono text-[11px] uppercase tracking-wider text-amber-200 whitespace-nowrap">
-              {selected.size} sélectionné{selected.size > 1 ? 's' : ''}
+            <span className="hidden md:inline text-[13px] font-medium text-amber-200 whitespace-nowrap">
+              {selected.size} ticket{selected.size > 1 ? 's' : ''} sélectionné{selected.size > 1 ? 's' : ''}
             </span>
-            <span className="hidden md:inline text-white/20">·</span>
+            <span aria-hidden className="hidden md:inline text-white/20">·</span>
+            <span className="shrink-0 text-[13px] text-white/60 whitespace-nowrap">Passer en</span>
             {STATUS_ORDER.map((s) => (
               <button
+                type="button"
                 key={s}
                 onClick={() => bulkMove(s)}
-                className={`shrink-0 whitespace-nowrap px-2 py-0.5 rounded border font-mono text-[11px] uppercase tracking-wider ${STATUS_META[s].pill} hover:brightness-125 transition`}
+                className={`shrink-0 ${btn('secondary', 'sm')}`}
               >
-                → {STATUS_META[s].label}
+                <Icon icon={STATUS_META[s].icon} className={`w-4 h-4 ${STATUS_META[s].text}`} aria-hidden />
+                {STATUS_META[s].label}
               </button>
             ))}
             <button
+              type="button"
               onClick={requestBulkDelete}
-              className="shrink-0 whitespace-nowrap px-2 py-0.5 rounded border border-red-400/40 bg-red-500/10 hover:bg-red-500/25 text-red-200 font-mono text-[11px] uppercase tracking-wider transition"
+              className={`shrink-0 ${btn('danger', 'sm')}`}
             >
-              ✕ supprimer
+              <Icon icon="mdi:trash-can-outline" className="w-4 h-4" aria-hidden />
+              Supprimer
             </button>
             <button
+              type="button"
               onClick={clearSelection}
-              className="hidden md:inline ml-auto text-white/50 hover:text-white font-mono text-[11px] uppercase tracking-wider"
+              className={`hidden md:inline-flex ml-auto ${btn('ghost', 'sm')}`}
             >
-              annuler
+              Annuler la sélection
             </button>
           </div>
         </div>
       </div>
 
       {isLoading && tickets.length === 0 ? (
-        <div className="text-center py-20 font-mono text-[11px] uppercase tracking-[0.3em] text-white/30">
-          chargement…
-        </div>
+        <LoadingState label="Chargement des tickets…" />
       ) : filtered.length === 0 ? (
-        <div className="text-center py-20 space-y-2">
-          <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-white/30">
-            {tickets.length === 0 ? 'inbox vide' : 'aucun résultat'}
-          </p>
-          {tickets.length === 0 && (
-            <p className="text-[12px] text-white/40">Les tickets envoyés depuis le jeu apparaîtront ici.</p>
-          )}
-        </div>
+        tickets.length === 0 ? (
+          <EmptyState
+            icon="mdi:inbox-outline"
+            title="Aucun ticket pour l'instant"
+            hint="Les signalements envoyés depuis le jeu (bug, question pourrie, idée) apparaîtront ici."
+          />
+        ) : (
+          <EmptyState
+            icon="mdi:magnify"
+            title="Aucun ticket ne correspond"
+            hint="Essaie un autre mot, ou retire le filtre de type."
+          />
+        )
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
           {STATUS_ORDER.map((status) => {
@@ -358,33 +327,36 @@ export const TicketsPanel = ({
             return (
               <div
                 key={status}
-                className={`relative rounded-xl border ${meta.accent} bg-black/30 overflow-hidden flex flex-col ${hiddenOnMobile ? 'hidden md:flex' : ''}`}
+                className={`relative ${PANEL} overflow-hidden flex flex-col ${hiddenOnMobile ? 'hidden md:flex' : ''}`}
               >
-                <div className={`relative bg-gradient-to-r ${meta.bar} px-3 py-2.5 border-b border-white/[0.06] hidden md:flex items-center gap-2`}>
+                <div className="px-3 py-2.5 border-b border-white/[0.06] hidden md:flex items-center gap-2">
+                  <Icon icon={meta.icon} className={`w-[18px] h-[18px] ${meta.text}`} aria-hidden />
                   <p className="text-[14px] font-semibold tracking-tight text-white">
                     {meta.label}
                   </p>
-                  <span className="ml-auto font-mono text-[12px] tabular-nums text-white/65 px-1.5 py-0.5 rounded bg-white/[0.05] border border-white/10">
+                  <span className={`ml-auto tabular-nums ${badge('neutral')}`}>
                     {col.length}
                   </span>
                 </div>
 
                 <div className="p-2 space-y-2 md:max-h-[calc(100vh-280px)] md:overflow-y-auto custom-scroll">
                   {col.length === 0 ? (
-                    <p className="text-center py-8 font-mono text-[11px] uppercase tracking-widest text-white/20">
-                      vide
+                    <p className="text-center py-8 text-[12px] text-white/50">
+                      Aucun ticket
                     </p>
                   ) : (
                     grouped.map((group, gIdx) => (
                       <div key={group.lobby ?? `orphan-${gIdx}`} className="space-y-2">
                         {groupByLobby && group.lobby && (
                           <div className="flex items-center gap-1.5 px-1.5 pt-1">
-                            <span className="font-mono text-[11px] uppercase tracking-wider text-white/30">▣</span>
-                            <span className="font-mono text-[11px] font-bold tracking-widest text-white/65">
+                            <span className="text-[12px] text-white/55">Salon</span>
+                            <span className="font-mono text-[12px] font-bold tracking-widest text-white/75">
                               {group.lobby}
                             </span>
-                            <span className="font-mono text-[11px] tabular-nums text-white/30">×{group.items.length}</span>
-                            <div className="flex-1 h-px bg-white/[0.05]" />
+                            <span className="text-[12px] tabular-nums text-white/55">
+                              · {group.items.length} ticket{group.items.length > 1 ? 's' : ''}
+                            </span>
+                            <div aria-hidden className="flex-1 h-px bg-white/[0.05]" />
                           </div>
                         )}
                         {group.items.map((t) => (
@@ -423,7 +395,9 @@ export const TicketsPanel = ({
           title={pendingDelete.kind === 'single'
             ? 'Supprimer ce ticket ?'
             : `Supprimer ${pendingDelete.ids.length} ticket${pendingDelete.ids.length > 1 ? 's' : ''} ?`}
-          message="Action irréversible. Les données seront effacées définitivement."
+          message={pendingDelete.kind === 'single'
+            ? 'Il sera effacé définitivement, impossible de revenir en arrière.'
+            : 'Ils seront effacés définitivement, impossible de revenir en arrière.'}
           confirmLabel="Supprimer"
           onConfirm={confirmDelete}
           onCancel={cancelDelete}

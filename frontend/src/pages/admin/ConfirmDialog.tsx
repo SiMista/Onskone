@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
+import { Icon } from '@iconify/react';
+import { FLOATING, btn } from './ui';
 
 export const ConfirmDialog = ({
   title, message, confirmLabel, onConfirm, onCancel, requireText,
@@ -12,6 +14,7 @@ export const ConfirmDialog = ({
   requireText?: string;
 }) => {
   const [typed, setTyped] = useState('');
+  const titleId = useId();
   const unlocked = !requireText || typed.trim().toUpperCase() === requireText.toUpperCase();
 
   useEffect(() => {
@@ -29,16 +32,19 @@ export const ConfirmDialog = ({
       onClick={onCancel}
     >
       <div
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-sm rounded-xl border border-red-400/30 bg-gradient-to-b from-[#171018] to-[#161a24] shadow-[0_30px_80px_-20px_rgba(248,113,113,0.25)] p-5 space-y-4"
+        className={`w-full max-w-sm ${FLOATING} p-5 space-y-4`}
       >
         <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-red-400" />
-          <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-red-200">danger zone</p>
+          <Icon icon="mdi:alert-outline" className="w-4 h-4 text-rose-300" aria-hidden />
+          <p className="text-[12px] font-semibold text-rose-200">À confirmer</p>
         </div>
         <div>
-          <h3 className="text-[16px] font-semibold tracking-tight text-white">{title}</h3>
-          <p className="mt-1 text-[13px] text-white/55">{message}</p>
+          <h3 id={titleId} className="text-[16px] font-semibold tracking-tight text-white">{title}</h3>
+          <p className="mt-1.5 text-[13px] leading-snug text-white/70">{message}</p>
         </div>
         {requireText && (
           <input
@@ -51,24 +57,26 @@ export const ConfirmDialog = ({
             autoCorrect="off"
             spellCheck={false}
             placeholder={`Tape ${requireText} pour confirmer`}
-            className="w-full bg-[#0f1117] text-white/90 border border-red-400/30 rounded-md px-3 py-2.5 text-[14px] font-mono
-              focus:outline-none focus:border-red-400/70 placeholder:text-white/25"
+            className="w-full bg-black/25 text-white/90 border border-rose-400/30 rounded-lg px-3 py-2.5 text-[14px] font-mono
+              focus:outline-none focus:border-rose-400/70 placeholder:text-white/40"
           />
         )}
         <div className="flex items-center gap-2 justify-end pt-1">
           <button
+            type="button"
             onClick={onCancel}
-            className="px-3 py-1.5 rounded-md border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-white/75 hover:text-white font-mono text-[11px] uppercase tracking-wider transition-colors"
+            className={btn('secondary')}
           >
             Annuler
           </button>
           <button
+            type="button"
             onClick={onConfirm}
             disabled={!unlocked}
             autoFocus={!requireText}
-            className="px-3 py-1.5 rounded-md border border-red-400/50 bg-red-500/20 hover:bg-red-500/35 text-red-100 font-mono text-[11px] font-bold uppercase tracking-wider transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            className={btn('danger')}
           >
-            ✕ {confirmLabel}
+            {confirmLabel}
           </button>
         </div>
       </div>

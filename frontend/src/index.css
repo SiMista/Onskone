@@ -370,15 +370,25 @@ img {
 
 body {
   @apply m-0 font-sans relative;
-  /* Fond : « ? » en filigrane (tile SVG, ~38 petits « ? » à 8-14 % de blanc) sur le halo de l'écran
-     de chargement (même dégradé que index.html, contraste légèrement renforcé) : aucune rupture entre le splash et l'app. */
+}
+
+/* Fond : « ? » en filigrane (tile SVG, ~38 petits « ? » à 8-14 % de blanc) sur le halo de l'écran
+   de chargement (même dégradé que index.html, contraste légèrement renforcé) : aucune rupture entre le splash et l'app.
+   Repris par les écrans bloquants (maj requise, maintenance) via .bg-brand-backdrop, qui pose en plus un
+   voile sombre (--brand-veil, 1re couche) pour signaler un écran « fermé » sans casser l'identité bleue. */
+body,
+.bg-brand-backdrop {
   background:
+    linear-gradient(var(--brand-veil, transparent), var(--brand-veil, transparent)),
     url('./assets/images/bg-question-marks.svg') 0 0 / 440px 560px repeat,
     radial-gradient(circle at 50% 56%,
       color-mix(in oklab, var(--color-brand-200) 88%, white) 0%,
       var(--color-brand-500) 35%,
       color-mix(in oklab, var(--color-brand-700) 88%, black) 100%);
   background-attachment: fixed;
+}
+.bg-brand-backdrop {
+  --brand-veil: rgb(8 26 46 / 0.34);
 }
 
 /* Scrollbar invisible pour les zones internes scrollables (feel app) */
@@ -1078,21 +1088,23 @@ button {
    PHASE 5 - ANSWER : papier ligné, tampon "ENVOYÉ", pliage, sablier
    ======================================================================== */
 
-/* Liquid glass : fond translucide flouté + halo intérieur + reflet supérieur.
-   Pensé pour les conteneurs admin posés sur un fond sombre dégradé. */
+/* Blocs de l'admin : aplat d'ardoise bleutée sombre (pas de dégradé : il se voit trop sur
+   les grands blocs), liseré de lumière sur l'arête supérieure et ombre portée profonde pour
+   décoller le bloc du fond. Translucide + flou : la trame du fond transparaît à peine.
+   Admin uniquement. */
 .surface-glass {
-  background-color: rgba(148, 163, 184, 0.10);
+  background-color: rgba(27, 32, 45, 0.88);
   backdrop-filter: blur(18px) saturate(160%);
   -webkit-backdrop-filter: blur(18px) saturate(160%);
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.08),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.02),
-    0 10px 28px -14px rgba(0, 0, 0, 0.6);
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.09),
+    0 1px 2px rgba(0, 0, 0, 0.35),
+    0 18px 40px -22px rgba(0, 0, 0, 0.85);
 }
 .surface-glass-hover:hover {
-  background-color: rgba(148, 163, 184, 0.16);
-  border-color: rgba(255, 255, 255, 0.18);
+  background-color: rgba(33, 39, 55, 0.92);
+  border-color: rgba(255, 255, 255, 0.16);
 }
 
 /* Shake léger quand le joueur clique submit */

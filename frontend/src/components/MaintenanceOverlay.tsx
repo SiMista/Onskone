@@ -2,7 +2,6 @@ import { useLocation } from 'react-router-dom';
 import { useLocale } from '../i18n';
 import { useMaintenance } from '../utils/maintenance';
 import { MaintenanceCard } from './MaintenanceCard';
-import { BRAND_BACKDROP } from './UpdateRequiredModal';
 
 // Pages qui restent accessibles pendant une maintenance : l'admin (c'est de là qu'on la
 // lève), le studio dev et les pages légales (obligatoires, sans rapport avec le jeu).
@@ -23,7 +22,7 @@ const MaintenanceOverlay = () => {
   if (!serverDown && !blockedByAdmin) return null;
 
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6" style={BRAND_BACKDROP}>
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6 bg-brand-backdrop">
       <MaintenanceCard
         title={serverDown ? t.maintenance.downTitle : t.maintenance.title}
         message={serverDown ? t.maintenance.downMessage : t.maintenance.message}

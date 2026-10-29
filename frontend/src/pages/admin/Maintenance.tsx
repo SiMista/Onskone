@@ -8,20 +8,22 @@ import { ConfirmDialog } from './ConfirmDialog';
 import { fetchAdminLobbies, fetchMaintenance, setMaintenanceMode } from '../../utils/adminDataApi';
 import { formatDate } from './shared';
 
-const MODES: { id: MaintenanceMode; title: string; desc: string }[] = [
+const MODES: { id: MaintenanceMode; title: string; desc: string; activeLabel: string }[] = [
   {
     id: 'new_games',
     title: 'Nouvelles parties seulement',
-    desc: 'Plus de création de salon ni de lancement de partie. Les parties en cours se terminent normalement.',
+    desc: 'Les parties déjà commencées se terminent normalement.',
+    activeLabel: 'Nouvelles parties bloquées',
   },
   {
     id: 'all',
     title: 'Tout couper',
-    desc: 'Écran de maintenance pour tout le monde, y compris en pleine partie. Les parties ne sont pas mises en pause : les manches continuent sans les joueurs (réponses vides, timers qui expirent) et peuvent se terminer avant la levée.',
+    desc: 'Même en pleine partie : les manches continuent sans les joueurs.',
+    activeLabel: 'Jeu coupé pour tous',
   },
 ];
 
-export const MaintenancePanel = ({ onStateChange }: { onStateChange?: (active: boolean) => void }) => {
+export const MaintenancePanel = ({ onStateChange }: { onStateChange?: (s: MaintenanceState) => void }) => {
   const showToast = useToast();
   const [state, setState] = useState<MaintenanceState | null>(null);
   const [playingLobbies, setPlayingLobbies] = useState<number | null>(null);
@@ -38,7 +40,7 @@ export const MaintenancePanel = ({ onStateChange }: { onStateChange?: (active: b
       setState(s);
       if (s.active) setMode(s.mode);
       if (lobbies) setPlayingLobbies(lobbies.filter((l) => l.phase === 'playing').length);
-      onStateChange?.(s.active);
+      onStateChange?.(s);
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Erreur', 'error');
     }
@@ -51,7 +53,7 @@ export const MaintenancePanel = ({ onStateChange }: { onStateChange?: (active: b
     try {
       const next = await setMaintenanceMode(active, active ? mode : undefined);
       setState(next);
-      onStateChange?.(next.active);
+      onStateChange?.(next);
       showToast(next.active ? 'Maintenance activée.' : 'Maintenance levée, le jeu est rouvert.', 'success');
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Erreur', 'error');
@@ -62,10 +64,10 @@ export const MaintenancePanel = ({ onStateChange }: { onStateChange?: (active: b
 
   const active = state?.active ?? false;
   const gamesLabel = playingLobbies === null ? null : `${playingLobbies} partie${playingLobbies > 1 ? 's' : ''} en cours`;
+  const modeLabel = MODES.find((m) => m.id === state?.mode)?.activeLabel;
   const statusPill = active
-    ? { tone: 'alert' as const, label: gamesLabel ? `Active · ${gamesLabel}` : 'Active' }
-    : gamesLabel ? { tone: 'neutral' as const, label: gamesLabel, icon: 'mdi:gamepad-variant-outline' } : null;
-  const modeLabel = MODES.find((m) => m.id === state?.mode)?.title;
+    ? { tone: 'alert' as const, label: `Active : ${modeLabel}` }
+    : { tone: 'ok' as const, label: 'Désactivée' };
 
   return (
     <div>
@@ -73,73 +75,59 @@ export const MaintenancePanel = ({ onStateChange }: { onStateChange?: (active: b
         tone="rose"
         icon="mdi:wrench-clock"
         title="Maintenance"
-        summary="Affiche l'écran de maintenance aux joueurs, en direct. La levée aussi."
+        summary="Ferme le jeu le temps d'une intervention : les joueurs voient un écran « maintenance », en direct."
         status={state ? statusPill : null}
+        meta={active && state?.since ? <p>Active depuis le {formatDate(state.since)}.</p> : null}
         loading={state === null}
         details={(
-          <>
-            <p>Appliqué en direct à tous les joueurs connectés, sans rechargement, et la levée aussi. Survit aux restarts du serveur.</p>
-            <p>Si le serveur crashe pour de vrai, les joueurs voient tout seuls un écran « serveur indisponible » : ce bouton ne sert que quand le back est vivant.</p>
-            <p>Les parties en cours restent en mémoire dans les deux modes : elles reprennent à la levée.</p>
-          </>
+          <ul className="list-disc pl-4 space-y-1">
+            <li>Effet immédiat, sans recharger, pour l'activation comme pour la levée. Survit aux redémarrages du serveur.</li>
+            <li>Inutile si le serveur plante : les joueurs voient déjà un écran « serveur indisponible ».</li>
+            <li>« Tout couper » ne met pas les parties en pause : elles continuent sans les joueurs.</li>
+          </ul>
         )}
       >
-        {state && (
+        {state && (active ? (
+          <DangerButton variant="safe" icon="mdi:lock-open-variant-outline" busy={busy} onClick={() => apply(false)}>
+            Lever la maintenance
+          </DangerButton>
+        ) : (
           <>
-            {active ? (
-              <div className="rounded-xl border border-rose-400/30 bg-rose-500/[0.08] p-3.5">
-                <p className="text-[14px] font-semibold text-rose-100">{modeLabel}</p>
-                {state.since && <p className="mt-0.5 text-[12px] text-white/50">depuis le {formatDate(state.since)}</p>}
-              </div>
-            ) : (
-              <div role="radiogroup" aria-label="Mode de maintenance" className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {MODES.map((m) => {
-                  const selected = mode === m.id;
-                  return (
-                    <button
-                      key={m.id}
-                      type="button"
-                      role="radio"
-                      aria-checked={selected}
-                      onClick={() => setMode(m.id)}
-                      className={`cursor-pointer text-left flex items-start gap-3 p-3.5 min-h-[44px] rounded-xl border transition-colors ${selected
-                        ? 'border-rose-400/60 bg-rose-500/10'
-                        : 'border-white/10 bg-white/[0.03] hover:border-white/25'
-                        }`}
-                    >
-                      <Icon icon={selected ? 'mdi:radiobox-marked' : 'mdi:radiobox-blank'} className={`w-5 h-5 mt-0.5 shrink-0 ${selected ? 'text-rose-300' : 'text-white/35'}`} />
-                      <span>
-                        <span className="block text-[14px] font-semibold text-white">{m.title}</span>
-                        <span className="block mt-0.5 text-[12px] leading-snug text-white/55">{m.desc}</span>
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            <div className="flex flex-col sm:flex-row gap-3">
-              {active ? (
-                <DangerButton variant="safe" icon="mdi:lock-open-variant-outline" busy={busy} onClick={() => apply(false)}>
-                  Lever la maintenance
-                </DangerButton>
-              ) : (
-                <DangerButton variant="danger" icon="mdi:alert-octagon-outline" busy={busy} onClick={() => setConfirming(true)}>
-                  Activer la maintenance
-                </DangerButton>
-              )}
+            <div role="radiogroup" aria-label="Que bloquer ?" className="rounded-lg border border-white/10 bg-black/25 divide-y divide-white/[0.06] overflow-hidden">
+              {MODES.map((m) => {
+                const selected = mode === m.id;
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    onClick={() => setMode(m.id)}
+                    className={`cursor-pointer w-full text-left flex items-start gap-3 px-3 py-2.5 min-h-[44px] transition-colors ${selected ? 'bg-rose-500/10' : 'hover:bg-white/[0.04]'}`}
+                  >
+                    <Icon icon={selected ? 'mdi:radiobox-marked' : 'mdi:radiobox-blank'} className={`w-5 h-5 mt-0.5 shrink-0 ${selected ? 'text-rose-300' : 'text-white/50'}`} />
+                    <span>
+                      <span className="block text-[14px] font-semibold text-white">{m.title}</span>
+                      <span className="block mt-0.5 text-[12px] leading-snug text-white/60">{m.desc}</span>
+                    </span>
+                  </button>
+                );
+              })}
             </div>
+            <DangerButton variant="danger" icon="mdi:alert-octagon-outline" busy={busy} onClick={() => setConfirming(true)}>
+              Activer la maintenance
+            </DangerButton>
           </>
-        )}
+        ))}
       </DangerCard>
 
       {confirming && createPortal(
         <ConfirmDialog
-          title={mode === 'all' ? 'Tout couper ?' : 'Bloquer les nouvelles parties ?'}
+          title={mode === 'all' ? 'Couper le jeu pour tout le monde ?' : 'Bloquer les nouvelles parties ?'}
           message={mode === 'all'
-            ? `Tous les joueurs verront l'écran de maintenance tout de suite, y compris les ${playingLobbies ?? '?'} partie(s) en cours. Elles ne sont pas mises en pause : les manches continuent sans les joueurs et peuvent se terminer avant la levée.`
-            : `Plus personne ne pourra créer de salon ni lancer de partie. Les ${playingLobbies ?? '?'} partie(s) en cours continuent.`}
-          confirmLabel="Activer"
+            ? `Tous les joueurs verront l'écran de maintenance tout de suite, même en pleine partie${gamesLabel ? ` (${gamesLabel})` : ''}. Les parties ne sont pas mises en pause : les manches continuent sans les joueurs et peuvent se finir avant que tu lèves la maintenance.`
+            : `Plus personne ne pourra créer de salon ni lancer de partie. Les parties déjà commencées${gamesLabel ? ` (${gamesLabel})` : ''} finissent normalement.`}
+          confirmLabel="Activer la maintenance"
           requireText={mode === 'all' ? 'MAINTENANCE' : undefined}
           onConfirm={() => { setConfirming(false); apply(true); }}
           onCancel={() => setConfirming(false)}

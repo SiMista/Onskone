@@ -1,35 +1,8 @@
 import { useMemo } from 'react';
+import { Icon } from '@iconify/react';
 import { Ticket, TicketStatus, TicketType } from '../../utils/ticketsApi';
 import { TYPE_META, STATUS_META, formatRelative } from './shared';
-
-const SectionLabel = ({ children }: { children: React.ReactNode }) => (
-  <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-white/55 font-bold mb-3">
-    {children}
-  </p>
-);
-
-const KpiCell = ({
-  label, value, hint, onClick,
-}: {
-  label: string;
-  value: number | string;
-  hint?: string;
-  onClick?: () => void;
-}) => {
-  const Tag = onClick ? 'button' : 'div';
-  return (
-    <Tag
-      onClick={onClick}
-      className={`text-left rounded-lg surface-glass surface-glass-hover transition-colors p-3 ${onClick ? 'cursor-pointer' : ''}`}
-    >
-      <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/40">{label}</p>
-      <p className="mt-1 text-[26px] font-semibold tracking-tight tabular-nums text-white leading-tight">
-        {value}
-      </p>
-      {hint && <p className="mt-0.5 font-mono text-[10px] text-white/35">{hint}</p>}
-    </Tag>
-  );
-};
+import { SectionLabel, KpiCell, EmptyState, PANEL, Strip, btn } from './ui';
 
 export const OverviewPanel = ({
   tickets, onJumpToTickets,
@@ -61,61 +34,82 @@ export const OverviewPanel = ({
     return { byStatus, byType, hotLobbies, recent };
   }, [tickets]);
 
-  const open = (stats.byStatus.new || 0) + (stats.byStatus.in_progress || 0);
+  const newCount = stats.byStatus.new || 0;
+  const inProgressCount = stats.byStatus.in_progress || 0;
+  const open = newCount + inProgressCount;
   const total = tickets.length || 1;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div>
         <SectionLabel>Vue d'ensemble</SectionLabel>
         <div className="grid grid-cols-2 gap-3">
-          <KpiCell label="Ouverts" value={open} hint={`${stats.byStatus.new || 0} nouveau · ${stats.byStatus.in_progress || 0} wip`} onClick={() => onJumpToTickets('new')} />
-          <KpiCell label="Résolus" value={stats.byStatus.resolved || 0} hint={`${stats.byStatus.wont_fix || 0} sans suite`} onClick={() => onJumpToTickets('resolved')} />
+          <KpiCell
+            label="À traiter"
+            value={open}
+            hint={`${newCount} nouveau${newCount > 1 ? 'x' : ''} · ${inProgressCount} en cours`}
+            onClick={() => onJumpToTickets('new')}
+          />
+          <KpiCell
+            label="Résolus"
+            value={stats.byStatus.resolved || 0}
+            hint={`+ ${stats.byStatus.wont_fix || 0} classé${(stats.byStatus.wont_fix || 0) > 1 ? 's' : ''} « ${STATUS_META.wont_fix.label} »`}
+            onClick={() => onJumpToTickets('resolved')}
+          />
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         <div className="lg:col-span-3">
-          <div className="flex items-baseline justify-between mb-3">
-            <SectionLabel>Derniers tickets</SectionLabel>
-            <button
-              onClick={() => onJumpToTickets()}
-              className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/35 hover:text-amber-200 transition-colors cursor-pointer"
-            >
-              voir tout →
-            </button>
-          </div>
+          <SectionLabel
+            right={(
+              <button
+                type="button"
+                onClick={() => onJumpToTickets()}
+                className={btn('ghost', 'sm')}
+              >
+                Voir tous les tickets
+                <Icon icon="mdi:chevron-right" className="w-4 h-4" aria-hidden />
+              </button>
+            )}
+          >
+            Derniers tickets
+          </SectionLabel>
           {stats.recent.length === 0 ? (
-            <div className="rounded-lg surface-glass py-10 text-center font-mono text-[11px] uppercase tracking-[0.22em] text-white/30">
-              inbox vide
-            </div>
+            <EmptyState
+              icon="mdi:inbox-outline"
+              title="Aucun ticket pour l'instant"
+              hint="Les signalements envoyés depuis le jeu (bug, question pourrie, idée) apparaîtront ici."
+            />
           ) : (
-            <div className="rounded-lg surface-glass overflow-hidden divide-y divide-white/[0.04]">
+            <div className={`${PANEL} overflow-hidden divide-y divide-white/[0.06]`}>
               {stats.recent.map((t) => {
                 const type = TYPE_META[t.type];
                 const status = STATUS_META[t.status];
                 return (
                   <button
+                    type="button"
                     key={t.id}
                     onClick={() => onJumpToTickets()}
-                    className="w-full text-left px-3 py-2.5 hover:bg-white/[0.025] transition-colors cursor-pointer flex items-start group"
+                    className="relative w-full text-left px-3 py-2.5 pl-4 hover:bg-white/[0.03] transition-colors cursor-pointer flex items-start group"
                   >
+                    <Strip color={type.dot} row />
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-                        <span className={`px-1.5 py-0.5 rounded border font-mono text-[10px] uppercase tracking-wider inline-flex items-center gap-1 ${type.chip}`}>
-                          <span aria-hidden className="text-[11px] leading-none">{type.glyph}</span>
+                      <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                        <span className={`inline-flex items-center gap-1 text-[12px] font-semibold ${type.text}`}>
+                          <Icon icon={type.icon} className="w-4 h-4" aria-hidden />
                           {type.label}
                         </span>
-                        <span className={`inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider ${status.text}`}>
-                          <span aria-hidden className={`inline-block h-1.5 w-1.5 rounded-full ${status.dot}`} />
+                        <span className={`inline-flex items-center gap-1 text-[12px] font-medium ${status.text}`}>
+                          <Icon icon={status.icon} className="w-3.5 h-3.5" aria-hidden />
                           {status.label}
                         </span>
                         {t.lobby_code && (
-                          <span className="font-mono text-[10px] tracking-widest font-bold text-white/55">{t.lobby_code}</span>
+                          <span className="font-mono text-[12px] tracking-widest font-bold text-white/60" title={`Salon ${t.lobby_code}`}>{t.lobby_code}</span>
                         )}
-                        <span className="ml-auto font-mono text-[10px] text-white/35 tabular-nums whitespace-nowrap">{formatRelative(t.created_at)}</span>
+                        <span className="ml-auto text-[12px] text-white/50 tabular-nums whitespace-nowrap">{formatRelative(t.created_at)}</span>
                       </div>
-                      <p className="text-[12.5px] text-white/85 leading-snug line-clamp-1 group-hover:text-white transition-colors">
+                      <p className="text-[13px] text-white/85 leading-snug line-clamp-1 group-hover:text-white transition-colors">
                         {t.message}
                       </p>
                     </div>
@@ -128,23 +122,26 @@ export const OverviewPanel = ({
 
         <div className="lg:col-span-2 space-y-5">
           <div>
-            <SectionLabel>Lobbies signalés</SectionLabel>
+            <SectionLabel>Salons signalés plusieurs fois</SectionLabel>
             {stats.hotLobbies.length === 0 ? (
-              <div className="rounded-lg surface-glass py-6 text-center font-mono text-[11px] text-white/30">
-                aucun lobby récurrent
-              </div>
+              <EmptyState
+                title="Aucun salon signalé plusieurs fois"
+                hint="Un salon apparaît ici dès qu'il reçoit au moins 2 tickets : souvent le signe d'un vrai souci dans cette partie."
+              />
             ) : (
-              <div className="rounded-lg surface-glass overflow-hidden divide-y divide-white/[0.04]">
+              <div className={`${PANEL} overflow-hidden divide-y divide-white/[0.06]`}>
                 {stats.hotLobbies.map(([code, count]) => (
                   <button
+                    type="button"
                     key={code}
                     onClick={() => onJumpToTickets()}
-                    className="w-full text-left px-3 py-2 hover:bg-white/[0.025] transition-colors cursor-pointer flex items-center gap-2"
+                    className="w-full text-left px-3 py-2 min-h-[40px] hover:bg-white/[0.03] transition-colors cursor-pointer flex items-center gap-2"
                   >
-                    <span className="text-rose-300 text-[12px]" title="récurrent">●</span>
-                    <span className="font-mono text-[12px] font-bold tracking-widest text-white/85">{code}</span>
-                    <span className="ml-auto font-mono text-[11px] tabular-nums text-white/55">
-                      ×{count} tickets
+                    <Icon icon="mdi:alert-circle-outline" className="w-4 h-4 text-rose-300" aria-hidden />
+                    <span className="text-[12px] text-white/55">Salon</span>
+                    <span className="font-mono text-[13px] font-bold tracking-widest text-white/85">{code}</span>
+                    <span className="ml-auto text-[12px] tabular-nums text-white/65">
+                      {count} tickets
                     </span>
                   </button>
                 ))}
@@ -153,25 +150,27 @@ export const OverviewPanel = ({
           </div>
 
           <div>
-            <SectionLabel>Par type</SectionLabel>
-            <div className="rounded-lg surface-glass p-3 space-y-2.5">
+            <SectionLabel>Tickets par type</SectionLabel>
+            <div className={`${PANEL} p-3 space-y-3`}>
               {(['bug', 'question_report', 'suggestion'] as TicketType[]).map((t) => {
                 const n = stats.byType[t] || 0;
                 const pct = Math.round((n / total) * 100);
                 return (
                   <button
+                    type="button"
                     key={t}
                     onClick={() => onJumpToTickets(undefined, t)}
                     className="group w-full text-left cursor-pointer"
+                    title={`Voir les tickets « ${TYPE_META[t].label} »`}
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span className="flex items-center gap-1.5">
-                        <span aria-hidden className="font-mono text-[12px] leading-none text-white/75">{TYPE_META[t].glyph}</span>
-                        <span className="font-mono text-[11px] text-white/75 group-hover:text-white transition-colors">
+                        <Icon icon={TYPE_META[t].icon} className={`w-4 h-4 ${TYPE_META[t].text}`} aria-hidden />
+                        <span className="text-[13px] text-white/80 group-hover:text-white transition-colors">
                           {TYPE_META[t].label}
                         </span>
                       </span>
-                      <span className="font-mono text-[11px] tabular-nums text-white/55">{n}</span>
+                      <span className="text-[13px] tabular-nums text-white/65">{n}</span>
                     </div>
                     <div className="h-1 rounded-full bg-white/[0.04] overflow-hidden">
                       <div
