@@ -8,10 +8,21 @@ packages:
   # Types partagés
   - 'shared'
 
+# Deps autorisées à lancer leur script d'install (binaires natifs). Deux clés pour
+# la même liste : pnpm 11+ ne lit que `allowBuilds` (et plante l'install sur un
+# build non approuvé), pnpm 9/10 ne lisent que `onlyBuiltDependencies`.
 allowBuilds:
-  esbuild: set this to true or false
+  better-sqlite3: true
+  esbuild: true
+  sharp: true
 
 onlyBuiltDependencies:
   - better-sqlite3
   - esbuild
   - sharp
+
+# Doublon voulu de `pnpm.overrides` du package.json racine : pnpm 11+ ignore ce
+# champ, pnpm 9 (Codemagic) ne lit que lui. Les deux doivent rester identiques,
+# sinon `pnpm install --frozen-lockfile` refuse le lockfile.
+overrides:
+  socket.io-parser: '>=4.2.7'
