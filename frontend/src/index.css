@@ -1361,6 +1361,22 @@ button {
   60%  { opacity: 0.9; }
   100% { transform: translateX(240%) skewX(-18deg); opacity: 0; }
 }
+/* Le reflet doit épouser les coins arrondis du conteneur. Sur iOS (WebKit), un
+   enfant animé en `transform` passe sur sa propre couche et échappe au clip
+   `overflow: hidden` + `border-radius` du parent : le reflet débordait des coins.
+   L'élément se clippe donc lui-même (rayon hérité du conteneur), et le masque
+   force WebKit à appliquer ce rayon à la couche animée (correctif WebKit
+   classique, sans effet visuel ailleurs). Le masque isole le groupe de
+   composition : le blend `overlay` est donc porté ici et non par le ::after,
+   qui n'aurait plus que du transparent sous lui. Masque sur ce calque et PAS sur
+   le conteneur : sur le conteneur, il couperait aussi son ombre empilée. */
+.premium-sweep {
+  overflow: hidden;
+  border-radius: inherit;
+  mix-blend-mode: overlay;
+  -webkit-mask-image: -webkit-radial-gradient(white, black);
+  mask-image: radial-gradient(white, black);
+}
 .premium-sweep::after {
   content: '';
   position: absolute;
@@ -1376,7 +1392,6 @@ button {
     transparent 100%
   );
   animation: premium-sweep 2.6s ease-in-out 0.4s 1 both;
-  mix-blend-mode: overlay;
 }
 
 /* Glow doré resserré pour le cadre avatar : lueur douce qui respire, SANS gros

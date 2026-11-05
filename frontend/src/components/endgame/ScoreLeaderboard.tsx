@@ -3,6 +3,7 @@ import { Icon } from '@iconify/react';
 import type { IPlayer, IRound, LeaderboardEntry } from '@onskone/shared';
 import Avatar from '../Avatar';
 import PremiumName from '../PremiumName';
+import AnswerText from '../AnswerText';
 import { useLocale } from '../../i18n';
 
 interface ScoreLeaderboardProps {
@@ -25,7 +26,7 @@ const PODIUM_COLORS = [
 /**
  * Carte des scores individuels (classement final) avec, pour chaque joueur
  * ayant été pilier, un popover montrant sa question reçue, son nombre de bonnes
- * réponses et les joueurs qu'il a bien devinés.
+ * réponses, et un bouton par joueur (✓ bien deviné / ✗ raté) qui affiche sa réponse.
  * L'état d'ouverture/animation du popover est local à ce composant.
  */
 const ScoreLeaderboard: React.FC<ScoreLeaderboardProps> = ({
@@ -50,6 +51,8 @@ const ScoreLeaderboard: React.FC<ScoreLeaderboardProps> = ({
   const [renderedPopoverFor, setRenderedPopoverFor] = useState<string | null>(null);
   const [popoverVisible, setPopoverVisible] = useState(false);
   const popoverRef = useRef<HTMLDivElement | null>(null);
+  // Joueur dont la réponse est affichée dans le popover ouvert (un seul à la fois).
+  const [shownAuthorId, setShownAuthorId] = useState<string | null>(null);
 
   // Gestion mount/unmount différé pour permettre l'animation de fermeture
   useEffect(() => {
@@ -121,24 +124,24 @@ const ScoreLeaderboard: React.FC<ScoreLeaderboardProps> = ({
           const hasQuestion = !!(round && round.selectedQuestion);
           const isOpen = openPopoverFor === entry.player.id;
           const isRendered = renderedPopoverFor === entry.player.id;
-          // Joueurs que ce pilier a bien devinés (liste calculée par le serveur,
-          // cohérente avec son score). En mode "Devine ma réponse", l'entrée
+          // Réponses du round (fin de partie = phase REVEAL, donc exposées par le
+          // serveur), chacune marquée bien devinée ou non (liste calculée par le
+          // serveur, cohérente avec le score). En mode "Devine ma réponse", l'entrée
           // portant l'id du PILIER est la réponse que le substitut a écrite à sa
-          // place : le pilier a bien reconnu « sa » réponse, on affiche donc son
-          // nom suivi de l'auteur réel, ex. « Bob (par Alice) ». Sans ça, le
-          // substitut apparaissait deux fois (sa réponse + celle du pilier).
+          // place : on affiche le nom du pilier suivi de l'auteur réel, ex.
+          // « Bob (par Alice) ». Sans ça, le substitut apparaissait deux fois.
           const substituteName = round?.substitutePlayerId
             ? playerNameById.get(round.substitutePlayerId)
             : undefined;
-          const correctNames = (round?.correctPlayerIds ?? [])
-            .map(id => {
-              const name = playerNameById.get(id);
-              if (!name) return undefined;
-              return id === entry.player.id && substituteName
-                ? `${name} ${t.endGame.byPlayer(substituteName)}`
-                : name;
-            })
-            .filter((n): n is string => !!n);
+          const correctIds = new Set(round?.correctPlayerIds ?? []);
+          const leaderName = playerNameById.get(entry.player.id);
+          const answerEntries = [
+            ...Object.entries(round?.answers ?? {}).map(([id, text]) => ({ id, label: playerNameById.get(id), text })),
+            ...(round?.guessMyAnswerMode && round.substituteAnswer && substituteName && leaderName
+              ? [{ id: entry.player.id, label: `${leaderName} ${t.endGame.byPlayer(substituteName)}`, text: round.substituteAnswer }]
+              : []),
+          ].filter((a): a is { id: string; label: string; text: string } => !!a.label);
+          const shownEntry = isOpen ? answerEntries.find(a => a.id === shownAuthorId) : undefined;
           // Bonnes réponses RÉELLES du pilier sur son round : le score qu'il y a
           // marqué (1 point par attribution juste, bonus de similarité inclus).
           const correctCount = round?.scores?.[entry.player.id] ?? 0;
@@ -191,6 +194,7 @@ const ScoreLeaderboard: React.FC<ScoreLeaderboardProps> = ({
                       onClick={(e) => {
                         e.stopPropagation();
                         setOpenPopoverFor(isOpen ? null : entry.player.id);
+                        setShownAuthorId(null);
                       }}
                       className="flex items-center justify-center w-7 h-7 md:w-8 md:h-8 rounded-full border-[2px] border-black bg-white hover:bg-gray-100 active:scale-95 transition-transform cursor-pointer text-gray-800"
                     >
@@ -212,10 +216,39 @@ const ScoreLeaderboard: React.FC<ScoreLeaderboardProps> = ({
                         <p className="text-xs font-display font-bold uppercase tracking-wider text-gray-500 leading-tight">
                           {t.endGame.correctAnswersCount(correctCount)}
                         </p>
-                        {correctNames.length > 0 && (
-                          <p className="mt-1 text-sm text-gray-900 leading-snug">
-                            {correctNames.join(', ')}
-                          </p>
+                        {answerEntries.length > 0 && (
+                          <>
+                            <p className="mt-1 text-xs text-gray-500 leading-tight">{t.endGame.answersHint}</p>
+                            <div className="mt-1.5 flex flex-wrap gap-1.5">
+                              {answerEntries.map(a => {
+                                const correct = correctIds.has(a.id);
+                                const shown = shownEntry?.id === a.id;
+                                return (
+                                  <button
+                                    key={a.id}
+                                    type="button"
+                                    aria-pressed={shown}
+                                    onClick={() => setShownAuthorId(shown ? null : a.id)}
+                                    className={`inline-flex items-center gap-1 max-w-full px-2 py-0.5 rounded-full border-2 border-black text-xs font-semibold text-gray-900 cursor-pointer active:scale-95 transition-transform ${shown ? 'bg-cream-answer stack-shadow-sm' : 'bg-white hover:bg-gray-100'}`}
+                                  >
+                                    <Icon
+                                      icon={correct ? 'mdi:check-bold' : 'mdi:close-thick'}
+                                      width="1.1em"
+                                      height="1.1em"
+                                      className={`shrink-0 ${correct ? 'text-success-700' : 'text-danger-500'}`}
+                                      aria-label={correct ? t.phases.reveal.authorCorrect : t.phases.reveal.authorWrong}
+                                    />
+                                    <span className="truncate">{a.label}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            {shownEntry && (
+                              <div className="mt-2 rounded-lg border-2 border-black bg-cream-answer px-2.5 py-1.5">
+                                <AnswerText text={shownEntry.text} className="m-0 text-sm leading-snug break-words" />
+                              </div>
+                            )}
+                          </>
                         )}
                         <span className="popover-notch" aria-hidden />
                       </div>

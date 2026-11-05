@@ -274,7 +274,7 @@ const ThemePickerModal = ({ isOpen, onClose, catalog, selected, mode, hostName, 
                       className={`group relative flex items-stretch w-full text-left border-[2.5px] rounded-2xl overflow-hidden bg-white min-h-[96px] md:min-h-[112px] transition-all duration-200 ${goldFrame ? 'border-premium-600' : 'border-black'} ${isEditable ? 'cursor-pointer active:scale-[0.98]' : 'cursor-default'
                         } ${active
                           ? 'stack-shadow-sm opacity-100'
-                          : 'opacity-55 grayscale-[60%]'
+                          : 'opacity-45 grayscale'
                         }`}
                     >
                       {/* Bloc illustration emoji - dégradé diagonal pour le relief */}

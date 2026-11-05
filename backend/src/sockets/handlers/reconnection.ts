@@ -33,6 +33,23 @@ export function tokenMatches(player: ServerPlayer, token: string | undefined): b
 }
 
 /**
+ * Le slot qui porte ce pseudo (insensible à la casse : « Loic » = « loic ») et si
+ * l'arrivant en est le propriétaire PROUVÉ : même socket, ou secret valide. Partagé
+ * par checkPlayerName et joinLobby. Le propriétaire prouvé n'est pas « un autre
+ * joueur » : son slot est épargné par le nettoyage et il s'y rattache. Sans preuve,
+ * le pseudo est pris (ou le fantôme est purgé par le nettoyage s'il est mort).
+ */
+export function findNameSlot(
+    lobby: Lobby,
+    name: string,
+    socketId: string,
+    token: string | undefined,
+): { slot: ServerPlayer | undefined; isOwner: boolean } {
+    const slot = lobby.players.find(p => p.name.toLowerCase() === name.toLowerCase());
+    return { slot, isOwner: !!slot && (slot.socketId === socketId || tokenMatches(slot, token)) };
+}
+
+/**
  * Secret provisoire remis à qui reprend le slot SANS preuve (cf. reclaimPlayer).
  * Le secret d'origine reste valide : si son détenteur revient, il est le propriétaire
  * prouvé, reprend le slot (éviction du socket courant) et le secret provisoire est

@@ -44,14 +44,21 @@ export const hapticSuccess = () => {
   }
 };
 
-// Avertissement : ta réponse est la PROCHAINE à être révélée (reveal local). Plus
-// léger que hapticAssigned (un seul tap), mais Medium : un Light passait inaperçu
-// sur un téléphone posé à plat.
+// Avertissement : ta réponse est la PROCHAINE à être révélée (reveal local). Rejoué
+// périodiquement tant que c'est le cas (cf. RevealPlayerLocalView). Vraie vibration
+// et non plus un tap d'impact : le téléphone est posé sur la table, parfois sous une
+// main ou un verre, et un Medium unique passait inaperçu.
 export const hapticNextToReveal = () => {
   if (vibrationOff()) return;
   if (isNative) {
-    Haptics.impact({ style: ImpactStyle.Medium }).catch(() => { /* haptics best-effort */ });
+    // iOS ignore la durée (buzz système fixe), Android la respecte.
+    Haptics.vibrate({ duration: 300 }).catch(() => { /* haptics best-effort */ });
   } else {
-    webVibrate(80);
+    webVibrate([200, 100, 200]);
   }
 };
+
+/** Rythme du rappel « tu es le prochain » : un buzz toutes les 4 s, 1 min max
+ *  (le pilier peut traîner, inutile de vider la batterie sur la table). */
+export const NEXT_TO_REVEAL_BUZZ_MS = 4000;
+export const NEXT_TO_REVEAL_MAX_BUZZES = 15;

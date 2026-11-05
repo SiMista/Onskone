@@ -814,9 +814,20 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
                 return;
             }
 
+            const round = game.currentRound as Round;
+            // GUESSING uniquement : appelé pendant ANSWERING / SUBSTITUTE_ANSWERING, le
+            // pool sortait SANS la réponse du substitut ; un client modifié n'avait plus
+            // qu'à le comparer au pool final pour démasquer « la » réponse du pilier.
+            // Et seul un socket attaché à un slot du salon peut lire le pool. Refus
+            // silencieux : GuessingPhase relance la demande toutes les 3 s.
+            if (round.phase !== RoundPhase.GUESSING) return;
+            if (!lobby.players.some(p => p.socketId === socket.id)) {
+                logger.warn(`requestShuffledAnswers refusé : socket hors du salon`, { lobbyCode: lobby.code, socketId: socket.id });
+                return;
+            }
+
             // Réponses dans l'ordre stable du round (réutilise l'ordre stocké en
             // reconnexion, sinon mélange une 1re fois) — incl. la réponse du substitut.
-            const round = game.currentRound as Round;
             const orderedAnswers = round.getOrderedGuessingAnswers();
 
             // En mode remote, broadcaster à toute la room; sinon seulement au pilier

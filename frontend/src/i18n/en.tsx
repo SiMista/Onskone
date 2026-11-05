@@ -44,6 +44,8 @@ export const en: Dictionary = {
     message: 'A new version is available. Update Onskoné to keep playing.',
     cta: 'Update',
     ctaWeb: 'Reload',
+    report: 'Trouble updating? Let us know',
+    reportSent: 'Thanks, your report has been sent!',
   },
 
   maintenance: {
@@ -191,6 +193,8 @@ export const en: Dictionary = {
       joinRefused: 'This name is already taken in this lobby, or your session expired.',
       playerJoined: (name) => `${name} joined the lobby`,
       playerLeft: (name) => `${name} left the lobby`,
+      soundHint: 'Turn the sound up: Onskoné is way better with it!',
+      soundHintIos: 'Turn the sound up and switch off silent mode: Onskoné is way better with it!',
     },
     playerMenu: {
       trigger: 'Player options',
@@ -227,10 +231,11 @@ export const en: Dictionary = {
     quit: 'Quit',
     individualScores: 'Individual scores',
     points: (n) => `${n} pt${n > 1 ? 's' : ''}`,
-    unranked: 'Unranked',
+    unranked: 'Never the pillar',
     receivedQuestion: 'Question received',
     correctAnswersCount: (n) => `${n} Correct answer${n > 1 ? 's' : ''}`,
     byPlayer: (name) => `(by ${name})`,
+    answersHint: 'Tap a player to see their answer',
     aria: {
       seeReceivedQuestion: 'See the received question',
     },
@@ -606,7 +611,6 @@ export const en: Dictionary = {
   },
 
   funFacts: [
-    "It's statistically safer to bet on a Kylian Mbappé goal than on a goal by the referee.",
     "Onskoné has created 10 couples. Amazing! (and destroyed 35)",
     "The round's pillar who ends with 0 correct answers has a 50% chance of being bad and a 50% chance of being drunk.",
     "Your husband or wife didn't guess a single one of your answers the whole game? That's valid grounds for a breakup (Article 711 of the Civil Code)",
@@ -754,7 +758,6 @@ export const en: Dictionary = {
         rolePlayer: 'PLAYER',
         leaderText: 'Read the answers out loud and guess who wrote what!',
         playerLocalText: 'Turn your phone sideways and show your screen to everyone!',
-        playerRemoteText: 'The leader is assigning the answers. Watch the screen and cross your fingers!',
       },
     },
     reveal: {

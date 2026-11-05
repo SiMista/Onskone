@@ -28,9 +28,11 @@ interface ReportModalProps {
   onClose: () => void;
   extraContext?: string;
   defaultType?: TicketType;
+  /** Appelé après un envoi réussi (en plus du toast), avant `onClose`. */
+  onSent?: () => void;
 }
 
-const ReportModal = ({ isOpen, onClose, extraContext, defaultType }: ReportModalProps) => {
+const ReportModal = ({ isOpen, onClose, extraContext, defaultType, onSent }: ReportModalProps) => {
   const [selectedType, setSelectedType] = useState<TicketType | null>(defaultType ?? null);
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -70,6 +72,7 @@ const ReportModal = ({ isOpen, onClose, extraContext, defaultType }: ReportModal
       });
       showToast(t.report.success, 'success');
       reset();
+      onSent?.();
       onClose();
     } catch (err) {
       const msg =

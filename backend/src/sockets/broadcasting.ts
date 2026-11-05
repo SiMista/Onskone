@@ -243,8 +243,10 @@ export function transitionToGuessing(io: IoServer, lobbyCode: string, lobby: Lob
     // pilier (émis une fois au montage de son écran) armait un timeout, et la phase
     // figeait pour toute la table si le pilier était en arrière-plan à cet instant.
     // Départ décalé de l'overlay d'intro : il bloque l'écran, le temps ne doit pas
-    // couler dessous.
-    armServerTimerForPhase(io, lobbyCode, lobby, currentRound, GAME_CONSTANTS.GUESSING_INTRO_MS);
+    // couler dessous. Pas d'intro à distance (chacun sur son écran, rien à montrer
+    // à la table), donc pas de décalage non plus.
+    const introMs = lobby.gameMode === 'remote' ? 0 : GAME_CONSTANTS.GUESSING_INTRO_MS;
+    armServerTimerForPhase(io, lobbyCode, lobby, currentRound, introMs);
 }
 
 /**

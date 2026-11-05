@@ -112,16 +112,19 @@ const RevealAuthorOverlay = ({ name, avatarId, premium = false, correct, onDone 
     <div
       role="status"
       aria-label={`${name} - ${stateLabel}`}
-      className="animate-reveal-author-backdrop reveal-author-bg fixed inset-0 z-[100] flex flex-col items-center justify-center gap-5 px-6 overflow-hidden"
+      className="animate-reveal-author-backdrop reveal-author-bg fixed inset-0 z-[100] flex flex-col items-center justify-center gap-5 px-6 overflow-hidden landscape:grid landscape:grid-cols-[auto_auto] landscape:content-center landscape:justify-center landscape:gap-x-10 landscape:gap-y-3"
       style={{
         animationDuration: `${GAME_CONSTANTS.REVEAL_AUTHOR_OVERLAY_MS}ms`,
         // Vert si bien deviné, rouge sinon (le doré premium reste sur l'anneau et le pseudo).
         '--burst-color': correct ? 'var(--color-success-500)' : 'var(--color-danger-500)',
       } as React.CSSProperties}
     >
-      <p className="animate-reveal-author-name relative text-display-xs text-white/70">{t.phases.reveal.writtenBy}</p>
+      {/* Paysage : peu de hauteur, de la largeur à revendre. Avatar à gauche (sur
+          deux lignes), « Écrit par » + pseudo empilés à droite, au lieu de tout
+          empiler sous la bulle. Portrait : colonne centrée. */}
+      <p className="animate-reveal-author-name relative text-display-xs text-white/70 landscape:!text-base landscape:col-start-2 landscape:row-start-1 landscape:self-end">{t.phases.reveal.writtenBy}</p>
 
-      <div className="animate-reveal-author-avatar relative w-[min(45vw,45vh,16rem)] aspect-square">
+      <div className="animate-reveal-author-avatar relative w-[min(45vw,45vh,16rem)] aspect-square landscape:w-[min(35vw,55vh,16rem)] landscape:col-start-1 landscape:row-start-1 landscape:row-span-2">
         <div aria-hidden className="reveal-author-halo absolute inset-[-45%] rounded-full" />
         <div className={`relative w-full h-full ${correct ? '' : 'animate-reveal-author-shake'}`}>
           <div className={`reveal-author-ring w-full h-full rounded-full ${premium ? '' : 'border-4 border-white'}`}>
@@ -135,12 +138,12 @@ const RevealAuthorOverlay = ({ name, avatarId, premium = false, correct, onDone 
       </div>
 
       {/* Pseudo sur sticker papier crème (même langage que les cartes du jeu) */}
-      <div className="animate-reveal-author-name relative max-w-full">
+      <div className="animate-reveal-author-name relative max-w-full landscape:max-w-[50vw] landscape:col-start-2 landscape:row-start-2 landscape:self-start landscape:justify-self-start">
         <div className="bg-cream-player border-2 border-black rounded-2xl stack-shadow-lg texture-paper px-6 py-2 -rotate-2">
           <PremiumName
             name={name}
             premium={premium}
-            className="block font-sans font-bold text-4xl tablet:text-5xl leading-tight text-black text-center break-words"
+            className="block font-sans font-bold text-4xl tablet:text-5xl landscape:!text-[length:min(16vh,5rem)] leading-tight text-black text-center break-words"
           />
         </div>
       </div>

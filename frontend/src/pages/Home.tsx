@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import socket from '../utils/socket';
 import Logo from '../components/Logo';
 import Frame from '../components/Frame';
@@ -20,7 +20,7 @@ import { useToast } from '../components/Toast';
 import type { Locale, IPlayer, ReclaimablePlayer } from '@onskone/shared';
 import BackButton from '../components/BackButton';
 import { Icon } from '@iconify/react';
-import { useSocketEvent } from '../hooks';
+import { useSocketEvent, useReconnectOnVisible } from '../hooks';
 import { useDocumentMeta } from '../hooks/useDocumentMeta';
 import { GameMode, GameStatus, isGameSpeed } from '@onskone/shared';
 import { GAME_CONFIG, AVATARS } from '../constants/game';
@@ -38,6 +38,7 @@ import {
   storeLobbyIdentity,
   getLastGame,
   clearLastGame,
+  getReconnectToken,
 } from '../utils/playerHelpers';
 import ReclaimPlayerModal from '../components/ReclaimPlayerModal';
 
@@ -165,6 +166,7 @@ const Home = () => {
   const [hostName, setHostName] = useState<string | null>(null);
   const [lobbyExists, setLobbyExists] = useState<boolean | null>(null);
   const [searchParams] = useSearchParams();
+  const { key: locationKey } = useLocation();
   const navigate = useNavigate();
   const showToast = useToast();
 
@@ -184,12 +186,38 @@ const Home = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Récupère les infos du lobby quand un code est présent dans l'URL
-  useEffect(() => {
-    if (lobbyCode) {
-      socket.emit('getLobbyInfo', { lobbyCode });
-    }
+  // Récupère les infos du lobby quand un code est présent dans l'URL.
+  // Lien d'invitation ouvert app DÉJÀ lancée (sortie d'arrière-plan) : socket.io
+  // croit encore la socket connectée (un zombie n'est détecté qu'au ping timeout,
+  // ~25 s) alors que l'OS l'a fermée ; la demande part dans le vide et l'écran
+  // restait sur « Vérification du salon... ». D'où : nouvelle demande à chaque
+  // navigation (même URL comprise : re-taper le lien relance), à chaque
+  // reconnexion / retour au premier plan, et reconnexion forcée sans réponse.
+  const checkLobby = useCallback(() => {
+    if (lobbyCode) socket.emit('getLobbyInfo', { lobbyCode });
   }, [lobbyCode]);
+
+  useEffect(() => {
+    // Home reste monté d'un code à l'autre : ne pas afficher l'état de l'ancien salon.
+    setLobbyExists(null);
+    setHostName(null);
+    checkLobby();
+  }, [checkLobby, locationKey]);
+
+  useReconnectOnVisible(checkLobby);
+
+  // Pas de réponse en 4 s : socket zombie, on coupe/relance (le `connect` de
+  // useReconnectOnVisible renvoie la demande), comme forceReconnect (useGameState).
+  useEffect(() => {
+    if (!lobbyCode || lobbyExists !== null) return;
+    const timer = setTimeout(() => {
+      if (socket.connected) {
+        socket.disconnect();
+        socket.connect();
+      }
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [lobbyCode, lobbyExists, locationKey]);
 
   // Studio : création auto du lobby (slot 0 / hôte).
   const autoFiredRef = useRef(false);
@@ -211,7 +239,7 @@ const Home = () => {
     const name = urlPlayerName || playerName;
     if (!name?.trim()) return;
     autoFiredRef.current = true;
-    socket.emit('checkPlayerName', { lobbyCode, playerName: name });
+    socket.emit('checkPlayerName', { lobbyCode, playerName: name, reconnectToken: getReconnectToken(lobbyCode) });
   }, [autoJoin, lobbyCode, lobbyExists, urlPlayerName, playerName]);
 
   // Pas de paywall promo automatique à l'ouverture : le premium ne s'ouvre que
@@ -260,7 +288,9 @@ const Home = () => {
       return;
     }
     rememberIdentity(playerName, avatarId);
-    socket.emit('checkPlayerName', { lobbyCode, playerName });
+    // Le token prouve que le slot de ce pseudo est le NÔTRE (parti sans que le
+    // serveur le sache) : ce n'est alors pas un pseudo « pris », on s'y rattache.
+    socket.emit('checkPlayerName', { lobbyCode, playerName, reconnectToken: getReconnectToken(lobbyCode) });
   }, [lobbyCode, playerName, avatarId, showToast, t]);
 
   const handleLobbyCreated = useCallback((data: { lobbyCode: string; reconnectToken: string }) => {
@@ -319,8 +349,16 @@ const Home = () => {
       socket.emit('getLobbyInfo', { lobbyCode: reclaim.lobbyCode });
       return;
     }
+    // Salon disparu entre-temps (ex. vidé de ses fantômes au moment de rejoindre) :
+    // toast traduit, et on revérifie le code de l'URL pour quitter le formulaire
+    // « Rejoindre » d'un salon mort (réponse exists:false → retour à l'accueil).
+    if (data.code === 'NOT_FOUND' && lobbyCode && !reclaim) {
+      showToast(t.home.toasts.lobbyNotFound, 'error');
+      checkLobby();
+      return;
+    }
     showToast(data.message, 'error');
-  }, [showToast, reclaim, t]);
+  }, [showToast, reclaim, t, lobbyCode, checkLobby]);
 
   // Partie en cours : impossible d'y entrer en nouveau joueur. Seule issue, reprendre
   // la place d'un joueur déconnecté (session perdue). Liste vide = personne de
@@ -376,8 +414,10 @@ const Home = () => {
     const inProgress = data.exists && data.gameStatus === GameStatus.IN_PROGRESS;
     const reclaimable = data.reclaimablePlayers ?? [];
 
-    // Flow popup "Rejoindre" : la réponse concerne le code saisi à la main.
-    if (pendingJoinCode !== null) {
+    // Flow popup "Rejoindre" : la réponse concerne le code saisi à la main (le
+    // serveur fait écho du code : une réponse pour le code de l'URL, relancée à la
+    // reconnexion, ne doit pas être prise pour celle de la popup).
+    if (pendingJoinCode !== null && (!data.lobbyCode || data.lobbyCode === pendingJoinCode)) {
       const code = pendingJoinCode;
       setPendingJoinCode(null);
       if (!data.exists) {

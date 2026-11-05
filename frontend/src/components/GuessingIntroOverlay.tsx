@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import step3Img from '../assets/images/home/3-guessing.png';
 import { useLocale } from '../i18n';
-import { GAME_CONSTANTS, type GameMode } from '@onskone/shared';
+import { GAME_CONSTANTS } from '@onskone/shared';
 
 const { GUESSING_INTRO_MS } = GAME_CONSTANTS;
 
@@ -13,11 +13,11 @@ const { GUESSING_INTRO_MS } = GAME_CONSTANTS;
  * jaune (pilier) ou bleue (joueur), et une consigne très courte. Durée stricte
  * (pas de fermeture au tap) : tous les écrans le voient simultanément, et le
  * timer serveur démarre à sa fin. Rendu dans un portail sur `document.body`
- * (cf. RevealAuthorOverlay).
+ * (cf. RevealAuthorOverlay). Mode local uniquement : à distance il n'est pas
+ * affiché (cf. Game.tsx), chacun jouant sur son propre écran.
  */
-const GuessingIntroOverlay = ({ isLeader, gameMode, onDone }: {
+const GuessingIntroOverlay = ({ isLeader, onDone }: {
   isLeader: boolean;
-  gameMode: GameMode;
   onDone: () => void;
 }) => {
   const { t } = useLocale();
@@ -31,7 +31,7 @@ const GuessingIntroOverlay = ({ isLeader, gameMode, onDone }: {
   }, []);
 
   const role = isLeader ? intro.roleLeader : intro.rolePlayer;
-  const text = isLeader ? intro.leaderText : gameMode === 'remote' ? intro.playerRemoteText : intro.playerLocalText;
+  const text = isLeader ? intro.leaderText : intro.playerLocalText;
   const aura = isLeader ? 'var(--color-warning-300)' : 'var(--color-brand-400)';
 
   return createPortal(

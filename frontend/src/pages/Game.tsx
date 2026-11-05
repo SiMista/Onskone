@@ -49,6 +49,8 @@ const GamePage: React.FC = () => {
   // Overlay d'intro GUESSING : seulement sur une transition vue en direct
   // (réponses → devinettes, même manche), jamais à un (re)montage direct dans la
   // phase (reconnexion, resync) : sinon il rejouerait au milieu de la phase.
+  // Jamais à distance : chacun joue sur son écran, il n'y a rien à montrer à la
+  // table (le serveur ne décale pas non plus le timer, cf. transitionToGuessing).
   const [guessingIntroRound, setGuessingIntroRound] = useState<number | null>(null);
   const prevPhaseRef = useRef<{ round: number; phase: RoundPhase } | null>(null);
   const curRound = game?.currentRound?.roundNumber;
@@ -65,6 +67,7 @@ const GamePage: React.FC = () => {
     }
   }, [curRound, curPhase]);
   const showGuessingIntro =
+    game?.lobby?.gameMode !== 'remote' &&
     curPhase === RoundPhase.GUESSING && guessingIntroRound !== null && guessingIntroRound === curRound;
 
   // Confirmation avant de quitter pendant une partie en cours
@@ -241,7 +244,7 @@ const GamePage: React.FC = () => {
       {/* Overlay purement décoratif : s'il plante on le saute, la phase dessous continue. */}
       {showGuessingIntro && (
         <SectionErrorBoundary name="game.guessingIntro" fallback="silent">
-          <GuessingIntroOverlay isLeader={isLeader} gameMode={game?.lobby?.gameMode ?? 'local'} onDone={() => setGuessingIntroRound(null)} />
+          <GuessingIntroOverlay isLeader={isLeader} onDone={() => setGuessingIntroRound(null)} />
         </SectionErrorBoundary>
       )}
       {/* Réglages flottants en haut à droite (hors de la carte), comme sur l'accueil. */}

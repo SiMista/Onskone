@@ -6,7 +6,7 @@ import { IPlayer, RevealResult } from '@onskone/shared';
 import { useLocale } from '../../i18n';
 import type { RevealCursorState } from '../../hooks/useRevealCursor';
 import PremiumName from '../PremiumName';
-import { hapticNextToReveal } from '../../utils/haptics';
+import { hapticNextToReveal, NEXT_TO_REVEAL_BUZZ_MS, NEXT_TO_REVEAL_MAX_BUZZES } from '../../utils/haptics';
 import RevealAuthorOverlay from './RevealAuthorOverlay';
 
 /**
@@ -83,11 +83,21 @@ const RevealPlayerLocalView = ({
     : revealedIndices;
   const isNextToReveal = !myRevealed && myIndex >= 0 && myIndex === findFirstDisplayable(0, effectiveRevealed);
 
-  // Petit tap quand ma carte devient la prochaine à révéler (même moment que le pulse).
-  const wasNextToRevealRef = useRef(false);
+  // Vibration quand ma carte devient la prochaine à révéler (même moment que le
+  // pulse), puis rappel périodique tant qu'elle l'est : le téléphone est posé sur la
+  // table, il faut que son propriétaire le sente avant que le pilier n'arrive dessus.
   useEffect(() => {
-    if (isNextToReveal && !wasNextToRevealRef.current) hapticNextToReveal();
-    wasNextToRevealRef.current = isNextToReveal;
+    if (!isNextToReveal) return;
+    hapticNextToReveal();
+    let buzzes = 1;
+    const interval = setInterval(() => {
+      if (++buzzes > NEXT_TO_REVEAL_MAX_BUZZES) {
+        clearInterval(interval);
+        return;
+      }
+      hapticNextToReveal();
+    }, NEXT_TO_REVEAL_BUZZ_MS);
+    return () => clearInterval(interval);
   }, [isNextToReveal]);
 
   const waitingFooter = allRevealed ? (

@@ -17,12 +17,6 @@ export class Lobby implements ILobby {
     gameSpeed: GameSpeed;
     excludedLeaderIds: string[];
     locale: Locale;
-    /**
-     * Statut premium de l'host (serveur-only, non diffusé dans ILobby).
-     * Déclaré par le client au handshake socket. Autorise la sélection des
-     * thèmes premium pour toute la table (gating "l'host débloque pour tous").
-     */
-    hostIsPremium: boolean;
 
     constructor(lobbyCode: string, locale: Locale = DEFAULT_LOCALE) {
         this.code = lobbyCode;
@@ -35,7 +29,6 @@ export class Lobby implements ILobby {
         this.guessMyAnswerMode = false;
         this.gameSpeed = GAME_CONSTANTS.GAME_SPEED_DEFAULT;
         this.excludedLeaderIds = [];
-        this.hostIsPremium = false;
     }
 
     updateActivity(): void {
@@ -73,5 +66,17 @@ export class Lobby implements ILobby {
     /** L'hôte courant du lobby (le joueur marqué isHost), ou undefined s'il n'y en a pas. */
     getHost(): ServerPlayer | undefined {
         return this.players.find(p => p.isHost);
+    }
+
+    /**
+     * Statut premium de l'host (serveur-only, non diffusé dans ILobby). Autorise la
+     * sélection des thèmes premium pour toute la table (gating "l'host débloque pour
+     * tous"). DÉRIVÉ de l'host courant, jamais mémorisé : son `isPremium` est relu au
+     * handshake à chaque (re)connexion, donc un achat en plein salon (le front
+     * reconnecte la socket) débloque aussitôt, et un transfert d'host suit le nouveau.
+     * Avant, un booléen figé au createLobby recochait l'achat en « non premium ».
+     */
+    get hostIsPremium(): boolean {
+        return !!this.getHost()?.isPremium;
     }
 }

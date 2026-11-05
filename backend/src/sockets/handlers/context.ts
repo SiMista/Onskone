@@ -75,11 +75,15 @@ export function cleanupDisconnectedPlayers(
         !registry.hasDisconnectTimeout(lobby.code, p.name)
     );
 
+    let lobbyRemoved = false;
     for (const player of playersToRemove) {
         // Supprimer le joueur (pas besoin d'annuler le timeout car il n'existe pas)
-        LobbyManager.removePlayer(lobby, player);
+        if (LobbyManager.removePlayer(lobby, player)) lobbyRemoved = true;
         logger.info(`Joueur déconnecté ${player.name} retiré du lobby ${lobby.code} (période de grâce expirée)`);
     }
+    // Salon vidé (que des fantômes) et supprimé : libérer ses kicks / timers, comme
+    // leaveLobby. Les appelants vérifient ensuite LobbyManager.getLobby (salon disparu).
+    if (lobbyRemoved) registry.cleanupLobbyResources(lobby.code);
 }
 
 /**

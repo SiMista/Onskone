@@ -456,6 +456,8 @@ export interface ClientToServerEvents {
   checkPlayerName: (data: {
     lobbyCode: string;
     playerName: string;
+    /** Secret du slot portant ce nom, si l'appareil l'a (cf. joinLobby). */
+    reconnectToken?: string;
   }) => void;
 
   /** Récupérer les informations d'un lobby (pour les liens d'invitation) */

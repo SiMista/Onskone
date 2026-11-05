@@ -22,6 +22,7 @@ import {
     listReclaimablePlayers,
     issueClaimToken,
     tokenMatches,
+    findNameSlot,
     revokeClaimIfProvenOwner,
 } from './reconnection.js';
 import {
@@ -93,13 +94,11 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
             // Gating "l'host débloque pour la table" : autorise les thèmes premium
             // pour tout le lobby. Auto-déclaré (falsifiable, enjeu faible assumé).
             const hostPremium = readHandshakePremium(socket);
-            if (lobby) {
-                lobby.hostIsPremium = hostPremium;
-                // Host premium : les thèmes premium sont sélectionnés d'office
-                // (recalcul de la sélection par défaut, qui excluait les premium au constructeur).
-                if (lobby.hostIsPremium) {
-                    lobby.selectedDecks = getDefaultSelectedDecks(lobby.locale, true);
-                }
+            // Host premium : les thèmes premium sont sélectionnés d'office
+            // (recalcul de la sélection par défaut, qui excluait les premium au constructeur).
+            // `lobby.hostIsPremium` est dérivé de l'host courant (cf. Lobby.ts).
+            if (lobby && hostPremium) {
+                lobby.selectedDecks = getDefaultSelectedDecks(lobby.locale, true);
             }
             const hostPlayer = new Player(sanitizedName, socket.id, true, avatarId, hostPremium);
             lobby?.addPlayer(hostPlayer);
@@ -144,9 +143,22 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
             // achat ou override Studio peut avoir changé depuis le 1er join).
             const joinerPremium = readHandshakePremium(socket);
 
-            // Nettoyer les joueurs vraiment déconnectés (ceux qui ont quitté l'onglet)
-            // IMPORTANT: Exclure le joueur qui se reconnecte pour ne pas le supprimer
-            ctx.cleanupDisconnectedPlayers(lobby, sanitizedName);
+            // Nettoyer les joueurs vraiment déconnectés (ceux qui ont quitté l'onglet).
+            // Le slot du nom entrant n'est épargné que si l'entrant PROUVE qu'il est à
+            // lui (token, ou même socket) : c'est une reconnexion, il garde ses points /
+            // son statut d'hôte. Sans preuve, un fantôme (inactif, socket hors room,
+            // grâce expirée) est purgé comme pour n'importe quel autre arrivant et le
+            // joueur rentre sur un slot neuf ; avant, il bloquait son propre pseudo
+            // (« Reconnexion non autorisée ») sans que l'hôte le voie. Aucun affaiblissement :
+            // un arrivant sous un autre nom purgeait déjà ce même fantôme.
+            const named = findNameSlot(lobby, sanitizedName, socket.id, data.reconnectToken);
+            ctx.cleanupDisconnectedPlayers(lobby, named.isOwner ? named.slot?.name : undefined);
+            // Salon vidé par le nettoyage (que des fantômes) : il n'existe plus, on n'y
+            // ajoute personne (sinon salon orphelin, hors LobbyManager).
+            if (!LobbyManager.getLobby(lobby.code)) {
+                socket.emit('error', { message: 'Salon introuvable', code: ERROR_CODES.NOT_FOUND });
+                return;
+            }
 
             // Vérifier si le joueur a été kické récemment
             if (registry.isPlayerKicked(data.lobbyCode, sanitizedName)) {
@@ -487,8 +499,27 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
                 socket.emit('error', { message: 'Salon introuvable', code: ERROR_CODES.NOT_FOUND });
                 return;
             }
-            // Insensible à la casse : "Loic" bloque "loic" (cf. joinLobby).
-            if (lobby.players.find(p => p.name.toLowerCase() === sanitizedName.toLowerCase())) {
+            // Même nettoyage que joinLobby AVANT de juger le nom : sinon un fantôme
+            // (joueur parti sans `leaveLobby` aboutie : bouton retour, socket morte en
+            // fin de partie…) bloquait son pseudo pour toujours, « pris » alors que
+            // l'hôte ne le voit plus. Jamais en partie (cf. cleanupDisconnectedPlayers).
+            const { slot: ownSlot, isOwner } = findNameSlot(lobby, sanitizedName, socket.id, data.reconnectToken);
+            const countBefore = lobby.players.length;
+            ctx.cleanupDisconnectedPlayers(lobby, isOwner ? ownSlot?.name : undefined);
+            if (lobby.players.length !== countBefore) {
+                // Salon vidé par le nettoyage (que des fantômes) : il n'existe plus.
+                if (!LobbyManager.getLobby(lobby.code)) {
+                    socket.emit('error', { message: 'Salon introuvable', code: ERROR_CODES.NOT_FOUND });
+                    return;
+                }
+                // La table voit le fantôme partir (et un éventuel nouvel hôte).
+                io.to(lobby.code).emit('updatePlayersList', { players: serializePlayers(lobby.players) });
+            }
+            // Insensible à la casse : "Loic" bloque "loic" (cf. joinLobby). Le
+            // propriétaire prouvé du slot n'est pas « un autre joueur » : joinLobby le
+            // rattachera à son slot (token revérifié là-bas).
+            const { slot: existing } = findNameSlot(lobby, sanitizedName, socket.id, data.reconnectToken);
+            if (existing && !isOwner) {
                 socket.emit('playerNameExists', { playerName: sanitizedName });
             } else {
                 socket.emit('playerNameValid');
@@ -544,9 +575,11 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
             const isLobbyRemoved = LobbyManager.removePlayer(lobby, player);
             io.to(lobbyCode).emit('updatePlayersList', { players: serializePlayers(lobby.players) });
             logger.info(`${player.name} a quitté le lobby ${lobbyCode}`);
+            // Toujours quitter la room : sinon le partant continuait de recevoir les
+            // events du salon (liste des joueurs, lancement de partie…) depuis l'accueil.
+            socket.leave(lobbyCode);
             if (isLobbyRemoved) {
                 registry.cleanupLobbyResources(lobbyCode);
-                socket.leave(lobbyCode);
                 logger.info(`Lobby ${lobbyCode} supprimé`);
             }
         });
@@ -690,6 +723,16 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
             if (!activePlayersAfterCleanup.some(p => !excludedLeaders.has(p.id))) {
                 socket.emit('error', { message: 'Au moins un joueur doit pouvoir être pilier', code: ERROR_CODES.INVALID });
                 return;
+            }
+
+            // Les thèmes premium ne partent en partie que si l'host ACTUEL est premium :
+            // ils ont pu être cochés par un host premium parti depuis (transfert d'host).
+            // Si la sélection ne contenait que du premium, retour à la sélection par défaut.
+            const countDecks = (d: typeof lobby.selectedDecks) => Object.values(d).reduce((acc, arr) => acc + arr.length, 0);
+            const decks = sanitizeSelectedDecks(lobby.selectedDecks, lobby.locale, lobby.hostIsPremium);
+            if (countDecks(decks) !== countDecks(lobby.selectedDecks)) {
+                lobby.selectedDecks = countDecks(decks) > 0 ? decks : getDefaultSelectedDecks(lobby.locale, lobby.hostIsPremium);
+                emitLobbyDecksState(io, null, lobby);
             }
 
             const game = createGame(lobby);

@@ -101,6 +101,8 @@ export interface Dictionary {
     message: string;
     cta: string;
     ctaWeb: string;
+    report: string;
+    reportSent: string;
   };
 
   /** Écran de maintenance (mode admin ou serveur injoignable) */
@@ -221,6 +223,10 @@ export interface Dictionary {
       joinRefused: string;
       playerJoined: (name: string) => string;
       playerLeft: (name: string) => string;
+      /** Rappel « joue avec le son » (une fois par lancement, cf. utils/soundHint). */
+      soundHint: string;
+      /** Variante iPhone/iPad : le bouton silencieux coupe les sons de l'app. */
+      soundHintIos: string;
     };
     playerMenu: {
       trigger: string;
@@ -268,6 +274,8 @@ export interface Dictionary {
     correctAnswersCount: (n: number) => string;
     /** Suffixe de l'entrée écrite par le substitut au nom du pilier : « (par Alice) ». */
     byPlayer: (name: string) => string;
+    /** Consigne au-dessus des boutons joueurs du popover (afficher leur réponse). */
+    answersHint: string;
     aria: {
       seeReceivedQuestion: string;
     };
@@ -481,7 +489,6 @@ export interface Dictionary {
         rolePlayer: string;
         leaderText: string;
         playerLocalText: string;
-        playerRemoteText: string;
       };
     };
     reveal: {

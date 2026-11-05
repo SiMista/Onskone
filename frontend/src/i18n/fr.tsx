@@ -44,6 +44,8 @@ export const fr: Dictionary = {
     message: 'Une nouvelle version est disponible. Mets à jour Onskoné pour continuer à jouer.',
     cta: 'Mettre à jour',
     ctaWeb: 'Recharger',
+    report: 'Un souci avec la mise à jour ? Signale-le',
+    reportSent: 'Merci, ton signalement est bien parti !',
   },
 
   maintenance: {
@@ -191,6 +193,8 @@ export const fr: Dictionary = {
       joinRefused: 'Ce pseudo est déjà pris dans ce salon, ou ta session a expiré.',
       playerJoined: (name) => `${name} a rejoint le salon`,
       playerLeft: (name) => `${name} a quitté le salon`,
+      soundHint: "Monte le son : Onskoné, c'est bien meilleur avec !",
+      soundHintIos: "Monte le son et coupe le mode silencieux : Onskoné, c'est bien meilleur avec !",
     },
     playerMenu: {
       trigger: 'Options du joueur',
@@ -227,10 +231,11 @@ export const fr: Dictionary = {
     quit: 'Quitter',
     individualScores: 'Scores individuels',
     points: (n) => `${n} pt${n > 1 ? 's' : ''}`,
-    unranked: 'Hors classement',
+    unranked: "N'a pas été pilier",
     receivedQuestion: 'Question reçue',
     correctAnswersCount: (n) => `${n} Bonne${n > 1 ? 's' : ''} réponse${n > 1 ? 's' : ''}`,
     byPlayer: (name) => `(par ${name})`,
+    answersHint: 'Touche un joueur pour voir sa réponse',
     aria: {
       seeReceivedQuestion: 'Voir la question reçue',
     },
@@ -606,7 +611,6 @@ export const fr: Dictionary = {
   },
 
   funFacts: [
-    "Il est statistiquement plus sûr de parier sur un but de Kylian Mbappé que sur un but de l’arbitre.",
     "Onskoné a crée 10 couples. Incroyable ! (et en a détruit 35)",
     "Le pilier de la manche qui arrive à 0 bonnes réponses a 50% d'être mauvais et 50% de chances d'être bourré.",
     "Ton mari ou ta femme n'a pas trouvé tes réponses pendant toute la partie ? C'est un motif valide de rupture (Article 711 du Code Civil)",
@@ -753,7 +757,6 @@ export const fr: Dictionary = {
         rolePlayer: 'JOUEUR',
         leaderText: 'Lis les réponses à voix haute et devine qui a écrit quoi !',
         playerLocalText: 'Tourne ton téléphone et montre ton écran à tout le monde !',
-        playerRemoteText: 'Le pilier attribue les réponses. Regarde l\'écran et croise les doigts !',
       },
     },
     reveal: {

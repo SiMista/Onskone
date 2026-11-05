@@ -21,6 +21,7 @@ import GameOptionsSheet from '../components/lobby/GameOptionsSheet';
 import { IPlayer, ERROR_CODES } from '@onskone/shared';
 import type { ErrorCode } from '@onskone/shared';
 import { useSocketEvent, useLeavePrompt, useReconnectOnVisible, useKeepAwake } from '../hooks';
+import { takeSoundHint } from '../utils/soundHint';
 import { useLobbyIdentity } from '../hooks/useLobbyIdentity';
 import { useShareInvite } from '../hooks/useShareInvite';
 import { useLobbyState } from '../hooks/useLobbyState';
@@ -52,6 +53,14 @@ const Lobby = () => {
             navigate('/');
         }
     }, [lobbyCode, navigate]);
+
+    // Rappel « joue avec le son » à l'arrivée dans le salon (une fois par lancement,
+    // jamais si les sons sont coupés dans les Réglages), avant que la partie démarre.
+    useEffect(() => {
+        const hint = takeSoundHint();
+        if (hint) showToast(hint === 'ios' ? t.lobby.toasts.soundHintIos : t.lobby.toasts.soundHint, 'info', 5000);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const [players, setPlayers] = useState<IPlayer[]>([]);
     const [currentPlayer, setCurrentPlayer] = useState<IPlayer | null>(null);

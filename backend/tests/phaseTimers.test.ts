@@ -113,6 +113,21 @@ describe('transitions interactives : le serveur arme lui-même le timer de la no
         expect(round.serverTimerHandle).toBeNull();
     });
 
+    it("transitionToGuessing à distance : pas d'intro, donc pas de décalage", () => {
+        const { lobby, round } = startedGame();
+        lobby.gameMode = 'remote';
+        const { io, emitted } = fakeIo();
+        round.nextPhase(); // QUESTION_SELECTION -> ANSWERING (Classique)
+        for (const p of lobby.players) {
+            if (p.id !== round.leader.id) round.answers[p.id] = `réponse ${p.name}`;
+        }
+        const now = Date.now();
+        transitionToGuessing(io, lobby.code, lobby, round, false);
+
+        const [, payload] = emitted('timerStarted')[0] as [string, { startedAt: number; duration: number }];
+        expect(payload.startedAt).toBe(now);
+    });
+
     it('finishAnsweringPhase (Devine ma réponse) arme un timer SUBSTITUTE_ANSWERING', () => {
         const { lobby, round } = startedGame(true);
         const { io } = fakeIo();
