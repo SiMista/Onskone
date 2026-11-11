@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Icon } from '@iconify/react';
+import { Icon } from '../../../components/Icon';
 import Button from '../../../components/Button';
 import BackButton from '../../../components/BackButton';
 import PseudoPlate from '../../../components/PseudoPlate';

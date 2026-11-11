@@ -229,6 +229,47 @@ export const darkenHex = (hex: string, amount: number) => mixHex(hex, 0, amount)
 export const getSoftCategoryColor = (category: string, amount = 0.35): string =>
   lightenHex(getCategoryColor(category), amount);
 
+// Icône (sticker) de chaque catégorie : fiches de l'onglet Thèmes et sélecteur de
+// thèmes. Catégorie inconnue : icône par défaut.
+const CATEGORY_ICONS: Record<string, string> = {
+  ICEBREAKERS: 'fluent-emoji-flat:ice',
+  FUN: 'fluent-emoji-flat:party-popper',
+  DEEP: 'fluent-emoji-flat:fire',
+};
+const DEFAULT_CATEGORY_ICON = 'fluent-emoji-flat:flower-playing-cards';
+export const getCategoryIcon = (category: string): string =>
+  CATEGORY_ICONS[category] ?? DEFAULT_CATEGORY_ICON;
+
+// « Idéal pour » de chaque catégorie : types de groupe conseillés, en pastilles sous sa
+// description (libellés : t.decks.audiences). Catégorie absente : rien d'affiché.
+export type AudienceKey = 'newGroup' | 'coworkers' | 'closeFriends' | 'family' | 'diggers';
+export const CATEGORY_AUDIENCES: Record<string, AudienceKey[]> = {
+  ICEBREAKERS: ['newGroup', 'coworkers'],
+  FUN: ['closeFriends'],
+  DEEP: ['family', 'diggers'],
+};
+
+// Dégradé diagonal (clair → couleur → foncé) des blocs illustrés d'une catégorie.
+export const categoryGradient = (hex: string): string =>
+  `linear-gradient(135deg, ${lightenHex(hex, 0.4)} 0%, ${hex} 55%, ${darkenHex(hex, 0.12)} 100%)`;
+
+// Dégradés vifs par catégorie : la couleur de la fiche du lobby (CATEGORY_COLORS) reste au
+// milieu, et les bouts glissent vers une teinte voisine plus saturée (cyan → bleu, jaune →
+// orange, rouge → rose) au lieu d'éclaircir/assombrir, ce qui ternissait (jaune virant au
+// brun, bleu délavé). Catégorie inconnue : dégradé générique ci-dessus.
+const CATEGORY_GRADIENTS: Record<string, [string, string]> = {
+  ICEBREAKERS: ['#4fdcff', '#1c86e8'],
+  FUN: ['#ffd84d', '#ff8f1f'],
+  DEEP: ['#ff7a70', '#d62d6b'],
+};
+export const getCategoryGradient = (category: string): string => {
+  const base = getCategoryColor(category);
+  const ends = CATEGORY_GRADIENTS[category];
+  return ends
+    ? `linear-gradient(135deg, ${ends[0]} 0%, ${base} 50%, ${ends[1]} 100%)`
+    : categoryGradient(base);
+};
+
 // Configuration de l'URL du serveur backend
 const getServerUrl = () => {
   // Si une variable d'environnement est définie, l'utiliser

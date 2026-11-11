@@ -16,6 +16,7 @@ import { installGlobalErrorLogging } from './utils/clientLog';
 import { BootSplashHold } from './utils/bootSplash';
 import UpdateRequiredModal from './components/UpdateRequiredModal';
 import MaintenanceOverlay from './components/MaintenanceOverlay';
+import ConnectionWarning from './components/ConnectionWarning';
 import AppDownloadBanner from './components/AppDownloadBanner';
 import { AppErrorBoundary } from './components/AppErrorBoundary';
 
@@ -155,6 +156,7 @@ const App = () => {
         <AppShell>
           <UpdateRequiredModal />
           <MaintenanceOverlay />
+          <ConnectionWarning />
           <DeepLinkHandler />
           {/* Page lazy au démarrage : l'écran de chargement reste affiché en attendant. */}
           <Suspense fallback={<BootSplashHold />}>

@@ -4,14 +4,15 @@ import socket from '../utils/socket';
 import { useReconnectOnVisible, useSocketEvent } from './index';
 import { getCurrentPlayerFromStorage, getReconnectToken, clearLastGame } from '../utils/playerHelpers';
 import {
-  IPlayer, IRound, IGame, RoundPhase, GameStatus, RevealResult, GameCard, ReconnectionData, GAME_CONSTANTS,
-  gameFingerprint, SYNC_CHECK_INTERVAL_MS, SYNC_ACK_TIMEOUT_MS,
+  IPlayer, IRound, IGame, RoundPhase, GameStatus, RevealResult, ReconnectionData, GAME_CONSTANTS,
+  gameFingerprint, SYNC_CHECK_INTERVAL_MS, SYNC_ACK_TIMEOUT_MS, buildRevealOrder,
 } from '@onskone/shared';
-import type { ErrorCode } from '@onskone/shared';
+import type { ErrorCode, ServerToClientEvents } from '@onskone/shared';
 import { useToast } from '../components/Toast';
 import { useLocale } from '../i18n';
 import { mergeGameState, deltaMatchesCurrentRound, isFinished, LOADING_SLOW_MS, RESYNC_MIN_GAP_MS } from '../utils/gameSync';
 import { reportClientLog } from '../utils/clientLog';
+import { recordSyncRtt, reportConnectionTrouble } from '../utils/connectionQuality';
 
 /**
  * Ordre canonique des phases, pour écarter un `gameState` périmé (cf. mergeGameState).
@@ -31,11 +32,31 @@ const PHASE_ORDER: RoundPhase[] = [
 const RESYNC_RETRY_DELAYS = [600, 1500, 3000] as const;
 const RESYNC_MAX_RETRIES = RESYNC_RETRY_DELAYS.length;
 
+/** Résultats du reveal + leur ordre (indices de results), reçus ensemble du serveur. */
+interface RevealState {
+  results: RevealResult[];
+  order: number[];
+}
+const NO_REVEAL: RevealState = { results: [], order: [] };
+
+/**
+ * État du reveal à partir de ce que le serveur envoie. L'ordre est toujours fourni
+ * par un serveur à jour ; sans lui (nouvelle app arrivée avant le déploiement du
+ * serveur, ou retour arrière du serveur), l'ordre des réponses avec le pilier
+ * deviné en dernier, plutôt qu'un reveal qui plante.
+ */
+const revealStateFrom = (results: RevealResult[], order: number[] | undefined, leaderId: string | undefined): RevealState => ({
+  results,
+  order: order ?? buildRevealOrder(results, leaderId ?? '', []),
+});
+
 interface UseGameStateResult {
   game: IGame | null;
   players: IPlayer[];
   currentPlayer: IPlayer | null;
   revealResults: RevealResult[];
+  /** Ordre du reveal (indices de revealResults, tour de table), fixé par le serveur. */
+  revealOrder: number[];
   reconnectionData: ReconnectionData | null;
   isLeader: boolean;
   /**
@@ -72,7 +93,8 @@ export function useGameState(lobbyCode: string | undefined): UseGameStateResult 
   const [game, setGame] = useState<IGame | null>(null);
   const [players, setPlayers] = useState<IPlayer[]>([]);
   const [currentPlayer, setCurrentPlayer] = useState<IPlayer | null>(null);
-  const [revealResults, setRevealResults] = useState<RevealResult[]>([]);
+  // Résultats du reveal et leur ordre : toujours posés ensemble (un seul state).
+  const [reveal, setReveal] = useState<RevealState>(NO_REVEAL);
   const [reconnectionData, setReconnectionData] = useState<ReconnectionData | null>(null);
   const [syncEpoch, setSyncEpoch] = useState(0);
   const [loadingSlow, setLoadingSlow] = useState(false);
@@ -154,7 +176,10 @@ export function useGameState(lobbyCode: string | undefined): UseGameStateResult 
 
   // ===== Boucle de synchronisation =====
   const ackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Envoi du syncCheck en attente de réponse : mesure la latence réelle (connectionQuality).
+  const syncSentAtRef = useRef<number | null>(null);
   const clearAckTimer = useCallback(() => {
+    syncSentAtRef.current = null;
     if (ackTimerRef.current) {
       clearTimeout(ackTimerRef.current);
       ackTimerRef.current = null;
@@ -173,14 +198,17 @@ export function useGameState(lobbyCode: string | undefined): UseGameStateResult 
       socket.emit('syncCheck', { lobbyCode, playerId: me.id, fingerprint: gameFingerprint(current) });
       if (ackTimerRef.current) return; // une réponse est déjà attendue
       const sentAt = Date.now();
+      syncSentAtRef.current = sentAt;
       ackTimerRef.current = setTimeout(() => {
         ackTimerRef.current = null;
+        syncSentAtRef.current = null;
         // Timer en retard de plusieurs secondes = l'app était gelée (veille, bascule d'appli),
         // pas le serveur muet : la réponse est peut-être déjà dans la file. On ne coupe pas
         // une connexion saine, le prochain tick refera un check avec un délai neuf.
         const elapsed = Date.now() - sentAt;
         if (elapsed > SYNC_ACK_TIMEOUT_MS * 2) return;
         reportClientLog('gameSync', 'Aucune réponse au syncCheck : reconnexion forcée', { lobbyCode, elapsedMs: elapsed }, 'warn');
+        reportConnectionTrouble();
         forceReconnect();
       }, SYNC_ACK_TIMEOUT_MS);
     };
@@ -201,6 +229,9 @@ export function useGameState(lobbyCode: string | undefined): UseGameStateResult 
   }, [lobbyCode, forceReconnect, clearAckTimer]);
 
   const handleSyncResult = useCallback((data: { status: 'ok' | 'detached' }) => {
+    // Lu AVANT clearAckTimer, qui le remet à zéro.
+    const sentAt = syncSentAtRef.current;
+    if (sentAt !== null) recordSyncRtt(Date.now() - sentAt);
     clearAckTimer();
     // Socket non rattaché au slot (évincé, slot non repris) : reconnexion complète.
     if (data.status === 'detached') requestResync('socket détaché du slot');
@@ -224,8 +255,9 @@ export function useGameState(lobbyCode: string | undefined): UseGameStateResult 
     setPlayers(data.players);
     if (data.reconnectionData) {
       setReconnectionData(data.reconnectionData);
-      if (data.reconnectionData.revealResults) {
-        setRevealResults(data.reconnectionData.revealResults);
+      const { revealResults, revealOrder } = data.reconnectionData;
+      if (revealResults) {
+        setReveal(revealStateFrom(revealResults, revealOrder, data.game.currentRound?.leader.id));
       }
     }
     // L'écran affiché était faux ou incomplet : remonter les composants de phase
@@ -236,15 +268,15 @@ export function useGameState(lobbyCode: string | undefined): UseGameStateResult 
   const handleGameStarted = useCallback((data: { game: IGame }) => {
     // Nouvelle partie (ou reprise) : état neuf, rien de l'ancienne manche ne doit rester.
     setGame(data.game);
-    setRevealResults([]);
+    setReveal(NO_REVEAL);
     setReconnectionData(null);
   }, []);
 
   // Applique un patch partiel au round courant, UNIQUEMENT s'il concerne la manche
   // affichée ; sinon resynchronisation (le client a raté une transition).
-  const patchRound = useCallback((roundNumber: number | undefined, patch: Partial<IRound>, event: string) => {
+  const patchRound = useCallback((roundNumber: number, patch: Partial<IRound>, event: string) => {
     if (!deltaMatchesCurrentRound(gameRef.current, roundNumber)) {
-      requestResync(`${event} pour la manche ${roundNumber ?? '?'} alors que la manche affichée est ${gameRef.current?.currentRound?.roundNumber ?? 'aucune'}`);
+      requestResync(`${event} pour la manche ${roundNumber} alors que la manche affichée est ${gameRef.current?.currentRound?.roundNumber ?? 'aucune'}`);
       return false;
     }
     setGame(prev => prev ? {
@@ -254,35 +286,36 @@ export function useGameState(lobbyCode: string | undefined): UseGameStateResult 
     return true;
   }, [requestResync]);
 
-  const handleQuestionSelected = useCallback((data: { question: string; phase: RoundPhase; auto?: boolean; card?: GameCard; roundNumber?: number }) => {
+  const handleQuestionSelected = useCallback((data: Parameters<ServerToClientEvents['questionSelected']>[0]) => {
     // gameCard seulement si fourni (sinon on conserve la carte courante via le spread).
     const patch: Partial<IRound> = { selectedQuestion: data.question, phase: data.phase };
     if (data.card) patch.gameCard = data.card;
     patchRound(data.roundNumber, patch, 'questionSelected');
   }, [patchRound]);
 
-  const handleAllAnswersSubmitted = useCallback((data: { phase: RoundPhase; answersCount: number; forced?: boolean; roundNumber?: number }) => {
+  const handleAllAnswersSubmitted = useCallback((data: Parameters<ServerToClientEvents['allAnswersSubmitted']>[0]) => {
     patchRound(data.roundNumber, { phase: data.phase }, 'allAnswersSubmitted');
   }, [patchRound]);
 
-  const handleSubstituteSelected = useCallback((data: { substitutePlayerId: string; phase: RoundPhase; auto?: boolean; roundNumber?: number }) => {
+  const handleSubstituteSelected = useCallback((data: Parameters<ServerToClientEvents['substituteSelected']>[0]) => {
     patchRound(data.roundNumber, { substitutePlayerId: data.substitutePlayerId, phase: data.phase }, 'substituteSelected');
   }, [patchRound]);
 
-  const handleSubstituteAnswerSubmitted = useCallback((data: { phase: RoundPhase; forced?: boolean; roundNumber?: number }) => {
+  const handleSubstituteAnswerSubmitted = useCallback((data: Parameters<ServerToClientEvents['substituteAnswerSubmitted']>[0]) => {
     patchRound(data.roundNumber, { phase: data.phase }, 'substituteAnswerSubmitted');
   }, [patchRound]);
 
-  const handleRevealResults = useCallback((data: { phase: RoundPhase; results: RevealResult[]; scores: Record<string, number>; roundNumber?: number }) => {
+  const handleRevealResults = useCallback((data: Parameters<ServerToClientEvents['revealResults']>[0]) => {
     if (patchRound(data.roundNumber, { phase: data.phase }, 'revealResults')) {
-      setRevealResults(data.results);
+      // `revealOrder` peut manquer face à un serveur pas à jour (cf. revealStateFrom).
+      setReveal(revealStateFrom(data.results, data.revealOrder as number[] | undefined, gameRef.current?.currentRound?.leader.id));
     }
   }, [patchRound]);
 
   // Les réponses révélées font partie de l'empreinte de synchro : les suivre ici
   // garde l'état local égal au serveur (sinon chaque révélation déclenchait une
   // resynchronisation complète chez tout le monde).
-  const handleAnswerRevealed = useCallback((data: { revealedIndex: number; revealedIndices: number[]; roundNumber?: number }) => {
+  const handleAnswerRevealed = useCallback((data: Parameters<ServerToClientEvents['answerRevealed']>[0]) => {
     patchRound(data.roundNumber, { revealedIndices: data.revealedIndices }, 'answerRevealed');
   }, [patchRound]);
 
@@ -296,7 +329,7 @@ export function useGameState(lobbyCode: string | undefined): UseGameStateResult 
   const handleRoundStarted = useCallback((data: { round: IRound }) => {
     // Nouvelle manche : rien de la précédente ne doit survivre.
     setReconnectionData(null);
-    setRevealResults([]);
+    setReveal(NO_REVEAL);
     setGame(prev => {
       if (prev) {
         // Dédoublonnage : un round peut déjà avoir été ajouté via gameState
@@ -317,6 +350,7 @@ export function useGameState(lobbyCode: string | undefined): UseGameStateResult 
         guessMyAnswerMode: false,
         gameSpeed: GAME_CONSTANTS.GAME_SPEED_DEFAULT,
         excludedLeaderIds: [],
+        seatOrder: [],
         locale
       };
       return {
@@ -416,7 +450,8 @@ export function useGameState(lobbyCode: string | undefined): UseGameStateResult 
     game,
     players,
     currentPlayer,
-    revealResults,
+    revealResults: reveal.results,
+    revealOrder: reveal.order,
     reconnectionData,
     isLeader,
     syncEpoch,

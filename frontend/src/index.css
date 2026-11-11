@@ -88,6 +88,10 @@
 
   /* Bleu pâle de slider (toggle "à distance" Lobby) */
   --color-brand-200: #7DD3F0;
+  /* Bleu ciel très pâle : bouton « i » des bulles d'aide */
+  --color-brand-100: #E2F5FC;
+  /* Bleu ciel à peine teinté : fond de la bulle d'aide (grande surface, plus claire que son bouton) */
+  --color-brand-50: #F1FAFE;
 
   --color-quit: #9ca3af; /* Boutons de retrait neutres (Quitter, Attendre) */
   --color-quit-hover: #d1d5db;
@@ -233,6 +237,20 @@
     2px 2px 0 0 rgba(0, 0, 0, 1),
     4px 4px 0 0 rgba(0, 0, 0, 0.18),
     6px 6px 0 0 rgba(0, 0, 0, 0.08);
+}
+/* Texte détouré façon sticker : contour noir épais DERRIÈRE le remplissage
+   (paint-order), pour les titres posés sur un fond coloré (écran « Préparer la
+   partie », « ? » de la table des places). Épaisseur : --outline-width. */
+@utility text-outline {
+  -webkit-text-stroke: var(--outline-width, 5px) black;
+  paint-order: stroke fill;
+}
+/* Bulle d'aide : info secondaire, donc plus légère que les cartes à ombre empilée noire.
+   Petit décalage franc teinté (rappel de la pile) + halo doux bleuté qui la décolle. */
+@utility help-bubble-shadow {
+  box-shadow:
+    2px 3px 0 0 color-mix(in srgb, var(--color-brand-700) 16%, transparent),
+    0 14px 30px -14px color-mix(in srgb, var(--color-brand-700) 55%, transparent);
 }
 @utility stack-shadow-lg {
   box-shadow:
@@ -429,6 +447,14 @@ button {
 
 .animate-spin-slow {
   animation: spin-slow 3s linear infinite;
+}
+
+/* Anneau pointillé de la table des places : tourne lentement dans le sens du jeu (horaire). */
+.animate-turn-ring {
+  animation: spin-slow 120s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-turn-ring { animation: none; }
 }
 
 /* Animation pour le menu popup */
@@ -969,22 +995,22 @@ button {
   .reveal-author-confetti { display: none; }
 }
 
-/* Overlay d'intro GUESSING : le rôle claque (gros → taille normale, léger rebond),
-   l'image et la consigne montent ensuite ; l'aura derrière l'image respire. */
-@keyframes guessing-intro-role {
+/* Écrans de rôle (RoleIntroOverlay : intros GUESSING et choix de la question) : le rôle
+   claque (gros → taille normale, léger rebond), l'image et la consigne montent ensuite. */
+@keyframes role-intro-role {
   0%   { opacity: 0; transform: scale(1.8); }
   60%  { opacity: 1; transform: scale(0.92); }
   100% { opacity: 1; transform: scale(1); }
 }
-.animate-guessing-intro-role {
-  animation: guessing-intro-role 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s both;
+.animate-role-intro-role {
+  animation: role-intro-role 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s both;
 }
-@keyframes guessing-intro-rise {
+@keyframes role-intro-rise {
   from { opacity: 0; transform: translateY(24px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-.animate-guessing-intro-img  { animation: guessing-intro-rise 0.45s ease-out 0.6s both; }
-.animate-guessing-intro-text { animation: guessing-intro-rise 0.45s ease-out 1s both; }
+.animate-role-intro-img  { animation: role-intro-rise 0.45s ease-out 0.6s both; }
+.animate-role-intro-text { animation: role-intro-rise 0.45s ease-out 1s both; }
 
 /* Clignotement jaune de la carte à révéler */
 @keyframes card-soft-pulse {
@@ -1082,6 +1108,42 @@ button {
 
 .animate-popover-bounce {
   animation: popover-bounce 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Bulle d'aide (HelpBubble) : sort de son bouton sans rebond, fondu + léger zoom depuis la
+   pointe (transform-origin et --bubble-dy réglés en JS selon que la bulle est dessus/dessous).
+   Durée de sortie à garder alignée avec BUBBLE_OUT_MS (HelpBubble). */
+@keyframes help-bubble-in {
+  from { opacity: 0; transform: translateY(var(--bubble-dy, -4px)) scale(0.9); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes help-bubble-out {
+  from { opacity: 1; transform: none; }
+  to   { opacity: 0; transform: translateY(var(--bubble-dy, -4px)) scale(0.96); }
+}
+.animate-help-bubble-in {
+  animation: help-bubble-in 0.24s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.animate-help-bubble-out {
+  animation: help-bubble-out 0.12s ease-in forwards;
+  pointer-events: none;
+}
+/* Pastille d'astuce (HelpBubble `attention`, astuce de la question en phase réponse) : un
+   anneau s'échappe en boucle tant que l'astuce n'a jamais été ouverte. Anneau en box-shadow
+   (pastille ronde), sans scale : le texte de la question autour ne bouge pas. Coupée au
+   premier tap et une fois la réponse envoyée (elle porte l'action en cours, pas de la déco). */
+@keyframes tip-pulse {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-brand-500) 60%, transparent); }
+  70%  { box-shadow: 0 0 0 8px color-mix(in srgb, var(--color-brand-500) 0%, transparent); }
+  100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-brand-500) 0%, transparent); }
+}
+.animate-tip-pulse {
+  animation: tip-pulse 1.6s ease-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-help-bubble-in,
+  .animate-help-bubble-out { animation: none; }
+  .animate-tip-pulse { animation: none; box-shadow: 0 0 0 2px var(--color-brand-400); }
 }
 
 /* ========================================================================
@@ -1237,7 +1299,21 @@ button {
   animation: timer-critical 0.52s ease-in-out infinite;
 }
 
+/* Sablier en zone rouge : balancier gauche/droite. Part de 0° (pas d'à-coup quand
+   le rouge s'allume) et accélère au passage du centre comme un vrai pendule ; un
+   aller = 0.52s, calé sur le battement du compteur. */
+@keyframes hourglass-rock {
+  0%   { transform: rotate(0deg);   animation-timing-function: ease-out; }
+  25%  { transform: rotate(-10deg); animation-timing-function: ease-in-out; }
+  75%  { transform: rotate(10deg);  animation-timing-function: ease-in; }
+  100% { transform: rotate(0deg); }
+}
+.animate-hourglass-rock {
+  animation: hourglass-rock 1.04s infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .animate-hourglass-rock { animation: none; }
   /* Pas de pulsation, mais on conserve le grossissement (c'est l'information). */
   .animate-timer-urgent {
     animation: none;
@@ -1276,6 +1352,17 @@ button {
 }
 .animate-snap-bounce {
   animation: snap-bounce 0.3s ease-out forwards;
+}
+
+/* Même geste, un cran plus marqué : durée estimée de la préparation, pour qu'on capte
+   que le réglage touché (manches, vitesse, mode) agit dessus. */
+@keyframes snap-bounce-strong {
+  0%   { transform: scale(0.94); opacity: 0.55; }
+  55%  { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(1); }
+}
+.animate-snap-bounce-strong {
+  animation: snap-bounce-strong 0.35s ease-out forwards;
 }
 
 /* Deal-in : la carte arrive en douceur depuis le haut */
@@ -1488,3 +1575,14 @@ button {
 }
 .animate-app-banner-in  { animation: app-banner-in 0.45s ease-out both; }
 .animate-app-banner-out { animation: app-banner-out 0.45s ease-in forwards; pointer-events: none; }
+
+/* Fondu de scroll transparent (cf. useScrollMask) : les variables sont animables via @property. */
+@property --fade-top { syntax: '<length>'; inherits: false; initial-value: 0px; }
+@property --fade-bottom { syntax: '<length>'; inherits: false; initial-value: 0px; }
+.scroll-mask {
+  --fade-top: 0px;
+  --fade-bottom: 0px;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--fade-top), #000 calc(100% - var(--fade-bottom)), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 var(--fade-top), #000 calc(100% - var(--fade-bottom)), transparent 100%);
+  transition: --fade-top 150ms ease-out, --fade-bottom 150ms ease-out;
+}

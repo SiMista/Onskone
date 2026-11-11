@@ -86,10 +86,6 @@ describe('deltaMatchesCurrentRound', () => {
     expect(deltaMatchesCurrentRound(null, 1)).toBe(false);
     expect(deltaMatchesCurrentRound(game(null), 1)).toBe(false);
   });
-
-  it('trusts an untagged delta (older server)', () => {
-    expect(deltaMatchesCurrentRound(game(round(3, RoundPhase.ANSWERING)), undefined)).toBe(true);
-  });
 });
 
 describe('fingerprint & finished', () => {

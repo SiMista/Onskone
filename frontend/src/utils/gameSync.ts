@@ -53,9 +53,8 @@ export const mergeGameState = (prev: IGame | null, incoming: IGame, phaseOrder: 
  * rien et on demande l'état complet — appliquer le delta à la mauvaise manche
  * faisait afficher une autre question / un autre pilier que le reste de la table.
  */
-export const deltaMatchesCurrentRound = (game: IGame | null, roundNumber: number | undefined): boolean => {
+export const deltaMatchesCurrentRound = (game: IGame | null, roundNumber: number): boolean => {
   if (!game?.currentRound) return false;
-  if (roundNumber === undefined) return true; // serveur antérieur au marquage : on fait confiance
   return game.currentRound.roundNumber === roundNumber;
 };
 

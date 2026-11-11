@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Icon } from '@iconify/react';
+import { Icon } from './Icon';
 import { useLocale } from '../i18n';
 import { useVersionBlock, openUpdate, isNativeUpdate } from '../utils/versionGate';
 import { getTestVersionOverride, setTestVersionOverride } from '../utils/socket';

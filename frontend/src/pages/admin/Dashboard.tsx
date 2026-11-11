@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Icon } from '@iconify/react';
+import { Icon } from '../../components/Icon';
 import type { AdminLobbySummary, MaintenanceState } from '@onskone/shared';
 import { useToast } from '../../components/Toast';
 import { Ticket, TicketStatus, TicketType, fetchTickets } from '../../utils/ticketsApi';

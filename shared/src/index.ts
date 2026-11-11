@@ -33,6 +33,10 @@ export type { MaintenanceMode, MaintenanceState } from './maintenance.js';
 export { gameFingerprint, SYNC_CHECK_INTERVAL_MS, SYNC_ACK_TIMEOUT_MS } from './sync.js';
 export type { GameFingerprintSource } from './sync.js';
 
+// Tour de table (ordre du reveal)
+export { tableTurnFrom, resolveSeatOrder } from './seating.js';
+export { isPersonneGuess, buildRevealOrder } from './reveal.js';
+
 // Player
 export { IPlayer } from './types/player.js';
 

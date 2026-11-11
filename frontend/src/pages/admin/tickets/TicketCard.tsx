@@ -1,4 +1,4 @@
-import { Icon } from '@iconify/react';
+import { Icon } from '../../../components/Icon';
 import { Ticket, TicketStatus } from '../../../utils/ticketsApi';
 import { TYPE_META, STATUS_META, STATUS_ORDER, formatDate, formatRelative } from '../shared';
 import { Strip, badge, btn } from '../ui';

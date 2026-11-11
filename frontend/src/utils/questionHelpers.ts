@@ -1,5 +1,12 @@
 import { RoundPhase } from '@onskone/shared';
+import type { GameCard } from '@onskone/shared';
 import type { Dictionary } from '../i18n/dictionary';
+
+/** Astuce de la question (colonne « Le Tip ! » de l'Excel) : indexée par son texte exact sur la carte. */
+export function getQuestionTip(card: GameCard | undefined, question: string): string | undefined {
+  const tip = card?.tips?.[question];
+  return typeof tip === 'string' && tip.trim() ? tip : undefined;
+}
 
 /**
  * Sous-titre affiché sous la QuestionCard selon la phase et le rôle.

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Icon } from '@iconify/react';
+import { Icon } from '../../components/Icon';
 import type { MaintenanceMode, MaintenanceState } from '@onskone/shared';
 import { useToast } from '../../components/Toast';
 import { DangerCard, DangerButton } from './DangerCard';

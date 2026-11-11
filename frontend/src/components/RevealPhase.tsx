@@ -17,13 +17,15 @@ import RevealPilierLocalView from './reveal/RevealPilierLocalView';
  *  3. pilier + carte "deviné"  → RevealPilierGuessedView (mode "Devine ma réponse")
  *  4. sinon (pilier local)     → RevealPilierLocalView
  */
-const RevealPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, isGameOver, results, serverRevealedIndices, gameMode }: {
+const RevealPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, isGameOver, results, revealOrder, serverRevealedIndices, gameMode }: {
   lobbyCode: string;
   isLeader: boolean;
   leader: Pick<IPlayer, 'id' | 'name' | 'avatarId' | 'isPremium'>;
   currentPlayerId: string;
   isGameOver: boolean;
   results: RevealResult[];
+  /** Ordre du reveal (indices de results, tour de table), fixé par le serveur. */
+  revealOrder: readonly number[];
   serverRevealedIndices?: number[];
   gameMode: GameMode;
 }) => {
@@ -34,6 +36,7 @@ const RevealPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, isGameOver,
     isLeader,
     gameMode,
     lobbyCode,
+    revealOrder,
     serverRevealedIndices,
   );
 

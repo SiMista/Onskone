@@ -5,6 +5,9 @@ project(':capacitor-android').projectDir = new File('../../node_modules/.pnpm/@c
 include ':capacitor-community-admob'
 project(':capacitor-community-admob').projectDir = new File('../../node_modules/.pnpm/@capacitor-community+admob@8.1.0/node_modules/@capacitor-community/admob/android')
 
+include ':capacitor-community-keep-awake'
+project(':capacitor-community-keep-awake').projectDir = new File('../../node_modules/.pnpm/@capacitor-community+keep-awake@8.0.1_@capacitor+core@8.4.0/node_modules/@capacitor-community/keep-awake/android')
+
 include ':capacitor-app'
 project(':capacitor-app').projectDir = new File('../../node_modules/.pnpm/@capacitor+app@8.1.0_@capacitor+core@8.4.0/node_modules/@capacitor/app/android')
 
@@ -19,6 +22,9 @@ project(':capacitor-splash-screen').projectDir = new File('../../node_modules/.p
 
 include ':capawesome-capacitor-app-update'
 project(':capawesome-capacitor-app-update').projectDir = new File('../../node_modules/.pnpm/@capawesome+capacitor-app-update@8.0.5_@capacitor+core@8.4.0/node_modules/@capawesome/capacitor-app-update/android')
+
+include ':capawesome-capacitor-volume'
+project(':capawesome-capacitor-volume').projectDir = new File('../../node_modules/.pnpm/@capawesome+capacitor-volume@0.1.3_@capacitor+core@8.4.0/node_modules/@capawesome/capacitor-volume/android')
 
 include ':revenuecat-purchases-capacitor'
 project(':revenuecat-purchases-capacitor').projectDir = new File('../../node_modules/.pnpm/@revenuecat+purchases-capacitor@13.2.3_@capacitor+core@8.4.0/node_modules/@revenuecat/purchases-capacitor/android')

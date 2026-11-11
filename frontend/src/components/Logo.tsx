@@ -26,11 +26,12 @@ const Logo = ({
     ? 'w-[60%] md:w-72 max-h-[max(70px,14dvh)] md:max-h-[max(80px,16dvh)]'
     : 'w-[45%] md:w-56 max-h-[max(50px,10dvh)] md:max-h-[max(60px,12dvh)]';
 
+  // Ombre "collée" : décalée vers le bas, sans flou, très légère (cf. maquette Salon v2).
   return (
     <img
       src={logoSloganImg}
       alt={t.seo.logoAlt}
-      className={`block my-3 md:my-5 desktop-short:my-2 mx-auto h-auto object-contain ${sizeClasses}`}
+      className={`block my-3 md:my-5 desktop-short:my-2 mx-auto h-auto object-contain [filter:drop-shadow(0_3px_0_rgba(0,0,0,0.12))] ${sizeClasses}`}
     />
   );
 };

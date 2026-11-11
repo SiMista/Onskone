@@ -8,7 +8,10 @@ import type { GameSpeed } from './types/lobby.js';
 export const GAME_CONSTANTS = {
   // Player limits
   MIN_PLAYERS: 3,
-  MAX_PLAYERS: 20,
+  MAX_PLAYERS: 15,
+  // Au-delà, les nouveaux arrivants ne sont pas piliers par défaut (manches plafonnées) ;
+  // l'hôte peut les re-cocher dans « Préparer la partie » pour rallonger la partie.
+  DEFAULT_MAX_ROUNDS: 8,
 
   // Character limits
   MAX_NAME_LENGTH: 20,
@@ -77,7 +80,6 @@ export const GAME_CONSTANTS = {
   // par défaut) : ces délais ne doivent pas redescendre en dessous.
   LEADER_DISCONNECT_DELAY_MS: 60_000,
   INACTIVE_DELAY_MS: 60_000,
-  KICK_BLOCK_DURATION_MS: 5 * 60 * 1000,
   // Filet de sécurité de la phase REVEAL (seule phase sans timer, conclue par le
   // pilier) : sans aucune action du pilier pendant ce délai, le serveur passe la
   // manche lui-même. Une table ne peut donc jamais rester figée sur la révélation,
@@ -93,6 +95,10 @@ export const GAME_CONSTANTS = {
   // Le serveur décale d'autant le départ du timer GUESSING : le sablier reste plein
   // pendant l'intro et ne coule qu'à sa fin (sinon le pilier perdait ce temps-là).
   GUESSING_INTRO_MS: 4000,
+  // Overlay « À ton tour d'être PILIER » sur l'écran du pilier, au début de chaque
+  // manche (QUESTION_SELECTION). Même principe : le serveur décale d'autant le départ
+  // du timer de la phase, pour que le pilier ne perde pas ce temps-là.
+  QUESTION_SELECTION_INTRO_MS: 3500,
 } as const;
 
 /**

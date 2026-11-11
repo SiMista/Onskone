@@ -16,8 +16,8 @@ import * as fsSync from 'fs';
 import * as path from 'path';
 import logger from '../utils/logger.js';
 
-// Forme du JSON produit par build-questions.mjs : { [category]: { [theme]: { description, subjects: [{subject, questions}] } } }
-type QuestionsFile = Record<string, Record<string, { description: string; subjects: { subject: string; questions: string[] }[] }>>;
+// Forme du JSON produit par build-questions.mjs : { [category]: { [theme]: { description, subjects: [{subject, questions, tips?}] } } }
+type QuestionsFile = Record<string, Record<string, { description: string; subjects: { subject: string; questions: string[]; tips?: Record<string, string> }[] }>>;
 
 // Forme de themes.json : { [code]: { category, emoji, mature?, labels: {fr,en}, descriptions: {fr,en} } }
 type ThemesMeta = Record<string, {
@@ -120,6 +120,7 @@ const loadOne = (locale: Locale): boolean => {
                         theme,
                         subject: entry.subject,
                         questions: entry.questions,
+                        ...(entry.tips && Object.keys(entry.tips).length > 0 ? { tips: entry.tips } : {}),
                         ...(premium ? { premium: true } : {}),
                     });
                 }
@@ -163,9 +164,10 @@ const MATURE_CODES = new Set(
 export const getPremiumCodes = (): string[] => [...PREMIUM_CODES];
 
 /**
- * Sélection par défaut d'un lobby. Les thèmes mature sont toujours exclus
- * (avertissement 18+ à activer). Les thèmes premium sont inclus SI `allowPremium`
- * (host premium ou promo) - il a payé, il en profite direct sans re-cocher.
+ * Sélection « tous les thèmes » (un salon, lui, démarre sans aucun thème coché) :
+ * repli de startGame quand la sélection ne contenait que du premium perdu au
+ * transfert d'host, et lobbies jouables des tests. Les thèmes mature sont toujours
+ * exclus (avertissement 18+ à activer), les premium inclus SI `allowPremium`.
  */
 export const getDefaultSelectedDecks = (
     locale: Locale = DEFAULT_LOCALE,

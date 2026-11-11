@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Icon } from '@iconify/react';
+import { Icon } from '../../../components/Icon';
 import Button from '../../../components/Button';
 import InfoModal from '../../../components/InfoModal';
 import HowToPlayCarousel from '../../../components/HowToPlayCarousel';
@@ -20,7 +20,7 @@ import { Section, CompactTile } from './layout';
 
 const SHARE_PRESETS = [
   { label: '15% - gênant', pct: 15, title: "C'est gênant là...", message: "Vous partagez le wifi, c'est déjà une base solide.", color: '#ff4f4f', emoji: '😐' },
-  { label: '35% - pas encore', pct: 35, title: 'Pas encore ça', message: 'Les bases sont là, reste juste à construire au-dessus.', color: '#ff8c3a', emoji: '👀' },
+  { label: '35% - pas encore', pct: 35, title: 'Pas encore ça', message: 'Vous avez le numéro de chacun, mais pas sûr que ce soit enregistré sous le bon nom.', color: '#ff8c3a', emoji: '👀' },
   { label: '55% - pas mal', pct: 55, title: 'Pas mal, pas mal', message: 'Un pas de plus et vous êtes une vraie team.', color: '#ffc700', emoji: '🤝' },
   { label: '75% - super team', pct: 75, title: 'Super team', message: 'Vous vous captez presque sans parler, c\'est beau à voir.', color: '#8bd94d', emoji: '✨' },
   { label: '92% - inséparables', pct: 92, title: 'Inséparables', message: 'À ce stade c\'est plus de l\'amitié, c\'est de la famille.', color: '#30c94d', emoji: '🫂' },
@@ -42,7 +42,7 @@ const SHARE_COUNT_PRESETS = [
   { label: '8 joueurs', hint: '2 col · pair', count: 8 },
   { label: '11 joueurs', hint: '2 col · orpheline centrée', count: 11 },
   { label: '12 joueurs', hint: '2 col · cartes moyennes', count: 12 },
-  { label: '20 joueurs', hint: '2 col · max salon', count: 20 },
+  { label: '15 joueurs', hint: '2 col · max salon', count: 15 },
 ]
 
 const makeSharePlayers = (count: number) =>

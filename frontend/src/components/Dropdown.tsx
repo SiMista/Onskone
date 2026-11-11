@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { Icon } from '@iconify/react';
+import { Icon } from './Icon';
 import ScrollFade from './ScrollFade';
 
 // Valeur du token `cream-player` (fond de la liste) : ScrollFade a besoin d'un hex

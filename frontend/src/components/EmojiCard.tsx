@@ -1,4 +1,4 @@
-import { Icon } from '@iconify/react';
+import { Icon } from './Icon';
 import { STICKER_FILTER, STICKER_FILTER_STRONG } from '../constants/icons';
 
 interface EmojiCardProps {

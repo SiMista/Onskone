@@ -32,6 +32,7 @@ export function registerTimerHandlers(socket: AppSocket, ctx: HandlerContext): v
                         duration: currentRound.timerDuration,
                         startedAt: currentRound.timerStartedAt,
                         serverNow: Date.now(),
+                        roundNumber: currentRound.roundNumber,
                     });
                     return;
                 }
@@ -99,6 +100,7 @@ export function registerTimerHandlers(socket: AppSocket, ctx: HandlerContext): v
                         duration: game.currentRound.timerDuration,
                         startedAt: game.currentRound.timerStartedAt,
                         serverNow: Date.now(),
+                        roundNumber: game.currentRound.roundNumber,
                     });
                     return;
                 }

@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, ReactNode } from 'react';
-import { Icon } from '@iconify/react';
+import { Icon } from './Icon';
 import { STICKER_FILTER } from '../constants/icons';
 
 export type ToastVariant = 'info' | 'success' | 'warning' | 'error' | 'achievement' | 'premium' | 'join' | 'leave';

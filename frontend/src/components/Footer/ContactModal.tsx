@@ -1,4 +1,4 @@
-import { Icon } from '@iconify/react';
+import { Icon } from '../Icon';
 import Modal from '../Modal';
 import { useLocale } from '../../i18n';
 

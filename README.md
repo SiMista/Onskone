@@ -4,7 +4,7 @@
 
 Chaque joueur partage une partie de lui-même en répondant à des questions personnelles (goûts, habitudes, défauts, souvenirs…). Le **pilier de la manche** doit deviner quelle réponse appartient à quel joueur, en mobilisant son intuition, son sens de l'observation et sa connaissance des autres.
 
-Jouez **en présentiel** autour d'une table ou **à distance**, en petit groupe ou jusqu'à **20 joueurs**.
+Jouez **en présentiel** autour d'une table ou **à distance**, en petit groupe ou jusqu'à **15 joueurs**.
 
 ---
 

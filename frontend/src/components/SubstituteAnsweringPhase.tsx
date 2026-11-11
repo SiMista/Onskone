@@ -12,6 +12,7 @@ import type { GameSpeed } from '@onskone/shared';
 import { useStartTimerDelayed } from '../hooks';
 import socket from '../utils/socket';
 import { useLocale } from '../i18n';
+import { getQuestionTip } from '../utils/questionHelpers';
 import { hapticAssigned } from '../utils/haptics';
 import PremiumName from './PremiumName';
 
@@ -123,7 +124,14 @@ const SubstituteAnsweringPhase = ({
 
         <QuestionByline player={leader} />
 
-        <QuestionCard question={question} card={card} variant="compact" />
+        {/* Le substitut écrit à la place du pilier : l'astuce l'aide autant qu'un joueur qui répond. */}
+        <QuestionCard
+          question={question}
+          card={card}
+          variant="compact"
+          tip={getQuestionTip(card, question)}
+          tipAttention={isSubstitute && !submitted}
+        />
 
         {isSubstitute ? (
           <div className="flex-1 flex flex-col">

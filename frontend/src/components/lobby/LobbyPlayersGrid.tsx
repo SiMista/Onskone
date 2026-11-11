@@ -9,8 +9,6 @@ interface LobbyPlayersGridProps {
   /** Ids des joueurs présents au premier render (pas d'animation de "pop" pour eux). */
   initialPlayerIds: Set<string> | null;
   activePlayersCount: number;
-  /** Joueurs exclus du rôle de pilier (badge "Pas pilier" sur leur carte). */
-  excludedLeaderIds: string[];
   onKick: (playerId: string) => void;
   onPromote: (playerId: string) => void;
   t: Dictionary;
@@ -28,7 +26,6 @@ const LobbyPlayersGrid = ({
   currentPlayer,
   initialPlayerIds,
   activePlayersCount,
-  excludedLeaderIds,
   onKick,
   onPromote,
   t,
@@ -55,7 +52,6 @@ const LobbyPlayersGrid = ({
               isActive={player.isActive}
               isFirstPlayer={index < 3}
               premium={player.isPremium}
-              notLeader={excludedLeaderIds.includes(player.id)}
               variant="square"
               onKick={onKick}
               onPromote={onPromote}

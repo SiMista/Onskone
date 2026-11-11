@@ -14,8 +14,9 @@ import { recordCardsShown, recordQuestionPicked } from '../../utils/deckStats.js
 import {
     serializeGame,
     serializeRounds,
-    serializePlayers,
+    serializeLobbyPlayers,
     buildRevealResults,
+    getRevealOrder,
     transitionToGuessing,
     finishAnsweringPhase,
     finishGuessing,
@@ -88,12 +89,13 @@ function emitGameState(socket: AppSocket, lobby: Lobby, game: Game, playerId: st
     // Résultats + réponses déjà révélées pour la phase REVEAL.
     if (round && round.phase === RoundPhase.REVEAL) {
         reconnectionData.revealResults = buildRevealResults(lobby, round);
+        reconnectionData.revealOrder = getRevealOrder(lobby, round, reconnectionData.revealResults);
         reconnectionData.revealedIndices = round.revealedIndices || [];
     }
 
     socket.emit('gameState', {
         game: serializeGame(lobby),
-        players: serializePlayers(lobby.players),
+        players: serializeLobbyPlayers(lobby),
         leaderboard: game.getLeaderboard(),
         reconnectionData,
     });
@@ -424,7 +426,7 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
                             }
 
                             // Notifier les autres joueurs
-                            io.to(lobby.code).emit('updatePlayersList', { players: serializePlayers(lobby.players) });
+                            io.to(lobby.code).emit('updatePlayersList', { players: serializeLobbyPlayers(lobby) });
                         } finally {
                             // Relâcher le lock
                             registry.releaseReconnectionLock(lobby.code, player.name);

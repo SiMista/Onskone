@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import socket from '../utils/socket';
 import { isStudioFrame, getStudioBotFlag, setStudioBotFlag } from '../utils/studioStorage';
 import { IGame, IPlayer, RoundPhase, GameCard } from '@onskone/shared';
+import type { ServerToClientEvents } from '@onskone/shared';
 
 // =====================================================================
 // useStudioBot - auto-pilot for Studio iframes flagged as bots
@@ -128,11 +129,7 @@ export function useStudioBot({ game, currentPlayer, players, lobbyCode }: UseStu
       socket.emit('selectQuestion', { lobbyCode: code, selectedQuestion: q });
     };
 
-    const onShuffled = (data: {
-      answers: Array<{ id: string; text: string }>;
-      players: IPlayer[];
-      roundNumber?: number;
-    }) => {
+    const onShuffled = (data: Parameters<ServerToClientEvents['shuffledAnswersReceived']>[0]) => {
       if (!enabledRef.current) return;
       const g = gameRef.current;
       const cp = currentPlayerRef.current;
@@ -141,7 +138,7 @@ export function useStudioBot({ game, currentPlayer, players, lobbyCode }: UseStu
       const round = g.currentRound;
       if (round.phase !== RoundPhase.GUESSING) return;
       if (round.leader.id !== cp.id) return;
-      if (data.roundNumber !== undefined && data.roundNumber !== round.roundNumber) return;
+      if (data.roundNumber !== round.roundNumber) return;
       const key = `${round.roundNumber}:submitGuesses`;
       if (firedRef.current.has(key)) return;
       firedRef.current.add(key);

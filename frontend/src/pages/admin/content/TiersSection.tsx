@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Icon } from '@iconify/react';
+import { Icon } from '../../../components/Icon';
 import { TIERS } from '../../../constants/tiers';
 import { buildShareCard } from '../../../utils/shareCard';
 import { fr } from '../../../i18n/fr';

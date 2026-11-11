@@ -49,7 +49,7 @@ const Footer = () => {
           </button>
           <span aria-hidden="true">|</span>
           <a
-            href="https://www.youtube.com/watch?v=xvFZjo5PgG0&list=RDxvFZjo5PgG0&start_radio=1"
+            href="https://www.youtube.com/watch?v=PvGEChOh5tc&t=7s"
             target="_blank"
             rel="noopener noreferrer"
             className={footerLinkClass}

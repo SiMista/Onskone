@@ -7,7 +7,6 @@ import {
   GAME_CONSTANTS,
 } from '@onskone/shared';
 import type { GameSpeed } from '@onskone/shared';
-import { speedFromLegacyMultiplier, legacyMultiplierFromSpeed } from '../src/utils/legacyTimeMultiplier';
 
 const T = GAME_CONSTANTS.TIMERS;
 
@@ -94,23 +93,5 @@ describe('getPhaseDuration', () => {
 
   it('defaults speed to normal and playerCount to 3 when omitted', () => {
     expect(getPhaseDuration(RoundPhase.GUESSING)).toBe(T.normal.GUESSING);
-  });
-});
-
-describe('legacy time multiplier bridge', () => {
-  it('maps old multipliers to a speed', () => {
-    expect(speedFromLegacyMultiplier(0.7)).toBe('fast');
-    expect(speedFromLegacyMultiplier(1)).toBe('normal');
-    // L'ancien niveau "Longue" n'existe plus : il retombe sur normal.
-    expect(speedFromLegacyMultiplier(1.3)).toBe('normal');
-    expect(speedFromLegacyMultiplier(30)).toBe('debug');
-    expect(speedFromLegacyMultiplier(NaN)).toBe('normal');
-    expect(speedFromLegacyMultiplier('n/a')).toBe('normal');
-  });
-
-  it('round-trips every speed', () => {
-    for (const speed of ['fast', 'normal', 'debug'] as GameSpeed[]) {
-      expect(speedFromLegacyMultiplier(legacyMultiplierFromSpeed(speed))).toBe(speed);
-    }
   });
 });

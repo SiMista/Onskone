@@ -1,7 +1,30 @@
 import { describe, it, expect } from '@jest/globals';
 import * as QuestionsRepo from '../src/data/questionsRepository';
-import { DEFAULT_LOCALE } from '@onskone/shared';
+import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from '@onskone/shared';
 import type { SelectedDecks } from '@onskone/shared';
+
+describe('tips des questions (questions_<locale>.json)', () => {
+    // Garde-fou si quelqu'un retouche le JSON à la main au lieu de l'Excel : un tip
+    // dont la clé ne correspond à aucune question de la carte ne s'affichera jamais.
+    it.each(SUPPORTED_LOCALES)('%s : chaque tip est indexé par une question de sa carte', (locale) => {
+        const pool = QuestionsRepo.getRandomQuestions(Number.MAX_SAFE_INTEGER, [], undefined, locale);
+        expect(pool.length).toBeGreaterThan(0);
+        for (const card of pool) {
+            for (const [question, tip] of Object.entries(card.tips ?? {})) {
+                expect(card.questions).toContain(question);
+                expect(tip.trim()).not.toBe('');
+            }
+        }
+    });
+
+    it('les cartes sans tip ne portent pas de champ tips vide', () => {
+        const pool = QuestionsRepo.getRandomQuestions(Number.MAX_SAFE_INTEGER, [], undefined, DEFAULT_LOCALE);
+        expect(pool.some((card) => card.tips)).toBe(true);
+        for (const card of pool) {
+            if (card.tips) expect(Object.keys(card.tips).length).toBeGreaterThan(0);
+        }
+    });
+});
 
 describe('sanitizeSelectedDecks - gating premium', () => {
     const catalog = QuestionsRepo.getDecksCatalog(DEFAULT_LOCALE);

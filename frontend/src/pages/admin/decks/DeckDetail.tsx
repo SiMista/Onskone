@@ -1,4 +1,4 @@
-import { Icon } from '@iconify/react';
+import { Icon } from '../../../components/Icon';
 import type { AdminDeckSummary } from '@onskone/shared';
 import { categoryStyle, type CategoryStyle } from './shared';
 import { SubjectCard } from './SubjectCard';

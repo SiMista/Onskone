@@ -13,7 +13,7 @@ import type { GameSpeed } from '@onskone/shared';
 import { playSound } from '../utils/sounds';
 import { useStartTimerDelayed, useSocketEvent } from '../hooks';
 import socket from '../utils/socket';
-import { getQuestionSubtitle } from '../utils/questionHelpers';
+import { getQuestionSubtitle, getQuestionTip } from '../utils/questionHelpers';
 import { useLocale } from '../i18n';
 import PremiumName from './PremiumName';
 
@@ -46,6 +46,7 @@ const AnswerPhase = ({
   const leader = players.find(p => p.id === leaderId);
   const subtitle = leader ? getQuestionSubtitle(t.phases, RoundPhase.ANSWERING, isLeader) : '';
   const subtitleBadge = !isLeader && leader ? <PlayerBadge player={leader} size="sm" /> : undefined;
+  const tip = getQuestionTip(card, question);
   const phaseDuration = getPhaseDuration(RoundPhase.ANSWERING, gameSpeed);
   useStartTimerDelayed(isLeader, lobbyCode, phaseDuration);
   const [answer, setAnswer] = useState(initialMyAnswer || '');
@@ -202,7 +203,7 @@ const AnswerPhase = ({
                 {subtitle}
               </p>
             )}
-            <QuestionCard question={question} card={card} subtitleBadge={subtitleBadge} variant="compact" />
+            <QuestionCard question={question} card={card} subtitleBadge={subtitleBadge} variant="compact" tip={tip} />
           </div>
 
           <HourglassTimer
@@ -301,7 +302,7 @@ const AnswerPhase = ({
 
         <QuestionByline player={leader} />
 
-        <QuestionCard question={question} card={card} variant="compact" />
+        <QuestionCard question={question} card={card} variant="compact" tip={tip} tipAttention={showNotebook} />
 
         <p className="text-center text-sm md:text-base text-gray-700 italic m-0">
           {t.phases.answering.writeYourAnswer}

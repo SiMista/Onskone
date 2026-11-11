@@ -102,6 +102,8 @@ describe('filet REVEAL (REVEAL_BACKSTOP_MS)', () => {
         armRevealBackstop(io, lobby.code, lobby, game, round);
         advanceAfterReveal(io, lobby.code, lobby, game); // nextRound du pilier
         expect(game.currentRound?.roundNumber).toBe(2);
+        // Début de manche : timer QUESTION_SELECTION décalé de l'intro du nouveau pilier.
+        expect(game.currentRound?.timerStartedAt).toBe(Date.now() + GAME_CONSTANTS.QUESTION_SELECTION_INTRO_MS);
 
         jest.advanceTimersByTime(BACKSTOP);
         expect(emitted('roundSkipped')).toHaveLength(0);

@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Icon } from '@iconify/react';
+import { Icon } from '../components/Icon';
 import socket from '../utils/socket';
 import { IPlayer, LeaderboardEntry, IRound } from '@onskone/shared';
 import ScreenLogo from '../components/ScreenLogo';

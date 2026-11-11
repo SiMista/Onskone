@@ -15,11 +15,13 @@ import { useLocale } from '../i18n';
 // Assez long pour LIRE le fait avant qu'il ne change.
 const FUN_FACT_ROTATE_MS = 15000;
 
-const QuestionSelection = ({ lobbyCode, isLeader, leader, gameSpeed }: {
+const QuestionSelection = ({ lobbyCode, isLeader, leader, gameSpeed, intro = false }: {
   lobbyCode: string;
   isLeader: boolean;
   leader: Pick<IPlayer, 'id' | 'name' | 'avatarId' | 'isPremium'>;
   gameSpeed: GameSpeed;
+  /** « À ton tour d'être PILIER » affiché par-dessus : les cartes se retournent à sa fin. */
+  intro?: boolean;
 }) => {
   const { t } = useLocale();
   const [cards, setCards] = useState<GameCard[]>([]);
@@ -103,9 +105,10 @@ const QuestionSelection = ({ lobbyCode, isLeader, leader, gameSpeed }: {
     setLoading(false);
   });
 
-  // Stagger reveal : retourne la carte active d'abord, puis les autres dans l'ordre
+  // Stagger reveal : retourne la carte active d'abord, puis les autres dans l'ordre.
+  // Pas sous l'intro du pilier : la donne se joue sous ses yeux, une fois l'overlay parti.
   useEffect(() => {
-    if (cards.length === 0) return;
+    if (cards.length === 0 || intro) return;
     setRevealedIdx(new Set());
     const timeouts: ReturnType<typeof setTimeout>[] = [];
     const order = [currentCardIndex, ...cards.map((_, i) => i).filter(i => i !== currentCardIndex)];
@@ -121,7 +124,7 @@ const QuestionSelection = ({ lobbyCode, isLeader, leader, gameSpeed }: {
     });
     return () => timeouts.forEach(clearTimeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cards]);
+  }, [cards, intro]);
 
   const locked = selectedQuestion !== null;
 
@@ -192,14 +195,15 @@ const QuestionSelection = ({ lobbyCode, isLeader, leader, gameSpeed }: {
   // Affiche un indice de swipe si le pilier ne swipe pas dans les 5 premières
   // secondes (mobile). Laisser le temps de LIRE la carte avant de couvrir l'écran :
   // à 3s le rappel tombait alors que le pilier était encore en train de lire.
+  // Compté depuis la fin de l'intro du pilier, pas sous l'overlay.
   useEffect(() => {
-    if (!isLeader || loading || locked || cards.length < 2) return;
+    if (!isLeader || loading || locked || cards.length < 2 || intro) return;
     if (hasInteractedRef.current) return;
     const t = setTimeout(() => {
       if (!hasInteractedRef.current) setShowSwipeHint(true);
     }, 5000);
     return () => clearTimeout(t);
-  }, [isLeader, loading, locked, cards.length]);
+  }, [isLeader, loading, locked, cards.length, intro]);
 
   const dismissSwipeHint = () => {
     hasInteractedRef.current = true;

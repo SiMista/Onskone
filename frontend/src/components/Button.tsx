@@ -16,6 +16,8 @@ type ButtonProps = {
   rotateEffect?: boolean;
   hero?: boolean;
   onClick?: () => void;
+  /** Clic sur le bouton désactivé (ex. toast qui explique pourquoi) : il passe alors en aria-disabled au lieu de `disabled` natif, qui avale le clic. */
+  onDisabledClick?: () => void;
   className?: string;
   type?: "button" | "submit" | "reset";
 };
@@ -50,6 +52,7 @@ const Button = ({
   rotateEffect = false,
   hero = false,
   onClick,
+  onDisabledClick,
   className = "",
   type = "button",
 }: ButtonProps) => {
@@ -104,8 +107,9 @@ const Button = ({
   return (
     <button
       type={type}
-      onClick={isDisabled ? undefined : onClick}
-      disabled={isDisabled}
+      onClick={isDisabled ? (isLoading ? undefined : onDisabledClick) : onClick}
+      disabled={isDisabled && !(onDisabledClick && !isLoading)}
+      aria-disabled={isDisabled || undefined}
       className={classes}
     >
       {band && (

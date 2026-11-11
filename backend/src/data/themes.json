@@ -1,4 +1,13 @@
 {
+  "ABOUT_YOU": {
+    "category": "ICEBREAKERS",
+    "emoji": "fluent-emoji-flat:dna",
+    "labels": { "fr": "QUI ES-TU ?", "en": "ABOUT YOU" },
+    "descriptions": {
+      "fr": "La base, les petits détails qui font qui tu es !",
+      "en": "The basics, the little details that make you who you are!"
+    }
+  },
   "DAILY": {
     "category": "ICEBREAKERS",
     "emoji": "fluent-emoji-flat:sun",
@@ -22,15 +31,15 @@
     "emoji": "fluent-emoji-flat:clapper-board",
     "labels": { "fr": "CINÉ & MUSIQUE", "en": "MOVIES & MUSIC" },
     "descriptions": {
-      "fr": "Ce que tu écoutes, ce que tu regardes, ce que ça dit de toi sans que tu t'en rendes compte !",
-      "en": "What you watch, what you listen to, and what it says about you without you realizing it !"
+      "fr": "Ce que tu écoutes, ce que tu regardes, ce que ça dit de toi !",
+      "en": "What you listen to, what you watch, what it says about you!"
     }
   },
   "WYD": {
     "category": "ICEBREAKERS",
     "emoji": "fluent-emoji-flat:performing-arts",
     "premium": true,
-    "labels": { "fr": "MISE EN SITUATION", "en": "WYD?" },
+    "labels": { "fr": "MISE EN SITUATION", "en": "WWYD?" },
     "descriptions": {
       "fr": "On te met dans un contexte, et on juge ce que ça donne !",
       "en": "What would you do ? We put you in a scenario, show us how you act."
@@ -39,19 +48,10 @@
   "TRAVEL": {
     "category": "ICEBREAKERS",
     "emoji": "fluent-emoji-flat:globe-showing-europe-africa",
-    "labels": { "fr": "VOYAGES & SORTIE", "en": "PARTIES & TRAVEL" },
+    "labels": { "fr": "VOYAGES & SORTIES", "en": "PARTIES & TRAVEL" },
     "descriptions": {
-      "fr": "Où tu vas et où tu sors !",
-      "en": "Where you travel, and what you get up to !"
-    }
-  },
-  "ABOUT_YOU": {
-    "category": "ICEBREAKERS",
-    "emoji": "fluent-emoji-flat:dna",
-    "labels": { "fr": "QUI ES-TU ?", "en": "ABOUT YOU" },
-    "descriptions": {
-      "fr": "Ton introduction, et les premiers détails qui apprennent à savoir qui tu es !",
-      "en": "Your intro. The first details that tell us who you really are."
+      "fr": "Où est-ce que tu vas ? Où est-ce que tu sors ?",
+      "en": "Where do you travel? Where do you go out?"
     }
   },
   "BETWEEN_US": {
@@ -75,7 +75,7 @@
   "RECEIPTS": {
     "category": "FUN",
     "emoji": "fluent-emoji-flat:open-file-folder",
-    "labels": { "fr": "LES DOSSIERS", "en": "THE RECEIPTS" },
+    "labels": { "fr": "LES DOSSIERS", "en": "THE FILES" },
     "descriptions": {
       "fr": "Opinions tranchées, aveux gênants, Onskoné ou Onvastapé !",
       "en": "Sharp opinions, awkward confessions. We see you."
@@ -97,7 +97,7 @@
     "emoji": "fluent-emoji-flat:speaking-head",
     "mature": true,
     "premium": true,
-    "labels": { "fr": "TES OPINIONS", "en": "HOT TAKES" },
+    "labels": { "fr": "MES OPINIONS", "en": "HOT TAKES" },
     "descriptions": {
       "fr": "Ce que tu penses à voix haute, sur plusieurs sujets... particuliers !",
       "en": "Your opinions, out loud, on everything, on some ... subjects."
@@ -125,10 +125,10 @@
   "FEELINGS": {
     "category": "DEEP",
     "emoji": "fluent-emoji-flat:yellow-heart",
-    "labels": { "fr": "ÉMOTIONS & BIEN-ÊTRE", "en": "FEELINGS" },
+    "labels": { "fr": "ÉMOTIONS & FEELINGS", "en": "FEELINGS" },
     "descriptions": {
-      "fr": "Ce que tu ressens vraiment ! Petite introspection.",
-      "en": "What you're actually feeling. A little introspection goes a long way."
+      "fr": "Petite introspection sur ce que tu ressens vraiment.",
+      "en": "A little introspection on what you really feel."
     }
   },
   "MIRROR": {
@@ -136,8 +136,8 @@
     "emoji": "fluent-emoji-flat:framed-picture",
     "labels": { "fr": "FACE À TOI-MÊME", "en": "IN THE MIRROR" },
     "descriptions": {
-      "fr": "Pas de filtre : ce que tu sais de toi mais que tu dis rarement.",
-      "en": "No filter. The things you know about yourself but rarely say out loud."
+      "fr": "Des questions sans filtre, sur les vérités que tu dis rarement.",
+      "en": "Unfiltered questions about the truths you rarely say out loud."
     }
   }
 }

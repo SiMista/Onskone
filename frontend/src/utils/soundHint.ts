@@ -1,27 +1,38 @@
 import { Capacitor } from '@capacitor/core';
+import { Volume } from '@capawesome/capacitor-volume';
 import { getSettings } from './settings';
 
 /**
- * Rappel discret « joue avec le son », une fois par lancement d'app (flag module,
- * donc par iframe dans le Studio). Pas de détection : aucune API web ne donne le
- * volume, et iOS n'expose nulle part l'état du bouton silencieux (qui coupe les
- * sons de l'app sans toucher au volume). Simple toast à l'arrivée dans le salon,
- * pas de popup : on ne bloque personne pour ça. Jamais si le joueur a lui-même
- * coupé les sons dans les Réglages.
+ * Rappel « monte le son », au lancement de la partie (gameStarted reçu dans le
+ * salon), UNIQUEMENT si le volume média du téléphone est à 0. Simple toast, pas de
+ * popup : on ne bloque personne pour ça.
+ * - Au plus une fois par lancement d'app (flag module) ; tant qu'il n'a pas été
+ *   montré, on revérifie le volume à chaque partie.
+ * - Jamais si le joueur a coupé les sons dans les Réglages.
+ * - Jamais sur le web : aucune API web ne donne le volume, et un rappel à
+ *   l'aveugle tombait sur des joueurs qui avaient déjà le son.
+ * - Volume illisible (plugin en échec) : rien, plutôt qu'un rappel à l'aveugle.
+ * Le bouton silencieux de l'iPhone reste indétectable (Apple n'expose rien) : la
+ * variante iOS le rappelle quand le volume est à 0.
  */
 let shown = false;
 
-const isIos = (): boolean => {
-  if (Capacitor.getPlatform() === 'ios') return true;
-  if (typeof navigator === 'undefined') return false;
-  // iPadOS se présente comme un Mac : on le reconnaît à l'écran tactile.
-  return /iPhone|iPad|iPod/.test(navigator.userAgent)
-    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+/** Variante du rappel à afficher maintenant, ou null (web / déjà vu / sons coupés / volume > 0). */
+export const takeSoundHint = async (): Promise<'ios' | 'default' | null> => {
+  if (shown || !getSettings().sound || !Capacitor.isNativePlatform()) return null;
+  let volume: number;
+  try {
+    ({ volume } = await Volume.getVolume());
+  } catch {
+    return null;
+  }
+  // Revérifié après l'attente : deux parties lancées coup sur coup ne doublent pas le toast.
+  if (shown || volume > 0) return null;
+  shown = true;
+  return Capacitor.getPlatform() === 'ios' ? 'ios' : 'default';
 };
 
-/** Variante du rappel à afficher maintenant, ou null (déjà vu / sons coupés). */
-export const takeSoundHint = (): 'ios' | 'default' | null => {
-  if (shown || !getSettings().sound) return null;
-  shown = true;
-  return isIos() ? 'ios' : 'default';
+/** Tests uniquement : remet le flag « déjà montré » à zéro. */
+export const resetSoundHintForTests = (): void => {
+  shown = false;
 };

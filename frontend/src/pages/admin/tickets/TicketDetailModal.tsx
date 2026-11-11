@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Icon } from '@iconify/react';
+import { Icon } from '../../../components/Icon';
 import { useToast } from '../../../components/Toast';
 import { Ticket, TicketStatus } from '../../../utils/ticketsApi';
 import { TYPE_META, STATUS_META, STATUS_ORDER, formatDate } from '../shared';

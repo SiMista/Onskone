@@ -25,6 +25,9 @@ export interface ReconnectionData {
   /** Résultats déjà calculés pour la phase REVEAL */
   revealResults?: RevealResult[];
 
+  /** Ordre du reveal (indices de revealResults, tour de table), toujours envoyé avec revealResults */
+  revealOrder?: number[];
+
   /** Indices des réponses déjà révélées en phase REVEAL */
   revealedIndices?: number[];
 }
@@ -103,7 +106,7 @@ export interface ServerToClientEvents {
    */
   joinedLobby: (data: { player: IPlayer; reconnectToken: string }) => void;
 
-  /** Mise à jour de la liste des joueurs */
+  /** Joueurs du salon, dans l'ordre des places autour de la table (sens du jeu) */
   updatePlayersList: (data: { players: IPlayer[] }) => void;
 
   /** Notification d'expulsion du lobby */
@@ -155,11 +158,8 @@ export interface ServerToClientEvents {
     gameSpeed: GameSpeed;
     /** Joueurs exclus du rôle de pilier (limités aux joueurs présents dans le salon) */
     excludedLeaderIds: string[];
-    /**
-     * @deprecated Ancien multiplicateur (0.7 / 1), émis UNIQUEMENT pour les apps
-     * d'avant `gameSpeed`. À retirer quand MIN_SUPPORTED_VERSION les exclut.
-     */
-    timeMultiplier: number;
+    /** Écran « Préparer la partie » ouvert par l'hôte : toute la table le suit */
+    preparing: boolean;
     locale: Locale;
   }) => void;
 
@@ -168,9 +168,6 @@ export interface ServerToClientEvents {
 
   /** La vitesse de jeu (durées des phases) a été mise à jour */
   gameSpeedUpdated: (data: { gameSpeed: GameSpeed }) => void;
-
-  /** @deprecated Pendant legacy de `gameSpeedUpdated`, pour les apps d'avant `gameSpeed`. */
-  timeMultiplierUpdated: (data: { timeMultiplier: number }) => void;
 
   /** Un substitut a été sélectionné par le pilier */
   substituteSelected: (data: {
@@ -203,7 +200,11 @@ export interface ServerToClientEvents {
   // ===== GAME EVENTS =====
 
   /** Notification de démarrage du jeu */
-  gameStarted: (data: { game: IGame }) => void;
+  gameStarted: (data: {
+    game: IGame;
+    /** true = renvoyé à un joueur qui revient dans une partie déjà lancée (pas un lancement) */
+    resumed: boolean;
+  }) => void;
 
   /** Envoi de l'état complet du jeu (pour reconnexion) */
   gameState: (data: {
@@ -279,6 +280,8 @@ export interface ServerToClientEvents {
   revealResults: (data: {
     phase: RoundPhase;
     results: RevealResult[];
+    /** Ordre du reveal (indices de results, tour de table), calculé par le serveur */
+    revealOrder: number[];
     scores: Record<string, number>;
     leaderboard: LeaderboardEntry[];
     forced?: boolean; // Si forcé par expiration du timer
@@ -320,7 +323,9 @@ export interface ServerToClientEvents {
     duration: number; // Durée en secondes
     startedAt: number; // Timestamp de démarrage (pour sync)
     /** Horloge serveur à l'émission : le client en déduit sa propre échéance sans dépendre de sa montre. */
-    serverNow?: number;
+    serverNow: number;
+    /** Manche du timer : relie son départ à la bonne intro de phase côté client. */
+    roundNumber: number;
   }) => void;
 
   /** État actuel du timer (réponse à requestTimerState) */
@@ -328,7 +333,8 @@ export interface ServerToClientEvents {
     phase: RoundPhase;
     duration: number;
     startedAt: number;
-    serverNow?: number; // cf. timerStarted
+    serverNow: number; // cf. timerStarted
+    roundNumber: number; // cf. timerStarted
   } | null) => void;
 
   /** Fin de la partie */
@@ -376,12 +382,12 @@ export const ERROR_CODES = {
   WRONG_PHASE: 'WRONG_PHASE',
   /** La partie est déjà en cours (réglage lobby refusé) */
   GAME_IN_PROGRESS: 'GAME_IN_PROGRESS',
-  /** Le joueur a été expulsé du salon */
-  KICKED: 'KICKED',
   /** Conflit d'état (reconnexion en cours, déjà soumis, etc.) */
   CONFLICT: 'CONFLICT',
   /** Serveur en maintenance : création de salon / lancement de partie refusés */
   MAINTENANCE: 'MAINTENANCE',
+  /** Salon plein (GAME_CONSTANTS.MAX_PLAYERS joueurs) : nouveau joueur refusé */
+  LOBBY_FULL: 'LOBBY_FULL',
   /** Erreur serveur inattendue */
   INTERNAL: 'INTERNAL',
 } as const;
@@ -489,13 +495,16 @@ export interface ClientToServerEvents {
     excludedLeaderIds: string[];
   }) => void;
 
-  /**
-   * @deprecated Ancien réglage par multiplicateur, encore envoyé par les apps d'avant
-   * `gameSpeed` (0.7 → fast, le reste → normal). À retirer avec `timeMultiplierUpdated`.
-   */
-  updateTimeMultiplier: (data: {
+  /** Ouvrir / fermer l'écran « Préparer la partie » pour toute la table (hôte uniquement, hors partie) */
+  setPreparation: (data: {
     lobbyCode: string;
-    timeMultiplier: number;
+    preparing: boolean;
+  }) => void;
+
+  /** Places autour de la table, dans le sens du jeu : ids des joueurs (hôte uniquement, hors partie) */
+  updateSeatOrder: (data: {
+    lobbyCode: string;
+    seatOrder: string[];
   }) => void;
 
   /** Sélectionner le joueur substitut (réservé au pilier, mode "Devine ma réponse") */

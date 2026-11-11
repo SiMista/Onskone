@@ -4,24 +4,25 @@ import socket from '../utils/socket';
 import Button from '../components/Button';
 import ScreenLogo from '../components/ScreenLogo';
 import Footer from '../components/Footer';
-import ConfirmModal from '../components/ConfirmModal';
 import InfoModal from '../components/InfoModal';
+import ConfirmModal from '../components/ConfirmModal';
 import HowToPlayCarousel from '../components/HowToPlayCarousel';
 import HowToPlayButton from '../components/HowToPlayButton';
 import SettingsButton from '../components/SettingsButton';
 import ShareInviteSheet from '../components/ShareInviteSheet';
-import { Icon } from '@iconify/react';
+import { Icon } from '../components/Icon';
 import ThemePickerModal from '../components/ThemePickerModal';
 import BackButton from '../components/BackButton';
 import ScrollFade from '../components/ScrollFade';
 import LobbyTabs, { type LobbyTabId } from '../components/lobby/LobbyTabs';
 import LobbyPlayersGrid from '../components/lobby/LobbyPlayersGrid';
-import LobbySettingsPanel from '../components/lobby/LobbySettingsPanel';
-import GameOptionsSheet from '../components/lobby/GameOptionsSheet';
+import LobbyThemesPanel from '../components/lobby/LobbyThemesPanel';
+import PrepareGame from '../components/lobby/PrepareGame';
 import { IPlayer, ERROR_CODES } from '@onskone/shared';
-import type { ErrorCode } from '@onskone/shared';
+import type { ErrorCode, ServerToClientEvents } from '@onskone/shared';
 import { useSocketEvent, useLeavePrompt, useReconnectOnVisible, useKeepAwake } from '../hooks';
 import { takeSoundHint } from '../utils/soundHint';
+import { gameStartNavState } from '../utils/phaseIntro';
 import { useLobbyIdentity } from '../hooks/useLobbyIdentity';
 import { useShareInvite } from '../hooks/useShareInvite';
 import { useLobbyState } from '../hooks/useLobbyState';
@@ -33,6 +34,7 @@ import { STICKER_FILTER } from '../constants/icons';
 import { studioStorage, isStudioFrame, getStudioBotFlag } from '../utils/studioStorage';
 import { getCurrentPlayerFromStorage, storeReconnectToken, getReconnectToken } from '../utils/playerHelpers';
 
+// En dessous, « Démarrer » demande confirmation (la partie reste jouable dès MIN_PLAYERS).
 const RECOMMENDED_PLAYERS = 4;
 // Helper texts sous l'action row : texte blanc posé sur le fond clair,
 // ombre nette + halo sombre pour rester lisible.
@@ -54,27 +56,19 @@ const Lobby = () => {
         }
     }, [lobbyCode, navigate]);
 
-    // Rappel « joue avec le son » à l'arrivée dans le salon (une fois par lancement,
-    // jamais si les sons sont coupés dans les Réglages), avant que la partie démarre.
-    useEffect(() => {
-        const hint = takeSoundHint();
-        if (hint) showToast(hint === 'ios' ? t.lobby.toasts.soundHintIos : t.lobby.toasts.soundHint, 'info', 5000);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
     const [players, setPlayers] = useState<IPlayer[]>([]);
     const [currentPlayer, setCurrentPlayer] = useState<IPlayer | null>(null);
     // Id du joueur courant tenu à jour pour identifier "moi" dans updatePlayersList
     // (le serveur ne diffuse plus socketId). Seedé depuis le storage pour couvrir le
     // tout premier updatePlayersList avant que joinedLobby n'ait renseigné currentPlayer.
     const currentPlayerIdRef = useRef<string | null>(getCurrentPlayerFromStorage()?.id ?? null);
-    const [showFewPlayersModal, setShowFewPlayersModal] = useState(false);
     const [showGameAlreadyStarted, setShowGameAlreadyStarted] = useState(false);
+    const [showFewPlayersModal, setShowFewPlayersModal] = useState(false);
     const [isHowToPlayOpen, setIsHowToPlayOpen] = useState(false);
-    const [isThemePickerOpen, setIsThemePickerOpen] = useState(false);
+    // Catégorie ouverte dans le sélecteur de thèmes (fiche touchée dans l'onglet Thèmes).
+    const [themePickerCategory, setThemePickerCategory] = useState<string | null>(null);
     const [shareSheetOpen, setShareSheetOpen] = useState(false);
-    const [optionsSheetOpen, setOptionsSheetOpen] = useState(false);
-    const [lobbyTab, setLobbyTab] = useState<LobbyTabId>('settings');
+    const [lobbyTab, setLobbyTab] = useState<LobbyTabId>('themes');
     const lobbyTabScrollRef = useRef<HTMLDivElement | null>(null);
     // Le scroll-container est partagé entre les 2 tabs (grid stacking).
     // Reset à 0 au switch pour éviter que la position scrollée des settings
@@ -100,13 +94,28 @@ const Lobby = () => {
         guessMyAnswerMode,
         gameSpeed,
         excludedLeaderIds,
+        preparing,
         contentLocale,
         onGuessMyAnswerModeChange,
         onGameSpeedChange,
         onExcludedLeadersChange,
         onSelectedDecksChange,
+        setPreparing,
         flushPendingSettings,
     } = useLobbyState(lobbyCode);
+
+    // Lus par handleUpdatePlayersList (toast d'arrivée pendant la préparation).
+    const preparingRef = useRef(preparing);
+    preparingRef.current = preparing;
+    const gameModeRef = useRef(gameMode);
+    gameModeRef.current = gameMode;
+
+    // L'hôte ouvre la préparation : on referme ce qui la cacherait (sélecteur, partage).
+    useEffect(() => {
+        if (!preparing) return;
+        setThemePickerCategory(null);
+        setShareSheetOpen(false);
+    }, [preparing]);
 
     // Partage de l'invitation : actions granulaires (partage OS, copie lien, copie code) + modale de repli.
     const { shareNative, copyLink, copyCode, fallbackLink, clearFallbackLink } = useShareInvite(lobbyCode, t);
@@ -137,7 +146,7 @@ const Lobby = () => {
         }
     }, [lobbyCode]);
 
-    const doStartGame = useCallback(() => {
+    const launchGame = useCallback(() => {
         if (lobbyCode) {
             // Réglages encore en debounce d'abord : ils doivent arriver avant startGame.
             flushPendingSettings();
@@ -145,14 +154,17 @@ const Lobby = () => {
         }
     }, [lobbyCode, flushPendingSettings]);
 
-    const startGame = useCallback(() => {
-        const activeCount = players.filter(p => p.isActive).length;
-        if (activeCount < RECOMMENDED_PLAYERS) {
-            setShowFewPlayersModal(true);
-        } else {
-            doStartGame();
-        }
-    }, [players, doStartGame]);
+    // Hôte : place les joueurs autour de la table. Optimiste (la liste suit tout de
+    // suite), le serveur rediffuse la liste dans l'ordre retenu.
+    const reorderSeats = useCallback((seatIds: string[]) => {
+        if (!lobbyCode) return;
+        setPlayers(prev => {
+            const byId = new Map(prev.map(p => [p.id, p]));
+            const seated = seatIds.flatMap(id => byId.get(id) ?? []);
+            return [...seated, ...prev.filter(p => !seatIds.includes(p.id))];
+        });
+        socket.emit('updateSeatOrder', { lobbyCode, seatOrder: seatIds });
+    }, [lobbyCode]);
 
     // Garder l'id "moi" à jour pour l'identification dans updatePlayersList.
     useEffect(() => {
@@ -250,9 +262,12 @@ const Lobby = () => {
         );
         const prevActive = prevActivePlayersRef.current;
         if (prevActive !== null) {
+            // Hôte en pleine préparation sur place : l'arrivant prend la dernière place, à lui de le placer.
+            const meIsHost = !!(myId && data.players.find(p => p.id === myId)?.isHost);
+            const placeIt = meIsHost && preparingRef.current && gameModeRef.current === 'local';
             for (const [id, name] of activeNow) {
                 if (id !== myId && !prevActive.has(id)) {
-                    showToast(t.lobby.toasts.playerJoined(name), 'join', 3000);
+                    showToast(placeIt ? t.lobby.toasts.joinedDuringPrep(name) : t.lobby.toasts.playerJoined(name), 'join', 3000);
                 }
             }
             for (const [id, name] of prevActive) {
@@ -278,19 +293,15 @@ const Lobby = () => {
         setCurrentPlayer(data.player);
     }, [lobbyCode]);
 
-    // Routing d'erreur sur le `code` stable du contrat ; fallback sur le
-    // texte localisé pour les serveurs qui n'émettent pas encore de code.
+    // Routing d'erreur sur le `code` stable du contrat.
     const handleError = useCallback((data: { message: string; code?: ErrorCode; sessionLost?: boolean }) => {
-        const isNotFound = data.code
-            ? data.code === ERROR_CODES.NOT_FOUND
-            : data.message === 'Lobby not found' || data.message === 'Player not found';
-        if (isNotFound) {
+        if (data.code === ERROR_CODES.NOT_FOUND) {
             navigate('/');
             return;
         }
-        // Expulsé : retour à l'accueil, sans proposer de reprendre ce salon.
-        if (data.code === ERROR_CODES.KICKED) {
-            showToast(t.lobby.toasts.kickedAnon, 'error', 5000);
+        // Salon plein (arrivé en même temps qu'un autre après la vérif du pseudo) : retour à l'accueil.
+        if (data.code === ERROR_CODES.LOBBY_FULL) {
+            showToast(t.home.toasts.lobbyFull(GAME_CONFIG.MAX_PLAYERS), 'error', 5000);
             navigate('/', { replace: true });
             return;
         }
@@ -307,12 +318,23 @@ const Lobby = () => {
         showToast(data.message, 'error', 5000);
     }, [navigate, showToast, t, lobbyCode]);
 
-    const handleGameStarted = useCallback(() => {
+    const handleGameStarted = useCallback((data: Parameters<ServerToClientEvents['gameStarted']>[0]) => {
         if (currentPlayer) {
             studioStorage.setItem('currentPlayer', JSON.stringify(currentPlayer));
         }
-        navigate(`/game/${lobbyCode}`);
-    }, [currentPlayer, lobbyCode, navigate]);
+        // Rappel « monte le son » au lancement de la partie, si le volume du téléphone
+        // est à 0 (cf. utils/soundHint). Pas à une reprise de partie (`resumed`, joueur
+        // qui revient en pleine partie). Le ToastProvider est global : le toast survit à
+        // la navigation vers /game, qu'on n'attend pas pour lire le volume.
+        if (!data.resumed) {
+            void takeSoundHint().then((hint) => {
+                if (hint) showToast(hint === 'ios' ? t.lobby.toasts.soundHintIos : t.lobby.toasts.soundHint, 'info', 5000);
+            });
+        }
+        // Lancement (pas une reprise) : le premier pilier aura son « À ton tour » même
+        // sans écran précédent sur /game (cf. utils/phaseIntro).
+        navigate(`/game/${lobbyCode}`, data.resumed ? undefined : { state: gameStartNavState() });
+    }, [currentPlayer, lobbyCode, navigate, showToast, t]);
 
     const handleGameAlreadyStarted = useCallback(() => {
         setShowGameAlreadyStarted(true);
@@ -344,8 +366,33 @@ const Lobby = () => {
         gameSpeed,
         guessMyAnswerMode,
     );
-    const canStartGame = enoughPlayers && hasThemeSelected && hasLeader;
+    // Salon : « Démarrer » ouvre la préparation (il faut assez de joueurs et un thème).
+    // Préparation : « Lancer la partie » exige en plus au moins 1 pilier.
+    // Le bouton est désactivé tant qu'il manque des joueurs ou un thème (le clic dessus
+    // relance ce contrôle pour afficher le toast) ; pour le pilier il reste cliquable et
+    // le manque est dit au clic, en toast rouge. Renvoie false si un prérequis manque.
+    const checkCanAdvance = (needLeader: boolean): boolean => {
+        const missing = !enoughPlayers
+            ? t.lobby.minPlayers(GAME_CONFIG.MIN_PLAYERS)
+            : !hasThemeSelected
+                ? (decksLoading ? t.lobby.loadingThemes : t.lobby.selectAtLeastOneTheme)
+                : needLeader && !hasLeader
+                    ? t.lobby.atLeastOneLeader
+                    : null;
+        if (missing) showToast(missing, 'error', 4000);
+        return !missing;
+    };
+    const onStartClick = () => {
+        if (!checkCanAdvance(false)) return;
+        // Peu de joueurs : on demande confirmation avant d'ouvrir la préparation.
+        if (activePlayers.length < RECOMMENDED_PLAYERS) setShowFewPlayersModal(true);
+        else setPreparing(true);
+    };
+    const onLaunchClick = () => {
+        if (checkCanAdvance(true)) launchGame();
+    };
     const isHost = !!currentPlayer?.isHost;
+    const shortHostName = hostName && hostName.length > 10 ? `${hostName.slice(0, 10)}…` : hostName;
 
     return (
         <div className="relative h-full flex flex-col overflow-hidden animate-phase-enter">
@@ -360,115 +407,148 @@ const Lobby = () => {
                     <div className="min-h-0 flex flex-col gap-2 md:gap-4">
                         {/* Bouton retour + raccourci "Comment jouer ?" + réglages sur la même ligne. */}
                         <div className="shrink-0 flex items-center justify-between gap-2">
-                            <BackButton onClick={leaveLobby} label={t.common.back} tone="danger" />
+                            {/* En préparation, seul l'hôte a un retour (vers le salon) ; les invités
+                                n'en ont pas (le span garde « Comment jouer ? » et les réglages à droite). */}
+                            {!preparing ? (
+                                <BackButton onClick={leaveLobby} label={t.common.back} tone="danger" />
+                            ) : isHost ? (
+                                <BackButton onClick={() => setPreparing(false)} label={t.lobby.prepare.backToLobby} />
+                            ) : (
+                                <span aria-hidden />
+                            )}
                             <div className="flex items-center gap-2">
                                 <HowToPlayButton onClick={() => setIsHowToPlayOpen(true)} hintAlign="end" />
                                 <SettingsButton contentLocale={contentLocale ?? undefined} />
                             </div>
                         </div>
 
-                        {/* Tabs : intercalaires cartonnés en éventail, coins asymétriques */}
-                        <LobbyTabs
-                            activeTab={lobbyTab}
-                            onTabChange={setLobbyTab}
-                            activePlayersCount={activePlayers.length}
-                            t={t}
-                        />
+                        {preparing ? (
+                            <PrepareGame
+                                isHost={isHost}
+                                hostName={hostName}
+                                gameMode={gameMode}
+                                players={players}
+                                currentPlayerId={currentPlayer?.id}
+                                excludedLeaderIds={excludedLeaderIds}
+                                onExcludedLeadersChange={onExcludedLeadersChange}
+                                onReorderSeats={reorderSeats}
+                                guessMyAnswerMode={guessMyAnswerMode}
+                                onGuessMyAnswerModeChange={onGuessMyAnswerModeChange}
+                                gameSpeed={gameSpeed}
+                                onGameSpeedChange={onGameSpeedChange}
+                                roundCount={roundCount}
+                                estimatedMinutes={estimatedMinutes}
+                                t={t}
+                            />
+                        ) : (
+                            <>
+                                {/* Tabs : intercalaires cartonnés en éventail, coins asymétriques */}
+                                <LobbyTabs
+                                    activeTab={lobbyTab}
+                                    onTabChange={setLobbyTab}
+                                    activePlayersCount={activePlayers.length}
+                                    themesCount={totalThemesSelected}
+                                    t={t}
+                                />
 
-                        {/* Panel de la tab active - sized to content, capé en dvh pour scroller
-                        si le contenu dépasse (settings dense ou liste de joueurs >9). */}
-                        <div
-                            key={lobbyTab}
-                            className="relative min-h-0 bg-white card-paper rounded-2xl stack-shadow overflow-hidden animate-phase-enter"
-                        >
-                            <div
-                                ref={lobbyTabScrollRef}
-                                role="tabpanel"
-                                className="max-h-[67dvh] overflow-y-auto overscroll-contain no-scrollbar px-4 pb-4 pt-6 md:px-5 md:pb-5 md:pt-7"
-                            >
-                                {/* Grid stacking : settings est toujours rendu (visible
-                                ou non) pour dicter la hauteur ; players se cale
-                                dans la même cellule de grille. */}
-                                <div className="grid grid-cols-1 grid-rows-1">
+                                {/* Panel de la tab active - sized to content, capé en dvh pour scroller
+                                si le contenu dépasse (fiches de thèmes ou liste de joueurs >9). */}
+                                <div
+                                    key={lobbyTab}
+                                    className="relative min-h-0 bg-white card-paper rounded-2xl stack-shadow overflow-hidden animate-phase-enter"
+                                >
                                     <div
-                                        className={`col-start-1 row-start-1 ${lobbyTab === 'settings' ? '' : 'invisible pointer-events-none'}`}
-                                        aria-hidden={lobbyTab !== 'settings'}
+                                        ref={lobbyTabScrollRef}
+                                        role="tabpanel"
+                                        className="max-h-[67dvh] overflow-y-auto overscroll-contain no-scrollbar px-4 pb-4 pt-6 md:px-5 md:pb-5 md:pt-7"
                                     >
-                                        <LobbySettingsPanel
-                                            isHost={isHost}
-                                            hostName={hostName}
-                                            guessMyAnswerMode={guessMyAnswerMode}
-                                            gameSpeed={gameSpeed}
-                                            roundCount={roundCount}
-                                            estimatedMinutes={estimatedMinutes}
-                                            onOpenOptions={() => setOptionsSheetOpen(true)}
-                                            selectedDecks={selectedDecks}
-                                            decksCatalogMeta={decksCatalogMeta}
-                                            totalThemesSelected={totalThemesSelected}
-                                            onOpenThemePicker={() => setIsThemePickerOpen(true)}
-                                            t={t}
-                                        />
+                                        {/* Grid stacking : les thèmes sont toujours rendus (visibles
+                                        ou non) pour dicter la hauteur ; players se cale
+                                        dans la même cellule de grille. */}
+                                        <div className="grid grid-cols-1 grid-rows-1">
+                                            <div
+                                                className={`col-start-1 row-start-1 ${lobbyTab === 'themes' ? '' : 'invisible pointer-events-none'}`}
+                                                aria-hidden={lobbyTab !== 'themes'}
+                                            >
+                                                <LobbyThemesPanel
+                                                    isHost={isHost}
+                                                    hostName={hostName}
+                                                    selectedDecks={selectedDecks}
+                                                    decksCatalogMeta={decksCatalogMeta}
+                                                    onOpenCategory={setThemePickerCategory}
+                                                    t={t}
+                                                />
+                                            </div>
+                                            <div
+                                                className={`col-start-1 row-start-1 ${lobbyTab === 'players' ? '' : 'invisible pointer-events-none'}`}
+                                                aria-hidden={lobbyTab !== 'players'}
+                                            >
+                                                <LobbyPlayersGrid
+                                                    players={players}
+                                                    currentPlayer={currentPlayer}
+                                                    initialPlayerIds={initialPlayerIdsRef.current}
+                                                    activePlayersCount={activePlayers.length}
+                                                    onKick={kickPlayer}
+                                                    onPromote={promotePlayer}
+                                                    t={t}
+                                                />
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div
-                                        className={`col-start-1 row-start-1 ${lobbyTab === 'players' ? '' : 'invisible pointer-events-none'}`}
-                                        aria-hidden={lobbyTab !== 'players'}
-                                    >
-                                        <LobbyPlayersGrid
-                                            players={players}
-                                            currentPlayer={currentPlayer}
-                                            initialPlayerIds={initialPlayerIdsRef.current}
-                                            activePlayersCount={activePlayers.length}
-                                            excludedLeaderIds={excludedLeaderIds}
-                                            onKick={kickPlayer}
-                                            onPromote={promotePlayer}
-                                            t={t}
-                                        />
-                                    </div>
+                                    <ScrollFade scrollRef={lobbyTabScrollRef} className="rounded-b-2xl" />
                                 </div>
-                            </div>
-                            <ScrollFade scrollRef={lobbyTabScrollRef} className="rounded-b-2xl" />
-                        </div>
+                            </>
+                        )}
 
-                        {/* ===================== ACTION ROW : Démarrer + Partager l'invitation ===================== */}
+                        {/* ===================== ACTION ROW ===================== */}
+                        {/* Salon : Démarrer (ouvre la préparation) + Partager l'invitation.
+                            Préparation : Lancer la partie. */}
                         <div className="shrink-0 flex flex-col items-center gap-1.5 mt-1 md:mt-2 safe-pb">
                             <div className="flex flex-row items-center justify-center gap-3 md:gap-4 w-full flex-wrap">
-                                {currentPlayer?.isHost ? (
+                                {isHost ? (
                                     <Button
-                                        text={t.lobby.start}
+                                        text={preparing ? t.lobby.prepare.launch : t.lobby.start}
                                         variant="success"
                                         size="md"
                                         hero
-                                        disabled={!canStartGame}
-                                        onClick={startGame}
+                                        // Pas assez de joueurs ou aucun thème : bouton désactivé (le texte sous le
+                                        // bouton dit pourquoi, et le clic rappelle ce qui manque en toast).
+                                        disabled={!enoughPlayers || !hasThemeSelected}
+                                        onDisabledClick={() => checkCanAdvance(false)}
+                                        onClick={preparing ? onLaunchClick : onStartClick}
                                         className="!rotate-0"
                                     />
                                 ) : (
                                     <div className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white/85 border-[2.5px] border-black stack-shadow-sm text-gray-700">
                                         <Icon icon="fluent-emoji-flat:hourglass-not-done" className="animate-spin-slow [filter:drop-shadow(1px_1.5px_0_rgba(0,0,0,0.5))]" width="1.1em" height="1.1em" aria-hidden />
-                                        <span className="text-sm font-display italic truncate">{t.lobby.startHostOnly(hostName && hostName.length > 10 ? `${hostName.slice(0, 10)}…` : hostName)}</span>
+                                        <span className="text-sm font-display italic truncate">
+                                            {preparing ? t.lobby.prepare.hostPreparing(shortHostName) : t.lobby.startHostOnly(shortHostName)}
+                                        </span>
                                     </div>
                                 )}
-                                <Button
-                                    text={t.lobby.shareInvite.button}
-                                    variant="warning"
-                                    size="sm"
-                                    className="!text-xs md:!text-sm whitespace-nowrap"
-                                    onClick={() => setShareSheetOpen(true)}
-                                />
+                                {!preparing && (
+                                    <Button
+                                        text={t.lobby.shareInvite.button}
+                                        variant="warning"
+                                        size="sm"
+                                        className="!text-xs md:!text-sm whitespace-nowrap"
+                                        onClick={() => setShareSheetOpen(true)}
+                                    />
+                                )}
                             </div>
 
-                            {/* Helper text sous l'action row */}
-                            {currentPlayer?.isHost && !enoughPlayers && (
+                            {/* Helper text sous l'action row (en plus du toast au clic) */}
+                            {isHost && !enoughPlayers && (
                                 <small className={HELPER_TEXT_CLASS}>
                                     {t.lobby.minPlayers(GAME_CONFIG.MIN_PLAYERS)}
                                 </small>
                             )}
-                            {currentPlayer?.isHost && enoughPlayers && !hasThemeSelected && (
+                            {isHost && enoughPlayers && !hasThemeSelected && (
                                 <small className={HELPER_TEXT_CLASS}>
                                     {decksLoading ? t.lobby.loadingThemes : t.lobby.selectAtLeastOneTheme}
                                 </small>
                             )}
-                            {currentPlayer?.isHost && enoughPlayers && hasThemeSelected && !hasLeader && (
+                            {isHost && enoughPlayers && hasThemeSelected && !hasLeader && (
                                 <small className={HELPER_TEXT_CLASS}>
                                     {t.lobby.atLeastOneLeader}
                                 </small>
@@ -485,11 +565,11 @@ const Lobby = () => {
                 <Footer />
             </div>
 
-            {/* Modal de confirmation pour peu de joueurs */}
+            {/* Confirmation « peu de joueurs » au clic sur Démarrer (hôte) */}
             <ConfirmModal
                 isOpen={showFewPlayersModal}
                 onClose={() => setShowFewPlayersModal(false)}
-                onConfirm={doStartGame}
+                onConfirm={() => setPreparing(true)}
                 title={t.lobby.modals.fewPlayers.title}
                 message={t.lobby.modals.fewPlayers.message}
                 confirmText={t.lobby.modals.fewPlayers.confirm}
@@ -531,25 +611,6 @@ const Lobby = () => {
             </InfoModal>
 
             {/* Bottom sheet de partage : code + copie rapide, copier le lien, partage OS */}
-            {/* Bottom sheet des options de jeu : mode, rythme + piliers (exclusion) */}
-            <GameOptionsSheet
-                isOpen={optionsSheetOpen}
-                onClose={() => setOptionsSheetOpen(false)}
-                isHost={isHost}
-                hostName={hostName}
-                guessMyAnswerMode={guessMyAnswerMode}
-                onGuessMyAnswerModeChange={onGuessMyAnswerModeChange}
-                gameSpeed={gameSpeed}
-                onGameSpeedChange={onGameSpeedChange}
-                players={players}
-                currentPlayerId={currentPlayer?.id}
-                excludedLeaderIds={excludedLeaderIds}
-                onExcludedLeadersChange={onExcludedLeadersChange}
-                roundCount={roundCount}
-                estimatedMinutes={estimatedMinutes}
-                t={t}
-            />
-
             <ShareInviteSheet
                 isOpen={shareSheetOpen}
                 onClose={() => setShareSheetOpen(false)}
@@ -581,10 +642,11 @@ const Lobby = () => {
                 </div>
             </InfoModal>
 
-            {/* Modal de sélection des thèmes (édition pour host, lecture seule sinon) */}
+            {/* Sélecteur de thèmes, ouvert sur la catégorie touchée (édition pour host, lecture seule sinon) */}
             <ThemePickerModal
-                isOpen={isThemePickerOpen}
-                onClose={() => setIsThemePickerOpen(false)}
+                isOpen={themePickerCategory !== null}
+                onClose={() => setThemePickerCategory(null)}
+                category={themePickerCategory}
                 catalog={decksCatalogMeta}
                 selected={selectedDecks}
                 mode={isHost ? 'edit' : 'readonly'}

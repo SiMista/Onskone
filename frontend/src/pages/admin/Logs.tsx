@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Icon } from '@iconify/react';
+import { Icon } from '../../components/Icon';
 import { useToast } from '../../components/Toast';
 import { useAdminResource } from '../../hooks';
 import { ClientLog, clearClientLogs, fetchClientLogs } from '../../utils/adminDataApi';

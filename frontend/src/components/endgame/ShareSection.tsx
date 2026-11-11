@@ -1,4 +1,4 @@
-import { Icon } from '@iconify/react';
+import { Icon } from '../Icon';
 import Button from '../Button';
 import Spinner from '../Spinner';
 import { useLocale } from '../../i18n';

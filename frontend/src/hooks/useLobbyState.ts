@@ -18,12 +18,16 @@ interface UseLobbyStateResult {
   guessMyAnswerMode: boolean;
   gameSpeed: GameSpeed;
   excludedLeaderIds: string[];
+  /** Écran « Préparer la partie » ouvert par l'hôte (toute la table le suit). */
+  preparing: boolean;
   /** Langue des questions du salon (choisie par l'hôte à la création). */
   contentLocale: Locale | null;
   onGuessMyAnswerModeChange: (next: boolean) => void;
   onGameSpeedChange: (next: GameSpeed) => void;
   onExcludedLeadersChange: (next: string[]) => void;
   onSelectedDecksChange: (next: SelectedDecks) => void;
+  /** Hôte : ouvre / ferme l'écran « Préparer la partie » pour toute la table. */
+  setPreparing: (next: boolean) => void;
   /** Envoie tout de suite les réglages encore en debounce (à appeler avant startGame). */
   flushPendingSettings: () => void;
 }
@@ -46,33 +50,55 @@ export function useLobbyState(lobbyCode: string | undefined): UseLobbyStateResul
   const [guessMyAnswerMode, setGuessMyAnswerMode] = useState<boolean>(false);
   const [gameSpeed, setGameSpeed] = useState<GameSpeed>(GAME_CONSTANTS.GAME_SPEED_DEFAULT);
   const [excludedLeaderIds, setExcludedLeaderIds] = useState<string[]>([]);
+  const [preparing, setPreparingState] = useState(false);
   const [contentLocale, setContentLocale] = useState<Locale | null>(null);
+
+  const settingsEmitTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  // Emit en attente par clé, pour pouvoir le déclencher sans attendre (flush).
+  const settingsEmitFns = useRef<Record<string, () => void>>({});
+  // Réglage modifié par l'hôte et pas encore envoyé : un état serveur qui arrive entre
+  // temps (diffusion à l'arrivée d'un joueur) est plus ancien que son geste, il ne doit
+  // pas l'écraser (sinon le geste suivant repart de l'état serveur et l'envoi en
+  // attente est remplacé : un thème coché disparaît sans un mot).
+  const isPending = (key: string) => key in settingsEmitTimers.current;
+
+  // Exclusions de pilier : l'hôte envoie la liste COMPLÈTE, mais le serveur en ajoute
+  // lui-même (arrivant au-delà du plafond de manches). On ne garde donc que les joueurs
+  // que l'hôte a touchés (id -> exclu ?), rejoués sur le dernier état serveur à l'envoi :
+  // une auto-exclusion arrivée entre-temps n'est pas effacée.
+  const pendingExclusions = useRef<Map<string, boolean>>(new Map());
+  const serverExcludedRef = useRef<string[]>([]);
+  const excludedRef = useRef(excludedLeaderIds);
+  excludedRef.current = excludedLeaderIds;
+  const withPendingExclusions = (base: string[]): string[] => {
+    if (pendingExclusions.current.size === 0) return base;
+    const ids = new Set(base);
+    pendingExclusions.current.forEach((excluded, id) => (excluded ? ids.add(id) : ids.delete(id)));
+    return [...ids];
+  };
 
   // Payloads typés via le contrat serveur (ServerToClientEvents) plutôt qu'inline :
   // ajouter/retirer un champ côté serveur force la mise à jour ici (sinon erreur de typecheck).
   const handleLobbyDecksState = useCallback((data: Parameters<ServerToClientEvents['lobbyDecksState']>[0]) => {
     setDecksCatalog(data.catalog);
     setDecksCatalogMeta(data.catalogWithMeta);
-    setSelectedDecks(data.selected);
+    if (!isPending('selectedDecks')) setSelectedDecks(data.selected);
     setGameMode(data.gameMode);
-    setGuessMyAnswerMode(data.guessMyAnswerMode);
-    setGameSpeed(data.gameSpeed);
-    // `?? []` : serveur d'avant l'exclusion de piliers.
-    setExcludedLeaderIds(data.excludedLeaderIds ?? []);
+    if (!isPending('guessMyAnswerMode')) setGuessMyAnswerMode(data.guessMyAnswerMode);
+    if (!isPending('gameSpeed')) setGameSpeed(data.gameSpeed);
+    serverExcludedRef.current = data.excludedLeaderIds;
+    setExcludedLeaderIds(withPendingExclusions(data.excludedLeaderIds));
+    setPreparingState(data.preparing);
     setContentLocale(data.locale);
   }, []);
 
   const handleGuessMyAnswerModeUpdated = useCallback((data: Parameters<ServerToClientEvents['guessMyAnswerModeUpdated']>[0]) => {
-    setGuessMyAnswerMode(data.guessMyAnswerMode);
+    if (!isPending('guessMyAnswerMode')) setGuessMyAnswerMode(data.guessMyAnswerMode);
   }, []);
 
   const handleGameSpeedUpdated = useCallback((data: Parameters<ServerToClientEvents['gameSpeedUpdated']>[0]) => {
-    setGameSpeed(data.gameSpeed);
+    if (!isPending('gameSpeed')) setGameSpeed(data.gameSpeed);
   }, []);
-
-  const settingsEmitTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
-  // Emit en attente par clé, pour pouvoir le déclencher sans attendre (flush).
-  const settingsEmitFns = useRef<Record<string, () => void>>({});
 
   const queueSettingEmit = useCallback((key: string, fn: () => void, delay = 150) => {
     const timers = settingsEmitTimers.current;
@@ -104,6 +130,7 @@ export function useLobbyState(lobbyCode: string | undefined): UseLobbyStateResul
       Object.values(timers).forEach(clearTimeout);
       settingsEmitTimers.current = {};
       settingsEmitFns.current = {};
+      pendingExclusions.current.clear();
     };
   }, [lobbyCode]);
 
@@ -124,10 +151,16 @@ export function useLobbyState(lobbyCode: string | undefined): UseLobbyStateResul
   }, [lobbyCode, queueSettingEmit]);
 
   const onExcludedLeadersChange = useCallback((next: string[]) => {
+    const before = new Set(excludedRef.current);
+    const after = new Set(next);
+    after.forEach(id => { if (!before.has(id)) pendingExclusions.current.set(id, true); });
+    before.forEach(id => { if (!after.has(id)) pendingExclusions.current.set(id, false); });
     setExcludedLeaderIds(next);
     if (!lobbyCode) return;
     queueSettingEmit('excludedLeaderIds', () => {
-      socket.emit('updateExcludedLeaders', { lobbyCode, excludedLeaderIds: next });
+      const excludedLeaderIds = withPendingExclusions(serverExcludedRef.current);
+      pendingExclusions.current.clear();
+      socket.emit('updateExcludedLeaders', { lobbyCode, excludedLeaderIds });
     });
   }, [lobbyCode, queueSettingEmit]);
 
@@ -138,6 +171,14 @@ export function useLobbyState(lobbyCode: string | undefined): UseLobbyStateResul
       socket.emit('updateSelectedDecks', { lobbyCode, selected: next });
     });
   }, [lobbyCode, queueSettingEmit]);
+
+  // Pas de debounce : c'est un changement d'écran pour toute la table. Optimiste côté
+  // hôte, le lobbyDecksState diffusé en retour réconcilie (refus : état serveur).
+  const setPreparing = useCallback((next: boolean) => {
+    setPreparingState(next);
+    if (!lobbyCode) return;
+    socket.emit('setPreparation', { lobbyCode, preparing: next });
+  }, [lobbyCode]);
 
   useSocketEvent('lobbyDecksState', handleLobbyDecksState);
   useSocketEvent('guessMyAnswerModeUpdated', handleGuessMyAnswerModeUpdated);
@@ -151,11 +192,13 @@ export function useLobbyState(lobbyCode: string | undefined): UseLobbyStateResul
     guessMyAnswerMode,
     gameSpeed,
     excludedLeaderIds,
+    preparing,
     contentLocale,
     onGuessMyAnswerModeChange,
     onGameSpeedChange,
     onExcludedLeadersChange,
     onSelectedDecksChange,
+    setPreparing,
     flushPendingSettings,
   };
 }

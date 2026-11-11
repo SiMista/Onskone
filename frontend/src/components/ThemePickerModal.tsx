@@ -1,18 +1,19 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Icon } from '@iconify/react';
+import { Icon } from './Icon';
 import { LuX, LuLock, LuCrown } from 'react-icons/lu';
 import type { DecksCatalogWithMeta, SelectedDecks, ThemeInfo } from '@onskone/shared';
 import { useLocale } from '../i18n';
-import { getCategoryColor, lightenHex, darkenHex } from '../constants/game';
+import { getCategoryColor, getCategoryIcon, getCategoryGradient, lightenHex } from '../constants/game';
 import ScrollFade from './ScrollFade';
-import { STICKER_FILTER } from '../constants/icons';
+import { STICKER_FILTER_HERO } from '../constants/icons';
 import { useModalChrome } from '../hooks/useModalChrome';
 import { useModalTransition } from '../hooks/useModalTransition';
 import { usePremium } from '../utils/premium';
 import ConfirmModal from './ConfirmModal';
 import PremiumModal from './PremiumModal';
 import EmojiCard from './EmojiCard';
+import Checkbox from './Checkbox';
 import HostOnlyHint from './HostOnlyHint';
 
 interface ThemePickerModalProps {
@@ -23,23 +24,9 @@ interface ThemePickerModalProps {
   mode: 'edit' | 'readonly';
   hostName: string;
   onChange: (next: SelectedDecks) => void;
+  /** Catégorie affichée (fiche touchée dans l'onglet Thèmes) ; inconnue : la première. */
+  category: string | null;
 }
-
-const CATEGORY_ICONS: Record<string, string> = {
-  ICEBREAKERS: 'fluent-emoji-flat:ice',
-  FUN: 'fluent-emoji-flat:party-popper',
-  DEEP: 'fluent-emoji-flat:fire',
-};
-const DEFAULT_CATEGORY_ICON = 'fluent-emoji-flat:flower-playing-cards';
-
-const CATEGORY_PATTERNS: Record<string, string> = {
-  ICEBREAKERS: 'bg-pattern-dots',
-  FUN: 'bg-pattern-zigzag',
-  DEEP: 'bg-pattern-diagonal',
-};
-
-const buildEmojiGradient = (hex: string): string =>
-  `linear-gradient(135deg, ${lightenHex(hex, 0.4)} 0%, ${hex} 55%, ${darkenHex(hex, 0.12)} 100%)`;
 
 const isThemeSelected = (selected: SelectedDecks, category: string, code: string): boolean =>
   selected[category]?.includes(code) ?? false;
@@ -54,11 +41,41 @@ const toggleTheme = (selected: SelectedDecks, category: string, code: string, ca
   return next;
 };
 
-const ThemePickerModal = ({ isOpen, onClose, catalog, selected, mode, hostName, onChange }: ThemePickerModalProps) => {
+/** Remplace d'un coup les thèmes choisis d'une catégorie (« Tout sélectionner »). */
+const setCategoryThemes = (selected: SelectedDecks, category: string, codes: string[], catalog: DecksCatalogWithMeta): SelectedDecks => {
+  const next: SelectedDecks = {};
+  for (const cat of Object.keys(catalog)) {
+    next[cat] = [...(selected[cat] || [])];
+  }
+  next[category] = codes;
+  return next;
+};
+
+/** Papier peint : l'icône de la catégorie répétée en quinconce, penchée, très discrète (décor). */
+const WALLPAPER_ROWS = 8;
+const WALLPAPER_COLS = 14;
+const IconWallpaper = ({ icon }: { icon: string }) => (
+  <div aria-hidden className="absolute -inset-10 -rotate-12 flex flex-col gap-4 opacity-25 pointer-events-none select-none">
+    {Array.from({ length: WALLPAPER_ROWS }, (_, row) => (
+      <div key={row} className={`flex shrink-0 gap-5 w-max ${row % 2 ? 'ml-6' : ''}`}>
+        {Array.from({ length: WALLPAPER_COLS }, (_, col) => (
+          <Icon key={col} icon={icon} width={30} height={30} className="shrink-0" />
+        ))}
+      </div>
+    ))}
+  </div>
+);
+
+const ThemePickerModal = ({ isOpen, onClose, catalog, selected, mode, hostName, onChange, category }: ThemePickerModalProps) => {
   const { t } = useLocale();
   const isPremium = usePremium();
-  const categories = useMemo(() => Object.keys(catalog), [catalog]);
-  const [activeCategory, setActiveCategory] = useState<string>(categories[0] ?? '');
+  // Dernière catégorie ouverte : quand le parent ferme la modale lui-même (`category`
+  // repasse à null), elle reste montée le temps du fondu de sortie et ne doit pas
+  // basculer sur la première catégorie pendant ce temps.
+  const lastCategoryRef = useRef(category);
+  if (category && catalog[category]) lastCategoryRef.current = category;
+  const shownCategory = lastCategoryRef.current;
+  const activeCategory = shownCategory && catalog[shownCategory] ? shownCategory : (Object.keys(catalog)[0] ?? '');
   const isEditable = mode === 'edit';
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -75,41 +92,12 @@ const ThemePickerModal = ({ isOpen, onClose, catalog, selected, mode, hostName, 
     localRef.current = selected;
   }, [selected]);
 
-  const totals = useMemo(() => {
-    const total = Object.values(catalog).reduce((acc, arr) => acc + arr.length, 0);
-    const sel = Object.values(localSelected).reduce((acc, arr) => acc + arr.length, 0);
-    return { total, sel };
-  }, [catalog, localSelected]);
-
   // Animation de sortie (fondu) : requestClose joue l'anim puis démonte.
   const { render, closing, requestClose } = useModalTransition(isOpen, onClose);
   // Scroll-lock body + fermeture Escape, partagés avec ModalShell.
   const { onBackdropClick } = useModalChrome(render, requestClose);
 
-  // À l'ouverture : revenir sur la première catégorie.
-  // Important : le reset de la catégorie ne doit se faire QU'À la transition fermé→ouvert,
-  // sinon chaque toggle de thème (qui renvoie un nouveau catalog depuis le serveur, donc
-  // une nouvelle ref `categories`) ramènerait l'utilisateur sur ICEBREAKERS.
-  const wasOpenRef = useRef(false);
-  useEffect(() => {
-    if (!isOpen) {
-      wasOpenRef.current = false;
-      return;
-    }
-    if (!wasOpenRef.current) {
-      setActiveCategory(categories[0] ?? '');
-      wasOpenRef.current = true;
-    }
-  }, [isOpen, categories]);
-
-  // Garde-fou : si l'activeCategory courante disparaît du catalogue, retombe sur la première.
-  useEffect(() => {
-    if (activeCategory && !categories.includes(activeCategory) && categories.length > 0) {
-      setActiveCategory(categories[0]);
-    }
-  }, [categories, activeCategory]);
-
-  // Reset le scroll vertical au changement d'onglet.
+  // Reset le scroll vertical au changement de catégorie.
   useEffect(() => {
     const el = listRef.current;
     if (el) el.scrollTop = 0;
@@ -120,11 +108,14 @@ const ThemePickerModal = ({ isOpen, onClose, catalog, selected, mode, hostName, 
   // Ouverture du paywall quand on tente d'activer un thème premium non débloqué.
   const [showPaywall, setShowPaywall] = useState(false);
 
-  const applyToggle = (cat: string, code: string) => {
-    const next = toggleTheme(localRef.current, cat, code, catalog);
+  const commit = (next: SelectedDecks) => {
     localRef.current = next;
     setLocalSelected(next);
     onChange(next);
+  };
+
+  const applyToggle = (cat: string, code: string) => {
+    commit(toggleTheme(localRef.current, cat, code, catalog));
   };
 
   const handleToggle = (cat: string, code: string, info: ThemeInfo) => {
@@ -150,9 +141,24 @@ const ThemePickerModal = ({ isOpen, onClose, catalog, selected, mode, hostName, 
   if (!render) return null;
 
   const activeColor = getCategoryColor(activeCategory);
-  const activePattern = CATEGORY_PATTERNS[activeCategory];
   const activeDescription = t.decks.categoryDescriptions[activeCategory] ?? '';
   const activeThemes = catalog[activeCategory] ?? [];
+
+  // « Tout sélectionner » : seulement les thèmes cochables d'un geste. Les 18+ gardent leur
+  // confirmation une par une, les premium verrouillés passent par le paywall.
+  const bulkCodes = activeThemes
+    .filter(info => !info.mature && !(info.premium && !isPremium))
+    .map(info => info.code);
+  const allBulkSelected = bulkCodes.length > 0
+    && bulkCodes.every(code => isThemeSelected(localSelected, activeCategory, code));
+  const handleSelectAll = (checked: boolean) => {
+    const current = localRef.current[activeCategory] ?? [];
+    // Décocher vide toute la catégorie (18+ et premium compris) ; cocher ajoute les
+    // cochables sans toucher aux 18+ déjà confirmés. Ordre du catalogue.
+    const keep = new Set(checked ? [...current, ...bulkCodes] : []);
+    const codes = activeThemes.map(info => info.code).filter(code => keep.has(code));
+    commit(setCategoryThemes(localRef.current, activeCategory, codes, catalog));
+  };
 
   // Portal vers <body> : échappe à tout stacking context parent (cf. ModalShell).
   return createPortal(
@@ -167,23 +173,14 @@ const ThemePickerModal = ({ isOpen, onClose, catalog, selected, mode, hostName, 
       {/* Wrapper : sur PC on cap la largeur pour ne pas que la modale s'étale ;
           sur mobile on prend toute la largeur. */}
       <div className="w-full max-w-2xl flex flex-col flex-1 min-h-0">
-        {/* Header flottant : titre + compteur (à droite du titre) + sous-texte contextuel + close */}
+        {/* Header minimal : rappel « seul l'hôte » pour les non-hôtes + fermeture.
+            Le titre et le compteur vivent dans le bandeau de la catégorie. */}
         <div
           className="relative shrink-0 flex items-center justify-between gap-3 px-5 pt-2 pb-3"
           onClick={e => e.stopPropagation()}
         >
-          <div className="flex-1 min-w-0 flex flex-col gap-2.5">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-lg md:text-xl font-display font-bold text-white !my-0 leading-none tracking-tight drop-shadow-[0_2px_3px_rgba(0,0,0,0.6)]">
-                {t.themePicker.title}
-              </h2>
-              <span className="inline-flex items-center leading-none text-xs font-display font-bold text-white/90 bg-black/30 border border-white/25 rounded-full px-2 py-0.5 self-center select-none">
-                {t.themePicker.counter(totals.sel)}
-              </span>
-            </div>
-            {isEditable ? (
-              <p className="!my-0 text-xs font-sans italic text-white/75 leading-tight">{t.themePicker.hostHint}</p>
-            ) : (
+          <div className="flex-1 min-w-0 flex items-center gap-2.5">
+            {!isEditable && (
               <HostOnlyHint text={t.themePicker.readOnlyHint(hostName)} shakeKey={hintShake} className="text-white/75" />
             )}
           </div>
@@ -196,58 +193,42 @@ const ThemePickerModal = ({ isOpen, onClose, catalog, selected, mode, hostName, 
           </button>
         </div>
 
-        {/* Tabs catégorie - chips colorés flottants sur backdrop */}
-        <div
-          className="relative shrink-0 px-4 pb-2 flex items-center gap-1.5 overflow-x-auto"
-          style={{ scrollbarWidth: 'none' }}
-          onClick={e => e.stopPropagation()}
-        >
-          {categories.map(cat => {
-            const active = cat === activeCategory;
-            const color = getCategoryColor(cat);
-            return (
-              <button
-                key={cat}
-                type="button"
-                onClick={() => setActiveCategory(cat)}
-                aria-pressed={active}
-                className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full border-[2.5px] border-black font-display font-bold text-xs uppercase tracking-tight transition-all duration-200 ${active ? 'scale-[1.04] stack-shadow-sm' : 'opacity-70 hover:opacity-90'
-                  }`}
-                style={{ backgroundColor: active ? color : 'white', color: '#000' }}
-              >
-                <Icon
-                  icon={CATEGORY_ICONS[cat] ?? DEFAULT_CATEGORY_ICON}
-                  width={16}
-                  height={16}
-                  aria-hidden
-                  style={{ filter: STICKER_FILTER }}
-                />
-                <span>{cat}</span>
-              </button>
-            );
-          })}
-        </div>
-
         {/* Zone de contenu : grande carte cartonnée pleine largeur, scroll vertical interne */}
         <div
           className="relative flex-1 min-h-0 mx-3 md:mx-6 mb-2 animate-modal-content"
           onClick={e => e.stopPropagation()}
         >
           <div className="relative h-full border-[2.5px] border-black rounded-2xl bg-white overflow-hidden stack-shadow-lg flex flex-col">
-            {/* Description de la catégorie (subtile) */}
-            {activeDescription && (
-              <div
-                className="relative shrink-0 px-3.5 py-2 border-b-[2px] border-dashed border-black/25"
-                style={{ backgroundColor: `${activeColor}25` }}
-              >
-                {activePattern && (
-                  <span aria-hidden className={`pointer-events-none absolute inset-0 ${activePattern} opacity-20`} />
-                )}
-                <span className="relative font-sans text-sm text-gray-800 leading-snug">
-                  {activeDescription}
+            {/* Bandeau de la catégorie : dégradé à sa couleur, emoji sticker penché, nom en
+                blanc contouré, et son sous-titre. */}
+            <div
+              className="relative shrink-0 overflow-hidden px-4 py-4 border-b-[2.5px] border-black"
+              style={{ backgroundImage: getCategoryGradient(activeCategory) }}
+            >
+              <IconWallpaper icon={getCategoryIcon(activeCategory)} />
+              <div className="relative flex items-center gap-3.5">
+                <Icon
+                  icon={getCategoryIcon(activeCategory)}
+                  width={56}
+                  height={56}
+                  aria-hidden
+                  className="shrink-0 -rotate-6"
+                  style={{ filter: STICKER_FILTER_HERO }}
+                />
+                <span className="min-w-0 flex flex-col gap-1.5">
+                  <span className="text-display-lg leading-none tracking-[0.04em] text-white text-outline [filter:drop-shadow(0_3px_0_black)]">
+                    {activeCategory}
+                  </span>
+                  {/* Sous-titre : la description, blanc contouré comme le titre (sticker),
+                      lisible sur toutes les couleurs sans boîte. */}
+                  {activeDescription && (
+                    <span className="font-display text-[15px] font-semibold leading-snug text-white text-outline [--outline-width:3px] [filter:drop-shadow(0_2px_0_black)]">
+                      {activeDescription}
+                    </span>
+                  )}
                 </span>
               </div>
-            )}
+            </div>
 
             {/* Liste verticale scrollable des cartes-thèmes. Wrapper relatif : les fades
                 se calent sur la liste (le fade du haut sous la description). */}
@@ -257,8 +238,19 @@ const ThemePickerModal = ({ isOpen, onClose, catalog, selected, mode, hostName, 
                 className="relative flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 flex flex-col gap-2.5"
                 style={{ backgroundColor: `${activeColor}25`, scrollbarWidth: 'none' }}
               >
-                {activePattern && (
-                  <span aria-hidden className={`pointer-events-none absolute inset-0 ${activePattern} opacity-15`} />
+                {isEditable && bulkCodes.length > 0 && (
+                  // À droite, case collée au texte et centrée sur lui (boxSide right = items-center).
+                  <div className="flex justify-end px-1 pt-0.5">
+                    <Checkbox
+                      checked={allBulkSelected}
+                      onChange={handleSelectAll}
+                      label={t.themePicker.selectAll}
+                      boxSide="right"
+                      fit
+                      // Cochée = même dégradé que les blocs emoji des thèmes choisis.
+                      checkedBackground={getCategoryGradient(activeCategory)}
+                    />
+                  </div>
                 )}
                 {activeThemes.map((info: ThemeInfo) => {
                   const active = isThemeSelected(localSelected, activeCategory, info.code);
@@ -280,8 +272,7 @@ const ThemePickerModal = ({ isOpen, onClose, catalog, selected, mode, hostName, 
                       {/* Bloc illustration emoji - dégradé diagonal pour le relief */}
                       <EmojiCard
                         icon={info.emoji}
-                        bgImage={buildEmojiGradient(activeColor)}
-                        pattern={activePattern}
+                        bgImage={getCategoryGradient(activeCategory)}
                         filterStrength="strong"
                       />
                       {/* Texte */}

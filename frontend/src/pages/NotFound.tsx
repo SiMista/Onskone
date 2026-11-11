@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Icon } from '@iconify/react';
+import { Icon } from '../components/Icon';
 import Logo from '../components/Logo';
 import Frame from '../components/Frame';
 import Button from '../components/Button';

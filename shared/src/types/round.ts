@@ -39,6 +39,13 @@ export interface GameCard {
   /** Liste de questions pour ce sujet */
   questions: string[];
 
+  /**
+   * Astuces facultatives, indexées par le texte exact de la question (colonne « Le Tip ! »
+   * de l'Excel) : bulle d'aide sur la question pendant que les joueurs répondent.
+   * Absent si aucune question de la carte n'a d'astuce.
+   */
+  tips?: Record<string, string>;
+
   /** Carte issue d'un thème premium (cf. `ThemeInfo.premium`) - affiche le badge exclusif. */
   premium?: boolean;
 }

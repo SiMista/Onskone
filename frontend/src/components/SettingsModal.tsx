@@ -135,7 +135,7 @@ const SettingsModal = ({ isOpen, onClose, onReport, contentLocale, lobbyCode, on
         />
         {contentLocale && contentLocale !== locale && (
           <p className="m-0 px-1 font-sans text-[11px] text-gray-600 leading-snug">
-            {t.settings.contentLocaleHint}
+            {t.settings.contentLocaleHint(t.settings.languageNames[contentLocale], t.settings.languageNames[locale])}
           </p>
         )}
       </section>

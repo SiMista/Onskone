@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Icon } from '@iconify/react';
+import { Icon } from '../../components/Icon';
 import { Ticket, TicketStatus, TicketType } from '../../utils/ticketsApi';
 import { TYPE_META, STATUS_META, formatRelative } from './shared';
 import { SectionLabel, KpiCell, EmptyState, PANEL, Strip, btn } from './ui';

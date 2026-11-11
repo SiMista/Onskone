@@ -1,10 +1,9 @@
-import { GAME_CONSTANTS } from '@onskone/shared';
 import logger from '../utils/logger.js';
 
 /**
  * ConnectionRegistry — détenteur UNIQUE de tout l'état de connexion volatile lié aux
- * lobbies : les timeouts de déconnexion / inactivité / saut de pilier, les locks de
- * reconnexion et la liste des joueurs kickés temporairement.
+ * lobbies : les timeouts de déconnexion / inactivité / saut de pilier et les locks de
+ * reconnexion.
  *
  * C'est le SEUL endroit du code socket qui mute ces maps. Les handlers passent par les
  * méthodes publiques ci-dessous, ce qui garantit l'invariant « une seule source de vérité
@@ -12,8 +11,6 @@ import logger from '../utils/logger.js';
  *
  * ── Choix de la clé ──
  * La clé reste basée sur `${lobbyCode}_${playerName}` plutôt que sur `player.id` :
- *  - `kickedPlayers` est consulté dans `joinLobby` AVANT qu'un objet Player n'existe
- *    (le joueur a justement été retiré du lobby), donc seul le nom est disponible.
  *  - La logique de reconnexion « même nom = reconnexion » résout le joueur par nom ;
  *    poser/annuler les timeouts par nom reste cohérent avec ce mécanisme.
  *  - `cleanupLobbyResources` balaie les clés par préfixe `${lobbyCode}_`.
@@ -29,11 +26,6 @@ export class ConnectionRegistry {
     private readonly inactiveTimeouts: Map<string, NodeJS.Timeout> = new Map();
     // Set pour empêcher les reconnexions simultanées (clé: lobbyCode_playerName)
     private readonly reconnectionLocks: Set<string> = new Set();
-    // Map pour stocker les joueurs kickés temporairement (clé: lobbyCode_playerName, valeur: timestamp d'expiration)
-    private readonly kickedPlayers: Map<string, number> = new Map();
-
-    // Durée du blocage après un kick — source de vérité dans shared/src/constants.ts.
-    private readonly KICK_BLOCK_DURATION = GAME_CONSTANTS.KICK_BLOCK_DURATION_MS;
 
     getDisconnectKey(lobbyCode: string, playerName: string): string {
         // Identité CANONIQUE (insensible à la casse) : la reconnexion et checkPlayerName
@@ -126,41 +118,11 @@ export class ConnectionRegistry {
         this.reconnectionLocks.delete(this.getDisconnectKey(lobbyCode, playerName));
     }
 
-    // ===== Kicked players =====
-
-    /**
-     * Vérifie si un joueur est bloqué (a été kické récemment).
-     * Nettoie automatiquement les entrées expirées.
-     */
-    isPlayerKicked(lobbyCode: string, playerName: string): boolean {
-        const key = this.getDisconnectKey(lobbyCode, playerName);
-        const expiration = this.kickedPlayers.get(key);
-
-        if (!expiration) return false;
-
-        if (Date.now() > expiration) {
-            // Le blocage a expiré, nettoyer l'entrée
-            this.kickedPlayers.delete(key);
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * Bloque un joueur après un kick.
-     */
-    blockKickedPlayer(lobbyCode: string, playerName: string): void {
-        const key = this.getDisconnectKey(lobbyCode, playerName);
-        this.kickedPlayers.set(key, Date.now() + this.KICK_BLOCK_DURATION);
-        logger.debug(`Joueur ${playerName} bloqué du lobby ${lobbyCode} pour ${this.KICK_BLOCK_DURATION / 1000}s`);
-    }
-
     // ===== Lobby-wide cleanup =====
 
     /**
-     * Nettoie tous les timeouts (déconnexion, pilier, inactivité), les locks de
-     * reconnexion et les entrées de joueurs kickés appartenant à un lobby donné.
+     * Nettoie tous les timeouts (déconnexion, pilier, inactivité) et les locks de
+     * reconnexion appartenant à un lobby donné.
      */
     cleanupLobbyResources(lobbyCode: string): void {
         // Préfixe normalisé pour matcher les clés canoniques (cf. getDisconnectKey, qui
@@ -190,15 +152,6 @@ export class ConnectionRegistry {
         }
         locksToDelete.forEach(key => this.reconnectionLocks.delete(key));
 
-        // Clean up kicked players list for this lobby
-        const kickedToDelete: string[] = [];
-        for (const key of this.kickedPlayers.keys()) {
-            if (key.startsWith(prefix)) {
-                kickedToDelete.push(key);
-            }
-        }
-        kickedToDelete.forEach(key => this.kickedPlayers.delete(key));
-
         // Clean up inactive timeouts for this lobby
         const inactiveToDelete: string[] = [];
         for (const [key, timeout] of this.inactiveTimeouts.entries()) {
@@ -209,8 +162,8 @@ export class ConnectionRegistry {
         }
         inactiveToDelete.forEach(key => this.inactiveTimeouts.delete(key));
 
-        if (keysToDelete.length > 0 || locksToDelete.length > 0 || kickedToDelete.length > 0 || inactiveToDelete.length > 0) {
-            logger.debug(`Nettoyage lobby ${lobbyCode}: ${keysToDelete.length} disconnect timeouts, ${inactiveToDelete.length} inactive timeouts, ${locksToDelete.length} locks, ${kickedToDelete.length} kicked`);
+        if (keysToDelete.length > 0 || locksToDelete.length > 0 || inactiveToDelete.length > 0) {
+            logger.debug(`Nettoyage lobby ${lobbyCode}: ${keysToDelete.length} disconnect timeouts, ${inactiveToDelete.length} inactive timeouts, ${locksToDelete.length} locks`);
         }
     }
 }

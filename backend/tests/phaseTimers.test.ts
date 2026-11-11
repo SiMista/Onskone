@@ -6,6 +6,7 @@ import { Round } from '../src/models/Round';
 import { ConnectionRegistry } from '../src/sockets/ConnectionRegistry';
 import {
     armServerTimerForPhase,
+    armRoundStartTimer,
     transitionToGuessing,
     finishAnsweringPhase,
 } from '../src/sockets/broadcasting';
@@ -70,6 +71,42 @@ describe('armServerTimerForPhase', () => {
 
         expect(round.serverTimerHandle).toBeNull();
         expect(emitted('timerStarted')).toHaveLength(0);
+    });
+});
+
+describe('armRoundStartTimer (début de manche)', () => {
+    beforeEach(() => { jest.useFakeTimers(); });
+    afterEach(() => { jest.clearAllTimers(); jest.useRealTimers(); });
+
+    it("décale le départ du timer QUESTION_SELECTION de la durée de l'intro du pilier", () => {
+        const { lobby, round } = startedGame();
+        const { io, emitted } = fakeIo();
+        const now = Date.now();
+
+        armRoundStartTimer(io, lobby.code, lobby, round);
+
+        const [, payload] = emitted('timerStarted')[0] as [string, { phase: RoundPhase; startedAt: number; duration: number }];
+        expect(payload.phase).toBe(RoundPhase.QUESTION_SELECTION);
+        expect(payload.startedAt).toBe(now + GAME_CONSTANTS.QUESTION_SELECTION_INTRO_MS);
+        expect(round.timerEnd?.getTime()).toBe(payload.startedAt + payload.duration * 1000);
+        // Le temps imparti entier reste dispo APRÈS l'intro : pas d'expiration avant.
+        jest.advanceTimersByTime(payload.duration * 1000);
+        expect(round.phase).toBe(RoundPhase.QUESTION_SELECTION);
+        // Expiration : question auto-choisie, la manche passe à la suite.
+        jest.advanceTimersByTime(GAME_CONSTANTS.QUESTION_SELECTION_INTRO_MS);
+        expect(round.phase).not.toBe(RoundPhase.QUESTION_SELECTION);
+    });
+
+    it("à distance aussi : l'intro du pilier est un signal « à toi de jouer »", () => {
+        const { lobby, round } = startedGame();
+        lobby.gameMode = 'remote';
+        const { io, emitted } = fakeIo();
+        const now = Date.now();
+
+        armRoundStartTimer(io, lobby.code, lobby, round);
+
+        const [, payload] = emitted('timerStarted')[0] as [string, { startedAt: number }];
+        expect(payload.startedAt).toBe(now + GAME_CONSTANTS.QUESTION_SELECTION_INTRO_MS);
     });
 });
 
@@ -183,6 +220,8 @@ describe('scheduleLeaderSkipTimeout (pilier absent)', () => {
         expect(next).not.toBe(round);
         expect(next.serverTimerHandle).not.toBeNull();
         expect(next.timerPhase).toBe(RoundPhase.QUESTION_SELECTION);
+        // Début de manche : départ décalé de l'intro du nouveau pilier.
+        expect(next.timerStartedAt).toBe(Date.now() + GAME_CONSTANTS.QUESTION_SELECTION_INTRO_MS);
     });
 
     it("saute même si le pilier n'est pas encore marqué inactif (timeout d'inactivité en attente)", () => {

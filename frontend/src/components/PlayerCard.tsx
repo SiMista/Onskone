@@ -106,8 +106,6 @@ interface PlayerCardProps {
   isActive?: boolean;
   isFirstPlayer?: boolean;
   premium?: boolean;
-  /** Exclu du rôle de pilier par l'hôte (lobby) : badge texte, pas seulement visuel. */
-  notLeader?: boolean;
   variant?: 'row' | 'square';
   onKick?: (id: string) => void;
   onPromote?: (id: string) => void;
@@ -123,7 +121,6 @@ const PlayerCard = ({
   isActive = true,
   isFirstPlayer = false,
   premium = false,
-  notLeader = false,
   variant = 'row',
   onKick,
   onPromote,
@@ -199,12 +196,6 @@ const PlayerCard = ({
             {/* Premium : le cadre doré (p-[2.5px]) déborde vers l'extérieur au lieu d'agrandir
                 l'avatar, pour que le nom reste à la même hauteur que sur les tuiles voisines. */}
             <Avatar avatarId={avatarId} name={name} size="lg" premium={premium} className={premium ? '-m-[2.5px]' : ''} />
-            {/* Exclu du rôle de pilier : ruban sticker en bas de l'avatar, loin de la couronne / du menu */}
-            {notLeader && (
-              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 -rotate-6 whitespace-nowrap text-display-xs leading-none px-1.5 py-1 rounded-md border-[1.5px] border-black bg-cream-kraft text-black stack-shadow-sm">
-                {t.lobby.notLeaderBadge}
-              </span>
-            )}
           </span>
           <PremiumName
             name={name}

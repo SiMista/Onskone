@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Icon } from '@iconify/react';
+import { Icon } from '../../components/Icon';
 import { BADGE, BADGE_TONES } from './ui';
 
 type Tone = 'rose' | 'violet';

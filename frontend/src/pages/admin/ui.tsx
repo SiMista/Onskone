@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Icon } from '@iconify/react';
+import { Icon } from '../../components/Icon';
 import { CLUSTER } from './shared';
 import questionMarks from '../../assets/images/bg-question-marks.svg';
 

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { LuLock } from 'react-icons/lu';
 
 /**
@@ -8,7 +9,7 @@ import { LuLock } from 'react-icons/lu';
  * La couleur du texte vient de `className` (fond sombre ou clair selon l'écran).
  */
 const HostOnlyHint = ({ text, shakeKey, className = '' }: {
-  text: string;
+  text: ReactNode;
   shakeKey: number;
   className?: string;
 }) => (

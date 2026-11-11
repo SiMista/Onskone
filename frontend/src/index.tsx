@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import './utils/iconPreload';
+import './utils/imagePreload';
 import App from './App';
 import { hideBootSplashWhenReady } from './utils/bootSplash';
 

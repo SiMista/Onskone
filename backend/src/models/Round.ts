@@ -41,6 +41,7 @@ export class Round implements IRound {
     timerProcessedForPhase: RoundPhase | null | undefined; // Empêche le double traitement du timer
     timerPhase: RoundPhase | undefined; // Phase pour laquelle le timer a été démarré
     revealedIndices: number[]; // Indices des réponses révélées en phase REVEAL
+    revealOrder: number[]; // Ordre du reveal (tour de table), figé à l'entrée en REVEAL
     similarityCorrections: number[]; // Indices corrigés par similarité
     proposedCards: GameCard[]; // Les 3 cartes proposées au pilier pour la sélection
     shownGameCards: GameCard[]; // Cartes déjà montrées au pilier (pour éviter les doublons)
@@ -75,6 +76,7 @@ export class Round implements IRound {
         this.timerProcessedForPhase = null;
         this.timerPhase = undefined;
         this.revealedIndices = [];
+        this.revealOrder = [];
         this.similarityCorrections = [];
         this.proposedCards = [];
         this.shownGameCards = [];

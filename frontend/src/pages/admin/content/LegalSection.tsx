@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Icon } from '@iconify/react';
+import { Icon } from '../../../components/Icon';
 import { SectionHeader } from './SectionHeader';
 import { LEGAL_CONTENT, LEGAL_LABELS_FR } from './shared';
 import { PANEL } from '../ui';

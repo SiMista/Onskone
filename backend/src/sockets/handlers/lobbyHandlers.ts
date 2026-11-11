@@ -9,10 +9,9 @@ import type { GameSpeed } from '@onskone/shared';
 import { validatePlayerName, validateAvatarId, sanitizeInput } from '../../utils/validation.js';
 import { rateLimiters } from '../../utils/rateLimiter.js';
 import { errMessage } from '../../utils/helpers.js';
-import { speedFromLegacyMultiplier, legacyMultiplierFromSpeed } from '../../utils/legacyTimeMultiplier.js';
 import { isNewGameBlocked } from '../../utils/maintenance.js';
 import logger from '../../utils/logger.js';
-import { serializeGame, serializeRound, serializePlayer, serializePlayers, emitLobbyDecksState, armServerTimerForPhase } from '../broadcasting.js';
+import { serializeGame, serializeRound, serializePlayer, serializeLobbyPlayers, emitLobbyDecksState, armRoundStartTimer } from '../broadcasting.js';
 import { scheduleLeaderSkipTimeout, armLeaderSkipIfDisconnected } from './disconnectHandler.js';
 import type { Round } from '../../models/Round.js';
 import {
@@ -30,6 +29,9 @@ import {
     type AppSocket,
     withGuards,
 } from './context.js';
+
+// Message serveur du refus « salon plein » (le client affiche son propre texte traduit via le code).
+const LOBBY_FULL_MESSAGE = `Le salon est plein (${GAME_CONSTANTS.MAX_PLAYERS} joueurs maximum)`;
 
 /**
  * Applique un réglage de lobby réservé à l'hôte (decks, mode, vitesse de jeu).
@@ -93,13 +95,8 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
             // Statut premium de l'host, déclaré au handshake (cf. front socket.ts).
             // Gating "l'host débloque pour la table" : autorise les thèmes premium
             // pour tout le lobby. Auto-déclaré (falsifiable, enjeu faible assumé).
-            const hostPremium = readHandshakePremium(socket);
-            // Host premium : les thèmes premium sont sélectionnés d'office
-            // (recalcul de la sélection par défaut, qui excluait les premium au constructeur).
             // `lobby.hostIsPremium` est dérivé de l'host courant (cf. Lobby.ts).
-            if (lobby && hostPremium) {
-                lobby.selectedDecks = getDefaultSelectedDecks(lobby.locale, true);
-            }
+            const hostPremium = readHandshakePremium(socket);
             const hostPlayer = new Player(sanitizedName, socket.id, true, avatarId, hostPremium);
             lobby?.addPlayer(hostPlayer);
             if (lobby && (data.gameMode === 'local' || data.gameMode === 'remote')) {
@@ -160,13 +157,6 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
                 return;
             }
 
-            // Vérifier si le joueur a été kické récemment
-            if (registry.isPlayerKicked(data.lobbyCode, sanitizedName)) {
-                socket.emit('error', { message: 'Vous avez été expulsé de ce salon', code: ERROR_CODES.KICKED });
-                logger.debug(`Joueur ${sanitizedName} bloqué - a été kické du lobby ${data.lobbyCode}`);
-                return;
-            }
-
             // Vérifie si le joueur avec ce socket.id est déjà dans le lobby
             const existingPlayerBySocket = lobby.players.find(p => p.socketId === socket.id);
             if (existingPlayerBySocket) {
@@ -181,11 +171,11 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
                 socket.join(lobby.code);
                 socket.emit('joinedLobby', { player: serializePlayer(existingPlayerBySocket), reconnectToken: existingPlayerBySocket.reconnectToken });
                 emitLobbyDecksState(io, socket, lobby);
-                io.to(lobby.code).emit('updatePlayersList', { players: serializePlayers(lobby.players) });
+                io.to(lobby.code).emit('updatePlayersList', { players: serializeLobbyPlayers(lobby) });
 
                 // Si une partie est en cours, envoyer gameStarted pour rediriger vers la page de jeu
                 if (lobby.game && lobby.game.status === 'IN_PROGRESS') {
-                    socket.emit('gameStarted', { game: serializeGame(lobby) });
+                    socket.emit('gameStarted', { game: serializeGame(lobby), resumed: true });
                     logger.info(`Partie en cours détectée, envoi gameStarted à ${existingPlayerBySocket.name}`);
                 }
                 return;
@@ -259,11 +249,11 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
 
                     socket.emit('joinedLobby', { player: serializePlayer(existingPlayerByName), reconnectToken: existingPlayerByName.reconnectToken });
                     emitLobbyDecksState(io, socket, lobby);
-                    io.to(lobby.code).emit('updatePlayersList', { players: serializePlayers(lobby.players) });
+                    io.to(lobby.code).emit('updatePlayersList', { players: serializeLobbyPlayers(lobby) });
 
                     // Si une partie est en cours, envoyer gameStarted pour rediriger vers la page de jeu
                     if (lobby.game && lobby.game.status === 'IN_PROGRESS') {
-                        socket.emit('gameStarted', { game: serializeGame(lobby) });
+                        socket.emit('gameStarted', { game: serializeGame(lobby), resumed: true });
                         logger.info(`Partie en cours détectée, envoi gameStarted à ${existingPlayerByName.name}`);
                     }
                 } finally {
@@ -280,6 +270,12 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
                 return;
             }
 
+            // Salon plein : revérifié ici (deux arrivées après la même vérif de pseudo).
+            if (lobby.players.length >= GAME_CONSTANTS.MAX_PLAYERS) {
+                socket.emit('error', { message: LOBBY_FULL_MESSAGE, code: ERROR_CODES.LOBBY_FULL });
+                return;
+            }
+
             // Nouveau joueur
             const avatarId = validateAvatarId(data.avatarId);
             const newPlayer = new Player(sanitizedName, socket.id, false, avatarId, joinerPremium);
@@ -288,8 +284,9 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
             socket.join(lobby.code);
             // reconnectToken émis UNIQUEMENT au socket du nouveau joueur (secret de reconnexion).
             socket.emit('joinedLobby', { player: serializePlayer(newPlayer), reconnectToken: newPlayer.reconnectToken });
-            emitLobbyDecksState(io, socket, lobby);
-            io.to(lobby.code).emit('updatePlayersList', { players: serializePlayers(lobby.players) });
+            // Toute la room : le nouvel arrivant peut avoir été exclu du rôle de pilier (plafond de manches).
+            emitLobbyDecksState(io, null, lobby);
+            io.to(lobby.code).emit('updatePlayersList', { players: serializeLobbyPlayers(lobby) });
             logger.info(`${sanitizedName} a rejoint le lobby ${lobby.code}`, { playerCount: lobby.players.length });
         });
     });
@@ -322,10 +319,6 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
                 socket.emit('error', { message: 'Joueur introuvable', code: ERROR_CODES.NOT_FOUND });
                 return;
             }
-            if (registry.isPlayerKicked(lobby.code, player.name)) {
-                socket.emit('error', { message: 'Vous avez été expulsé de ce salon', code: ERROR_CODES.KICKED });
-                return;
-            }
             // Un socket ne tient qu'UN slot : s'il est déjà rattaché à un autre joueur du
             // salon (joueur connecté qui rouvre le lien d'invitation et tape sur le nom
             // d'un ami déconnecté), deux joueurs partageraient le même socketId et le
@@ -353,7 +346,7 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
             const gameStatus = lobby.game?.status ?? GameStatus.WAITING;
             socket.emit('playerReclaimed', { player: serializePlayer(player), reconnectToken, gameStatus });
             emitLobbyDecksState(io, socket, lobby);
-            io.to(lobby.code).emit('updatePlayersList', { players: serializePlayers(lobby.players) });
+            io.to(lobby.code).emit('updatePlayersList', { players: serializeLobbyPlayers(lobby) });
             logger.info(`Slot de ${player.name} repris sans secret (session perdue) dans ${lobby.code}`, { gameStatus });
         });
     });
@@ -396,12 +389,8 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
         // serait mort.
         applyHostSetting(socket, data, 'modifier les decks', (lobby) => {
             const sanitized = sanitizeSelectedDecks(data.selected || {}, lobby.locale, lobby.hostIsPremium);
-            const totalSelected = Object.values(sanitized).reduce((acc, arr) => acc + arr.length, 0);
-            if (totalSelected === 0) {
-                socket.emit('error', { message: 'Au moins un thème doit être sélectionné', code: ERROR_CODES.INVALID });
-                return;
-            }
-
+            // Sélection vide autorisée (l'hôte peut tout décocher) : « au moins un thème »
+            // est exigé au démarrage (startGame), pas à chaque décochage.
             lobby.selectedDecks = sanitized;
             lobby.updateActivity();
 
@@ -423,7 +412,7 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
         });
     });
 
-    // Applique une vitesse de jeu au lobby et la diffuse (event courant + pendant legacy).
+    // Applique une vitesse de jeu au lobby et la diffuse.
     const applyGameSpeed = (lobby: Lobby, requested: unknown): void => {
         // Vitesse de debug : acceptée UNIQUEMENT si le backend tourne en développement.
         // En production elle retombe sur la vitesse par défaut — sans quoi n'importe
@@ -436,7 +425,6 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
 
         emitLobbyDecksState(io, null, lobby);
         io.to(lobby.code).emit('gameSpeedUpdated', { gameSpeed: speed });
-        io.to(lobby.code).emit('timeMultiplierUpdated', { timeMultiplier: legacyMultiplierFromSpeed(speed) });
     };
 
     // Update game speed (host only)
@@ -448,6 +436,28 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
     });
 
     // Update excluded leaders (host only) : joueurs qui ne seront jamais pilier.
+    // Écran « Préparer la partie » (hôte uniquement, hors partie) : toute la table le
+    // suit. Le salon reste en attente : on peut encore le rejoindre pendant la préparation.
+    socket.on('setPreparation', (data) => {
+        applyHostSetting(socket, data, 'préparer la partie', (lobby) => {
+            const preparing = data.preparing === true;
+            if (lobby.preparing === preparing) return;
+            lobby.preparing = preparing;
+            lobby.updateActivity();
+            emitLobbyDecksState(io, null, lobby);
+        });
+    });
+
+    // Places autour de la table (hôte uniquement, hors partie) : ordre du reveal.
+    // La liste des joueurs est rediffusée dans le nouvel ordre.
+    socket.on('updateSeatOrder', (data) => {
+        applyHostSetting(socket, data, 'placer les joueurs', (lobby) => {
+            if (!lobby.setSeatOrder(data.seatOrder)) return;
+            lobby.updateActivity();
+            io.to(lobby.code).emit('updatePlayersList', { players: serializeLobbyPlayers(lobby) });
+        });
+    });
+
     socket.on('updateExcludedLeaders', (data) => {
         // Cf. updateSelectedDecks : le try/catch interne de withGuards suffit.
         applyHostSetting(socket, data, 'modifier ce réglage', (lobby) => {
@@ -468,13 +478,6 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
             lobby.updateActivity();
 
             emitLobbyDecksState(io, null, lobby);
-        });
-    });
-
-    // Legacy : apps d'avant gameSpeed (cf. utils/legacyTimeMultiplier).
-    socket.on('updateTimeMultiplier', (data) => {
-        applyHostSetting(socket, data, 'modifier ce réglage', (lobby) => {
-            applyGameSpeed(lobby, speedFromLegacyMultiplier(data.timeMultiplier));
         });
     });
 
@@ -513,7 +516,7 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
                     return;
                 }
                 // La table voit le fantôme partir (et un éventuel nouvel hôte).
-                io.to(lobby.code).emit('updatePlayersList', { players: serializePlayers(lobby.players) });
+                io.to(lobby.code).emit('updatePlayersList', { players: serializeLobbyPlayers(lobby) });
             }
             // Insensible à la casse : "Loic" bloque "loic" (cf. joinLobby). Le
             // propriétaire prouvé du slot n'est pas « un autre joueur » : joinLobby le
@@ -521,6 +524,10 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
             const { slot: existing } = findNameSlot(lobby, sanitizedName, socket.id, data.reconnectToken);
             if (existing && !isOwner) {
                 socket.emit('playerNameExists', { playerName: sanitizedName });
+            } else if (!existing && lobby.players.length >= GAME_CONSTANTS.MAX_PLAYERS) {
+                // Nouveau joueur dans un salon plein : refusé dès l'accueil, avant d'y entrer
+                // (un joueur qui reprend son slot n'est pas concerné).
+                socket.emit('error', { message: LOBBY_FULL_MESSAGE, code: ERROR_CODES.LOBBY_FULL });
             } else {
                 socket.emit('playerNameValid');
             }
@@ -559,7 +566,7 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
             // jusqu'à gameEnded, où le lobby est nettoyé normalement.
             if (lobby.game?.status === GameStatus.IN_PROGRESS) {
                 player.isActive = false;
-                io.to(lobbyCode).emit('updatePlayersList', { players: serializePlayers(lobby.players) });
+                io.to(lobbyCode).emit('updatePlayersList', { players: serializeLobbyPlayers(lobby) });
                 logger.info(`${player.name} a quitté pendant la partie (marqué inactif) dans ${lobbyCode}`);
 
                 const game = lobby.game;
@@ -573,7 +580,7 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
             }
 
             const isLobbyRemoved = LobbyManager.removePlayer(lobby, player);
-            io.to(lobbyCode).emit('updatePlayersList', { players: serializePlayers(lobby.players) });
+            io.to(lobbyCode).emit('updatePlayersList', { players: serializeLobbyPlayers(lobby) });
             logger.info(`${player.name} a quitté le lobby ${lobbyCode}`);
             // Toujours quitter la room : sinon le partant continuait de recevoir les
             // events du salon (liste des joueurs, lancement de partie…) depuis l'accueil.
@@ -630,9 +637,8 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
                 registry.cancelDisconnectTimeout(lobbyCode, kickedPlayerName);
                 registry.cancelInactiveTimeout(lobbyCode, kickedPlayerName);
 
-                // Bloquer le joueur pour empêcher la reconnexion immédiate
-                registry.blockKickedPlayer(lobbyCode, kickedPlayerName);
-
+                // Pas de blocage après un kick : l'expulsé peut revenir tout de suite (choix
+                // produit ; un blocage par pseudo se contournait de toute façon en changeant de nom).
                 // Retirer le joueur du lobby
                 lobby.removePlayer(kickedPlayer);
 
@@ -647,7 +653,7 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
                 }
 
                 // Mettre à jour la liste des joueurs pour les autres
-                io.to(lobbyCode).emit('updatePlayersList', { players: serializePlayers(lobby.players) });
+                io.to(lobbyCode).emit('updatePlayersList', { players: serializeLobbyPlayers(lobby) });
 
                 logger.info(`Player ${kickedPlayerName} expulsé du lobby ${lobbyCode}`);
             } catch (error) {
@@ -680,7 +686,7 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
 
             // Promote player to host
             lobby.setHost(playerToPromote);
-            io.to(lobbyCode).emit('updatePlayersList', { players: serializePlayers(lobby.players) });
+            io.to(lobbyCode).emit('updatePlayersList', { players: serializeLobbyPlayers(lobby) });
             logger.info(`Player ${playerToPromote.name} promu hôte dans ${lobbyCode}`);
         });
     });
@@ -701,6 +707,11 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
             const activePlayers = lobby.players.filter(p => p.isActive);
             if (activePlayers.length < 3) {
                 socket.emit('error', { message: 'Il faut au moins 3 joueurs pour lancer la partie', code: ERROR_CODES.INVALID });
+                return;
+            }
+
+            if (Object.values(lobby.selectedDecks).every(arr => arr.length === 0)) {
+                socket.emit('error', { message: 'Au moins un thème doit être sélectionné', code: ERROR_CODES.INVALID });
                 return;
             }
 
@@ -737,15 +748,17 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
 
             const game = createGame(lobby);
             lobby.game = game; // Assigner le jeu au lobby
+            // Préparation terminée : au retour de la partie, la table retrouve le salon.
+            lobby.preparing = false;
 
             // Démarrer le premier round automatiquement
             game.nextRound();
 
             // Envoyer les événements aux clients
-            io.to(data.lobbyCode).emit('gameStarted', { game: serializeGame(lobby) });
+            io.to(data.lobbyCode).emit('gameStarted', { game: serializeGame(lobby), resumed: false });
             if (game.currentRound) {
                 io.to(data.lobbyCode).emit('roundStarted', { round: serializeRound(game.currentRound)! });
-                armServerTimerForPhase(io, data.lobbyCode, lobby, game.currentRound as Round);
+                armRoundStartTimer(io, data.lobbyCode, lobby, game.currentRound as Round);
                 armLeaderSkipIfDisconnected(io, registry, data.lobbyCode, game.currentRound as Round);
             }
             logger.game.started(data.lobbyCode, activePlayers.length);

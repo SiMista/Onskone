@@ -62,9 +62,9 @@ const HourglassTimer = ({ duration, onExpire, phase, lobbyCode, size = 'md', hid
 
   if (hidden) return null;
 
-  // Le sablier reste immobile : seul le compteur s'agite en zone critique (cf.
-  // `animate-timer-critical`). Agiter tout le bloc rendait le chiffre difficile
-  // à lire au moment précis où il compte le plus.
+  // En zone critique, le compteur pulse (`animate-timer-critical`) et le sablier se
+  // balance (`animate-hourglass-rock`), chacun de son côté : agiter tout le bloc
+  // rendait le chiffre difficile à lire au moment précis où il compte le plus.
   return (
     <div className="inline-flex flex-row items-center gap-1.5 md:gap-2">
       {/* Dès l'orange (≤35 % du temps), le compteur grossit et pulse : à 10px sur
@@ -77,87 +77,91 @@ const HourglassTimer = ({ duration, onExpire, phase, lobbyCode, size = 'md', hid
       >
         {Math.max(0, remainingSec)}s
       </span>
-      <svg viewBox="0 0 100 130" className={`${sizeClass.svg} drop-shadow-[2px_2px_0_rgba(0,0,0,0.8)]`}>
-        {/* Plateaux bois haut/bas */}
-        <rect x="8" y="4" width="84" height="9" rx="2" fill="#8b5a2b" stroke={glassStroke} strokeWidth="3" strokeLinejoin="round" />
-        <rect x="8" y="117" width="84" height="9" rx="2" fill="#8b5a2b" stroke={glassStroke} strokeWidth="3" strokeLinejoin="round" />
-
-        {/* Silhouette verre : top bulb */}
-        <path
-          d="M 20 13 L 80 13 L 56 63 Q 50 68 44 63 Z"
-          fill={bulbFill}
-          stroke={glassStroke}
-          strokeWidth="3.5"
-          strokeLinejoin="round"
-        />
-        {/* Silhouette verre : bottom bulb */}
-        <path
-          d="M 44 67 Q 50 62 56 67 L 80 117 L 20 117 Z"
-          fill={bulbFill}
-          stroke={glassStroke}
-          strokeWidth="3.5"
-          strokeLinejoin="round"
-        />
-
-        {/* Sable top : on remplit depuis le bas du bulb vers le haut */}
-        <defs>
-          <clipPath id="top-bulb-clip">
-            <path d="M 20 13 L 80 13 L 56 63 Q 50 68 44 63 Z" />
-          </clipPath>
-          <clipPath id="bottom-bulb-clip">
-            <path d="M 44 67 Q 50 62 56 67 L 80 117 L 20 117 Z" />
-          </clipPath>
-        </defs>
-
-        {/* Sable dans le bulb du haut - rectangle qui descend en hauteur */}
-        <rect
-          x="10"
-          y={63 - topSandH}
-          width="80"
-          height={topSandH + 2}
-          fill={sandColor}
-          clipPath="url(#top-bulb-clip)"
-          style={{ transition: 'y 1s linear, height 1s linear, fill 0.5s ease' }}
-        />
-
-        {/* Sable dans le bulb du bas - rectangle qui remplit par le bas */}
-        <rect
-          x="10"
-          y={117 - bottomSandH}
-          width="80"
-          height={bottomSandH + 2}
-          fill={sandColor}
-          clipPath="url(#bottom-bulb-clip)"
-          style={{ transition: 'y 1s linear, height 1s linear, fill 0.5s ease' }}
-        />
-
-        {/* Grains en chute dans le col */}
-        {progress > 0 && progress < 100 && grains.map(g => (
-          <circle
-            key={g.id}
-            cx={50 + g.offsetX}
-            cy={63}
-            r={isCritical ? 1.4 : 1.1}
-            fill={sandColor}
-            className="hourglass-grain"
-            style={{ animationDelay: `${g.delay}s` }}
+      {/* L'ombre vit sur l'enveloppe et la rotation sur le SVG : l'ombre reste
+          portée en bas à droite pendant que le sablier se balance. */}
+      <span className="inline-flex drop-shadow-[2px_2px_0_rgba(0,0,0,0.8)]">
+        <svg viewBox="0 0 100 130" className={`${sizeClass.svg} origin-center ${isCritical ? 'animate-hourglass-rock' : ''}`}>
+          {/* Plateaux bois haut/bas */}
+          <rect x="8" y="4" width="84" height="9" rx="2" fill="#8b5a2b" stroke={glassStroke} strokeWidth="3" strokeLinejoin="round" />
+          <rect x="8" y="117" width="84" height="9" rx="2" fill="#8b5a2b" stroke={glassStroke} strokeWidth="3" strokeLinejoin="round" />
+  
+          {/* Silhouette verre : top bulb */}
+          <path
+            d="M 20 13 L 80 13 L 56 63 Q 50 68 44 63 Z"
+            fill={bulbFill}
+            stroke={glassStroke}
+            strokeWidth="3.5"
+            strokeLinejoin="round"
           />
-        ))}
-
-        {/* Petit tas sur le fond du bulb du bas, animé */}
-        {progress < 100 && (
-          <ellipse
-            cx="50"
-            cy={117 - Math.max(2, bottomSandH * 0.35)}
-            rx={Math.min(18, 4 + bottomSandH * 0.35)}
-            ry="2.5"
+          {/* Silhouette verre : bottom bulb */}
+          <path
+            d="M 44 67 Q 50 62 56 67 L 80 117 L 20 117 Z"
+            fill={bulbFill}
+            stroke={glassStroke}
+            strokeWidth="3.5"
+            strokeLinejoin="round"
+          />
+  
+          {/* Sable top : on remplit depuis le bas du bulb vers le haut */}
+          <defs>
+            <clipPath id="top-bulb-clip">
+              <path d="M 20 13 L 80 13 L 56 63 Q 50 68 44 63 Z" />
+            </clipPath>
+            <clipPath id="bottom-bulb-clip">
+              <path d="M 44 67 Q 50 62 56 67 L 80 117 L 20 117 Z" />
+            </clipPath>
+          </defs>
+  
+          {/* Sable dans le bulb du haut - rectangle qui descend en hauteur */}
+          <rect
+            x="10"
+            y={63 - topSandH}
+            width="80"
+            height={topSandH + 2}
             fill={sandColor}
-            opacity="0.85"
+            clipPath="url(#top-bulb-clip)"
+            style={{ transition: 'y 1s linear, height 1s linear, fill 0.5s ease' }}
+          />
+  
+          {/* Sable dans le bulb du bas - rectangle qui remplit par le bas */}
+          <rect
+            x="10"
+            y={117 - bottomSandH}
+            width="80"
+            height={bottomSandH + 2}
+            fill={sandColor}
             clipPath="url(#bottom-bulb-clip)"
-            style={{ transition: 'cy 1s linear, rx 1s linear, fill 0.5s ease' }}
+            style={{ transition: 'y 1s linear, height 1s linear, fill 0.5s ease' }}
           />
-        )}
-      </svg>
+  
+          {/* Grains en chute dans le col */}
+          {progress > 0 && progress < 100 && grains.map(g => (
+            <circle
+              key={g.id}
+              cx={50 + g.offsetX}
+              cy={63}
+              r={isCritical ? 1.4 : 1.1}
+              fill={sandColor}
+              className="hourglass-grain"
+              style={{ animationDelay: `${g.delay}s` }}
+            />
+          ))}
+  
+          {/* Petit tas sur le fond du bulb du bas, animé */}
+          {progress < 100 && (
+            <ellipse
+              cx="50"
+              cy={117 - Math.max(2, bottomSandH * 0.35)}
+              rx={Math.min(18, 4 + bottomSandH * 0.35)}
+              ry="2.5"
+              fill={sandColor}
+              opacity="0.85"
+              clipPath="url(#bottom-bulb-clip)"
+              style={{ transition: 'cy 1s linear, rx 1s linear, fill 0.5s ease' }}
+            />
+          )}
+        </svg>
+      </span>
     </div>
   );
 };

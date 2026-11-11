@@ -5,7 +5,7 @@ import type { Round } from '../../models/Round.js';
 import { GAME_CONSTANTS, GameStatus, RoundPhase } from '@onskone/shared';
 import { errMessage } from '../../utils/helpers.js';
 import logger from '../../utils/logger.js';
-import { serializeRound, serializePlayers, endGame, armServerTimerForPhase } from '../broadcasting.js';
+import { serializeRound, serializeLobbyPlayers, endGame, armRoundStartTimer } from '../broadcasting.js';
 import { ConnectionRegistry } from '../ConnectionRegistry.js';
 import {
     type HandlerContext,
@@ -56,7 +56,7 @@ function scheduleInactiveTimeout(
             player.isActive = false;
             logger.info(`Player ${playerName} marqué inactif après ${INACTIVE_DELAY}ms`);
 
-            io.to(lobbyCode).emit('updatePlayersList', { players: serializePlayers(currentLobby.players) });
+            io.to(lobbyCode).emit('updatePlayersList', { players: serializeLobbyPlayers(currentLobby) });
         } catch (error) {
             logger.error('Error in inactive timeout', { error: errMessage(error) });
         }
@@ -145,7 +145,7 @@ export function scheduleLeaderSkipTimeout(
                     io.to(lobbyCode).emit('roundStarted', {
                         round: serializeRound(currentGame.currentRound!)!
                     });
-                    armServerTimerForPhase(io, lobbyCode, currentLobby, currentGame.currentRound as Round);
+                    armRoundStartTimer(io, lobbyCode, currentLobby, currentGame.currentRound as Round);
                     armLeaderSkipIfDisconnected(io, registry, lobbyCode, currentGame.currentRound as Round);
                     logger.info(`Nouveau round démarré après déconnexion du pilier`, {
                         lobbyCode,
@@ -235,7 +235,7 @@ function scheduleGracePeriodRemoval(
                     registry.cleanupLobbyResources(lobbyCode);
                     logger.info(`Lobby ${lobbyCode} supprimé (vide)`);
                 } else {
-                    io.to(lobbyCode).emit('updatePlayersList', { players: serializePlayers(currentLobby.players) });
+                    io.to(lobbyCode).emit('updatePlayersList', { players: serializeLobbyPlayers(currentLobby) });
                 }
             }
         } catch (error) {

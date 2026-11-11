@@ -1,11 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Icon } from '@iconify/react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { Icon } from '../components/Icon';
 import QuestionSelection from '../components/QuestionSelection';
 import AnswerPhase from '../components/AnswerPhase';
 import GuessingPhase from '../components/GuessingPhase';
 import RevealPhase from '../components/RevealPhase';
 import GuessingIntroOverlay from '../components/GuessingIntroOverlay';
+import QuestionSelectionIntroOverlay from '../components/QuestionSelectionIntroOverlay';
+import {
+  shouldPlayPhaseIntro, isFreshGameStart, introEndsAt, type PhaseSnapshot, type PlayingIntro, type TimerStart,
+} from '../utils/phaseIntro';
+import { localTimerStart } from '../utils/timerClock';
 import { SectionErrorBoundary } from '../components/SectionErrorBoundary';
 import { StudioCrashProbe, clearStudioCrash } from '../utils/studioCrash';
 import SubstituteSelection from '../components/SubstituteSelection';
@@ -16,10 +21,10 @@ import Spinner from '../components/Spinner';
 import Button from '../components/Button';
 import { getPhaseDuration } from '../constants/game';
 import SettingsButton from '../components/SettingsButton';
-import { useLeavePrompt, useKeepAwake } from '../hooks';
+import { useLeavePrompt, useKeepAwake, useSocketEvent } from '../hooks';
 import { useGameState } from '../hooks/useGameState';
 import { useLobbyExitEvents } from '../hooks/useLobbyExitEvents';
-import { RoundPhase, GameStatus, GAME_CONSTANTS } from '@onskone/shared';
+import { RoundPhase, GameStatus, GAME_CONSTANTS, type TimerStatePayload } from '@onskone/shared';
 import { isStudioFrame, studioSlotIndex } from '../utils/studioStorage';
 import { useStudioBot } from '../hooks/useStudioBot';
 import { useLocale } from '../i18n';
@@ -43,32 +48,60 @@ const GamePage: React.FC = () => {
   // État de la partie + toute la synchronisation socket (fetch/reconnexion,
   // handlers d'évènements, dérivé isLeader) — cf. hooks/useGameState.
   const {
-    game, players, currentPlayer, revealResults, reconnectionData, isLeader, syncEpoch, loadingSlow, retrySync,
+    game, players, currentPlayer, revealResults, revealOrder, reconnectionData, isLeader, syncEpoch, loadingSlow, retrySync,
   } = useGameState(lobbyCode);
 
-  // Overlay d'intro GUESSING : seulement sur une transition vue en direct
-  // (réponses → devinettes, même manche), jamais à un (re)montage direct dans la
-  // phase (reconnexion, resync) : sinon il rejouerait au milieu de la phase.
-  // Jamais à distance : chacun joue sur son écran, il n'y a rien à montrer à la
-  // table (le serveur ne décale pas non plus le timer, cf. transitionToGuessing).
-  const [guessingIntroRound, setGuessingIntroRound] = useState<number | null>(null);
-  const prevPhaseRef = useRef<{ round: number; phase: RoundPhase } | null>(null);
+  // Écrans de rôle plein écran à l'entrée d'une phase, seulement sur une transition
+  // vue en direct (ou au lancement de la partie), jamais à un (re)montage en pleine
+  // phase : sinon ils rejoueraient au milieu (règles dans utils/phaseIntro).
+  //  - GUESSING : « Tu es PILIER / JOUEUR » sur tous les écrans, jamais à distance :
+  //    chacun joue sur son écran, rien à montrer à la table (le serveur ne décale pas
+  //    non plus le timer, cf. transitionToGuessing) ;
+  //  - QUESTION_SELECTION : « À ton tour d'être PILIER » sur l'écran du pilier seul,
+  //    dans les deux modes (timer serveur décalé, cf. armRoundStartTimer).
+  // La page porte la durée (pas l'overlay) : s'il plante, l'intro se termine quand
+  // même à l'heure, et les cartes du pilier, qui attendent sa fin, se retournent.
+  const location = useLocation();
+  // Posé par le salon au lancement de la partie (cf. Lobby, isFreshGameStart).
+  const navStateRef = useRef<unknown>(location.state);
+  const [intro, setIntro] = useState<PlayingIntro | null>(null);
+  const prevPhaseRef = useRef<PhaseSnapshot | null>(null);
+  const syncEpochRef = useRef(syncEpoch);
   const curRound = game?.currentRound?.roundNumber;
   const curPhase = game?.currentRound?.phase;
   useEffect(() => {
     if (curRound === undefined || curPhase === undefined) return;
     const prev = prevPhaseRef.current;
-    prevPhaseRef.current = { round: curRound, phase: curPhase };
-    if (
-      curPhase === RoundPhase.GUESSING && prev && prev.round === curRound &&
-      (prev.phase === RoundPhase.ANSWERING || prev.phase === RoundPhase.SUBSTITUTE_ANSWERING)
-    ) {
-      setGuessingIntroRound(curRound);
+    const cur = { round: curRound, phase: curPhase };
+    prevPhaseRef.current = cur;
+    // Écran changé par une resync complète (retour d'arrière-plan, transition ratée) :
+    // la phase a commencé sans nous et son temps coule déjà, pas d'intro par-dessus.
+    const resynced = syncEpoch !== syncEpochRef.current;
+    syncEpochRef.current = syncEpoch;
+    if (!resynced && shouldPlayPhaseIntro(prev, cur, isFreshGameStart(navStateRef.current))) {
+      setIntro({ ...cur, shownAt: Date.now() });
     }
-  }, [curRound, curPhase]);
+  }, [curRound, curPhase, syncEpoch]);
+  // Départ réel du timer de la phase (cf. introEndsAt) : `timerStarted` en direct, ou
+  // `timerState` demandé par le sablier de la phase à son montage.
+  const [timerStart, setTimerStart] = useState<TimerStart | null>(null);
+  const onTimer = (data: TimerStatePayload) => {
+    if (data) setTimerStart({ round: data.roundNumber, phase: data.phase, at: localTimerStart(data) });
+  };
+  useSocketEvent('timerStarted', onTimer);
+  useSocketEvent('timerState', onTimer);
+  useEffect(() => {
+    if (!intro) return;
+    const timer = setTimeout(() => setIntro(null), Math.max(0, introEndsAt(intro, timerStart) - Date.now()));
+    return () => clearTimeout(timer);
+  }, [intro, timerStart]);
+  // Une phase quittée avant la fin de son intro (question choisie par le bot du
+  // Studio, manche sautée) la coupe aussitôt.
+  const introPlaying = intro !== null && intro.round === curRound && intro.phase === curPhase;
   const showGuessingIntro =
-    game?.lobby?.gameMode !== 'remote' &&
-    curPhase === RoundPhase.GUESSING && guessingIntroRound !== null && guessingIntroRound === curRound;
+    introPlaying && curPhase === RoundPhase.GUESSING && game?.lobby?.gameMode !== 'remote';
+  const showQuestionSelectionIntro =
+    introPlaying && curPhase === RoundPhase.QUESTION_SELECTION && isLeader;
 
   // Confirmation avant de quitter pendant une partie en cours
   useLeavePrompt(game?.status === GameStatus.IN_PROGRESS);
@@ -145,6 +178,7 @@ const GamePage: React.FC = () => {
             isLeader={isLeader}
             leader={game.currentRound.leader}
             gameSpeed={gameSpeed}
+            intro={showQuestionSelectionIntro}
           />
         );
 
@@ -224,6 +258,8 @@ const GamePage: React.FC = () => {
             currentPlayerId={currentPlayer.id}
             isGameOver={isGameOver}
             results={revealResults}
+            // Tour de table : ordre fixé par le serveur, le même pour tous les clients.
+            revealOrder={revealOrder}
             // État serveur des révélations (suivi via answerRevealed + resync) : le
             // composant s'y aligne sans être remonté.
             serverRevealedIndices={game.currentRound.revealedIndices ?? reconnectionData?.revealedIndices}
@@ -241,10 +277,15 @@ const GamePage: React.FC = () => {
       {/* Studio : crash simulé HORS boundary local -> écran global (AppErrorBoundary). */}
       <StudioCrashProbe target="global" crashKey={screenKey} />
       <ScreenLogo />
-      {/* Overlay purement décoratif : s'il plante on le saute, la phase dessous continue. */}
+      {/* Overlays purement décoratifs : s'ils plantent on les saute, la phase dessous continue. */}
       {showGuessingIntro && (
         <SectionErrorBoundary name="game.guessingIntro" fallback="silent">
-          <GuessingIntroOverlay isLeader={isLeader} onDone={() => setGuessingIntroRound(null)} />
+          <GuessingIntroOverlay isLeader={isLeader} />
+        </SectionErrorBoundary>
+      )}
+      {showQuestionSelectionIntro && (
+        <SectionErrorBoundary name="game.questionSelectionIntro" fallback="silent">
+          <QuestionSelectionIntroOverlay guessMyAnswerMode={!!game?.currentRound?.guessMyAnswerMode} />
         </SectionErrorBoundary>
       )}
       {/* Réglages flottants en haut à droite (hors de la carte), comme sur l'accueil. */}

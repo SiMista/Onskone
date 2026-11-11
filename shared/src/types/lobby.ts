@@ -36,9 +36,15 @@ export interface ILobby {
   /**
    * Joueurs que l'hôte a exclus du rôle de pilier : ils jouent normalement mais ne
    * sont jamais tirés comme pilier. Nombre de manches = joueurs actifs non exclus.
-   * Optionnel : absent des serveurs d'avant l'exclusion de piliers.
    */
-  excludedLeaderIds?: string[];
+  excludedLeaderIds: string[];
+
+  /**
+   * Places autour de la table (ids de joueurs, dans le sens du jeu) : ordre du
+   * reveal uniquement (à partir de la gauche du pilier ; les piliers sont tirés au
+   * hasard). Tenu par le serveur, gardé d'une partie à l'autre.
+   */
+  seatOrder: string[];
 
   /** Langue du contenu (questions, thèmes) - choisie par l'hôte à la création */
   locale: Locale;

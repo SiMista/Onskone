@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Icon } from '@iconify/react';
+import { Icon } from './Icon';
 import ReportModal from './ReportModal';
 import type { TicketType } from '../utils/ticketsApi';
 import { useLocale } from '../i18n';

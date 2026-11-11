@@ -1,4 +1,4 @@
-import { Icon } from '@iconify/react';
+import { Icon } from '../Icon';
 import { STICKER_FILTER } from '../../constants/icons';
 import { PUBLIC_TIERS, ONSKONE_INDEX, type Tier } from '../../constants/tiers';
 import { useLocale } from '../../i18n';

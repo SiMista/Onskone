@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { Locale } from '@onskone/shared';
+import type { AudienceKey } from '../constants/game';
 
 /**
  * Forme typée du dictionnaire d'i18n. Chaque langue (fr.ts, en.ts) exporte un
@@ -52,6 +53,8 @@ export interface Dictionary {
     language: string;
     back: string;
     close: string;
+    /** Libellé accessible du bouton « ? » (HelpBubble). */
+    help: string;
     cancel: string;
     confirm: string;
     loading: string;
@@ -72,8 +75,9 @@ export interface Dictionary {
     /** Réglage sans effet sur cet appareil (ex. vibrations sur iOS Safari). */
     unavailable: string;
     report: string;
-    /** Sous le choix de langue, en lobby / partie, si l'interface ≠ langue du salon. */
-    contentLocaleHint: string;
+    /** Sous le choix de langue, en lobby / partie, si l'interface ≠ langue du salon.
+     *  Reçoit les noms (dans la langue de l'interface) : celle du salon, puis celle de l'interface. */
+    contentLocaleHint: (lobbyLanguage: string, uiLanguage: string) => string;
     /** Nom de chaque langue, écrit dans la langue de ce dictionnaire. */
     languageNames: Record<Locale, string>;
     /** Section "Salon" en partie : code du salon, copiable (cf. SettingsModal). */
@@ -111,6 +115,11 @@ export interface Dictionary {
     message: string;
     downTitle: string;
     downMessage: string;
+    /** Serveur sans réponse : plutôt le réseau du joueur. */
+    unreachableTitle: string;
+    unreachableMessage: string;
+    /** Toast : connexion lente / qui coupe (utils/connectionQuality). */
+    unstableToast: string;
     autoResume: string;
     gameKept: string;
   };
@@ -139,6 +148,8 @@ export interface Dictionary {
       enterPseudoJoin: string;
       invalidLobbyCode: string;
       lobbyNotFound: string;
+      /** Salon plein : nouveau joueur refusé (max = GAME_CONSTANTS.MAX_PLAYERS). */
+      lobbyFull: (max: number) => string;
       pseudoTaken: (name: string) => string;
       /** Partie en cours sans place à reprendre : impossible d'entrer. */
       gameInProgress: string;
@@ -152,40 +163,58 @@ export interface Dictionary {
   };
 
   lobby: {
-    tabs: { settings: string; players: string };
+    tabs: { themes: string; players: string };
     inTheRoom: string;
     connectedCount: (n: number) => string;
-    settingsHostOnlyPrefix: string;
-    settingsHostOnlySuffix: string;
-    guessMyAnswer: { label: string; description: string };
+    /** Bandeau « Seul <hôte> peut modifier les thèmes » (non-hôtes, onglet Thèmes). */
+    themesHostOnlyPrefix: string;
+    themesHostOnlySuffix: string;
+    themesHostHint: string;
+    guessMyAnswer: { label: string; description: string; help: string };
     gameSpeed: {
       label: string;
       fast: string;
       normal: string;
       estimate: (minutes: number) => string;
     };
-    /** Bottom sheet "Options de jeu" (mode, rythme, piliers) et sa ligne de résumé. */
-    options: {
+    /** Écran « Préparer la partie » (entre Démarrer et le lancement) : manches, places, options. */
+    prepare: {
       title: string;
-      summary: (mode: string, speed: string, rounds: number, minutes: number) => string;
-      /** Nom du mode sans "Devine ma réponse", affiché dans le résumé. */
-      classicMode: string;
-      leaders: string;
-      rounds: (n: number) => string;
+      /** Bouton retour de l'hôte vers le salon. */
+      backToLobby: string;
+      /** Bandeau des invités pendant que l'hôte prépare. */
+      roundsWord: (n: number) => string;
+      roundsHint: string;
+      roundsCapHint: (max: number) => string;
+      /** Sur place : titre, mot d'explication et consignes du cercle des places. */
+      seatsTitle: string;
+      seatsHintHost: string;
+      /** Nom de l'hôte en gras. */
+      seatsHintGuest: (host: string) => ReactNode;
+      /** Invité : sa consigne, sous l'explication (pendant des gestes de l'hôte). */
+      seatsGuestCheck: string;
+      /** Hôte : les deux gestes du cercle, une ligne chacun sous l'explication (verbe du geste en gras). */
+      seatsGestures: { drag: ReactNode; tap: ReactNode };
+      turnDirection: string;
+      legendLeader: string;
+      /** Étiquette sur sa propre place. */
+      youTag: string;
+      seatAria: (name: string, isLeader: boolean, editable: boolean) => string;
+      /** À distance : liste des piliers. */
+      leadersTitle: string;
+      playersCount: (n: number) => string;
       leadersHint: string;
+      /** Suffixe de sa propre ligne dans la liste. */
       you: string;
-      hostOnly: (host: string) => string;
-      /** Libellé du récap de durée en tête du sheet Options (dépend du rythme et des piliers). */
-      estimateLabel: string;
-      /** Précision sous le récap de durée. */
-      estimateHint: string;
+      /** Nom de l'hôte en gras (idem hostPreparing). */
+      hostOnly: (host: string) => ReactNode;
+      launch: string;
+      hostPreparing: (host: string) => ReactNode;
+      /** Le dernier pilier ne peut pas être retiré. */
+      lastLeader: string;
     };
     /** Badge sur la carte d'un joueur exclu du rôle de pilier. */
-    notLeaderBadge: string;
     atLeastOneLeader: string;
-    themes: string;
-    /** Titre de section du bloc mode + options de jeu (onglet Paramètres). */
-    gameSection: string;
     start: string;
     shareInvite: {
       button: string;
@@ -201,7 +230,8 @@ export interface Dictionary {
     minPlayers: (n: number) => string;
     selectAtLeastOneTheme: string;
     loadingThemes: string;
-    startHostOnly: (hostName: string) => string;
+    /** Nom de l'hôte en gras. */
+    startHostOnly: (hostName: string) => ReactNode;
     hostFallback: string;
     modals: {
       fewPlayers: { title: string; message: string; confirm: string; cancel: string };
@@ -223,6 +253,8 @@ export interface Dictionary {
       joinRefused: string;
       playerJoined: (name: string) => string;
       playerLeft: (name: string) => string;
+      /** Pour l'hôte : un joueur arrive pendant la préparation, il prend la dernière place. */
+      joinedDuringPrep: (name: string) => string;
       /** Rappel « joue avec le son » (une fois par lancement, cf. utils/soundHint). */
       soundHint: string;
       /** Variante iPhone/iPad : le bouton silencieux coupe les sons de l'app. */
@@ -357,16 +389,26 @@ export interface Dictionary {
     all: string;
     loading: string;
     categoryDescriptions: Record<string, string>;
+    /** Bulle d'aide du sélecteur de thèmes : une phrase par catégorie (même clés que le catalogue). */
+    categoryHelpIntro: string;
+    categoryHelp: Record<string, string>;
+    /** « Idéal pour » : petit libellé devant les types de groupe conseillés d'une catégorie. */
+    idealFor: string;
+    /** Types de groupe conseillés (cf. CATEGORY_AUDIENCES). */
+    audiences: Record<AudienceKey, string>;
   };
 
   themePicker: {
     title: string;
     modify: string;
+    /** « Voir » des fiches de l'onglet Thèmes (non-hôtes, lecture seule). */
     view: string;
     emptyState: string;
     counter: (n: number) => string;
+    selectAll: string;
     hostHint: string;
-    readOnlyHint: (hostName: string) => string;
+    /** Nom de l'hôte en gras. */
+    readOnlyHint: (hostName: string) => ReactNode;
     matureBadge: string;
     premiumBadge: string;
     matureConfirm: {
@@ -439,6 +481,13 @@ export interface Dictionary {
       selected: string;
       confirmQuestion: string;
       cancelQuestion: string;
+      /** Écran « À ton tour d'être PILIER » au début de la manche (pilier seul). */
+      intro: {
+        yourTurn: string;
+        role: string;
+        text: string;
+        textGuessMyAnswer: string;
+      };
     };
     answering: {
       questionAskedToOthers: string;
@@ -450,6 +499,10 @@ export interface Dictionary {
       editAnswer: string;
       waitingForOthers: string;
       answersReceived: string;
+      /** Bulle d'appel temporaire à côté de la pastille d'astuce. */
+      tipTeaser: string;
+      /** Libellé accessible de la pastille d'astuce. */
+      tipLabel: string;
     };
     substituteSelection: {
       instructionLeader: string;

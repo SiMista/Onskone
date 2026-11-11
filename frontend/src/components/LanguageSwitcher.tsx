@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Icon } from '@iconify/react';
+import { Icon } from './Icon';
 import { useLocale, LOCALE_META, SUPPORTED_LOCALES } from '../i18n';
 
 const LanguageSwitcher = () => {

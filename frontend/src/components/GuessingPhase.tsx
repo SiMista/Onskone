@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
-import { Icon } from '@iconify/react';
+import { Icon } from './Icon';
 import HourglassTimer from './HourglassTimer';
 import Button from './Button';
 import QuestionCard from './QuestionCard';

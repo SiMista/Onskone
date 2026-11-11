@@ -1,5 +1,5 @@
 import { useEffect, useId, useState } from 'react';
-import { Icon } from '@iconify/react';
+import { Icon } from '../../components/Icon';
 import { FLOATING, btn } from './ui';
 
 export const ConfirmDialog = ({

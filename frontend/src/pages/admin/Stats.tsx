@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Icon } from '@iconify/react';
+import { Icon } from '../../components/Icon';
 import type { AdminDeckStatRow, AdminDeckStats } from '@onskone/shared';
 import { useAdminResource } from '../../hooks';
 import { fetchAdminDeckStats } from '../../utils/adminDataApi';

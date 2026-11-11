@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Icon } from '@iconify/react';
+import { Icon } from '../../components/Icon';
 import { Ticket, TicketStatus, TicketType } from '../../utils/ticketsApi';
 import { CLUSTER, TYPE_META, STATUS_META, STATUS_ORDER } from './shared';
 import { BottomSheet } from './MobileNav';

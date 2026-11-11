@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Icon } from '@iconify/react';
+import { Icon } from '../../../components/Icon';
 import { LuMinus, LuPlus } from 'react-icons/lu';
 import { GAME_CONSTANTS } from '@onskone/shared';
 import { RoundPhase } from '@onskone/shared';

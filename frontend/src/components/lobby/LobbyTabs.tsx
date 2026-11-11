@@ -1,33 +1,35 @@
-import { GAME_CONFIG } from '../../constants/game';
 import type { Dictionary } from '../../i18n/dictionary';
 
-export type LobbyTabId = 'settings' | 'players';
+export type LobbyTabId = 'themes' | 'players';
 
 interface LobbyTabsProps {
   activeTab: LobbyTabId;
   onTabChange: (tab: LobbyTabId) => void;
   activePlayersCount: number;
+  /** Nombre de thèmes choisis (pastille de l'onglet Thèmes). */
+  themesCount: number;
   t: Dictionary;
 }
 
 /**
  * Onglets du lobby : intercalaires cartonnés en éventail, coins asymétriques.
- * Onglet "settings" (warning) à gauche, "players" (brand, avec compteur) à droite.
+ * Onglet "themes" (warning, avec le nombre de thèmes choisis) à gauche, "players"
+ * (brand, avec compteur) à droite.
  */
-const LobbyTabs = ({ activeTab, onTabChange, activePlayersCount, t }: LobbyTabsProps) => {
+const LobbyTabs = ({ activeTab, onTabChange, activePlayersCount, themesCount, t }: LobbyTabsProps) => {
   const tabs = [
     {
-      id: 'settings' as const,
+      id: 'themes' as const,
       color: 'var(--color-warning-500)',
-      label: t.lobby.tabs.settings,
-      badge: null,
+      label: t.lobby.tabs.themes,
+      badge: String(themesCount),
       outer: 'left' as const,
     },
     {
       id: 'players' as const,
       color: 'var(--color-brand-500)',
       label: t.lobby.tabs.players,
-      badge: `${activePlayersCount}/${GAME_CONFIG.MAX_PLAYERS}`,
+      badge: `${activePlayersCount}`,
       outer: 'right' as const,
     },
   ];

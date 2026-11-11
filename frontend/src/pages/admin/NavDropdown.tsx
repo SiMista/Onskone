@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Icon } from '@iconify/react';
+import { Icon } from '../../components/Icon';
 import { AdminTab, NAV_MENUS, TabGroup, tabsOfGroup } from './shared';
 import { FLOATING } from './ui';
 

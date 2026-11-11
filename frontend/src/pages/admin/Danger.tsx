@@ -1,4 +1,4 @@
-import { Icon } from '@iconify/react';
+import { Icon } from '../../components/Icon';
 import type { MaintenanceState } from '@onskone/shared';
 import { MaintenancePanel } from './Maintenance';
 import { VersionGatePanel } from './VersionGate';

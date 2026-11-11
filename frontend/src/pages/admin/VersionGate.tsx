@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Icon } from '@iconify/react';
+import { Icon } from '../../components/Icon';
 import { useToast } from '../../components/Toast';
 import { DangerCard, DangerButton } from './DangerCard';
 import { ConfirmDialog } from './ConfirmDialog';

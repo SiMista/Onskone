@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { localTimerEnd } from './timerClock';
+import { localTimerEnd, localTimerStart } from './timerClock';
 
 describe('localTimerEnd', () => {
   const data = { startedAt: 1_000_000, duration: 60, serverNow: 1_000_000 };
@@ -22,8 +22,16 @@ describe('localTimerEnd', () => {
     const late = { ...data, serverNow: 1_040_000 };
     expect(localTimerEnd(late, 5_000) - 5_000).toBe(20_000);
   });
+});
 
-  it('sans serverNow (ancien serveur) : ancien calcul', () => {
-    expect(localTimerEnd({ startedAt: 1_000_000, duration: 60 })).toBe(1_060_000);
+describe('localTimerStart', () => {
+  it("départ décalé de 3,5 s (intro) : dans le futur sur l'horloge locale, quelle que soit sa montre", () => {
+    const data = { startedAt: 1_003_500, serverNow: 1_000_000 };
+    expect(localTimerStart(data, 1_000_000)).toBe(1_003_500);
+    expect(localTimerStart(data, 1_300_000)).toBe(1_303_500);
+  });
+
+  it('timer déjà parti : départ dans le passé', () => {
+    expect(localTimerStart({ startedAt: 1_000_000, serverNow: 1_010_000 }, 2_000_000)).toBe(1_990_000);
   });
 });

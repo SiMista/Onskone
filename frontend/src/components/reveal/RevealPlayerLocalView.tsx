@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Icon } from '@iconify/react';
+import { Icon } from '../Icon';
 import Avatar from '../Avatar';
 import RevealedAnswerCard from '../RevealedAnswerCard';
 import { IPlayer, RevealResult } from '@onskone/shared';

@@ -19,10 +19,10 @@ import { useLocale } from '../i18n';
 import { useToast } from '../components/Toast';
 import type { Locale, IPlayer, ReclaimablePlayer } from '@onskone/shared';
 import BackButton from '../components/BackButton';
-import { Icon } from '@iconify/react';
+import { Icon } from '../components/Icon';
 import { useSocketEvent, useReconnectOnVisible } from '../hooks';
 import { useDocumentMeta } from '../hooks/useDocumentMeta';
-import { GameMode, GameStatus, isGameSpeed } from '@onskone/shared';
+import { GameMode, GameStatus, isGameSpeed, ERROR_CODES } from '@onskone/shared';
 import { GAME_CONFIG, AVATARS } from '../constants/game';
 import { STICKER_FILTER } from '../constants/icons';
 import {
@@ -355,6 +355,10 @@ const Home = () => {
     if (data.code === 'NOT_FOUND' && lobbyCode && !reclaim) {
       showToast(t.home.toasts.lobbyNotFound, 'error');
       checkLobby();
+      return;
+    }
+    if (data.code === ERROR_CODES.LOBBY_FULL) {
+      showToast(t.home.toasts.lobbyFull(GAME_CONFIG.MAX_PLAYERS), 'error', 5000);
       return;
     }
     showToast(data.message, 'error');

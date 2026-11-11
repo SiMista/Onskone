@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
-import { Icon } from '@iconify/react';
+import { Icon } from './Icon';
 import Modal from './Modal';
 import Button from './Button';
 import Dropdown from './Dropdown';

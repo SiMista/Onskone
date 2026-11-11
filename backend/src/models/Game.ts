@@ -54,9 +54,9 @@ export class Game implements IGame {
             throw new Error("Tous les joueurs actifs ont déjà été piliers");
         }
 
-        // Choisir un pilier au HASARD parmi les éligibles (pas déterminé par l'ordre du lobby)
-        const randomIndex = randomInt(0, eligibleLeaders.length);
-        const leader = eligibleLeaders[randomIndex];
+        // Pilier tiré au HASARD parmi les éligibles : les places à table (`seatOrder`)
+        // ne servent qu'à l'ordre du reveal, pas à l'ordre des piliers.
+        const leader = eligibleLeaders[randomInt(0, eligibleLeaders.length)];
 
         const gameCard = this.getRandomGameCard();
 
@@ -116,7 +116,7 @@ export class Game implements IGame {
 
     /** Joueurs actifs que l'hôte n'a pas exclus du rôle de pilier. */
     getLeaderCandidates(): typeof this.lobby.players {
-        const excluded = new Set(this.lobby.excludedLeaderIds ?? []);
+        const excluded = new Set(this.lobby.excludedLeaderIds);
         return this.getActivePlayers().filter(p => !excluded.has(p.id));
     }
 

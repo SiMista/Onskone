@@ -57,7 +57,10 @@
           "questions": [
             "What's your preferred way to communicate? (SMS, Messaging apps, Calls, Instagram...)",
             "On average, how many messages do you send per day?"
-          ]
+          ],
+          "tips": {
+            "What's your preferred way to communicate? (SMS, Messaging apps, Calls, Instagram...)": "Texts, WhatsApp, calls, Instagram…"
+          }
         },
         {
           "subject": "Grocery Shopping",
@@ -84,7 +87,7 @@
           "subject": "Messages & Writing",
           "questions": [
             "Who do you message the most?",
-            "What was the last thing you wrote a real handwritten letter for?"
+            "When did you last write a real handwritten letter, and to whom?"
           ]
         },
         {
@@ -95,7 +98,7 @@
           ]
         },
         {
-          "subject": "Time Management",
+          "subject": "Time Spent",
           "questions": [
             "On average, how long does it take you to get ready in the morning?",
             "On average, how many hours a day do you spend on your phone?"
@@ -112,11 +115,11 @@
           "subject": "Society Today",
           "questions": [
             "What current societal trend completely baffles you?",
-            "If you had to describe today's society in 3 words, what would they be?"
+            "If you had to describe French society today in 3 words, what would they be?"
           ]
         },
         {
-          "subject": "Books",
+          "subject": "Reading Habits",
           "questions": [
             "What's the last book you read?",
             "If you had to estimate the number of books you've read in your life, how many, honestly?"
@@ -154,7 +157,7 @@
           "subject": "Specific Words",
           "questions": [
             "What's your most-used swear word?",
-            "What's the most beautiful word in the English language, according to you?"
+            "What's the most beautiful word in the French language, according to you?"
           ]
         },
         {
@@ -186,7 +189,7 @@
           ]
         },
         {
-          "subject": "Names",
+          "subject": "Opinions on Names",
           "questions": [
             "What name do you hate?",
             "What name do you think is the coolest?"
@@ -195,9 +198,12 @@
         {
           "subject": "Your Name",
           "questions": [
-            "What's a nickname that's used for you the least?",
+            "Which version of your name (or nickname) do people use the least to address you?",
             "If you had to change your name, what would you choose?"
-          ]
+          ],
+          "tips": {
+            "Which version of your name (or nickname) do people use the least to address you?": "It could be full name, short form, nickname…"
+          }
         },
         {
           "subject": "Cooking Recipes",
@@ -228,7 +234,7 @@
           ]
         },
         {
-          "subject": "Default Mode",
+          "subject": "Chores & Transport",
           "questions": [
             "If you could eliminate one chore forever, which one would you choose?",
             "What mode of transport have you used the most throughout your life?"
@@ -245,8 +251,12 @@
           "subject": "Trivia",
           "questions": [
             "What's your date of birth (day and month)?",
-            "What are your favorite color and number? Example: Blue/7"
-          ]
+            "What are your favorite color and number?"
+          ],
+          "tips": {
+            "What's your date of birth (day and month)?": "Day and month only, not the year.",
+            "What are your favorite color and number?": "Example answer: Blue / 7"
+          }
         },
         {
           "subject": "Habits",
@@ -259,8 +269,11 @@
           "subject": "Planning",
           "questions": [
             "If you had one extra hour free every day, what would you honestly do with it?",
-            "How many blocks is your typical day broken up into on your calendar?"
-          ]
+            "How many different activities do you pack into a typical day?"
+          ],
+          "tips": {
+            "How many different activities do you pack into a typical day?": "For example: work, sport, errands, friends, going out…"
+          }
         },
         {
           "subject": "Jobs",
@@ -296,7 +309,7 @@
           ]
         },
         {
-          "subject": "Animals",
+          "subject": "Spirit Animal",
           "questions": [
             "If you could talk to any animal, which one would you choose?",
             "What animal represents you best, and what does that say about you?"
@@ -411,7 +424,7 @@
           "subject": "Board Games",
           "questions": [
             "What's your favorite board game?",
-            "What's the board game that drives you absolutely crazy?"
+            "What board game bores or annoys you the most?"
           ]
         },
         {
@@ -429,7 +442,7 @@
           ]
         },
         {
-          "subject": "Reading",
+          "subject": "Favorite Books",
           "questions": [
             "What's your favorite book?",
             "What's the book you recommend the most often?"
@@ -473,7 +486,7 @@
         {
           "subject": "New Activities",
           "questions": [
-            "What activity have you never gotten around to doing, even though you've been talking about it for ages?",
+            "What's something you've been talking about doing for years but still haven't done?",
             "What's the most extreme activity you'd be capable of doing?"
           ]
         },
@@ -481,7 +494,7 @@
           "subject": "Sports Goals",
           "questions": [
             "What physical feat would you love to be capable of?",
-            "What do you want to change this year?"
+            "What sportive goal have you targeted ?"
           ]
         },
         {
@@ -506,28 +519,28 @@
           ]
         },
         {
-          "subject": "Sports Practice",
+          "subject": "My Sport",
           "questions": [
             "What sport are you genuinely terrible at, despite all your efforts?",
             "What sport have you played the longest in your life?"
           ]
         },
         {
-          "subject": "Social Networks",
+          "subject": "Online Life",
           "questions": [
             "What was your last post on social media?",
             "Who do you follow on social media that you don't fully own up to?"
           ]
         },
         {
-          "subject": "Social Media",
+          "subject": "Online Favorites",
           "questions": [
             "What's your favorite social network?",
             "What's your favorite YouTube channel?"
           ]
         },
         {
-          "subject": "Sports",
+          "subject": "Competition & Injuries",
           "questions": [
             "What sports injury or physical mishap left you with the most memories?",
             "If you had to sign up for a sports competition tomorrow, which one would you choose?"
@@ -557,7 +570,7 @@
       ]
     },
     "MOVIES & MUSIC": {
-      "description": "What you watch, what you listen to, and what it says about you without you realizing it !",
+      "description": "What you listen to, what you watch, what it says about you!",
       "subjects": [
         {
           "subject": "Celebrity Crush",
@@ -612,7 +625,7 @@
           "subject": "Fiction",
           "questions": [
             "If you could meet a fictional character, who would you choose?",
-            "If you could live in a fictional world, which one would you choose?"
+            "If you could live in a fictional movie, which one would you choose?"
           ]
         },
         {
@@ -676,7 +689,10 @@
           "questions": [
             "What type of film do you categorically refuse to watch?",
             "If your life were a film, what genre would it be? (Horror, Comedy, Drama, Adventure, Thriller...)"
-          ]
+          ],
+          "tips": {
+            "If your life were a film, what genre would it be? (Horror, Comedy, Drama, Adventure, Thriller...)": "Horror, comedy, drama, adventure, thriller…"
+          }
         },
         {
           "subject": "Movies",
@@ -695,14 +711,17 @@
       ]
     },
     "PARTIES & TRAVEL": {
-      "description": "Where you travel, and what you get up to !",
+      "description": "Where do you travel? Where do you go out?",
       "subjects": [
         {
           "subject": "Vibes",
           "questions": [
             "Describe your perfect party atmosphere in three specific elements.",
             "What music do you put on when you want to get everyone in a good mood?"
-          ]
+          ],
+          "tips": {
+            "Describe your perfect party atmosphere in three specific elements.": "Think music, setting, who's there…"
+          }
         },
         {
           "subject": "Travel Destinations",
@@ -728,7 +747,7 @@
         {
           "subject": "Travel Experiences",
           "questions": [
-            "What are the best vacation you've ever had?",
+            "What are the best vacations you've ever had?",
             "What was your worst travel experience?"
           ]
         },
@@ -742,9 +761,12 @@
         {
           "subject": "Language Skills",
           "questions": [
-            "What's your English level out of 10?",
+            "What's the foreign word from your native language that you use most often?",
             "What language would you love to learn?"
-          ]
+          ],
+          "tips": {
+            "What's the foreign word from your native language that you use most often?": "A word from another language that you slip into your sentences (mazeltov, bonjour …)."
+          }
         },
         {
           "subject": "Nature",
@@ -840,14 +862,17 @@
       ]
     },
     "ABOUT YOU": {
-      "description": "Your intro. The first details that tell us who you really are.",
+      "description": "The basics, the little details that make you who you are!",
       "subjects": [
         {
           "subject": "Astrology",
           "questions": [
-            "What's your star sign and do you believe in it? Example answer: Scorpio/Yes",
+            "What's your star sign, and do you believe in it?",
             "What superstition do you actually believe in?"
-          ]
+          ],
+          "tips": {
+            "What's your star sign, and do you believe in it?": "Example answer: Scorpio / Yes"
+          }
         },
         {
           "subject": "Comparisons",
@@ -857,14 +882,14 @@
           ]
         },
         {
-          "subject": "Trust",
+          "subject": "Losing & Winning Trust",
           "questions": [
             "What can shatter your self-confidence in a matter of seconds?",
             "What instantly earns someone your trust?"
           ]
         },
         {
-          "subject": "Conversations",
+          "subject": "Memorable Conversations",
           "questions": [
             "If you could have a 30-minute conversation with anyone alive in the world today, who would it be?",
             "What's the hardest conversation you've ever had to have?"
@@ -895,11 +920,11 @@
           "subject": "Costumes",
           "questions": [
             "What's the best costume you'd love to wear?",
-            "If you had to show up in costume tonight, what would you have chosen?"
+            "If you had to show up in costume tonight, what would you choose?"
           ]
         },
         {
-          "subject": "Discuss",
+          "subject": "Interests",
           "questions": [
             "What's your favorite conversation topic?",
             "What talent do you admire in others but don't have yourself?"
@@ -963,13 +988,13 @@
         }
       ]
     },
-    "WYD?": {
-      "description": "What would you do ? We put you in a scenario, show us how you act",
+    "WWYD?": {
+      "description": "What would you do ? We put you in a scenario, show us how you act.",
       "subjects": [
         {
           "subject": "Friendship Conflict",
           "questions": [
-            "A friend doesn't wish you happy birthday. What do you do?",
+            "A friend/relative doesn't wish you happy birthday. What do you do?",
             "You find out your friend group organized an event without inviting you. What do you do?"
           ]
         },
@@ -983,7 +1008,7 @@
         {
           "subject": "Moral Dilemma",
           "questions": [
-            "You find a wallet with $500 and an ID on the subway. What do you do?",
+            "You find a wallet with €500 and an ID on the metro. What do you do?",
             "Your best friend tells you they've been cheating on their partner for 6 months and asks you to say nothing. What do you do?"
           ]
         },
@@ -1053,8 +1078,8 @@
         {
           "subject": "Sharing",
           "questions": [
-            "What quality do you share with the person on your left?",
-            "If you had to give a gift to the person on your left, what would you give them?"
+            "What quality do you share with the player on your left?",
+            "What does the player on your left lack ?"
           ]
         },
         {
@@ -1062,21 +1087,29 @@
           "questions": [
             "Who in the group seems the most serious but is actually the most wild?",
             "Who in the group seems the most intelligent but is actually the least?"
-          ]
+          ],
+          "tips": {
+            "Who in the group seems the most serious but is actually the most wild?": "Someone in the game!",
+            "Who in the group seems the most intelligent but is actually the least?": "Someone in the game!"
+          }
         },
         {
           "subject": "Gifts",
           "questions": [
-            "If you could give a gift to the person on your left with no budget limit, what would you choose?",
-            "If the person on your right gave you a gift, what would it be?"
+            "If you could give a gift to the player on your left with no budget limit, what would you choose?",
+            "If the player on your right gave you a gift, what would it be?"
           ]
         },
         {
-          "subject": "Breakthroughs",
+          "subject": "Style & Fame",
           "questions": [
             "Who in the group has the best style?",
             "Who in the group is most likely to become famous?"
-          ]
+          ],
+          "tips": {
+            "Who in the group has the best style?": "Someone in the game!",
+            "Who in the group is most likely to become famous?": "Someone in the game!"
+          }
         },
         {
           "subject": "Life Changes",
@@ -1090,34 +1123,48 @@
           "questions": [
             "Who in the group would survive longest on a survival show?",
             "Who in the group would you call first if you had a major problem at 2am?"
-          ]
+          ],
+          "tips": {
+            "Who in the group would survive longest on a survival show?": "Someone in the game!",
+            "Who in the group would you call first if you had a major problem at 2am?": "Someone in the game!"
+          }
         },
         {
-          "subject": "Family",
+          "subject": "Group Roles",
           "questions": [
             "If this group were a family, what role would you play?",
             "If this group had to go on a trip together, who would you trust to organize it?"
-          ]
+          ],
+          "tips": {
+            "If this group had to go on a trip together, who would you trust to organize it?": "Someone in the game!"
+          }
         },
         {
           "subject": "Group Laughs",
           "questions": [
             "Who in the group makes you laugh the most?",
             "Give a nickname to the player on your right."
-          ]
+          ],
+          "tips": {
+            "Who in the group makes you laugh the most?": "Someone in the game!"
+          }
         },
         {
           "subject": "Unexpected",
           "questions": [
             "Who in the group could surprise everyone with a totally unexpected revelation?",
             "Who in the group is the worst loser at Onskoné?"
-          ]
+          ],
+          "tips": {
+            "Who in the group could surprise everyone with a totally unexpected revelation?": "Someone in the game!",
+            "Who in the group is the worst loser at Onskoné?": "Someone in the game!"
+          }
         },
         {
           "subject": "Group Dynamics",
           "questions": [
             "If this group starred in a film, what role would you play?",
-            "What do you think about the person on your right that you've never said to their face?"
+            "What do you think about the player on your right that you've never said to their face?"
           ]
         },
         {
@@ -1125,14 +1172,22 @@
           "questions": [
             "Who in the group is always late?",
             "Who in the group would stay calm in total chaos?"
-          ]
+          ],
+          "tips": {
+            "Who in the group is always late?": "Someone in the game!",
+            "Who in the group would stay calm in total chaos?": "Someone in the game!"
+          }
         },
         {
           "subject": "Champion",
           "questions": [
             "Who in the group would win in a fight?",
             "Who's best at bringing this group together and keeping it solid?"
-          ]
+          ],
+          "tips": {
+            "Who in the group would win in a fight?": "Someone in the game!",
+            "Who's best at bringing this group together and keeping it solid?": "Someone in the game!"
+          }
         },
         {
           "subject": "Common Ground",
@@ -1144,8 +1199,8 @@
         {
           "subject": "First Impressions",
           "questions": [
-            "What's the first flaw that comes to mind about the person on your right?",
-            "What's the first quality that comes to mind about the person on your right?"
+            "What's the first flaw that comes to mind about the player on your right?",
+            "What's the first quality that comes to mind about the player on your right?"
           ]
         },
         {
@@ -1153,14 +1208,22 @@
           "questions": [
             "If you could borrow someone from the group's wardrobe for a week, whose would you choose?",
             "Who in the group would surprise you most if you learned they have a hidden artistic talent?"
-          ]
+          ],
+          "tips": {
+            "If you could borrow someone from the group's wardrobe for a week, whose would you choose?": "Someone in the game!",
+            "Who in the group would surprise you most if you learned they have a hidden artistic talent?": "Someone in the game!"
+          }
         },
         {
           "subject": "Group Secrets",
           "questions": [
             "Who in the group would you trust the most to keep an absolutely shameful secret?",
             "Who in the group knows the real you the best?"
-          ]
+          ],
+          "tips": {
+            "Who in the group would you trust the most to keep an absolutely shameful secret?": "Someone in the game!",
+            "Who in the group knows the real you the best?": "Someone in the game!"
+          }
         },
         {
           "subject": "Group Memories",
@@ -1173,15 +1236,22 @@
           "subject": "Group Talents",
           "questions": [
             "Who in the group would make the best mentor for the others?",
-            "Who in the group could teach you something useful? Now's the time to ask."
-          ]
+            "Who in the group could teach you something useful? Now's your chance to ask."
+          ],
+          "tips": {
+            "Who in the group would make the best mentor for the others?": "Someone in the game!",
+            "Who in the group could teach you something useful? Now's your chance to ask.": "Someone in the game!"
+          }
         },
         {
           "subject": "Group Tensions",
           "questions": [
             "Who in the group are you most likely to get into an argument with?",
             "What recent group moment or event didn't sit right with you and you still haven't let go?"
-          ]
+          ],
+          "tips": {
+            "Who in the group are you most likely to get into an argument with?": "Someone in the game!"
+          }
         }
       ]
     },
@@ -1226,7 +1296,7 @@
         {
           "subject": "Family Secrets",
           "questions": [
-            "What family tradition or belief took you a while to realize was unique to your family?",
+            "Which family tradition or belief took you a while to realize wasn't universal?",
             "What topic does your family carefully avoid bringing up at gatherings?"
           ]
         },
@@ -1275,7 +1345,7 @@
         {
           "subject": "Parenting",
           "questions": [
-            "What values would you want to pass on to your kids?",
+            "What would you like to pass on to your kids?",
             "What would be your golden rule if you were a parent?"
           ]
         },
@@ -1311,7 +1381,7 @@
           "subject": "Social Skills",
           "questions": [
             "What do you systematically do when you want someone to feel comfortable?",
-            "What excuse do you use most often to turn down an invitation and feel a little less guilty?"
+            "What was the last social invitation you turned down?"
           ]
         },
         {
@@ -1337,7 +1407,7 @@
         }
       ]
     },
-    "THE RECEIPTS": {
+    "THE FILES": {
       "description": "Sharp opinions, awkward confessions. We see you.",
       "subjects": [
         {
@@ -1372,28 +1442,14 @@
           "subject": "Stupid Stuff",
           "questions": [
             "What's the biggest stupid thing you've ever done?",
-            "Who have you led into doing something dumb, and what did they do?"
+            "What's the dumbest thing you've ever talked someone into doing?"
           ]
         },
         {
           "subject": "Guilty Pleasures",
           "questions": [
-            "What's your guilty pleasure in music that you don't fully own up to?",
+            "What's your guilty pleasure in music?",
             "What awful show or content do you still watch with pleasure?"
-          ]
-        },
-        {
-          "subject": "Debates",
-          "questions": [
-            "What's a topic you've completely changed your mind on?",
-            "What topic are you ready to debate with absolutely anyone?"
-          ]
-        },
-        {
-          "subject": "Political Decisions",
-          "questions": [
-            "What do you think is the main problem in your country right now?",
-            "What would be your first decision as President?"
           ]
         },
         {
@@ -1448,19 +1504,19 @@
         {
           "subject": "Scheming",
           "questions": [
-            "What have you done — or considered doing — purely to manipulate someone for your own benefit?",
-            "What's a funny story you can tell about pulling a harmless scam on someone?"
+            "What have you already done to manipulate someone for your own benefit?",
+            "What harmless little scam have you pulled on someone, and why was it funny?"
           ]
         },
         {
           "subject": "Awkward Moments",
           "questions": [
             "What's the most embarrassing thing you've done recently?",
-            "What do you find the most awkward?"
+            "What behavior in other people makes you the most uncomfortable?"
           ]
         },
         {
-          "subject": "Big Lies",
+          "subject": "Lies & Excuses",
           "questions": [
             "What's the worst excuse you've ever made up to get out of a difficult situation?",
             "What's the most convincing lie you've ever told?"
@@ -1477,8 +1533,11 @@
           "subject": "Losses",
           "questions": [
             "What's the biggest object you've ever lost?",
-            "What do you spend the most money on pointlessly?"
-          ]
+            "What have you already lost ?"
+          ],
+          "tips": {
+            "What have you already lost ?": "It can be relationships, values, possessions, or material things."
+          }
         },
         {
           "subject": "Politics",
@@ -1491,7 +1550,7 @@
           "subject": "Thoughts",
           "questions": [
             "If you could read one person's mind, who would you choose?",
-            "What's a weird thought you had today?"
+            "What's the weirdest thought you've had today?"
           ]
         },
         {
@@ -1505,14 +1564,14 @@
           "subject": "Taboos",
           "questions": [
             "What taboo topic do you prefer not to bring up with the group?",
-            "Say one sentence that would immediately get under the person on your left's skin."
+            "Say one sentence that would immediately get under the player on your left's skin."
           ]
         },
         {
           "subject": "Tattoos & Accessories",
           "questions": [
             "If you had to get a tattoo of one thing, what would it be and where?",
-            "What amount of money would it take for you to get an obscene tattoo on your arm?"
+            "What's a borderline tattoo you'd secretly love to get?"
           ]
         },
         {
@@ -1582,12 +1641,33 @@
             "What do you find sexy about someone that has nothing to do with their looks?",
             "What's your type in 3 words?"
           ]
+        },
+        {
+          "subject": "With who ?",
+          "questions": [
+            "Who is the person you'd love to sleep with ?",
+            "Who is the last person you have slept with ?"
+          ]
         }
       ]
     },
     "HOT TAKES": {
-      "description": "Your opinions, out loud, on everything, on some … subjects.",
+      "description": "Your opinions, out loud, on everything, on some ... subjects.",
       "subjects": [
+        {
+          "subject": "Debates",
+          "questions": [
+            "What's a topic you've completely changed your mind on?",
+            "What topic are you ready to debate with absolutely anyone?"
+          ]
+        },
+        {
+          "subject": "Political Decisions",
+          "questions": [
+            "What do you think is the main problem in your country right now?",
+            "What would be your first decision as President?"
+          ]
+        },
         {
           "subject": "Ethnicities",
           "questions": [
@@ -1664,6 +1744,13 @@
             "What's your opinion on euthanasia?",
             "What's your opinion on the death penalty?"
           ]
+        },
+        {
+          "subject": "Hot Politics",
+          "questions": [
+            "What's your opinion on the Yellow Vests (gilets jaunes)?",
+            "What's your opinion on immigration?"
+          ]
         }
       ]
     }
@@ -1673,7 +1760,7 @@
       "description": "Childhood, regrets, turning points. Everything that made you who you are.",
       "subjects": [
         {
-          "subject": "Life Moments",
+          "subject": "Forgotten or Overlooked Moments",
           "questions": [
             "Is there a moment in your life you have no memory of, but that people have told you about many times?",
             "What moment did you take for granted, only to later realize it was truly unique?"
@@ -1710,7 +1797,7 @@
         {
           "subject": "Spending",
           "questions": [
-            "What was your most pointless big expense?",
+            "What was your most pointless big expense in your life ?",
             "What's your biggest expense category each month?"
           ]
         },
@@ -1750,14 +1837,14 @@
           ]
         },
         {
-          "subject": "Key Moments",
+          "subject": "Sports & Everyday Moments",
           "questions": [
             "What sports moment most marked you as a spectator?",
             "What seemingly ordinary moment turned out to be more significant over time?"
           ]
         },
         {
-          "subject": "Defining Moments",
+          "subject": "High School & Party Memories",
           "questions": [
             "What's the most memorable moment from your high school years?",
             "What's your best memory from a party or night out?"
@@ -1794,7 +1881,7 @@
         {
           "subject": "Surprises",
           "questions": [
-            "When was the time you surprised everyone?",
+            "What's a decision, moment, or story where you completely surprised everyone?",
             "What's the most beautiful surprise you've ever received?"
           ]
         },
@@ -1818,9 +1905,16 @@
       "description": "Your dreams, your money, your vision. What are you actually building?",
       "subjects": [
         {
-          "subject": "Big Purchases",
+          "subject": "Loterie",
           "questions": [
             "If you won the lottery, what would be your first purchase?",
+            "What's the most expensive thing you own?"
+          ]
+        },
+        {
+          "subject": "Expensive",
+          "questions": [
+            "What's the next expensive purchase you're planning to make?",
             "What's the most expensive thing you own?"
           ]
         },
@@ -1841,7 +1935,7 @@
         {
           "subject": "Budget",
           "questions": [
-            "If you had $10,000 to spend in 24 hours without keeping any, how would you blow it?",
+            "If you had €10,000 to spend in 24 hours without keeping any, how would you blow it?",
             "What expense do you always justify but deep down know is excessive?"
           ]
         },
@@ -1930,7 +2024,7 @@
           ]
         },
         {
-          "subject": "Depth",
+          "subject": "Meaning & Values",
           "questions": [
             "If you could take a 3-month sabbatical tomorrow, how would you spend it?",
             "What do you do every day that truly aligns with your values?"
@@ -1988,7 +2082,7 @@
       ]
     },
     "FEELINGS": {
-      "description": "What you're actually feeling. A little introspection goes a long way.",
+      "description": "A little introspection on what you really feel.",
       "subjects": [
         {
           "subject": "Self-Love",
@@ -2008,7 +2102,7 @@
           "subject": "Good Laughs",
           "questions": [
             "What supposedly funny topic actually doesn't make you laugh that much?",
-            "What memory or topic is guaranteed to make you laugh even when you're alone?"
+            "What memory or topic is guaranteed to make you laugh, even when you're alone?"
           ]
         },
         {
@@ -2057,7 +2151,7 @@
           "subject": "Generosity",
           "questions": [
             "What's the most generous thing anyone has ever done for you?",
-            "What do you do for others without shouting it from the rooftops?"
+            "What do you do anonymously and generously, expecting nothing in return?"
           ]
         },
         {
@@ -2085,14 +2179,14 @@
           "subject": "Mood",
           "questions": [
             "What emotion do you feel most often throughout the day?",
-            "How would you describe your current mood in a few words?"
+            "How would you describe your current mood in one word?"
           ]
         },
         {
           "subject": "Idealizations",
           "questions": [
             "What have you idealized in your current life before actually experiencing it?",
-            "What do you hope for but know will probably never happen?"
+            "What do you hope for, even though you know it will probably never happen?"
           ]
         },
         {
@@ -2120,7 +2214,7 @@
           "subject": "Reality",
           "questions": [
             "Have you ever had a dream so real you took a while to realize it was a dream?",
-            "In what moment do you feel most present and truly alive?"
+            "In which moments of your life do you feel most alive?"
           ]
         },
         {
@@ -2148,7 +2242,7 @@
           "subject": "Mental Health",
           "questions": [
             "What do you do to take care of your mental health?",
-            "Describe your mental health in one sentence."
+            "Describe your current mental health in one word."
           ]
         },
         {
@@ -2189,7 +2283,7 @@
       ]
     },
     "IN THE MIRROR": {
-      "description": "No filter. The things you know about yourself but rarely say out loud.",
+      "description": "Unfiltered questions about the truths you rarely say out loud.",
       "subjects": [
         {
           "subject": "Gifts Received",
@@ -2229,9 +2323,12 @@
         {
           "subject": "Contradictions",
           "questions": [
-            "What do you have (a talent, trait, or situation) that you're not proud enough of?",
+            "What do you have that you're not proud enough of?",
             "What's the biggest contradiction between what you want and your everyday life?"
-          ]
+          ],
+          "tips": {
+            "What do you have that you're not proud enough of?": "A talent, a personality trait, a life situation…"
+          }
         },
         {
           "subject": "Flaws",
@@ -2248,7 +2345,7 @@
           ]
         },
         {
-          "subject": "Ideal Conversations",
+          "subject": "What You'd Love to Hear",
           "questions": [
             "If you could receive the perfect compliment, what would you want to hear?",
             "What question do you wish people asked you more often?"
@@ -2273,7 +2370,10 @@
           "questions": [
             "What phrase, if you hear it, immediately drives you up the wall?",
             "What's something totally normal or great that secretly drives you crazy?"
-          ]
+          ],
+          "tips": {
+            "What's something totally normal or great that secretly drives you crazy?": "Something everyone loves, except you."
+          }
         },
         {
           "subject": "Exaggerations",
@@ -2342,7 +2442,7 @@
           "subject": "Fashion",
           "questions": [
             "What outfit makes you feel 100% yourself?",
-            "Who has the most style, in your opinion, and that you'd love to look like?"
+            "Who has the most style in your opinion, and who would you love to be more like?"
           ]
         },
         {
@@ -2430,7 +2530,7 @@
           ]
         },
         {
-          "subject": "You & Time",
+          "subject": "Future & Weekdays",
           "questions": [
             "If you could choose to know everything about your future or nothing at all, which do you prefer?",
             "If you were a day of the week, which one would you be and why?"
@@ -2451,7 +2551,7 @@
           ]
         },
         {
-          "subject": "Random",
+          "subject": "Laziness & Quirks",
           "questions": [
             "What's the most bizarre thing you do when you're alone?",
             "What's your biggest everyday laziness?"

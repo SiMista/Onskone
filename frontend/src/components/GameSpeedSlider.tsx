@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef } from 'react';
-import { Icon } from '@iconify/react';
+import { Icon } from './Icon';
 import { GAME_CONSTANTS } from '@onskone/shared';
 import type { GameSpeed } from '@onskone/shared';
 import { STICKER_FILTER } from '../constants/icons';
@@ -14,17 +14,24 @@ interface GameSpeedSliderProps {
     t: Dictionary;
 }
 
-// Niveaux discrets : vitesses proposées par le contrat partagé (ordre rapide → lent).
+// Niveaux discrets : vitesses proposées par le contrat partagé, affichées de la plus
+// posée à la plus rapide (Normale à gauche, Rapide à droite). Une vitesse ajoutée au
+// contrat sans place ici passe en fin de rail.
+const SLIDER_ORDER: readonly GameSpeed[] = ['normal', 'fast'];
 const LEVEL_EMOJIS: Partial<Record<GameSpeed, string>> = {
     fast: 'fluent-emoji-flat:rabbit-face',
     normal: 'fluent-emoji-flat:person-walking',
+};
+const rank = (v: GameSpeed) => {
+    const i = SLIDER_ORDER.indexOf(v);
+    return i >= 0 ? i : SLIDER_ORDER.length;
 };
 const buildLevels = (t: Dictionary) => {
     const labels: Partial<Record<GameSpeed, string>> = {
         fast: t.lobby.gameSpeed.fast,
         normal: t.lobby.gameSpeed.normal,
     };
-    return GAME_CONSTANTS.GAME_SPEEDS.map((value) => ({
+    return [...GAME_CONSTANTS.GAME_SPEEDS].sort((a, b) => rank(a) - rank(b)).map((value) => ({
         value,
         label: labels[value] ?? value,
         emoji: LEVEL_EMOJIS[value] ?? LEVEL_EMOJIS.normal!,

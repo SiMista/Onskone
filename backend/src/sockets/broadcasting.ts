@@ -12,10 +12,9 @@ import { Game } from '../models/Game';
 // serveur complet (méthodes métier + bookkeeping) porté par la classe Round.
 import type { IRound as ServerRound } from '../types/IRound';
 import type { ServerToClientEvents, ClientToServerEvents, IGame, IRound, IPlayer, GameCard, Locale } from '@onskone/shared';
-import { RoundPhase, GameStatus, GAME_CONSTANTS, formatNoResponse, getPhaseDuration } from '@onskone/shared';
+import { RoundPhase, GameStatus, GAME_CONSTANTS, formatNoResponse, getPhaseDuration, buildRevealOrder, resolveSeatOrder } from '@onskone/shared';
 import { getRandomQuestions } from '../data/questionsRepository.js';
 import { errMessage } from '../utils/helpers.js';
-import { legacyMultiplierFromSpeed } from '../utils/legacyTimeMultiplier.js';
 import logger from '../utils/logger.js';
 
 export type IoServer = Server<ClientToServerEvents, ServerToClientEvents>;
@@ -47,6 +46,11 @@ export function serializePlayer(p: IPlayer): IPlayer {
  */
 export function serializePlayers(players: IPlayer[]): IPlayer[] {
     return players.map(serializePlayer);
+}
+
+/** Joueurs du salon en vue publique, dans l'ordre des places (cf. Lobby.getSeatedPlayers). */
+export function serializeLobbyPlayers(lobby: Lobby): IPlayer[] {
+    return serializePlayers(lobby.getSeatedPlayers());
 }
 
 export interface RevealResult {
@@ -90,13 +94,28 @@ export function buildRevealResults(
             playerAvatarId: player?.avatarId ?? 0,
             playerIsPremium: !!player?.isPremium,
             answer,
-            guessedPlayerId: guessedPlayerId || '',
+            // Id vide = "Personne" (cf. isPersonneGuess) : aussi pour un id qui ne
+            // correspond plus à aucun joueur, sinon il passerait pour une vraie carte.
+            guessedPlayerId: guessedPlayer ? guessedPlayer.id : '',
             guessedPlayerName: guessedPlayer?.name || 'Aucun',
             guessedPlayerAvatarId: guessedPlayer?.avatarId ?? 0,
             guessedPlayerIsPremium: !!guessedPlayer?.isPremium,
             correct: guessedPlayerId === playerId || corrections.includes(index),
         };
     });
+}
+
+/**
+ * Ordre du reveal de la manche (tour de table, cf. `buildRevealOrder`), figé sur le
+ * round au premier calcul : tous les clients suivent le même, reconnexion comprise,
+ * même si les places changeaient ensuite.
+ */
+export function getRevealOrder(lobby: Lobby, round: Round, results: Parameters<typeof buildRevealOrder>[0]): number[] {
+    if (round.revealOrder.length === 0 && results.length > 0) {
+        const seats = resolveSeatOrder(lobby.seatOrder, lobby.players.map(p => p.id));
+        round.revealOrder = buildRevealOrder(results, round.leader.id, seats);
+    }
+    return round.revealOrder;
 }
 
 /**
@@ -156,12 +175,14 @@ export function serializeGame(lobby: Lobby): IGame {
             code: lobby.code,
             // Anti-fuite : projeter les joueurs vers la vue publique (omet socketId
             // ET reconnectToken). serializeGame est diffusé à toute la room.
-            players: serializePlayers(lobby.players),
+            players: serializeLobbyPlayers(lobby),
             selectedDecks: lobby.selectedDecks,
             gameMode: lobby.gameMode,
             guessMyAnswerMode: lobby.guessMyAnswerMode,
             gameSpeed: lobby.gameSpeed,
             excludedLeaderIds: lobby.excludedLeaderIds,
+            // Places à table : ordre du reveal côté client (le même pour tous).
+            seatOrder: lobby.seatOrder,
             locale: lobby.locale,
         },
         currentRound: serializeRound(game.currentRound),
@@ -187,7 +208,7 @@ export function emitLobbyDecksState(
         guessMyAnswerMode: lobby.guessMyAnswerMode,
         gameSpeed: lobby.gameSpeed,
         excludedLeaderIds: lobby.excludedLeaderIds,
-        timeMultiplier: legacyMultiplierFromSpeed(lobby.gameSpeed), // apps d'avant gameSpeed
+        preparing: lobby.preparing,
         locale: lobby.locale,
     };
     if (target) {
@@ -472,6 +493,7 @@ export function finishGuessing(io: IoServer, lobbyCode: string, lobby: Lobby, ga
     io.to(lobbyCode).emit('revealResults', {
         phase: round.phase,
         results,
+        revealOrder: getRevealOrder(lobby, round, results),
         scores: round.scores,
         leaderboard: game.getLeaderboard(),
         forced,
@@ -512,7 +534,7 @@ export function advanceAfterReveal(io: IoServer, lobbyCode: string, lobby: Lobby
     if (!round) return;
     io.to(lobbyCode).emit('roundStarted', { round: serializeRound(round)! });
     logger.game.roundStarted(lobbyCode, round.roundNumber, round.leader.name);
-    armServerTimerForPhase(io, lobbyCode, lobby, round);
+    armRoundStartTimer(io, lobbyCode, lobby, round);
     roundStartedHook?.(io, lobbyCode, round);
 }
 
@@ -603,6 +625,17 @@ export function armServerTimerForPhase(io: IoServer, lobbyCode: string, lobby: L
 }
 
 /**
+ * Timer de la première phase d'une manche qui démarre (QUESTION_SELECTION), à appeler
+ * juste après `roundStarted` : départ décalé de l'overlay « À ton tour d'être PILIER »
+ * qui couvre l'écran du pilier, pour qu'il ne perde pas ce temps-là (même principe que
+ * l'intro GUESSING). Dans les deux modes : c'est un signal « à toi de jouer », utile
+ * aussi à distance.
+ */
+export function armRoundStartTimer(io: IoServer, lobbyCode: string, lobby: Lobby, round: Round): void {
+    armServerTimerForPhase(io, lobbyCode, lobby, round, GAME_CONSTANTS.QUESTION_SELECTION_INTRO_MS);
+}
+
+/**
  * Cœur commun de l'armement d'un timeout serveur autoritatif pour la phase COURANTE
  * du round : écrit le bookkeeping de timer (end/startedAt/duration/phase), réinitialise
  * la garde anti-double-traitement pour cette phase, (ré)arme le setTimeout avec la
@@ -644,7 +677,7 @@ export function armServerTimer(io: IoServer, lobbyCode: string, round: Round, du
         }
     }, duration * 1000 + leadInMs);
 
-    io.to(lobbyCode).emit('timerStarted', { phase, duration, startedAt, serverNow: Date.now() });
+    io.to(lobbyCode).emit('timerStarted', { phase, duration, startedAt, serverNow: Date.now(), roundNumber: round.roundNumber });
 }
 
 /**

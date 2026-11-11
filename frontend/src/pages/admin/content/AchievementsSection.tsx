@@ -1,4 +1,4 @@
-import { Icon } from '@iconify/react';
+import { Icon } from '../../../components/Icon';
 import { ACHIEVEMENTS } from '../../../utils/playerStats';
 import { SectionHeader } from './SectionHeader';
 import { ACHIEVEMENT_TEXTS } from './shared';
