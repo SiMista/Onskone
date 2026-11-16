@@ -103,24 +103,29 @@ const RevealRemoteView = ({
       }
       footer={
         <>
-          {showSimilarity && isLeader && (
+          {/* Pilier, pendant l'arbitrage : Oui/Non à la place du bouton (grisé de toute
+              façon) ; empilés, popup + bouton écrasaient la carte en paysage. */}
+          {showSimilarity && isLeader ? (
             <SimilarityPopover
-              guessedPlayerName={similarityModal!.guessedPlayerName}
-              playerName={similarityModal!.playerName}
+              comparison={similarityModal!.comparison}
+              leaderId={leader.id}
+              remote
               isLeader={isLeader}
               onConfirm={onConfirmSimilarity}
               onDismiss={onDismissSimilarity}
             />
-          )}
+          ) : (
+            <>
+              <p className="text-gray-700 text-xs md:text-sm mt-1">
+                {displayablePosition}/{displayableTotal}
+              </p>
 
-          <p className="text-gray-700 text-xs md:text-sm mt-1">
-            {displayablePosition}/{displayableTotal}
-          </p>
-
-          {isLeader && (
-            <div className="mt-3 md:mt-4 flex items-center justify-center">
-              <RevealPrimaryButton reveal={reveal} isGameOver={isGameOver} />
-            </div>
+              {isLeader && (
+                <div className="mt-3 md:mt-4 flex items-center justify-center">
+                  <RevealPrimaryButton reveal={reveal} isGameOver={isGameOver} />
+                </div>
+              )}
+            </>
           )}
         </>
       }

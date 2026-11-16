@@ -55,7 +55,7 @@ export interface GameCard {
  *
  * IMPORTANT : ce type ne contient QUE les champs réellement lus par le frontend.
  * Tout le bookkeeping serveur (timers, ordre de mélange, attributions intermédiaires,
- * cartes proposées, corrections de similarité…) vit côté backend dans
+ * cartes proposées…) vit côté backend dans
  * `backend/src/types/IRound.ts` + la classe `backend/src/models/Round.ts`, et NE doit
  * PAS transiter par le réseau (anti-fuite).
  *
@@ -112,4 +112,15 @@ export interface IRound {
    * sous l'id du PILIER. Exposé uniquement en phase REVEAL (vide avant, anti-fuite).
    */
   correctPlayerIds?: string[];
+
+  /**
+   * Similarité en attente de l'arbitrage du pilier : index (dans `revealResults`) de
+   * la carte jugée, `null` sinon. État SERVEUR (survit à une reconnexion, compte dans
+   * l'empreinte de synchro) : la popup du pilier et la mise en avant des téléphones
+   * s'en déduisent. REVEAL uniquement (`null` avant).
+   */
+  pendingSimilarityIndex: number | null;
+
+  /** Cartes (indices de `revealResults`) validées « même réponse » par le pilier. REVEAL uniquement (vide avant). */
+  similarityCorrections: number[];
 }

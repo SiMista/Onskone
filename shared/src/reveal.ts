@@ -10,6 +10,51 @@ import { tableTurnFrom } from './seating.js';
 export const isPersonneGuess = (r: RevealResult): boolean => !r.guessedPlayerId;
 
 /**
+ * Ce à quoi se compare une carte mal attribuée (similarité, tour de table).
+ * Ex. : la carte posée devant Bob a été écrite par Alice ; ce que Bob a vraiment
+ * écrit, le pilier l'a posé devant Charlie. On compare donc l'écran de Bob à
+ * l'écran de CHARLIE (le « holder »), que la table peut regarder, et pas à une
+ * réponse que personne n'a sous les yeux.
+ */
+export interface SimilarityComparison {
+  /** Index (dans results) de la vraie réponse du joueur désigné : la carte à comparer. */
+  comparedIndex: number;
+  /** Texte de cette carte. */
+  comparedAnswer: string;
+  /**
+   * Joueur devant qui le pilier a posé cette carte : '' si elle n'a été donnée à
+   * personne, l'id du pilier s'il se l'est donnée (mode "Devine ma réponse").
+   */
+  holderId: string;
+  /** Nom de ce joueur (sans objet quand holderId est vide). */
+  holderName: string;
+}
+
+/**
+ * Comparaison de la carte `answerIndex` (cf. SimilarityComparison), source unique
+ * du serveur (détection, revalidation) et des clients (texte de la popup, téléphone
+ * mis en avant) : le téléphone allumé est toujours celui de la réponse comparée.
+ * null si la carte n'a pas de joueur désigné ("Personne"), si elle est bien
+ * attribuée (pas de comparaison) ou si la vraie réponse du désigné est introuvable.
+ */
+export const getSimilarityComparison = (
+  results: readonly RevealResult[],
+  answerIndex: number,
+): SimilarityComparison | null => {
+  const card = results[answerIndex];
+  if (!card || isPersonneGuess(card)) return null;
+  const comparedIndex = results.findIndex(r => r.playerId === card.guessedPlayerId);
+  if (comparedIndex < 0 || comparedIndex === answerIndex) return null;
+  const compared = results[comparedIndex];
+  return {
+    comparedIndex,
+    comparedAnswer: compared.answer,
+    holderId: compared.guessedPlayerId,
+    holderName: compared.guessedPlayerName,
+  };
+};
+
+/**
  * Ordre du reveal (indices de `results`) en tour de table : la carte attribuée à
  * chaque joueur, place par place, en partant du voisin de gauche du pilier. Les écrans
  * s'allument donc de voisin en voisin, et le point de départ change à chaque manche.

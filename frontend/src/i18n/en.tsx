@@ -352,6 +352,12 @@ export const en: Dictionary = {
     ariaButton: 'How to play',
     firstTimeHint: 'New player? All the rules here!',
     goToStep: (n) => `Go to step ${n}`,
+    ringLabel: 'Knowledge score',
+    intro: () => (
+      <>
+        Welcome to <b>Onskoné</b>, the <b>collaborative</b> game that tests how well you know your friends and family! Find everyone's answers together.
+      </>
+    ),
     steps: [
       ({ Pilier }) => (
         <>
@@ -374,6 +380,11 @@ export const en: Dictionary = {
         </>
       ),
     ],
+    outro: ({ Joueurs }) => (
+      <>
+        Every round scores points for the {Joueurs('group')}. At the end, you get the final score. <b>So, Onskoné?</b>
+      </>
+    ),
   },
 
   report: {
@@ -666,8 +677,9 @@ export const en: Dictionary = {
       newGroup: 'New group',
       coworkers: 'Coworkers',
       closeFriends: 'Close friends',
+      apero: 'Drinks night',
       family: 'Family',
-      diggers: 'Group ready to dig deep',
+      longtimeFriends: 'Longtime friends',
     },
   },
 
@@ -827,11 +839,18 @@ export const en: Dictionary = {
       writtenBy: 'Written by',
       authorCorrect: 'Nailed it!',
       authorWrong: 'Missed!',
+      spotlightNext: "Your turn! Show your screen",
+      spotlightCompared: 'The leader is comparing with your card!',
     },
     similarity: {
-      promptPrefix: '',
-      promptMiddle: 'has the same answer as',
-      promptSuffix: ', is it the same?',
+      screenPrefix: () => 'Same answer as on ',
+      screenSuffix: "'s screen?",
+      remotePrefix: 'Same answer as the card given to ',
+      remoteSuffix: '?',
+      leaderSelf: 'Same answer as the card you kept for yourself?',
+      unassigned: 'Same answer as this one?',
+      fallback: 'Is it the same answer?',
+      quote: (answer) => `“${answer}”`,
       yes: 'Yes',
       no: 'No',
       waitingLeader: 'Waiting for the leader...',

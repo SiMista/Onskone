@@ -9,9 +9,11 @@ import {
   Layout, SlotConfig, SlotRuntimeState,
   FUN_NAMES, STORAGE_KEY, loadSavedConfig, makeSlot,
 } from './studio/shared';
-import { Toolbar } from './studio/Toolbar';
+import { Toolbar, type StudioView } from './studio/Toolbar';
 import { SlotCard } from './studio/SlotCard';
 import { Gallery } from './studio/Gallery';
+import { Screens } from './studio/Screens';
+import { STUDIO_STOPS, findStudioScenario, type StudioStop } from '../utils/studioScenarios';
 
 // =====================================================================
 // Studio - multi-iframe local test harness (DEV only)
@@ -39,7 +41,17 @@ const Studio = () => {
       : GAME_CONSTANTS.GAME_SPEED_DEFAULT,
   );
 
-  const [view, setView] = useState<'rigging' | 'gallery'>('rigging');
+  // Scénario de Régie : partie jouée par des bots scriptés jusqu'au point d'arrêt.
+  const [scenarioId, setScenarioId] = useState<string>(() => findStudioScenario(saved?.scenarioId)?.id ?? '');
+  const [scenarioStop, setScenarioStop] = useState<StudioStop>(
+    () => (saved?.scenarioStop && saved.scenarioStop in STUDIO_STOPS ? saved.scenarioStop as StudioStop : 'similarity'),
+  );
+  const [scenarioReached, setScenarioReached] = useState(false);
+  const scenario = findStudioScenario(scenarioId);
+  // Point d'arrêt proposé par le scénario (repli sur son premier si l'ancien n'en fait pas partie).
+  const effectiveStop: StudioStop = scenario && !scenario.stops.includes(scenarioStop) ? scenario.stops[0] : scenarioStop;
+
+  const [view, setView] = useState<StudioView>('rigging');
   const [running, setRunning] = useState(false);
   const [lobbyCode, setLobbyCode] = useState<string | null>(null);
   const [slotStates, setSlotStates] = useState<Record<number, SlotRuntimeState>>({});
@@ -52,9 +64,9 @@ const Studio = () => {
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ slots, layout, zoom, debugTimers, gameMode, gameSpeed }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ slots, layout, zoom, debugTimers, gameMode, gameSpeed, scenarioId, scenarioStop }));
     } catch { /* silent */ }
-  }, [slots, layout, zoom, debugTimers, gameMode, gameSpeed]);
+  }, [slots, layout, zoom, debugTimers, gameMode, gameSpeed, scenarioId, scenarioStop]);
 
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
@@ -73,8 +85,18 @@ const Studio = () => {
             isLeader,
             isSubstitute,
             phase: data.phase ?? null,
+            role: typeof data.role === 'string' ? data.role : null,
           },
         }));
+        return;
+      }
+      // Un bot a atteint le point d'arrêt du scénario : tout le monde rend la main.
+      if (data.type === 'studio:scenarioReached') {
+        setScenarioReached(true);
+        setSlots((s) => (s.some((x) => x.bot) ? s.map((x) => ({ ...x, bot: false })) : s));
+        Object.values(iframeRefs.current).forEach((frame) => {
+          try { frame?.contentWindow?.postMessage({ type: 'studio:scenarioReached' }, '*'); } catch { /* silent */ }
+        });
       }
     };
     window.addEventListener('message', onMessage);
@@ -164,11 +186,17 @@ const Studio = () => {
   };
 
   const start = () => {
-    slots.forEach((_, i) => purgeStudioSlot(i));
+    // Scénario : exactement ses joueurs, tous bots (ils jouent le script jusqu'à l'arrêt).
+    const total = scenario ? scenario.players : slots.length;
+    for (let i = 0; i < Math.max(total, slots.length); i++) purgeStudioSlot(i);
+    setScenarioReached(false);
     // Garantir l'unicité des pseudos & avatars : deux slots avec le même
     // pseudo seraient interprétés comme une reconnexion par le backend
     // (SocketHandler.joinLobby) et fusionneraient en un seul joueur.
-    setSlots((s) => {
+    setSlots((prev) => {
+      const s = scenario
+        ? Array.from({ length: total }, (_, i) => ({ ...(prev[i] ?? makeSlot(i)), bot: true }))
+        : prev;
       const usedNames = new Set<string>();
       const usedAvatars = new Set<number>();
       return s.map((slot, i) => {
@@ -200,6 +228,7 @@ const Studio = () => {
   };
   const reset = () => {
     slots.forEach((_, i) => purgeStudioSlot(i));
+    setScenarioReached(false);
     setSlotStates({});
     setLobbyCode(null);
     setRunning(false);
@@ -248,6 +277,12 @@ const Studio = () => {
       // Paramètre non « live » : le changer recharge l'iframe (cf. SlotCard).
       if (slot.platform !== 'web') params.set('platform', slot.platform);
       if (!isRunning) return `${base}/?${params.toString()}`;
+      // Scénario de Régie : chaque slot connaît le script et le point d'arrêt (capté au
+      // boot de l'iframe, cf. studioStorage) ; non « live », lu une fois au lancement.
+      if (scenario) {
+        params.set('studioScenario', scenario.id);
+        params.set('studioStop', effectiveStop);
+      }
       if (index === 0) {
         params.set('autoCreate', '1');
         params.set('studioGameMode', gameMode);
@@ -259,7 +294,7 @@ const Studio = () => {
       params.set('autoJoin', '1');
       return `${base}/?${params.toString()}`;
     },
-    [debugTimers, gameMode, gameSpeed]
+    [debugTimers, gameMode, gameSpeed, scenario, effectiveStop]
   );
 
   const cols = useMemo(() => {
@@ -321,9 +356,16 @@ const Studio = () => {
         onReloadAll={reloadAll}
         onStart={start}
         onReset={reset}
+        scenarioId={scenarioId}
+        setScenarioId={setScenarioId}
+        scenarioStop={effectiveStop}
+        setScenarioStop={setScenarioStop}
+        scenarioReached={scenarioReached}
       />
 
       {view === 'gallery' && <Gallery />}
+
+      {view === 'screens' && <Screens />}
 
       {view === 'rigging' && (
         <div

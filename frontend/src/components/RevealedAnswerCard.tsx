@@ -26,6 +26,8 @@ interface RevealedAnswerCardProps {
   footer?: ReactNode;
   /** Afficher le stickman derrière la carte (défaut: true). */
   showStickman?: boolean;
+  /** Le stickman flotte (défaut: true). Figé quand une autre animation infinie porte l'écran. */
+  stickmanFloat?: boolean;
   /** Afficher la bulle "Écrit par" à gauche de la carte (défaut: true).
    *  À mettre à false pour la vue REVEAL "pas de réponse attribuée". */
   showBubble?: boolean;
@@ -50,6 +52,7 @@ const RevealedAnswerCard = ({
   header,
   footer,
   showStickman = true,
+  stickmanFloat = true,
   showBubble = true,
   waitingFor,
 }: RevealedAnswerCardProps) => {
@@ -110,7 +113,7 @@ const RevealedAnswerCard = ({
                 alt=""
                 aria-hidden
                 draggable={false}
-                className="absolute left-[78%] -translate-x-1/2 -top-16 tablet:-top-20 phone-landscape:-top-16 short-landscape:-top-9 h-32 tablet:h-40 phone-landscape:h-32 short-landscape:h-20 w-auto select-none pointer-events-none animate-float z-0"
+                className={`absolute left-[78%] -translate-x-1/2 -top-16 tablet:-top-20 phone-landscape:-top-16 short-landscape:-top-9 h-32 tablet:h-40 phone-landscape:h-32 short-landscape:h-20 w-auto select-none pointer-events-none ${stickmanFloat ? 'animate-float' : ''} z-0`}
                 // Le bas du bonhomme fond dans la carte (la carte cache la moitié basse de l'image,
                 // donc le dégradé démarre au-dessus de son bord pour être visible). Position inchangée.
                 style={{

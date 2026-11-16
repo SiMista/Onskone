@@ -58,6 +58,8 @@ export interface SlotRuntimeState {
   isLeader: boolean;
   isSubstitute: boolean;
   phase: string | null;
+  /** Rôle dans le scénario de Régie (« Pilier », « A · Pizza »), null hors scénario. */
+  role?: string | null;
 }
 
 export const FUN_NAMES = [
@@ -85,6 +87,9 @@ export interface SavedConfig {
   debugTimers: boolean;
   gameMode?: GameMode;
   gameSpeed?: GameSpeed;
+  /** Scénario de Régie choisi ('' = partie libre) et son point d'arrêt (cf. utils/studioScenarios.ts). */
+  scenarioId?: string;
+  scenarioStop?: string;
 }
 
 export const loadSavedConfig = (): SavedConfig | null => {

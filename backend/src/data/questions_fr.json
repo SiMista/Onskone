@@ -14,7 +14,7 @@
           "subject": "5 sens",
           "questions": [
             "Quel est ton sens le plus développé ?",
-            "Si tu perdais un sens pour toujours, lequel choisis-tu de sacrifier ?"
+            "Si tu devais sacrifier un sens pour toujours, lequel choisirais-tu ?"
           ]
         },
         {
@@ -80,7 +80,7 @@
           "subject": "Curiosités Linguistiques",
           "questions": [
             "Quel est le mot en langue étrangère que tu préfères ?",
-            "Y a-t-il un mot dont tu as longtemps mal compris le sens ?"
+            "Quel mot as-tu longtemps mal compris ?"
           ]
         },
         {
@@ -100,7 +100,7 @@
         {
           "subject": "Temps passé",
           "questions": [
-            "En moyenne, combien d'heures passes-tu pour te préparer le matin ?",
+            "En moyenne, combien de temps mets-tu à te préparer le matin ?",
             "En moyenne, combien de temps passes-tu sur ton téléphone sur une journée ?"
           ]
         },
@@ -122,7 +122,7 @@
           "subject": "Habitudes de lecture",
           "questions": [
             "Quel est le dernier livre que tu as lu ?",
-            "Si tu devais estimer le nombre de livres que tu as lus dans ta vie, c'est combien, honnêtement ?"
+            "Si tu devais estimer le nombre de livres que tu as lus dans ta vie, ce serait combien, honnêtement ?"
           ]
         },
         {
@@ -170,7 +170,7 @@
         {
           "subject": "Objets du Quotidien",
           "questions": [
-            "Si tu devais survivre la journée avec un seul objet (hors portable), que choisis-tu ?",
+            "Si tu devais tenir une journée avec un seul objet (hors portable), lequel choisirais-tu ?",
             "Quel est l'objet du quotidien, que tout le monde utilise, dont tu n'as jamais saisi l'utilité ?"
           ]
         },
@@ -198,11 +198,11 @@
         {
           "subject": "Ton prénom",
           "questions": [
-            "Quelle version de ton prénom (ou surnom) est la moins utilisée pour t'appeler ?",
+            "Quelle version de ton prénom est la moins utilisée pour t'appeler ?",
             "Si tu devais changer de prénom, lequel choisirais-tu ?"
           ],
           "tips": {
-            "Quelle version de ton prénom (ou surnom) est la moins utilisée pour t'appeler ?": "Ca peut être un prénom complet, diminutif, surnom…"
+            "Quelle version de ton prénom est la moins utilisée pour t'appeler ?": "Ça peut être un prénom complet, un diminutif, un surnom…"
           }
         },
         {
@@ -250,25 +250,25 @@
         {
           "subject": "Trivia",
           "questions": [
-            "Quelle est ta date de naissance (Date & mois) ?",
+            "Quelle est ta date de naissance ?",
             "Quels sont ta couleur et ton nombre fétiches ?"
           ],
           "tips": {
-            "Quelle est ta date de naissance (Date & mois) ?": "Jour et mois uniquement, pas l'année.",
+            "Quelle est ta date de naissance ?": "Jour et mois uniquement, pas l'année.",
             "Quels sont ta couleur et ton nombre fétiches ?": "Exemple de réponse : Bleu / 7"
           }
         },
         {
           "subject": "Habitudes",
           "questions": [
-            "As-tu une habitude quotidienne qui contribue à ton développement personnel ?",
+            "Quelle habitude quotidienne contribue à ton développement personnel ?",
             "Quelle est l'habitude ou le tic que tout le monde remarque chez toi ?"
           ]
         },
         {
           "subject": "Planning",
           "questions": [
-            "Si tu avais une heure de temps libre plus chaque jour, qu'en ferais-tu honnêtement ?",
+            "Si tu avais une heure de temps libre en plus chaque jour, qu'en ferais-tu honnêtement ?",
             "Combien d'activités différentes enchaînes-tu dans une journée type ?"
           ],
           "tips": {
@@ -292,7 +292,7 @@
         {
           "subject": "Nutrition",
           "questions": [
-            "Si ta nutrition était un nutriscore, de A à E, tu as quelle note ?",
+            "Si ton alimentation avait un Nutri-Score, de A à E, quelle note aurait-elle ?",
             "Quel est ton grignotage préféré ?"
           ]
         }
@@ -319,7 +319,7 @@
           "subject": "Animal de Compagnie",
           "questions": [
             "Si tu pouvais avoir un animal sauvage totalement domestiqué, lequel choisirais-tu ?",
-            "Quel est le nom de l'animal de compagnie qui t'a le plus marqué ?"
+            "Quel est le nom de l'animal de compagnie qui t'a le plus marqué(e) ?"
           ]
         },
         {
@@ -333,13 +333,16 @@
           "subject": "Art",
           "questions": [
             "Si tu pouvais maîtriser parfaitement une forme d'art, laquelle choisirais-tu ?",
-            "Quelle œuvre d'art (tableau, sculpture, photo...) t'a un jour laissé sans voix ?"
-          ]
+            "Quelle œuvre d'art t'a un jour laissé(e) sans voix ?"
+          ],
+          "tips": {
+            "Quelle œuvre d'art t'a un jour laissé(e) sans voix ?": "Un tableau, une sculpture, une photo…"
+          }
         },
         {
           "subject": "Célébrité",
           "questions": [
-            "Quelle est une célébrité qui t'a déçu ?",
+            "Quelle célébrité t'a déçu(e) ?",
             "Quelle est la dernière célébrité que tu as croisée dans la vraie vie ?"
           ]
         },
@@ -367,14 +370,14 @@
         {
           "subject": "Curiosité",
           "questions": [
-            "Quel domaine tu n'y connais rien, mais qui t'attire vraiment ?",
+            "Quel domaine t'attire vraiment, alors que tu n'y connais rien ?",
             "Quelle est la dernière chose qui t'a rendu(e) vraiment curieux/curieuse ?"
           ]
         },
         {
           "subject": "Découvertes",
           "questions": [
-            "Qu'est-ce que tu as appris récemment qui t'a marqué ?",
+            "Qu'est-ce que tu as appris récemment qui t'a marqué(e) ?",
             "Quelle découverte scientifique ou historique t'a le plus impressionné(e) ?"
           ]
         },
@@ -409,7 +412,7 @@
         {
           "subject": "Internet",
           "questions": [
-            "Quelle est la dernière page Internet ouverte ?",
+            "Quelle est la dernière page Internet que tu as ouverte ?",
             "Quel est le site Internet que tu visites le plus ?"
           ]
         },
@@ -424,7 +427,7 @@
           "subject": "Jeux de société",
           "questions": [
             "Quel est ton jeu de société préféré ?",
-            "Quel jeu de société t'ennuie ou t'énerve le plus ?"
+            "À quel jeu de société refuses-tu catégoriquement de jouer ?"
           ]
         },
         {
@@ -451,7 +454,7 @@
         {
           "subject": "Les JO",
           "questions": [
-            "Quel est le sport où tu as des chances d'être médaillé aux JO ?",
+            "Quel est le sport où tu as des chances d'être médaillé(e) aux JO ?",
             "Quel est le sport le plus atypique que tu as pu voir en vrai ?"
           ]
         },
@@ -494,7 +497,7 @@
           "subject": "Objectifs sportifs",
           "questions": [
             "Quel exploit physique voudrais-tu être capable de faire ?",
-            "Quel objectif sportif t'es tu fixé ?"
+            "Quel objectif sportif t'es-tu fixé ?"
           ]
         },
         {
@@ -507,15 +510,15 @@
         {
           "subject": "Podcast",
           "questions": [
-            "Si tu animais ton propre podcast, quel en serait le sujet et le nom ?",
-            "Quel podcast ou émission audio t'a le plus appris quelque chose en dehors de l'école ?"
+            "Si tu animais ton propre podcast, quels en seraient le sujet et le nom ?",
+            "Quel podcast ou quelle émission t'a appris le plus de choses ?"
           ]
         },
         {
           "subject": "Portable",
           "questions": [
             "Sur quelle application portable passes-tu le plus de temps inutilement ?",
-            "Dessines l'emoji que tu utilises le plus ?"
+            "Quel est l'emoji que tu utilises le plus ?"
           ]
         },
         {
@@ -603,7 +606,7 @@
         {
           "subject": "Cinéma",
           "questions": [
-            "Quel est le dernier film que tu es allé voir au cinéma ?",
+            "Quel est le dernier film que tu es allé(e) voir au cinéma ?",
             "Quel film méritait absolument d'être vu sur grand écran plutôt qu'en streaming ?"
           ]
         },
@@ -625,7 +628,7 @@
           "subject": "Fiction",
           "questions": [
             "Si tu pouvais rencontrer un personnage fictif, qui choisirais-tu ?",
-            "Si tu pouvais vivre dans un film, lequel choisirais-tu ?"
+            "Quel film mérite une suite ?"
           ]
         },
         {
@@ -638,7 +641,7 @@
         {
           "subject": "Favorites",
           "questions": [
-            "Quelle musique choisirais-tu comme sonnerie d'alarme pour toujours ?",
+            "Quelle musique choisirais-tu comme sonnerie de réveil pour toujours ?",
             "Si tu pouvais écouter une seule chanson pour le reste de ta vie, laquelle choisirais-tu ?"
           ]
         },
@@ -653,28 +656,28 @@
           "subject": "Scènes de films",
           "questions": [
             "Quelle est ta scène de film préférée ?",
-            "Si tu pouvais vivre dans un film, lequel choisirais-tu ?"
+            "Quelle est la dernière scène de film qui t'a fait pleurer ?"
           ]
         },
         {
           "subject": "Série favorite",
           "questions": [
             "Quelle est ta série préférée de tous les temps ?",
-            "Quelle série as-tu le plus recommandée autour de toi ?"
+            "Quelle série as-tu revue le plus de fois ?"
           ]
         },
         {
           "subject": "Netflix & Chill",
           "questions": [
             "Quel est ton record d'épisodes vus à la suite, en binge-watching ?",
-            "Quelle est la série que tu n'as jamais fini ?"
+            "Quelle est la série que tu n'as jamais finie ?"
           ]
         },
         {
           "subject": "Superpouvoirs",
           "questions": [
             "Si tu devais incarner un superhéros, quel serait son nom ?",
-            "Si tu pouvais avoir un super-pouvoir, lequel choisirais-tu ?"
+            "Si tu pouvais avoir un superpouvoir, lequel choisirais-tu ?"
           ]
         },
         {
@@ -688,10 +691,10 @@
           "subject": "Type de films",
           "questions": [
             "Quel type de film refuses-tu catégoriquement de regarder ?",
-            "Si ta vie était un film, de quel type serait-elle ? (Horreur, Comédie, Drame, Aventure, Thriller etc.)"
+            "Si ta vie était un film, de quel genre serait-il ?"
           ],
           "tips": {
-            "Si ta vie était un film, de quel type serait-elle ? (Horreur, Comédie, Drame, Aventure, Thriller etc.)": "Horreur, comédie, drame, aventure, thriller…"
+            "Si ta vie était un film, de quel genre serait-il ?": "Horreur, comédie, drame, aventure, thriller…"
           }
         },
         {
@@ -705,7 +708,7 @@
           "subject": "Biopic",
           "questions": [
             "Si ta vie était un film, quel en serait le titre ?",
-            "Quelle personnalité mériterait absolument un biopic, que tu irais voir en premier ?"
+            "Sur quelle personnalité rêverais-tu de voir un biopic ?"
           ]
         }
       ]
@@ -726,14 +729,14 @@
         {
           "subject": "Destination",
           "questions": [
-            "Quelle destination serais-tu capable de faire seul, tellement tu en as envie ?",
+            "Quelle destination serais-tu capable de faire seul(e), tellement tu en as envie ?",
             "Quelle destination te plaisait autrefois, mais maintenant plus du tout, et pourquoi ?"
           ]
         },
         {
           "subject": "Endroits spécifiques",
           "questions": [
-            "Quel est le premier lieu qui te vient en tête quand tu penses à ton enfance et pourquoi ?",
+            "Quel est le premier lieu qui te vient en tête quand tu penses à ton enfance, et pourquoi ?",
             "Quel est l'endroit le plus insolite où tu as dormi ?"
           ]
         },
@@ -754,8 +757,8 @@
         {
           "subject": "Historique",
           "questions": [
-            "Si tu pouvais voyager à une époque passée, laquelle choisirais-tu ?",
-            "Y a-t-il un moment historique qui a changé ta vie ?"
+            "Quelle époque du passé te fascine ?",
+            "Quel moment historique a changé ta vie ?"
           ]
         },
         {
@@ -771,9 +774,12 @@
         {
           "subject": "Nature",
           "questions": [
-            "Si tu devais vivre dans un environnement naturel précis (montagne, mer, forêt, désert…), lequel choisirais-tu ?",
-            "Quel phénomène naturel t'a le plus impressionné dans ta vie ?"
-          ]
+            "Si tu devais vivre dans un environnement naturel précis, lequel choisirais-tu ?",
+            "Quel phénomène naturel t'a le plus impressionné(e) dans ta vie ?"
+          ],
+          "tips": {
+            "Si tu devais vivre dans un environnement naturel précis, lequel choisirais-tu ?": "Montagne, mer, forêt, désert…"
+          }
         },
         {
           "subject": "Sorties nature",
@@ -806,7 +812,7 @@
         {
           "subject": "Soirée",
           "questions": [
-            "Si tu pouvais inviter 1 célébrité à une soirée, qui choisirais-tu ?",
+            "Si tu pouvais inviter une célébrité à une soirée, qui choisirais-tu ?",
             "Quel est l'élément indispensable pour une soirée réussie ?"
           ]
         },
@@ -827,36 +833,39 @@
         {
           "subject": "Villes",
           "questions": [
-            "Dans combien de villes différentes as-tu habitées dans ta vie ?",
+            "Dans combien de villes différentes as-tu habité dans ta vie ?",
             "Quelle ville a le plus marqué ta trajectoire de vie ?"
           ]
         },
         {
           "subject": "Voyages insolites",
           "questions": [
-            "Si tu pouvais voyager dans le temps, quelle époque choisirais-tu de visiter et pourquoi ?",
-            "Quelle était l'expérience de voyage la plus bizarre que tu aies faite ?"
+            "Si tu pouvais voyager dans le temps, quelle époque choisirais-tu de visiter, et pourquoi ?",
+            "Quelle est l'expérience de voyage la plus bizarre que tu aies vécue ?"
           ]
         },
         {
           "subject": "Lieu",
           "questions": [
             "En dehors de ton domicile, où tu te sens le plus chez toi ?",
-            "Dans quel lieu très commun tu n'es jamais allé ?"
+            "Dans quel lieu très commun tu n'es jamais allé(e) ?"
           ]
         },
         {
           "subject": "Lieu fictif",
           "questions": [
             "Si tu pouvais vivre dans un lieu fictif, lequel choisirais-tu ?",
-            "Quel lieu fictif (film, série, livre, jeux vidéo) te ferait le plus peur à visiter ?"
-          ]
+            "Quel lieu fictif aurais-tu le plus peur de visiter ?"
+          ],
+          "tips": {
+            "Quel lieu fictif aurais-tu le plus peur de visiter ?": "Film, série, livre, jeu vidéo…"
+          }
         },
         {
           "subject": "Voyage dans le passé",
           "questions": [
-            "Quel moment historique aurais-tu aimé assister ?",
-            "Tu peux voyager dans le passé. Où tu vas et à quelle époque ?"
+            "À quel moment historique aurais-tu aimé assister ?",
+            "Quel évènement historique t'a le plus marqué(e) ?"
           ]
         }
       ]
@@ -885,13 +894,13 @@
           "subject": "Perdre & gagner confiance",
           "questions": [
             "Qu'est-ce qui peut faire s'effondrer ta confiance en toi en quelques secondes ?",
-            "Quelle est la chose qui peut instantanément faire gagner ta confiance à quelqu'un ?"
+            "Que doit faire quelqu'un pour gagner instantanément ta confiance ?"
           ]
         },
         {
           "subject": "Conversations marquantes",
           "questions": [
-            "Si tu pouvais avoir une conversation de 30 minutes avec n'importe qui au monde vivant aujourd'hui, qui serait-ce ?",
+            "Si tu pouvais discuter 30 minutes avec n'importe quelle personne vivante, qui choisirais-tu ?",
             "Quelle est la conversation la plus dure que tu as eue à mener ?"
           ]
         },
@@ -919,7 +928,7 @@
         {
           "subject": "Déguisement",
           "questions": [
-            "Quel est le déguisement que tu préfères ?",
+            "Quel est le dernier déguisement que tu as porté ?",
             "Si tu devais venir déguisé(e) ici ce soir, quel déguisement choisirais-tu ?"
           ]
         },
@@ -940,7 +949,7 @@
         {
           "subject": "Identité",
           "questions": [
-            "Comment décrirais-tu ton identité en trois mots à un inconnu ?",
+            "Comment décrirais-tu ton identité en 3 mots à un inconnu ?",
             "Quelle est ta première valeur, non négociable ?"
           ]
         },
@@ -955,7 +964,7 @@
           "subject": "Zone de Confort",
           "questions": [
             "Comment tu recharges tes batteries après une grande réunion ou soirée sociale ?",
-            "Dans quelle situation te sens-tu le plus dans ta comfort zone ?"
+            "Dans quelle situation te sens-tu le plus dans ta zone de confort ?"
           ]
         },
         {
@@ -968,7 +977,7 @@
         {
           "subject": "Qualités en Question",
           "questions": [
-            "Y a-t-il une qualité que tu pensais avoir, mais que tu as fini par remettre en question ?",
+            "Quelle qualité pensais-tu avoir avant de la remettre en question ?",
             "Quelle qualité as-tu développée avec le temps et l'expérience ?"
           ]
         },
@@ -1001,14 +1010,14 @@
         {
           "subject": "Situation sociale",
           "questions": [
-            "Tu vas croiser quelqu'un de la famille que tu n'apprécies pas du tout dans la rue, lui ne t'a pas encore vu. Que fais-tu ?",
+            "Dans la rue, tu aperçois un membre de ta famille que tu n'apprécies pas du tout. Il ne t'a pas encore vu(e). Que fais-tu ?",
             "Tu croises ton ex dans la rue avec son nouveau partenaire. Comment tu gères la conversation ?"
           ]
         },
         {
           "subject": "Dilemme moral",
           "questions": [
-            "Tu trouves un portefeuille avec 500€ et une carte d'identité dans le métro. Que fais-tu ?",
+            "Tu trouves un portefeuille avec 500 € et une carte d'identité dans le métro. Que fais-tu ?",
             "Ton meilleur ami te révèle qu'il trompe sa copine depuis 6 mois et te demande de ne rien dire. Que fais-tu ?"
           ]
         },
@@ -1044,7 +1053,7 @@
           "subject": "Responsabilité",
           "questions": [
             "Tu réalises que ton ami est trop saoul et veut rentrer en voiture. Tu fais quoi ?",
-            "Tu vois quelqu'un d'isolé et perdu dans une soirée. Tu fais quoi ?"
+            "Tu vois quelqu'un d'isolé et de perdu dans une soirée. Tu fais quoi ?"
           ]
         },
         {
@@ -1072,14 +1081,17 @@
           "subject": "Le meilleur",
           "questions": [
             "Quelle est la personne la plus intelligente du groupe ?",
-            "Qui est la personne la plus drôle du groupe ?"
-          ]
+            "Qui est la personne la plus forte du groupe dans une baston ?"
+          ],
+          "tips": {
+            "Quelle est la personne la plus intelligente du groupe ?": "Quelqu'un présent dans la partie !"
+          }
         },
         {
           "subject": "Partage",
           "questions": [
             "Quelle qualité partages-tu avec ton joueur de gauche ?",
-            "Qu'est-ce qui manque le plus, au joueur de gauche, selon toi ?"
+            "Selon toi, de quoi ton joueur de gauche manque-t-il le plus ?"
           ]
         },
         {
@@ -1097,7 +1109,7 @@
           "subject": "Cadeaux",
           "questions": [
             "Si tu pouvais offrir un cadeau au joueur de gauche sans limite de budget, que choisirais-tu ?",
-            "Si le joueur de droite t'offrait un cadeau, lequel serait-il ?"
+            "Si le joueur de droite t'offrait un cadeau, ce serait quoi ?"
           ]
         },
         {
@@ -1116,7 +1128,11 @@
           "questions": [
             "Si tu pouvais échanger ta vie avec quelqu'un du groupe pendant une semaine, qui choisirais-tu ?",
             "Qui a la vie qui te ressemble le plus ?"
-          ]
+          ],
+          "tips": {
+            "Si tu pouvais échanger ta vie avec quelqu'un du groupe pendant une semaine, qui choisirais-tu ?": "Quelqu'un présent dans la partie !",
+            "Qui a la vie qui te ressemble le plus ?": "Quelqu'un présent dans la partie !"
+          }
         },
         {
           "subject": "En crise",
@@ -1182,11 +1198,11 @@
           "subject": "Le champion",
           "questions": [
             "Qui serait le plus fort du groupe dans une baston ?",
-            "Qui est le meilleur pour solidifier et rassembler ce groupe ?"
+            "Qui soude le plus ce groupe ?"
           ],
           "tips": {
             "Qui serait le plus fort du groupe dans une baston ?": "Quelqu'un présent dans la partie !",
-            "Qui est le meilleur pour solidifier et rassembler ce groupe ?": "Quelqu'un présent dans la partie !"
+            "Qui soude le plus ce groupe ?": "Quelqu'un présent dans la partie !"
           }
         },
         {
@@ -1199,18 +1215,18 @@
         {
           "subject": "Jugement",
           "questions": [
-            "Quel est le 1er défaut qui te vient à l'esprit vis-à-vis de ton joueur de droite ?",
-            "Quelle est la 1ère qualité qui te vient à l'esprit vis-à-vis de ton joueur de droite ?"
+            "Quel est le premier défaut qui te vient à l'esprit vis-à-vis de ton joueur de droite ?",
+            "Quelle est la première qualité qui te vient à l'esprit vis-à-vis de ton joueur de droite ?"
           ]
         },
         {
           "subject": "Révélations du Groupe",
           "questions": [
-            "Si tu devais emprunter la garde-robe de quelqu'un du groupe pour une semaine, qui choisirais-tu ?",
+            "Si tu devais voler un objet à quelqu'un du groupe, lequel volerais-tu ?",
             "Qui du groupe te surprendrait le plus si tu apprenais qu'il/elle cache un talent artistique ?"
           ],
           "tips": {
-            "Si tu devais emprunter la garde-robe de quelqu'un du groupe pour une semaine, qui choisirais-tu ?": "Quelqu'un présent dans la partie !",
+            "Si tu devais voler un objet à quelqu'un du groupe, lequel volerais-tu ?": "Quelqu'un présent dans la partie !",
             "Qui du groupe te surprendrait le plus si tu apprenais qu'il/elle cache un talent artistique ?": "Quelqu'un présent dans la partie !"
           }
         },
@@ -1218,11 +1234,11 @@
           "subject": "Secret du Groupe",
           "questions": [
             "À qui du groupe ferais-tu le plus confiance pour garder un secret absolument inavouable ?",
-            "Quelle est la personne au sein du groupe, qui te connaît le mieux, le vrai toi ?"
+            "Quelle est la personne du groupe qui te connaît le mieux, le vrai toi ?"
           ],
           "tips": {
             "À qui du groupe ferais-tu le plus confiance pour garder un secret absolument inavouable ?": "Quelqu'un présent dans la partie !",
-            "Quelle est la personne au sein du groupe, qui te connaît le mieux, le vrai toi ?": "Quelqu'un présent dans la partie !"
+            "Quelle est la personne du groupe qui te connaît le mieux, le vrai toi ?": "Quelqu'un présent dans la partie !"
           }
         },
         {
@@ -1236,18 +1252,18 @@
           "subject": "Talents du Groupe",
           "questions": [
             "Qui du groupe serait le meilleur mentor pour les autres ?",
-            "Qui du groupe pourrait t'apprendre quelque chose d'utile ?"
+            "Qui du groupe aimerais-tu avoir comme prof particulier ?"
           ],
           "tips": {
             "Qui du groupe serait le meilleur mentor pour les autres ?": "Quelqu'un présent dans la partie !",
-            "Qui du groupe pourrait t'apprendre quelque chose d'utile ?": "Profites-en pour lui demander après !"
+            "Qui du groupe aimerais-tu avoir comme prof particulier ?": "Profites-en pour lui demander après !"
           }
         },
         {
           "subject": "Tensions",
           "questions": [
             "Avec qui du groupe es-tu le plus susceptible de t'embrouiller ?",
-            "Quel moment ou événement récent du groupe as-tu mal vécu, et n'as-tu toujours pas digéré ?"
+            "Quel moment récent du groupe as-tu mal vécu, sans l'avoir encore digéré ?"
           ],
           "tips": {
             "Avec qui du groupe es-tu le plus susceptible de t'embrouiller ?": "Quelqu'un présent dans la partie !"
@@ -1261,7 +1277,7 @@
         {
           "subject": "Amis perdus",
           "questions": [
-            "Y a-t-il quelqu'un que tu as perdu de vue et que tu aimerais retrouver demain ?",
+            "Quelle personne perdue de vue aimerais-tu retrouver demain ?",
             "Quelle amitié terminée t'a appris quelque chose d'important sur toi ?"
           ]
         },
@@ -1296,7 +1312,7 @@
         {
           "subject": "Famille secrète",
           "questions": [
-            "Quelle tradition ou croyance de ta famille as-tu mis du temps à réaliser qu'elle n'était pas universelle ?",
+            "Quelle tradition ou croyance de ta famille as-tu longtemps crue universelle ?",
             "Quel est le sujet que ta famille évite soigneusement d'aborder en réunion ?"
           ]
         },
@@ -1304,7 +1320,7 @@
           "subject": "Génération",
           "questions": [
             "Que penses-tu que la génération suivante jugera sévèrement dans nos comportements actuels ?",
-            "Quelle est pour toi, la meilleure génération ?"
+            "Quelle est, pour toi, la meilleure génération ?"
           ]
         },
         {
@@ -1325,13 +1341,13 @@
           "subject": "Les anciens",
           "questions": [
             "Qu'est-ce que la génération précédente a selon toi mieux géré que la tienne ?",
-            "Qui ne fait pas du tout son âge ?"
+            "Qui, dans ta famille, ne fait pas du tout son âge ?"
           ]
         },
         {
           "subject": "Meilleur Pote",
           "questions": [
-            "Quel est le nom de ton(a) meilleur(e) ami(e) ?",
+            "Quel est le nom de ton/ta meilleur(e) ami(e) ?",
             "Depuis combien d'années connais-tu ton meilleur ami ?"
           ]
         },
@@ -1339,7 +1355,7 @@
           "subject": "Transmission",
           "questions": [
             "Quel est le talent ou la particularité propre à un de tes parents, et dont tu as hérité sans le choisir ?",
-            "Quel est le principal point commun avec ta fratrie ?"
+            "Quel est ton principal point commun avec ta fratrie ?"
           ]
         },
         {
@@ -1367,7 +1383,7 @@
           "subject": "Réconciliation",
           "questions": [
             "Quelle est la relation que tu as réussi à récupérer après une embrouille ?",
-            "Y a-t-il une personne avec qui tu aimerais te réconcilier mais vers qui tu n'as pas encore fait le premier pas ?"
+            "Avec qui aimerais-tu te réconcilier, sans avoir encore fait le premier pas ?"
           ]
         },
         {
@@ -1421,13 +1437,13 @@
           "subject": "Blague",
           "questions": [
             "Quel type d'humour te fait vraiment rire ?",
-            "Raconte-nous ta meilleure blague ?"
+            "Raconte-nous ta meilleure blague."
           ]
         },
         {
           "subject": "Changements",
           "questions": [
-            "Existe-t-il un sujet où tu n'es clairement pas objectif ?",
+            "Existe-t-il un sujet où tu n'es clairement pas objectif/objective ?",
             "Quel est le plus grand changement que tu aimerais voir dans le monde dans les 10 prochaines années ?"
           ]
         },
@@ -1442,14 +1458,14 @@
           "subject": "Conneries",
           "questions": [
             "Quelle est la plus grosse connerie que tu aies faite ?",
-            "Quelle bêtise as-tu déjà fait faire à quelqu'un d'autre ?"
+            "Quelle bêtise as-tu déjà poussé quelqu'un à faire ?"
           ]
         },
         {
           "subject": "Coupable",
           "questions": [
             "Quel est ton plaisir coupable en musique ?",
-            "Quelle émission ou contenu vraiment nul tu regardes quand même avec plaisir ?"
+            "Quelle émission ou quel contenu vraiment nul regardes-tu quand même avec plaisir ?"
           ]
         },
         {
@@ -1463,21 +1479,21 @@
           "subject": "Engagement",
           "questions": [
             "Dans quelle cause ou quel engagement t'es-tu le plus impliqué(e) dans ta vie ?",
-            "Y a-t-il une pétition, une association ou un mouvement que tu soutiens activement ?"
+            "Quelle pétition, quelle association ou quel mouvement soutiens-tu activement ?"
           ]
         },
         {
           "subject": "Fail",
           "questions": [
-            "Dans quelle chose/activité tu perds le plus de temps ?",
-            "Quelle est la pire décision de dernière minute qui t'a mené à un énorme fail ?"
+            "À quoi perds-tu le plus de temps ?",
+            "Quelle est la pire décision de dernière minute qui t'a mené(e) à un énorme fail ?"
           ]
         },
         {
           "subject": "Illégal",
           "questions": [
             "Qu'est-ce que tu as déjà fait de plus illégal ?",
-            "Si tu devais faire quelque chose d'illégal demain, ce serait quoi ?"
+            "Si tu avais 24 h d'impunité totale, que ferais-tu d'illégal ?"
           ]
         },
         {
@@ -1505,14 +1521,14 @@
           "subject": "Manigances",
           "questions": [
             "Qu'as-tu déjà fait uniquement pour manipuler quelqu'un à ton avantage ?",
-            "Quelle petite arnaque inoffensive as-tu faite à quelqu'un, et pourquoi c'était drôle ?"
+            "Quel est le meilleur canular que tu aies fait à quelqu'un ?"
           ]
         },
         {
           "subject": "Gênance",
           "questions": [
             "Quelle est la chose la plus embarrassante que tu aies faite récemment ?",
-            "Quel comportement des autres te met le plus mal à l'aise ?"
+            "Dans quelle situation as-tu eu le plus honte pour quelqu'un d'autre ?"
           ]
         },
         {
@@ -1525,8 +1541,8 @@
         {
           "subject": "On s'en doutait pas",
           "questions": [
-            "Qui est-ce que tu n'aimes pas mais que tu n'oses pas avouer (sauf maintenant) ?",
-            "Qui est-ce que tu aimes bien mais que tu n'oses pas avouer (sauf maintenant) ?"
+            "Qui est-ce que tu n'aimes pas, sans oser l'avouer (sauf maintenant) ?",
+            "Qui est-ce que tu aimes bien, sans oser l'avouer (sauf maintenant) ?"
           ]
         },
         {
@@ -1536,7 +1552,7 @@
             "Qu'est-ce que tu as déjà perdu d'important ?"
           ],
           "tips": {
-            "Qu'est-ce que tu as déjà perdu d'important ?": "Ça peut être des relations, des valeurs, des objets"
+            "Qu'est-ce que tu as déjà perdu d'important ?": "Ça peut être une relation, une valeur, une opportunité…"
           }
         },
         {
@@ -1554,6 +1570,12 @@
           ]
         },
         {
+          "subject": "Mythos",
+          "questions": [
+            "Quelle est la pire excuse que tu aies entendue de quelqu'un ?"
+          ]
+        },
+        {
           "subject": "Sérieux ?",
           "questions": [
             "Quelle personne détestes-tu secrètement, sans que presque personne ne le sache ?",
@@ -1563,7 +1585,7 @@
         {
           "subject": "Tabous",
           "questions": [
-            "Quel est le sujet tabou dont tu préfères ne pas aborder avec le groupe ?",
+            "Quel est le sujet tabou que tu préfères ne pas aborder avec le groupe ?",
             "Dis une phrase qui peut faire vriller ton joueur de gauche."
           ]
         },
@@ -1577,7 +1599,7 @@
         {
           "subject": "Téléréalité",
           "questions": [
-            "Quel serait le titre de ton émission de téléréalité si ta vie était filmée 24h/24 ?",
+            "Quel serait le titre de ton émission de téléréalité si ta vie était filmée 24 h/24 ?",
             "Si tu devais être interviewé(e) sur un plateau pour une bêtise que tu as faite, laquelle ce serait ?"
           ]
         }
@@ -1597,7 +1619,7 @@
           "subject": "Histoires insolites",
           "questions": [
             "Dans quel endroit insolite as-tu déjà fait l'amour ?",
-            "Quelle est la chose la plus audacieuse que tu aies faite en sexe ?"
+            "Quelle est la chose la plus audacieuse que tu aies faite au lit ?"
           ]
         },
         {
@@ -1645,7 +1667,7 @@
         {
           "subject": "Avec qui ?",
           "questions": [
-            "Quelle est la personne que tu rêverais de coucher avec ?",
+            "Avec qui rêverais-tu de coucher ?",
             "Qui est la dernière personne avec qui tu as couché, en secret ?"
           ]
         }
@@ -1671,8 +1693,8 @@
         {
           "subject": "Ethnies",
           "questions": [
-            "Qu'est-ce que tu penses des arabes ?",
-            "Qu'est-ce que tu penses des indiens ?"
+            "Qu'est-ce que tu penses des Arabes ?",
+            "Qu'est-ce que tu penses des Indiens ?"
           ]
         },
         {
@@ -1728,7 +1750,7 @@
           "subject": "Tech & IA",
           "questions": [
             "Qu'est-ce que tu penses de l'intelligence artificielle ?",
-            "L'intelligence artificielle : chance pour l'humanité ou menace réelle ?"
+            "Quelle est la technologie actuelle qu'il faudrait supprimer ?"
           ]
         },
         {
@@ -1762,7 +1784,7 @@
         {
           "subject": "Moments oubliés ou sous-estimés",
           "questions": [
-            "Y a-t-il un moment de ta vie dont tu n'as aucun souvenir mais qu'on t'a souvent raconté ?",
+            "Quel moment de ta vie, dont tu n'as aucun souvenir, t'a-t-on le plus souvent raconté ?",
             "Quel moment de vie prenais-tu pour acquis, avant de te rendre compte qu'il était vraiment unique ?"
           ]
         },
@@ -1790,8 +1812,8 @@
         {
           "subject": "Plus Jeune",
           "questions": [
-            "Quel conseil donnerais-tu à ton toi plus jeune ?",
-            "Qu'est-ce qui rendait ton toi d'enfant heureux et que tu as arrêté de faire adulte ?"
+            "Quel conseil donnerais-tu aux jeunes de la prochaine génération ?",
+            "Qu'est-ce que tu adorais faire enfant et que tu as arrêté une fois adulte ?"
           ]
         },
         {
@@ -1812,7 +1834,7 @@
           "subject": "Études",
           "questions": [
             "Si tu devais reprendre des études aujourd'hui, tu étudierais quoi ?",
-            "Quel prof t'a le plus influencé dans ta vie, et pourquoi ?"
+            "Quel prof t'a le plus influencé(e) dans ta vie, et pourquoi ?"
           ]
         },
         {
@@ -1825,21 +1847,21 @@
         {
           "subject": "Le destin",
           "questions": [
-            "Quel moment de ta vie tu penses avoir raté, mais qui s'est révélé être une chance incroyable ?",
+            "Quel moment de ta vie tu pensais avoir raté, mais qui s'est révélé être une chance incroyable ?",
             "Comment imagines-tu ton destin ?"
           ]
         },
         {
           "subject": "Mémoire",
           "questions": [
-            "Quel est le souvenir le plus ancien dont tu te souviens avec précision ?",
+            "Quel est ton plus vieux souvenir précis ?",
             "Quelle est la chose que tu oublies systématiquement, peu importe tes efforts ?"
           ]
         },
         {
           "subject": "Moments sportifs & anodins",
           "questions": [
-            "Quel est le moment sportif qui t'a le plus marqué en tant que spectateur ?",
+            "Quel est le moment sportif qui t'a le plus marqué(e) en tant que spectateur ?",
             "Quel moment anodin s'est révélé être plus marquant avec le temps ?"
           ]
         },
@@ -1861,14 +1883,14 @@
           "subject": "Insomnie",
           "questions": [
             "Qu'est-ce que tu fais quand tu n'arrives pas à dormir à 3h du matin ?",
-            "Quel est le meilleur souvenir de nuit blanche que tu aies vécu ?"
+            "Quelle est ta meilleure nuit blanche ?"
           ]
         },
         {
           "subject": "Plus Beau Moment",
           "questions": [
             "Quel a été le plus beau moment de ta vie jusqu'à présent ?",
-            "À quel moment de ta vie penses-tu souvent en ce moment ?"
+            "À quelle période de ta vie repenses-tu souvent ces temps-ci ?"
           ]
         },
         {
@@ -1881,15 +1903,18 @@
         {
           "subject": "Surprises",
           "questions": [
-            "Quelle est la fois (décision, moment, histoire) où tu as surpris absolument tout le monde ?",
-            "Quelle est la plus belle des surprises que tu as eue ?"
-          ]
+            "Quand as-tu surpris absolument tout le monde ?",
+            "Quelle est la plus belle surprise qu'on t'ait faite ?"
+          ],
+          "tips": {
+            "Quand as-tu surpris absolument tout le monde ?": "Une décision, un moment, une histoire…"
+          }
         },
         {
           "subject": "Par hasard",
           "questions": [
             "Quelle est la chose la plus insolite que tu aies trouvée (par hasard) ?",
-            "Qu'est-ce qui t'es arrivé de plus improbable ?"
+            "Qu'est-ce qui t'est arrivé de plus improbable ?"
           ]
         },
         {
@@ -1908,7 +1933,7 @@
           "subject": "Loterie",
           "questions": [
             "Si tu gagnais à la loterie, quel serait ton premier achat ?",
-            "Si tu gagnais à la loterie, avec qui partages-tu l'argent ?"
+            "Si tu gagnais à la loterie, avec qui partagerais-tu l'argent ?"
           ]
         },
         {
@@ -1929,21 +1954,21 @@
           "subject": "Avenir",
           "questions": [
             "Quel aspect ou défi de la vie future te fait le plus peur ?",
-            "Quels sont les trois mots qui te viennent à l'esprit quand tu penses à l'avenir ?"
+            "Quels sont les 3 mots qui te viennent à l'esprit quand tu penses à l'avenir ?"
           ]
         },
         {
           "subject": "Budget",
           "questions": [
-            "Si tu avais 10 000€ à dépenser en 24h sans les garder, comment tu les dépenserais ?",
+            "Si tu avais 10 000 € à dépenser en 24 h sans les garder, comment tu les dépenserais ?",
             "Quelle est la dépense que tu justifies toujours mais que tu sais être excessive ?"
           ]
         },
         {
           "subject": "Développements",
           "questions": [
-            "Quelle est la chose que tu sais maintenant faire que ton toi d'il y a 5 ans n'aurait jamais imaginé ?",
-            "Quelle compétence professionnelle es-tu le/la plus fier(ère) d'avoir développée ?"
+            "Quelle est la chose que tu sais maintenant faire et dont tu ne te serais jamais cru(e) capable il y a 5 ans ?",
+            "Quelle compétence professionnelle es-tu le plus fier(ère) d'avoir développée ?"
           ]
         },
         {
@@ -1964,11 +1989,11 @@
           "subject": "Fierté",
           "questions": [
             "Quel est le moment où tu as senti que tes parents étaient le plus fiers de toi ?",
-            "Quelle est la personne dont tu es la plus fière ?"
+            "Quelle est la personne dont tu es le plus fier(ère) ?"
           ]
         },
         {
-          "subject": "Futur",
+          "subject": "Futurs moments",
           "questions": [
             "Quel moment de ta vie future attends-tu avec impatience ?",
             "Si tu pouvais voir un moment de ton avenir, lequel choisirais-tu ?"
@@ -1985,7 +2010,7 @@
           "subject": "Inspiration",
           "questions": [
             "Quel est le meilleur conseil que tu as reçu ?",
-            "Qui est le modèle dans ta vie ?"
+            "Qui est ton modèle dans la vie ?"
           ]
         },
         {
@@ -2061,7 +2086,7 @@
         {
           "subject": "Victoires",
           "questions": [
-            "Quelle est ta petite victoire du quotidien qui te rend irrationnellement fier(e) ?",
+            "Quelle est ta petite victoire du quotidien qui te rend irrationnellement fier(ère) ?",
             "Quelle habitude as-tu réussi à mettre en place récemment après plusieurs tentatives ?"
           ]
         },
@@ -2102,7 +2127,7 @@
           "subject": "Bon délire",
           "questions": [
             "Quel sujet supposément marrant ne te fait pas trop rire ?",
-            "Quel souvenir ou sujet te fait systématiquement rire quand tu y penses, même seul(e) ?"
+            "Quelle vidéo ou quel mème te fait rire à chaque fois ?"
           ]
         },
         {
@@ -2115,14 +2140,14 @@
         {
           "subject": "Sous le charme",
           "questions": [
-            "Quel comportement tu as quand tu es vraiment amoureux ?",
+            "Quel comportement tu as quand tu es vraiment amoureux/amoureuse ?",
             "Quel comportement pourrait te faire quitter le date en 10 secondes ?"
           ]
         },
         {
           "subject": "Conseils amoureux",
           "questions": [
-            "Quel est le conseil amoureux que tu donnerais à ton \"moi\" plus jeune ?",
+            "Quel est le conseil amoureux que tu donnerais à ton « moi » plus jeune ?",
             "Quelle est ta maxime en amour ?"
           ]
         },
@@ -2130,13 +2155,13 @@
           "subject": "Drague",
           "questions": [
             "Quelle est ta technique infaillible pour séduire quelqu'un ?",
-            "Comment décrirais-tu ton style de drague en trois mots ?"
+            "Comment décrirais-tu ton style de drague en 3 mots ?"
           ]
         },
         {
           "subject": "Fatigue",
           "questions": [
-            "Quel est ton signal d'alarme quand tu sens que tu vas pas bien ?",
+            "Quel est ton signal d'alarme quand tu sens que tu ne vas pas bien ?",
             "Qu'est-ce qui te recharge le plus vite quand tu es à plat ?"
           ]
         },
@@ -2165,13 +2190,13 @@
           "subject": "Tristesse",
           "questions": [
             "Quelle est la dernière chose qui t'a fait pleurer ?",
-            "Quels moments du quotidien te rendent vraiment le plus triste ?"
+            "Quel moment du quotidien te rend le plus triste ?"
           ]
         },
         {
           "subject": "Gratitude",
           "questions": [
-            "Quelle personne de ta vie mérite un remerciement que tu ne lui as jamais dit ?",
+            "Quelle personne de ta vie mérite un merci que tu ne lui as jamais dit ?",
             "Quelle est la chose du quotidien pour laquelle tu es le plus reconnaissant(e) ?"
           ]
         },
@@ -2192,14 +2217,14 @@
         {
           "subject": "Intuition",
           "questions": [
-            "Raconte une fois où ton intuition t'a sauvé d'une mauvaise situation.",
+            "Raconte une fois où ton intuition t'a sauvé(e) d'une mauvaise situation.",
             "Dans quel domaine de ta vie tu suis le plus ton instinct ?"
           ]
         },
         {
           "subject": "Petits Plaisirs",
           "questions": [
-            "Quelle est la chose qui te rend immédiatement heureux ?",
+            "Quelle est la chose qui te rend immédiatement heureux/heureuse ?",
             "Quel est ton moment préféré de la journée ?"
           ]
         },
@@ -2207,13 +2232,13 @@
           "subject": "Peurs",
           "questions": [
             "Quelle est ta plus grande peur ?",
-            "Quel est le lieu ou l'endroit qui te met le plus mal à l'aise ?"
+            "Quel est le lieu qui te met le plus mal à l'aise ?"
           ]
         },
         {
           "subject": "Réel",
           "questions": [
-            "As-tu déjà eu un rêve tellement réel que tu as mis du temps à réaliser que c'en était un ?",
+            "Quel rêve était tellement réel que tu as mis du temps à réaliser que c'en était un ?",
             "Dans quels moments de ta vie te sens-tu le plus vivant(e) ?"
           ]
         },
@@ -2242,7 +2267,7 @@
           "subject": "Santé mentale",
           "questions": [
             "Quelle est la chose que tu fais pour prendre soin de ta santé mentale ?",
-            "Décris ton état actuel de santé mentale en un mot"
+            "Décris ton état actuel de santé mentale en un mot."
           ]
         },
         {
@@ -2255,7 +2280,7 @@
         {
           "subject": "Stress",
           "questions": [
-            "Quel comportement adaptes-tu face à la pression ?",
+            "Quel comportement adoptes-tu face à la pression ?",
             "Quel est le moment ou l'action anodine du quotidien qui te stresse ?"
           ]
         },
@@ -2263,7 +2288,7 @@
           "subject": "Séduction",
           "questions": [
             "Quel trait de personnalité te fait craquer direct ?",
-            "Comment peut-on te montrer qu'on s'intéresse à toi ?"
+            "Quel petit geste te montre que quelqu'un s'intéresse vraiment à toi ?"
           ]
         },
         {
@@ -2310,7 +2335,7 @@
           "subject": "Coïncidences",
           "questions": [
             "Quelle est la coïncidence la plus troublante que tu aies vécue ?",
-            "As-tu déjà eu une intuition ou un pressentiment qui s'est réalisé de façon inexplicable ?"
+            "Quel pressentiment s'est réalisé pour toi de façon inexplicable ?"
           ]
         },
         {
@@ -2340,9 +2365,12 @@
         {
           "subject": "Développement Perso",
           "questions": [
-            "Quelle ressource (livre, philosophie...) t'a le plus aidé à progresser dans ta vie ?",
+            "Quelle ressource t'a le plus aidé(e) à progresser dans ta vie ?",
             "Quel est l'objectif de développement personnel que tu poursuis actuellement ?"
-          ]
+          ],
+          "tips": {
+            "Quelle ressource t'a le plus aidé(e) à progresser dans ta vie ?": "Un livre, une philosophie…"
+          }
         },
         {
           "subject": "Ce que tu aimerais entendre",
@@ -2378,7 +2406,7 @@
         {
           "subject": "Exagérations",
           "questions": [
-            "Dans quel sujet tu abuses ?",
+            "Dans quel domaine tu abuses ?",
             "Qu'est-ce que tu exagères à propos de toi ?"
           ]
         },
@@ -2407,7 +2435,7 @@
           "subject": "La mort",
           "questions": [
             "Si tu écrivais ta propre épitaphe, que dirais-tu en une phrase ?",
-            "Quelle serait ta façon de mourir, la plus probable en dehors de la mort naturelle ?"
+            "En dehors de la mort naturelle, quelle serait ta façon de mourir la plus probable ?"
           ]
         },
         {
@@ -2441,22 +2469,21 @@
         {
           "subject": "Mode",
           "questions": [
-            "Quelle est la tenue dans laquelle tu te sens vraiment toi-même à 100% ?",
-            "Qui a le plus de style selon toi, et à qui aimerais-tu ressembler ?"
+            "Quelle est la tenue dans laquelle tu te sens vraiment toi-même à 100 % ?",
+            "À qui aimerais-tu ressembler niveau style ?"
           ]
         },
         {
           "subject": "Mythos",
           "questions": [
-            "Quel est ton plus gros mensonge récent ?",
-            "Quelle a été ta pire excuse pour annuler un plan ?"
+            "Quel est ton plus gros mensonge récent ?"
           ]
         },
         {
           "subject": "Négociation",
           "questions": [
             "Quelle est la chose pour laquelle tu négocies le mieux ?",
-            "Quelle est la dernière fois où tu as réussi à convaincre quelqu'un de changer d'avis ?"
+            "Sur quel sujet as-tu réussi à faire changer d'avis quelqu'un pour la dernière fois ?"
           ]
         },
         {
@@ -2483,7 +2510,7 @@
         {
           "subject": "Réflexions",
           "questions": [
-            "As-tu un endroit secret ou spécial où tu aimes aller pour réfléchir ?",
+            "Quel est ton endroit secret pour réfléchir ?",
             "Quelle relation passée t'a le plus appris sur ce que tu mérites vraiment ?"
           ]
         },
@@ -2511,8 +2538,8 @@
         {
           "subject": "Religion",
           "questions": [
-            "Si tu devais t'initier (ou changer) de religion, laquelle choisirais-tu ?",
-            "As-tu un rituel ou une pratique spirituelle, même discret(e), que tu t'accordes ?"
+            "Si tu devais adopter une religion (ou en changer), laquelle choisirais-tu ?",
+            "Quel rituel ou quelle pratique spirituelle t'accordes-tu, même discrètement ?"
           ]
         },
         {
@@ -2525,22 +2552,22 @@
         {
           "subject": "Spiritualité",
           "questions": [
-            "Quel est le moment dans ta vie où tu as le plus ressenti quelque chose de 'mystérieux' ou inexplicable ?",
+            "Quel est le moment dans ta vie où tu as le plus ressenti quelque chose de mystérieux ou d'inexplicable ?",
             "Quel est le phénomène le plus étrange auquel tu as assisté ?"
           ]
         },
         {
           "subject": "Futur & jours de la semaine",
           "questions": [
-            "Si tu pouvais choisir de tout savoir sur ton futur ou ne rien savoir du tout, que préfères-tu ?",
-            "Si tu étais un jour de la semaine, lequel serais-tu et pourquoi ?"
+            "Si tu pouvais choisir de tout savoir sur ton futur ou ne rien savoir du tout, que préférerais-tu ?",
+            "Si tu étais un jour de la semaine, lequel serais-tu, et pourquoi ?"
           ]
         },
         {
           "subject": "Trajectoire de vie",
           "questions": [
             "Quelle rencontre a le plus changé ta trajectoire de vie ?",
-            "Où te trouveras-tu dans 10 ans ? En 3 mots"
+            "En 3 mots, où te vois-tu dans 10 ans ?"
           ]
         },
         {
@@ -2553,7 +2580,7 @@
         {
           "subject": "Flemme & bizarreries",
           "questions": [
-            "Quelle est la chose la plus bizarre que tu fais seul ?",
+            "Quelle est la chose la plus bizarre que tu fais seul(e) ?",
             "Quelle est ta plus grosse flemme quotidienne ?"
           ]
         }

@@ -3,15 +3,19 @@ import step1Img from '../assets/images/home/1-question_selection.png';
 import step2Img from '../assets/images/home/2-answering.png';
 import step3Img from '../assets/images/home/3-guessing.png';
 import step4Img from '../assets/images/home/4-reveal.png';
+import logoFr from '../assets/logos/logo-fr.png';
+import logoEn from '../assets/logos/logo-en.png';
+import { PUBLIC_TIERS } from '../constants/tiers';
 import { useLocale } from '../i18n';
 import { useSwipe } from '../hooks/useSwipe';
 import type { HowToPlayMarkers } from '../i18n/dictionary';
 
-type Step = {
-  n: number;
-  image: string;
-  text: ReactNode;
-};
+// 3 types de bulles : accueil (logo), étapes numérotées (illustration), fin (anneau de score).
+// `n` = numéro du sticker : les étapes vont de 1 à 4, la fin porte le 5, l'accueil n'en a pas.
+type Step =
+  | { kind: 'intro'; text: ReactNode }
+  | { kind: 'step'; n: number; image: string; text: ReactNode }
+  | { kind: 'outro'; n: number; text: ReactNode };
 
 const ACCENT = '#F5B800';
 const ACCENT_PAUSED = '#b8860b';
@@ -35,14 +39,217 @@ const MARKERS: HowToPlayMarkers = {
 };
 
 const SLIDE_DURATION = 7000;
-// Le step 3 a un texte plus long : on lui donne 1s de plus pour le lire.
+// Index dans la liste complète (intro = 0, étapes = 1..4, outro = 5) : les bulles
+// au texte plus long ont plus de temps de lecture.
 const STEP_DURATION_OVERRIDES: Record<number, number> = {
-  2: 9000,
+  0: 8000,
+  3: 8000,
+  5: 8000,
 };
 const getStepDuration = (i: number) => STEP_DURATION_OVERRIDES[i] ?? SLIDE_DURATION;
 
 const SLIDE_ANIM_MS = 600;
 const SLIDE_EASE = 'cubic-bezier(0.32, 0.72, 0, 1)';
+
+const ILLU_SIZE =
+  'w-[max(200px,min(280px,38dvh))] h-[max(200px,min(280px,38dvh))] md:w-[max(260px,min(370px,46dvh))] md:h-[max(260px,min(370px,46dvh))]';
+// L'anneau de score reste plus compact que les stickmen.
+const RING_SIZE =
+  'w-[max(140px,min(190px,26dvh))] h-[max(140px,min(190px,26dvh))] md:w-[max(180px,min(250px,34dvh))] md:h-[max(180px,min(250px,34dvh))]';
+
+const LOGO_BY_LOCALE = { fr: logoFr, en: logoEn } as Record<string, string>;
+
+// Bulle d'accueil : le logo (sans slogan, le texte le dit déjà) en gros.
+const LogoIllustration = () => {
+  const { locale, t } = useLocale();
+  return (
+    <img
+      src={LOGO_BY_LOCALE[locale] ?? logoFr}
+      alt={t.seo.logoAlt}
+      draggable={false}
+      className="w-[max(200px,min(260px,36dvh))] md:w-[max(260px,min(340px,44dvh))] h-auto object-contain [filter:drop-shadow(3px_4px_0_rgba(0,0,0,0.18))]"
+    />
+  );
+};
+
+// Confettis de la bulle d'accueil : FIXES (aucune animation propre, ils suivent juste
+// le pop de la bulle), disposés en gerbe qui jaillit du logo — chaque pièce est placée
+// sur un rayon partant du centre et orientée le long de ce rayon. Grosse gerbe en
+// haut, petite en bas (plus serrée et plus clairsemée : le texte est juste en dessous).
+// Couleurs = tokens, pas de hex.
+const CONFETTI_COLORS = [
+  'var(--color-success-400)',
+  'var(--color-warning-300)',
+  'var(--color-brand-400)',
+  'var(--color-premium-300)',
+  'var(--color-danger-400)',
+  'var(--color-brand-200)',
+];
+// Pseudo-aléatoire déterministe (pas de Math.random au render).
+const rand = (i: number, k: number) => {
+  const x = Math.sin(i * 127.1 + k * 311.7) * 43758.5453;
+  return x - Math.floor(x);
+};
+// Ellipse calée sur le logo (large et bas) : rayons en % de SA largeur / hauteur.
+const CONFETTI_RX = 58;
+const CONFETTI_RY_TOP = 95;
+const CONFETTI_RY_BOTTOM = 108;
+const CONFETTI_TOP_COUNT = 11;
+const CONFETTI_BOTTOM_COUNT = 4;
+// Éparpillement VERTICAL (sinon ça fait deux ovales bien rangés) : chaque pièce
+// s'éloigne ou se rapproche du logo en hauteur seulement (facteur [min, max] sur le
+// rayon vertical), sa position horizontale ne bouge pas. Plage plus courte en bas :
+// le texte est juste en dessous.
+const CONFETTI_SCATTER_Y_TOP: [number, number] = [0.85, 1.4];
+const CONFETTI_SCATTER_Y_BOTTOM: [number, number] = [0.95, 1.2];
+// Retouche à la main : facteur vertical imposé à certaines pièces du bas (clé = index
+// dans la gerbe du bas, 0 = la plus à droite) pour garder un confetti tout près du logo.
+const CONFETTI_BOTTOM_SCATTER_FIXED: Record<number, number> = { 1: 0.87, 2: 1.05 };
+const confettiPiece = (
+  i: number,
+  baseDeg: number,
+  rx: number,
+  ry: number,
+  [scatterMin, scatterMax]: [number, number],
+) => {
+  const deg = baseDeg + (rand(i, 1) - 0.5) * 10;
+  const angle = (deg * Math.PI) / 180;
+  const scatter = scatterMin + rand(i, 3) * (scatterMax - scatterMin);
+  const shape = i % 3; // 0 = bandelette, 1 = rectangle, 2 = rond
+  return {
+    left: 50 + Math.cos(angle) * rx,
+    top: 50 + Math.sin(angle) * ry * scatter,
+    // Orientée le long du rayon (bandelettes « tirées » hors du logo).
+    rot: deg + 90 + (rand(i, 2) - 0.5) * 30,
+    color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+    w: shape === 0 ? 4 : 8,
+    h: shape === 0 ? 16 : shape === 1 ? 11 : 8,
+    round: shape === 2,
+  };
+};
+const CONFETTI_PIECES = [
+  // Haut : éventail de 160° à 380°, flanc gauche -> haut -> flanc droit
+  // (0° = droite, y écran vers le bas).
+  ...Array.from({ length: CONFETTI_TOP_COUNT }, (_, i) => {
+    const deg = 160 + (i / (CONFETTI_TOP_COUNT - 1)) * 220;
+    const far = i % 2 ? 1.08 : 1; // deux « couronnes » pour casser la régularité
+    return confettiPiece(i, deg, CONFETTI_RX * far, CONFETTI_RY_TOP * far, CONFETTI_SCATTER_Y_TOP);
+  }),
+  // Bas : de 50° à 130°, entre les deux flancs, sans les toucher.
+  ...Array.from({ length: CONFETTI_BOTTOM_COUNT }, (_, j) => {
+    const i = CONFETTI_TOP_COUNT + j;
+    const deg = 50 + (j / (CONFETTI_BOTTOM_COUNT - 1)) * 80;
+    const far = j % 2 ? 0.9 : 1; // ici la 2e couronne est à l'intérieur
+    const fixed = CONFETTI_BOTTOM_SCATTER_FIXED[j];
+    return confettiPiece(
+      i,
+      deg,
+      CONFETTI_RX * far,
+      CONFETTI_RY_BOTTOM * far,
+      fixed !== undefined ? [fixed, fixed] : CONFETTI_SCATTER_Y_BOTTOM,
+    );
+  }),
+];
+const ConfettiBurst = () => (
+  <div aria-hidden className="absolute inset-0 pointer-events-none">
+    {CONFETTI_PIECES.map((c, i) => (
+      <span
+        key={i}
+        className="absolute block"
+        style={{
+          left: `${c.left}%`,
+          top: `${c.top}%`,
+          width: c.w,
+          height: c.h,
+          backgroundColor: c.color,
+          borderRadius: c.round ? 999 : 1.5,
+          transform: `translate(-50%, -50%) rotate(${c.rot}deg)`,
+          boxShadow: '1px 1.5px 0 rgba(0,0,0,0.18)',
+        }}
+      />
+    ))}
+  </div>
+);
+
+// Bulle de fin : anneau de score façon EndGame. Un seul arc qui progresse d'un trait
+// (couleur du palier en cours, comme VerdictRing) pendant que le % monte ; valeur
+// d'exemple fixe. Rejoue à chaque passage sur la bulle.
+// L'anneau part d'un score déjà entamé et monte jusqu'au score d'exemple.
+const RING_FROM_PCT = 30;
+const RING_PCT = 67;
+const RING_R = 90;
+const RING_C = 2 * Math.PI * RING_R;
+const RING_ANIM_MS = 2800;
+const RING_START_DELAY_MS = 400;
+const tierColorFor = (pct: number) =>
+  (PUBLIC_TIERS.find((t) => pct <= t.max) ?? PUBLIC_TIERS[PUBLIC_TIERS.length - 1]).color;
+
+const ScoreRingIllustration = ({ active }: { active: boolean }) => {
+  const [pct, setPct] = useState(RING_FROM_PCT);
+  useEffect(() => {
+    if (!active) {
+      setPct(RING_FROM_PCT);
+      return;
+    }
+    let raf = 0;
+    let startedAt = 0;
+    const tick = (now: number) => {
+      if (!startedAt) startedAt = now;
+      const p = Math.min(1, Math.max(0, (now - startedAt) / RING_ANIM_MS));
+      // ease-in-out sinus : démarrage et arrivée doux, montée régulière au milieu
+      setPct(RING_FROM_PCT + (RING_PCT - RING_FROM_PCT) * (0.5 - Math.cos(Math.PI * p) / 2));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    const to = window.setTimeout(() => {
+      raf = requestAnimationFrame(tick);
+    }, RING_START_DELAY_MS);
+    return () => {
+      window.clearTimeout(to);
+      cancelAnimationFrame(raf);
+    };
+  }, [active]);
+
+  const { t } = useLocale();
+  const shown = Math.round(pct);
+  return (
+    <div className="flex flex-col items-center gap-1">
+    <div className="relative" style={{ filter: 'drop-shadow(3px 4px 0 rgba(0,0,0,0.18))' }}>
+      <svg viewBox="0 0 240 240" aria-hidden className={`-rotate-90 ${RING_SIZE}`}>
+        <circle cx={120} cy={120} r={RING_R} fill="none" stroke="rgba(0,0,0,0.08)" strokeWidth={20} />
+        <circle
+          cx={120}
+          cy={120}
+          r={RING_R}
+          fill="none"
+          stroke={tierColorFor(pct)}
+          strokeWidth={20}
+          strokeLinecap="round"
+          strokeDasharray={`${(pct / 100) * RING_C} ${RING_C}`}
+        />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className="font-display font-bold text-gray-900 text-5xl md:text-6xl tabular-nums">{shown}%</span>
+      </div>
+    </div>
+    <p className="m-0 font-display font-semibold text-sm md:text-base text-gray-800">{t.howToPlay.ringLabel}</p>
+    </div>
+  );
+};
+
+// Pop de la bulle quand elle devient active (transition CSS one-shot, rejouée à
+// chaque passage) + léger float : seule animation idle de l'écran.
+const Pop = ({ active, children }: { active: boolean; children: ReactNode }) => (
+  <div
+    className="relative"
+    style={{
+      transform: active ? 'scale(1) rotate(0deg)' : 'scale(0.82) rotate(-6deg)',
+      opacity: active ? 1 : 0.4,
+      transition: 'transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease-out',
+    }}
+  >
+    <div className={active ? 'animate-float' : undefined}>{children}</div>
+  </div>
+);
 
 const Illustration = ({ image }: { image: string }) => (
   <div
@@ -64,7 +271,7 @@ const Illustration = ({ image }: { image: string }) => (
       alt=""
       aria-hidden
       draggable={false}
-      className="relative z-10 w-[max(200px,min(280px,38dvh))] h-[max(200px,min(280px,38dvh))] md:w-[max(260px,min(370px,46dvh))] md:h-[max(260px,min(370px,46dvh))] object-contain"
+      className={`relative z-10 ${ILLU_SIZE} object-contain`}
     />
   </div>
 );
@@ -72,13 +279,17 @@ const Illustration = ({ image }: { image: string }) => (
 const HowToPlayCarousel = () => {
   const { t } = useLocale();
   const STEPS = useMemo<Step[]>(
-    () =>
-      t.howToPlay.steps.map((render, i) => ({
+    () => [
+      { kind: 'intro', text: t.howToPlay.intro(MARKERS) },
+      ...t.howToPlay.steps.map((render, i): Step => ({
+        kind: 'step',
         n: i + 1,
         image: STEP_IMAGES[i],
         text: render(MARKERS),
       })),
-    [t.howToPlay.steps],
+      { kind: 'outro', n: t.howToPlay.steps.length + 1, text: t.howToPlay.outro(MARKERS) },
+    ],
+    [t.howToPlay],
   );
   const TRACK_SLIDES = useMemo<Step[]>(
     () => [STEPS[STEPS.length - 1], ...STEPS, STEPS[0]],
@@ -110,7 +321,7 @@ const HowToPlayCarousel = () => {
       setIsPaused(false);
       return;
     }
-    // Conserver la convention "3→0 = forward" et "0→3 = backward"
+    // Conserver la convention "dernière→0 = forward" et "0→dernière = backward"
     const forward = target > index || (index === STEPS.length - 1 && target === 0);
     let nextDisplay: number;
     if (forward && target < index) nextDisplay = STEPS.length; // ghost à droite
@@ -205,6 +416,9 @@ const HowToPlayCarousel = () => {
 
   // TRACK_SLIDES = [ghost-last, s0, s1, s2, s3, ghost-first]
   // displayIndex = -1 → position 0 (ghost-last), 0 → position 1 (s0), etc.
+  // Une slide du track (ghosts inclus) est active si elle correspond à l'index logique courant.
+  const isSlideActive = (trackI: number) =>
+    (((trackI - 1) % STEPS.length) + STEPS.length) % STEPS.length === index;
   const trackPosition = displayIndex + 1;
   const trackTransform = `translateX(calc(${-trackPosition * 100}% + ${dragX}px))`;
   const trackTransition = animate ? `transform ${SLIDE_ANIM_MS}ms ${SLIDE_EASE}` : 'none';
@@ -241,20 +455,30 @@ const HowToPlayCarousel = () => {
                   key={`ill-${i}`}
                   className="w-full flex-shrink-0 flex items-center justify-center"
                 >
-                  <Illustration image={s.image} />
+                  <Pop active={isSlideActive(i)}>
+                    {s.kind === 'intro' && (
+                      <div className="relative">
+                        <ConfettiBurst />
+                        <LogoIllustration />
+                      </div>
+                    )}
+                    {s.kind === 'step' && <Illustration image={s.image} />}
+                    {s.kind === 'outro' && <ScoreRingIllustration active={isSlideActive(i)} />}
+                  </Pop>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Numéro sticker - reste fixe, reflète l'index logique */}
+          {/* Numéro sticker - reste fixe, reflète l'index logique (0 = accueil). */}
           <div
             className="absolute -top-2 left-1 z-20 w-11 h-11 desktop-short:w-8 desktop-short:h-8 rounded-full flex items-center justify-center font-display font-bold text-xl desktop-short:text-base text-gray-900 border-[2.5px] border-black overflow-hidden"
             style={{
               backgroundColor: '#ffffff',
-              transform: `rotate(-8deg) scale(${isPaused ? 0.94 : 1})`,
+              transform: `rotate(-8deg) scale(${step.kind === 'intro' ? 0.6 : isPaused ? 0.94 : 1})`,
+              opacity: step.kind === 'intro' ? 0 : 1,
               boxShadow: '2px 2px 0 0 #000',
-              transition: 'transform 0.2s ease-out',
+              transition: 'transform 0.2s ease-out, opacity 0.2s ease-out',
             }}
           >
             <span
@@ -268,7 +492,7 @@ const HowToPlayCarousel = () => {
                 transition: 'background-color 0.2s ease-out',
               }}
             />
-            <span className="relative z-10">{step.n}</span>
+            <span className="relative z-10">{step.kind === 'intro' ? '' : step.n}</span>
           </div>
         </div>
       </div>
@@ -298,14 +522,14 @@ const HowToPlayCarousel = () => {
 
       {/* Stepper dots */}
       <div className="flex items-center gap-2 pt-1">
-        {STEPS.map((s, i) => {
+        {STEPS.map((step_i, i) => {
           const active = i === index;
           return (
             <button
-              key={s.n}
+              key={i}
               type="button"
               onClick={() => goTo(i)}
-              aria-label={t.howToPlay.goToStep(s.n)}
+              aria-label={step_i.kind === 'intro' ? t.howToPlay.ariaButton : t.howToPlay.goToStep(step_i.n)}
               className="cursor-pointer transition-all duration-200"
               style={{
                 width: active ? 28 : 10,

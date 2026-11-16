@@ -339,7 +339,13 @@ export interface Dictionary {
     ariaButton: string;
     firstTimeHint: string; // bulle sous le bouton au tout premier passage
     goToStep: (n: number) => string;
+    /** Bulle d'accueil (logo) : avant les étapes numérotées. */
+    intro: (m: HowToPlayMarkers) => ReactNode;
     steps: Array<(m: HowToPlayMarkers) => ReactNode>;
+    /** Bulle de fin (anneau de score) : après les étapes numérotées. */
+    outro: (m: HowToPlayMarkers) => ReactNode;
+    /** Légende sous l'anneau de score de la bulle de fin. */
+    ringLabel: string;
   };
 
   report: {
@@ -564,11 +570,26 @@ export interface Dictionary {
       writtenBy: string;
       authorCorrect: string;
       authorWrong: string;
+      /** Écran assombri du joueur dont la carte est la prochaine à révéler. */
+      spotlightNext: string;
+      /** Écran assombri du joueur dont la carte est comparée pendant une similarité. */
+      spotlightCompared: string;
     };
     similarity: {
-      promptPrefix: string;
-      promptMiddle: string;
-      promptSuffix: string;
+      /** Carte comparée posée devant un joueur (local) : « … sur l'écran de {nom} ? » (élision selon le nom). */
+      screenPrefix: (name: string) => string;
+      screenSuffix: string;
+      /** Partie à distance : « … la carte donnée à {nom} ? » */
+      remotePrefix: string;
+      remoteSuffix: string;
+      /** Le pilier a gardé la carte comparée pour lui (Devine ma réponse). */
+      leaderSelf: string;
+      /** La carte comparée n'a été donnée à personne. */
+      unassigned: string;
+      /** Comparaison introuvable (ne devrait pas arriver). */
+      fallback: string;
+      /** Réponse citée entre guillemets typographiques. */
+      quote: (answer: string) => string;
       yes: string;
       no: string;
       waitingLeader: string;

@@ -1,6 +1,7 @@
 import { GameMode, GAME_CONSTANTS } from '@onskone/shared';
 import type { GameSpeed } from '@onskone/shared';
 import type { StudioCrashTarget } from '../../utils/studioCrash';
+import { STUDIO_SCENARIOS, STUDIO_STOPS, findStudioScenario, type StudioStop } from '../../utils/studioScenarios';
 import { Layout, SlotConfig, SELECT_CLS } from './shared';
 
 // Variants compacts (locaux) pour la Toolbar, plus denses que le PILL_ICON
@@ -10,9 +11,17 @@ const COMPACT_ICON = `${COMPACT_PILL} w-6 h-6 flex items-center justify-center t
 const COMPACT_BTN = `${COMPACT_PILL} px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-white/70 hover:text-white`;
 const COMPACT_CLUSTER = 'flex items-center gap-1 bg-black/30 border border-white/[0.06] rounded-lg px-1.5 py-1';
 
+/** Vues du Studio : régie multi-joueurs, galerie de composants, aperçu d'écrans spéciaux. */
+export type StudioView = 'rigging' | 'gallery' | 'screens';
+const VIEWS: { id: StudioView; label: string }[] = [
+  { id: 'rigging', label: 'Régie' },
+  { id: 'gallery', label: 'Compos.' },
+  { id: 'screens', label: 'Écrans' },
+];
+
 interface ToolbarProps {
-  view: 'rigging' | 'gallery';
-  setView: (v: 'rigging' | 'gallery') => void;
+  view: StudioView;
+  setView: (v: StudioView) => void;
   slots: SlotConfig[];
   layout: Layout;
   setLayout: (l: Layout) => void;
@@ -37,6 +46,13 @@ interface ToolbarProps {
   onReloadAll: () => void;
   onStart: () => void;
   onReset: () => void;
+  /** Scénario de Régie ('' = partie libre) et point d'arrêt. */
+  scenarioId: string;
+  setScenarioId: (id: string) => void;
+  scenarioStop: StudioStop;
+  setScenarioStop: (stop: StudioStop) => void;
+  /** Les bots ont atteint le point d'arrêt : la main est au testeur. */
+  scenarioReached: boolean;
 }
 
 export const Toolbar = ({
@@ -48,7 +64,10 @@ export const Toolbar = ({
   onCrash,
   onAddSlot, onRemoveLastSlot, onToggleAllBots,
   onReloadAll, onStart, onReset,
-}: ToolbarProps) => (
+  scenarioId, setScenarioId, scenarioStop, setScenarioStop, scenarioReached,
+}: ToolbarProps) => {
+  const scenario = findStudioScenario(scenarioId);
+  return (
   <div className="sticky top-0 z-30 backdrop-blur-xl bg-[#0a0c12]/85 border-b border-white/[0.07]">
     <div className="px-3 py-2 flex flex-wrap items-center gap-1.5">
       <div className="flex items-center gap-2 ml-0.5">
@@ -60,29 +79,30 @@ export const Toolbar = ({
         </span>
       </div>
 
-      <button
-        type="button"
-        role="switch"
-        aria-checked={view === 'gallery'}
-        aria-label="Basculer entre Régie et Composants"
-        onClick={() => setView(view === 'rigging' ? 'gallery' : 'rigging')}
-        className="ml-1 relative grid grid-cols-2 rounded-md border border-white/10 bg-black/30 p-0.5 font-mono text-[10px] uppercase tracking-wider select-none cursor-pointer overflow-hidden hover:border-white/20 transition-colors"
+      <div
+        role="radiogroup"
+        aria-label="Vue du Studio"
+        className="ml-1 relative grid grid-cols-3 rounded-md border border-white/10 bg-black/30 p-0.5 font-mono text-[10px] uppercase tracking-wider select-none overflow-hidden hover:border-white/20 transition-colors"
       >
         <span
           aria-hidden
           className="pointer-events-none absolute top-0.5 bottom-0.5 left-0.5 rounded bg-white/[0.10] border border-white/[0.06] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)] transition-transform duration-300 ease-out"
           style={{
-            width: 'calc(50% - 2px)',
-            transform: view === 'gallery' ? 'translateX(100%)' : 'translateX(0)',
+            width: 'calc(33.333% - 1.33px)',
+            transform: `translateX(${VIEWS.findIndex((v) => v.id === view) * 100}%)`,
           }}
         />
-        <span
-          className={`pointer-events-none relative z-10 px-2 py-0.5 rounded transition-colors flex items-center justify-center text-center ${view === 'rigging' ? 'text-white' : 'text-white/45'}`}
-        >Régie</span>
-        <span
-          className={`pointer-events-none relative z-10 px-2 py-0.5 rounded transition-colors flex items-center justify-center text-center ${view === 'gallery' ? 'text-white' : 'text-white/45'}`}
-        >Compos.</span>
-      </button>
+        {VIEWS.map((v) => (
+          <button
+            key={v.id}
+            type="button"
+            role="radio"
+            aria-checked={view === v.id}
+            onClick={() => setView(v.id)}
+            className={`relative z-10 px-2 py-0.5 rounded transition-colors flex items-center justify-center text-center cursor-pointer ${view === v.id ? 'text-white' : 'text-white/45 hover:text-white/70'}`}
+          >{v.label}</button>
+        ))}
+      </div>
 
       <div className="flex-1 min-w-2" />
 
@@ -236,12 +256,62 @@ export const Toolbar = ({
       )}
     </div>
 
-    {view === 'rigging' && !running && (
-      <div className="px-4 pb-2.5 -mt-1">
-        <p className="font-mono text-[11px] text-white/35 tracking-wide">
-          <span className="text-amber-300/70">→</span> Configure les slots ci-dessous, puis <span className="text-amber-200">▶ Lancer</span>. Le slot 1 crée le lobby, les autres rejoignent automatiquement.
+    {view === 'rigging' && (
+      <div className="px-3 pb-2.5 -mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+        <div
+          className={COMPACT_CLUSTER}
+          title="Scénario : une vraie partie jouée par des bots scriptés (réponses et attributions préparées) jusqu'au point d'arrêt, puis la main est à toi."
+        >
+          <span className="font-mono text-[10px] uppercase tracking-wider text-white/40 pl-1">🎬 Scénario</span>
+          <select
+            value={scenarioId}
+            onChange={(e) => setScenarioId(e.target.value)}
+            disabled={running}
+            className={`${SELECT_CLS} !px-1.5 !py-0.5 !text-[10px] disabled:opacity-40 disabled:cursor-not-allowed`}
+          >
+            <option value="">Partie libre</option>
+            {STUDIO_SCENARIOS.map((sc) => <option key={sc.id} value={sc.id}>{sc.label}</option>)}
+          </select>
+          {scenario && (
+            <>
+              <span className="font-mono text-[10px] uppercase tracking-wider text-white/40 pl-1">⏸ Arrêt</span>
+              <select
+                value={scenarioStop}
+                onChange={(e) => setScenarioStop(e.target.value as StudioStop)}
+                disabled={running}
+                className={`${SELECT_CLS} !px-1.5 !py-0.5 !text-[10px] disabled:opacity-40 disabled:cursor-not-allowed`}
+              >
+                {scenario.stops.map((stop) => <option key={stop} value={stop}>{STUDIO_STOPS[stop]}</option>)}
+              </select>
+            </>
+          )}
+        </div>
+        <p className="font-mono text-[11px] text-white/40 tracking-wide flex-1 min-w-[16rem] leading-snug">
+          {!scenario ? (
+            !running && (
+              <>
+                <span className="text-amber-300/70">→</span> Configure les slots ci-dessous, puis <span className="text-amber-200">▶ Lancer</span>. Le slot 1 crée le lobby, les autres rejoignent automatiquement.
+              </>
+            )
+          ) : !running ? (
+            <>
+              <span className="text-amber-300/70">→</span> {scenario.description}{' '}
+              <span className="text-white/30">
+                ({scenario.players} joueurs, tous bots. A, B, C = non-piliers dans l'ordre des places, le pilier est tiré au hasard.)
+              </span>
+            </>
+          ) : scenarioReached ? (
+            <span className="text-emerald-300">
+              ⏸ Arrêt atteint ({STUDIO_STOPS[scenarioStop]}) : à toi de jouer. 🤖 pour laisser les bots continuer le script.
+            </span>
+          ) : (
+            <span className="text-violet-200">
+              ▶ Les bots jouent « {scenario.label} » jusqu'à : {STUDIO_STOPS[scenarioStop]}…
+            </span>
+          )}
         </p>
       </div>
     )}
   </div>
-);
+  );
+};

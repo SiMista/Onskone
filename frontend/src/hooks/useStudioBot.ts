@@ -1,7 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import socket from '../utils/socket';
-import { isStudioFrame, getStudioBotFlag, setStudioBotFlag } from '../utils/studioStorage';
-import { IGame, IPlayer, RoundPhase, GameCard } from '@onskone/shared';
+import {
+  isStudioFrame, studioSlotIndex, getStudioBotFlag, setStudioBotFlag,
+  getStudioScenarioRun, markStudioScenarioReached,
+} from '../utils/studioStorage';
+import {
+  STUDIO_STOPS, findStudioScenario, isPhaseStop, scenarioGuesses, scenarioRolePlayers,
+  type StudioScenario, type StudioStop,
+} from '../utils/studioScenarios';
+import { IGame, IPlayer, RoundPhase, GameCard, GAME_CONSTANTS } from '@onskone/shared';
 import type { ServerToClientEvents } from '@onskone/shared';
 
 // =====================================================================
@@ -29,14 +36,29 @@ const randomAnswer = () => {
 // module-level de `studio:setBot` (y compris hors /game).
 const readInitialBotFlag = (): boolean => getStudioBotFlag();
 
+/** Scénario de Régie en cours (cf. utils/studioScenarios.ts), null = bots aléatoires. */
+const currentScenario = (): { scenario: StudioScenario; stop: StudioStop; armed: boolean } | null => {
+  const run = getStudioScenarioRun();
+  const scenario = run ? findStudioScenario(run.id) : null;
+  if (!run || !scenario) return null;
+  const stop = (run.stop in STUDIO_STOPS ? run.stop : 'never') as StudioStop;
+  return { scenario, stop, armed: !run.reached && stop !== 'never' };
+};
+
+// Scénario : laisser le temps de voir chaque écran (overlay « qui a écrit ? », popup).
+const SCENARIO_REVEAL_STEP_MS = GAME_CONSTANTS.REVEAL_AUTHOR_OVERLAY_MS + 500;
+const SCENARIO_DECISION_DELAY_MS = 2500;
+
 interface UseStudioBotArgs {
   game: IGame | null;
   currentPlayer: IPlayer | null;
   players: IPlayer[];
   lobbyCode: string | null;
+  /** Ordre du reveal (tour de table) : le pilier bot révèle dans cet ordre, comme un humain. */
+  revealOrder?: readonly number[];
 }
 
-export function useStudioBot({ game, currentPlayer, players, lobbyCode }: UseStudioBotArgs) {
+export function useStudioBot({ game, currentPlayer, players, lobbyCode, revealOrder }: UseStudioBotArgs) {
   const enabledRef = useRef<boolean>(readInitialBotFlag());
   // Tracks which phase-actions have already been emitted, keyed by
   // `${roundNumber}:${phase}`. Reset on round change.
@@ -53,10 +75,22 @@ export function useStudioBot({ game, currentPlayer, players, lobbyCode }: UseStu
   const currentPlayerRef = useRef(currentPlayer);
   const playersRef = useRef(players);
   const lobbyCodeRef = useRef(lobbyCode);
+  const revealOrderRef = useRef<readonly number[]>(revealOrder ?? []);
+  revealOrderRef.current = revealOrder ?? [];
   useEffect(() => { gameRef.current = game; }, [game]);
   useEffect(() => { currentPlayerRef.current = currentPlayer; }, [currentPlayer]);
   useEffect(() => { playersRef.current = players; }, [players]);
   useEffect(() => { lobbyCodeRef.current = lobbyCode; }, [lobbyCode]);
+
+  // Point d'arrêt du scénario atteint ICI : ce bot s'arrête et prévient la Régie, qui
+  // l'annonce à toutes les iframes (`studio:scenarioReached`) : tout le monde rend la main.
+  const handOverRef = useRef((stop: StudioStop) => {
+    enabledRef.current = false;
+    markStudioScenarioReached();
+    try {
+      window.parent?.postMessage({ type: 'studio:scenarioReached', slot: studioSlotIndex, stop }, '*');
+    } catch { /* silent */ }
+  });
 
   // Listen for the live bot toggle from the studio parent.
   useEffect(() => {
@@ -81,6 +115,12 @@ export function useStudioBot({ game, currentPlayer, players, lobbyCode }: UseStu
           firedRef.current.clear();
           setBotWakeTick((t) => t + 1);
         }
+        return;
+      }
+
+      // Point d'arrêt atteint par un autre slot : on rend la main aussi.
+      if (data.type === 'studio:scenarioReached') {
+        enabledRef.current = false;
         return;
       }
 
@@ -141,13 +181,23 @@ export function useStudioBot({ game, currentPlayer, players, lobbyCode }: UseStu
       if (data.roundNumber !== round.roundNumber) return;
       const key = `${round.roundNumber}:submitGuesses`;
       if (firedRef.current.has(key)) return;
+      const sc = currentScenario();
+      if (sc?.armed && isPhaseStop(sc.stop, RoundPhase.GUESSING)) {
+        handOverRef.current(sc.stop);
+        return;
+      }
       firedRef.current.add(key);
-      const candidates = data.players.map((p) => p.id);
-      const shuffledCandidates = [...candidates].sort(() => Math.random() - 0.5);
-      const guesses: Record<string, string> = {};
-      data.answers.forEach((a, i) => {
-        guesses[a.id] = shuffledCandidates[i % shuffledCandidates.length];
-      });
+      let guesses: Record<string, string> = {};
+      if (sc) {
+        // Scénario : le pilier pose chaque carte où le script le dit (auteur retrouvé par le texte).
+        guesses = scenarioGuesses(sc.scenario, data.answers, scenarioRolePlayers(playersRef.current, round.leader.id), round.leader.id);
+      } else {
+        const candidates = data.players.map((p) => p.id);
+        const shuffledCandidates = [...candidates].sort(() => Math.random() - 0.5);
+        data.answers.forEach((a, i) => {
+          guesses[a.id] = shuffledCandidates[i % shuffledCandidates.length];
+        });
+      }
       setTimeout(() => {
         if (!enabledRef.current) return;
         socket.emit('submitGuesses', { lobbyCode: code, guesses });
@@ -185,6 +235,16 @@ export function useStudioBot({ game, currentPlayer, players, lobbyCode }: UseStu
     const isLeader = mainLeaderId === mainPlayerId;
     const isSubstitute = mainSubstituteId === mainPlayerId;
 
+    // Scénario de Régie : arrêt en arrivant dans la phase choisie, sinon réponses et
+    // choix scriptés par rôle (A, B, C… = non-piliers dans l'ordre des places).
+    const sc = currentScenario();
+    if (sc?.armed && isPhaseStop(sc.stop, phase)) {
+      handOverRef.current(sc.stop);
+      return;
+    }
+    const rolePlayers = mainLeaderId ? scenarioRolePlayers(playersRef.current, mainLeaderId) : [];
+    const myRole = rolePlayers.findIndex((p) => p.id === mainPlayerId);
+
     const schedule = (key: string, delay: number, fn: () => void) => {
       if (firedRef.current.has(key)) return;
       firedRef.current.add(key);
@@ -207,7 +267,8 @@ export function useStudioBot({ game, currentPlayer, players, lobbyCode }: UseStu
 
     // ----- SUBSTITUTE_SELECTION (leader) -----
     if (phase === RoundPhase.SUBSTITUTE_SELECTION && isLeader) {
-      const candidate = playersRef.current.find(
+      const scripted = sc?.scenario.substitute ? rolePlayers[sc.scenario.substitute.role] : undefined;
+      const candidate = scripted ?? playersRef.current.find(
         (p) => p.isActive && p.id !== mainPlayerId
       );
       if (!candidate) return;
@@ -230,7 +291,7 @@ export function useStudioBot({ game, currentPlayer, players, lobbyCode }: UseStu
         socket.emit('submitAnswer', {
           lobbyCode,
           playerId: mainPlayerId,
-          answer: randomAnswer(),
+          answer: (sc && myRole >= 0 ? sc.scenario.answers[myRole] : undefined) ?? randomAnswer(),
         });
       });
       return;
@@ -241,7 +302,7 @@ export function useStudioBot({ game, currentPlayer, players, lobbyCode }: UseStu
       schedule(`${mainRoundNumber}:submitSubstituteAnswer`, 500 + Math.random() * 600, () => {
         socket.emit('submitSubstituteAnswer', {
           lobbyCode,
-          answer: randomAnswer(),
+          answer: sc?.scenario.substitute?.answer ?? randomAnswer(),
         });
       });
       return;
@@ -272,8 +333,16 @@ export function useStudioBot({ game, currentPlayer, players, lobbyCode }: UseStu
       const totalAnswers =
         Object.keys(round.answers ?? {}).length +
         (round.guessMyAnswerMode && round.substituteAnswer ? 1 : 0);
+      // Tour de table (ordre fixé par le serveur), comme un pilier humain ; sinon dans
+      // l'ordre des réponses (serveur antérieur). Les « Personne » sont révélés d'office.
+      const order = revealOrderRef.current.length
+        ? [...revealOrderRef.current]
+        : Array.from({ length: totalAnswers }, (_, i) => i);
       const already = new Set(round.revealedIndices ?? []);
-      let idx = 0;
+      let pos = 0;
+      let decisions = 0;
+      // Scénario : rythme humain (chaque overlay « qui a écrit ? » se joue en entier).
+      const step = sc ? SCENARIO_REVEAL_STEP_MS : 900;
 
       const revealNext = () => {
         if (!enabledRef.current) return;
@@ -281,9 +350,35 @@ export function useStudioBot({ game, currentPlayer, players, lobbyCode }: UseStu
         const g = gameRef.current;
         if (!g?.currentRound || g.currentRound.roundNumber !== round.roundNumber) return;
         if (g.currentRound.phase !== RoundPhase.REVEAL) return;
+        const now = currentScenario();
 
-        while (idx < totalAnswers && already.has(idx)) idx++;
-        if (idx >= totalAnswers) {
+        // Similarité en attente : arrêt du scénario ici, ou décision (script, sinon au
+        // hasard) après un temps pour voir la popup et les écrans allumés. Sans
+        // décision, la carte suivante l'abandonnerait d'office.
+        const pending = g.currentRound.pendingSimilarityIndex;
+        if (pending != null) {
+          if (now?.armed && now.stop === 'similarity') {
+            handOverRef.current(now.stop);
+            return;
+          }
+          const scripted = now?.scenario.similarityDecisions?.[decisions];
+          decisions++;
+          const confirm = now ? (scripted ?? 'confirm') === 'confirm' : Math.random() < 0.5;
+          setTimeout(() => {
+            if (!enabledRef.current) return;
+            socket.emit(confirm ? 'confirmSimilarity' : 'dismissSimilarity', { lobbyCode, answerIndex: pending });
+            setTimeout(revealNext, now ? step : 1500);
+          }, now ? SCENARIO_DECISION_DELAY_MS : 0);
+          return;
+        }
+
+        const live = new Set(g.currentRound.revealedIndices ?? []);
+        while (pos < order.length && (already.has(order[pos]) || live.has(order[pos]))) pos++;
+        if (pos >= order.length) {
+          if (now?.armed && now.stop === 'roundEnd') {
+            handOverRef.current(now.stop);
+            return;
+          }
           setTimeout(() => {
             if (!enabledRef.current) return;
             const gg = gameRef.current;
@@ -292,13 +387,15 @@ export function useStudioBot({ game, currentPlayer, players, lobbyCode }: UseStu
           }, 800);
           return;
         }
+        const idx = order[pos++];
+        // À distance, les spectateurs suivent le curseur du pilier.
+        if (g.lobby?.gameMode === 'remote') socket.emit('advanceRevealCursor', { lobbyCode, nextIndex: idx });
         socket.emit('revealAnswer', { lobbyCode, answerIndex: idx });
         already.add(idx);
-        idx++;
-        setTimeout(revealNext, 900);
+        setTimeout(revealNext, step);
       };
 
-      setTimeout(revealNext, 900);
+      setTimeout(revealNext, sc ? 1500 : 900);
     }
     // NB: pas de `players` ici - on lit playersRef pour éviter qu'un update
     // serveur (très fréquent) ne re-déclenche l'effect en milieu de phase.

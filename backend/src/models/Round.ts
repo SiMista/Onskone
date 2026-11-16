@@ -43,6 +43,9 @@ export class Round implements IRound {
     revealedIndices: number[]; // Indices des réponses révélées en phase REVEAL
     revealOrder: number[]; // Ordre du reveal (tour de table), figé à l'entrée en REVEAL
     similarityCorrections: number[]; // Indices corrigés par similarité
+    // Similarité en attente de l'arbitrage du pilier (index de la carte jugée), null sinon.
+    // Gérée par sockets/similarityArbitration.ts ; survit à la reconnexion du pilier.
+    pendingSimilarityIndex: number | null;
     proposedCards: GameCard[]; // Les 3 cartes proposées au pilier pour la sélection
     shownGameCards: GameCard[]; // Cartes déjà montrées au pilier (pour éviter les doublons)
     // Pool GUESSING anonymisé : chaque réponse a un slot opaque + son auteur réel.
@@ -78,6 +81,7 @@ export class Round implements IRound {
         this.revealedIndices = [];
         this.revealOrder = [];
         this.similarityCorrections = [];
+        this.pendingSimilarityIndex = null;
         this.proposedCards = [];
         this.shownGameCards = [];
         this.answerSlots = [];

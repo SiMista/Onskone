@@ -1021,6 +1021,13 @@ button {
 .animate-card-soft-pulse {
   animation: card-soft-pulse 1.4s ease-in-out infinite;
 }
+/* Mouvements réduits : surbrillance jaune fixe au lieu du clignotement. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-card-soft-pulse {
+    animation: none;
+    background-color: var(--color-warning-200);
+  }
+}
 
 /* Wobble cartoon pour le timer en phase critique */
 @keyframes timer-wobble {

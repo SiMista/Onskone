@@ -63,6 +63,39 @@ export const setStudioBotFlag = (enabled: boolean): void => {
   } catch { /* silent */ }
 };
 
+// Scénario de Régie en cours pour CE slot (cf. utils/studioScenarios.ts).
+const SCENARIO_RUN_KEY = 'studioScenarioRun';
+
+export interface StudioScenarioRun {
+  id: string;
+  /** Point d'arrêt (StudioStop). */
+  stop: string;
+  /** Point d'arrêt déjà atteint : les bots ne s'arrêtent plus. */
+  reached: boolean;
+}
+
+function readScenarioRun(): StudioScenarioRun | null {
+  if (!isStudioFrame) return null;
+  try {
+    const raw = localStorage.getItem(`${PREFIX}${SCENARIO_RUN_KEY}`);
+    const run = raw ? JSON.parse(raw) : null;
+    return run && typeof run.id === 'string' ? run : null;
+  } catch { return null; }
+}
+
+/** Scénario de Régie de ce slot (null hors Studio ou partie libre). */
+export const getStudioScenarioRun = (): StudioScenarioRun | null => readScenarioRun();
+
+/** Point d'arrêt atteint : coupe le bot de ce slot et désarme l'arrêt. */
+export const markStudioScenarioReached = (): void => {
+  const run = readScenarioRun();
+  setStudioBotFlag(false);
+  if (!run || run.reached) return;
+  try {
+    localStorage.setItem(`${PREFIX}${SCENARIO_RUN_KEY}`, JSON.stringify({ ...run, reached: true }));
+  } catch { /* silent */ }
+};
+
 // Sync URL `?bot=1|0` to sessionStorage at module boot so that downstream
 // readers (Lobby auto-start, useStudioBot) see the flag immediately - even
 // before the parent's postMessage handshake or before Game.tsx mounts.
@@ -78,6 +111,29 @@ if (isStudioFrame && typeof window !== 'undefined') {
     if (e.origin !== window.location.origin) return;
     const data = e.data as { type?: unknown; enabled?: unknown } | null;
     if (data && data.type === 'studio:setBot') setStudioBotFlag(!!data.enabled);
+  });
+
+  // Scénario de Régie (`?studioScenario=…&studioStop=…`, posé au lancement) : gardé dans
+  // le stockage du slot (purgé à chaque lancement par la Régie), donc il survit aux
+  // navigations et au rechargement d'un slot sans repartir de zéro. Pas de paramètre =
+  // partie libre : on oublie tout scénario précédent.
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('studioScenario');
+    const stop = params.get('studioStop') ?? 'never';
+    const prev = readScenarioRun();
+    if (!id) localStorage.removeItem(`${PREFIX}${SCENARIO_RUN_KEY}`);
+    else if (!prev || prev.id !== id || prev.stop !== stop) {
+      localStorage.setItem(`${PREFIX}${SCENARIO_RUN_KEY}`, JSON.stringify({ id, stop, reached: false }));
+    }
+  } catch { /* silent */ }
+
+  // Point d'arrêt atteint (annoncé par la Régie à toutes les iframes) : plus de bot, et
+  // plus d'arrêt ensuite (rallumer les bots fait continuer le script sans re-stopper).
+  window.addEventListener('message', (e: MessageEvent) => {
+    if (e.origin !== window.location.origin) return;
+    const data = e.data as { type?: unknown } | null;
+    if (data && data.type === 'studio:scenarioReached') markStudioScenarioReached();
   });
 
   // Sync URL `?premium=1|0` into the slot's premium cache (même format que

@@ -8,12 +8,13 @@ import type { RevealCursorState } from '../../hooks/useRevealCursor';
 import PremiumName from '../PremiumName';
 import { hapticNextToReveal, NEXT_TO_REVEAL_BUZZ_MS, NEXT_TO_REVEAL_MAX_BUZZES } from '../../utils/haptics';
 import RevealAuthorOverlay from './RevealAuthorOverlay';
+import RevealSpotlight from './RevealSpotlight';
 
 /**
  * Vue REVEAL d'un joueur non-pilier en mode local : carte unique de la réponse
  * qui lui a été attribuée (ou état "pas de réponse attribuée"), avec stickman
- * et footer "Montre ton écran". Gère ses propres animations (pulse "à révéler",
- * pop de révélation, bascule rouge quand aucune réponse n'est attribuée).
+ * et footer "Montre ton écran". Gère ses propres animations (projecteur "à révéler"
+ * ou "comparée", pop de révélation, bascule rouge quand aucune réponse n'est attribuée).
  */
 const RevealPlayerLocalView = ({
   reveal,
@@ -83,9 +84,23 @@ const RevealPlayerLocalView = ({
     : revealedIndices;
   const isNextToReveal = !myRevealed && myIndex >= 0 && myIndex === findFirstDisplayable(0, effectiveRevealed);
 
+  // Similarité en attente : si la carte posée devant moi est celle que le pilier
+  // compare, mon téléphone s'allume aussi (la table regarde les deux écrans).
+  const isComparedCard = myIndex >= 0 && similarityModal?.comparison?.comparedIndex === myIndex;
+  // Projecteur (écran assombri, réponse en grand qui clignote) : jamais par-dessus
+  // l'overlay « qui a écrit ? », qui garde la main pendant ses 3,5 s.
+  const spotlight: 'next' | 'compared' | null = authorOverlay
+    ? null
+    : isNextToReveal ? 'next' : isComparedCard ? 'compared' : null;
+
+  // Un coup de vibration quand le pilier se met à comparer avec ma carte.
+  useEffect(() => {
+    if (isComparedCard) hapticNextToReveal();
+  }, [isComparedCard]);
+
   // Vibration quand ma carte devient la prochaine à révéler (même moment que le
-  // pulse), puis rappel périodique tant qu'elle l'est : le téléphone est posé sur la
-  // table, il faut que son propriétaire le sente avant que le pilier n'arrive dessus.
+  // projecteur), puis rappel périodique tant qu'elle l'est : le téléphone est posé sur
+  // la table, il faut que son propriétaire le sente avant que le pilier n'arrive dessus.
   useEffect(() => {
     if (!isNextToReveal) return;
     hapticNextToReveal();
@@ -119,6 +134,12 @@ const RevealPlayerLocalView = ({
   if (myResult) {
     return (
       <>
+      {spotlight && (
+        <RevealSpotlight
+          answer={myResult.answer}
+          label={spotlight === 'next' ? t.phases.reveal.spotlightNext : t.phases.reveal.spotlightCompared}
+        />
+      )}
       {authorOverlay && myResult.playerName && (
         <RevealAuthorOverlay
           name={myResult.playerName}
@@ -132,7 +153,10 @@ const RevealPlayerLocalView = ({
         result={myResult}
         revealed={myRevealed}
         correct={myCorrect}
-        cardClassName={`${isNextToReveal ? 'animate-card-soft-pulse' : ''} ${revealAnimating ? 'animate-reveal-pop' : ''}`}
+        // Le clignotement « à révéler » est porté par le projecteur (une seule animation
+        // infinie par écran) : la carte en dessous ne clignote plus, le bonhomme se fige.
+        cardClassName={revealAnimating ? 'animate-reveal-pop' : ''}
+        stickmanFloat={!spotlight}
         footer={
           <>
             {waitingFooter && <div className="shrink-0 mt-1">{waitingFooter}</div>}

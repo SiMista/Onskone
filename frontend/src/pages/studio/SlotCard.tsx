@@ -321,6 +321,12 @@ export const SlotCard = ({
           />
           <span className="uppercase tracking-wider text-white/60">{phaseLabel}</span>
         </span>
+        {running && state?.role && (
+          <>
+            <span className="text-white/15">·</span>
+            <span className="text-violet-200" title="Rôle dans le scénario de Régie">🎬 {state.role}</span>
+          </>
+        )}
         <span className="text-white/15">·</span>
         <span>{preset.short}</span>
         <span className="text-white/15">·</span>

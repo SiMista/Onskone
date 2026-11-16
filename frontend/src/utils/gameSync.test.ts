@@ -23,6 +23,8 @@ const round = (roundNumber: number, phase: RoundPhase, revealedIndices: number[]
   guessMyAnswerMode: false,
   substitutePlayerId: null,
   substituteAnswer: null,
+  pendingSimilarityIndex: null,
+  similarityCorrections: [],
 } as IRound);
 
 const game = (currentRound: IRound | null, status: GameStatus = GameStatus.IN_PROGRESS): IGame => ({

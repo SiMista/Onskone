@@ -295,11 +295,16 @@ export interface ServerToClientEvents {
     roundNumber: number;
   }) => void;
 
-  /** Similarité détectée entre deux réponses (après reveal d'une réponse incorrecte) */
+  /**
+   * Similarité détectée : la carte révélée (mal attribuée) ressemble à la vraie réponse
+   * du joueur désigné (cf. `getSimilarityComparison`). Ouvre l'arbitrage du pilier
+   * (`IRound.pendingSimilarityIndex`).
+   */
   similarityDetected: (data: {
     answerIndex: number; // Index de la réponse révélée
     guessedPlayerName: string; // Nom du joueur que le pilier avait deviné
     playerName: string; // Nom du vrai auteur de la réponse révélée
+    roundNumber: number;
   }) => void;
 
   /** Confirmation de similarité par le pilier (score corrigé) */
@@ -307,11 +312,13 @@ export interface ServerToClientEvents {
     answerIndex: number;
     correctedScore: number; // Nouveau score du pilier pour ce round
     leaderboard: LeaderboardEntry[];
+    roundNumber: number;
   }) => void;
 
-  /** Similarité rejetée par le pilier */
+  /** Similarité rejetée par le pilier (ou abandonnée : il est passé à la carte suivante) */
   similarityDismissed: (data: {
     answerIndex: number;
+    roundNumber: number;
   }) => void;
 
   /** Le pilier avance au prochain joueur dans la révélation (mode remote) */

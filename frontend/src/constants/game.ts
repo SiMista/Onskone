@@ -242,11 +242,11 @@ export const getCategoryIcon = (category: string): string =>
 
 // « Idéal pour » de chaque catégorie : types de groupe conseillés, en pastilles sous sa
 // description (libellés : t.decks.audiences). Catégorie absente : rien d'affiché.
-export type AudienceKey = 'newGroup' | 'coworkers' | 'closeFriends' | 'family' | 'diggers';
+export type AudienceKey = 'newGroup' | 'coworkers' | 'closeFriends' | 'apero' | 'family' | 'longtimeFriends';
 export const CATEGORY_AUDIENCES: Record<string, AudienceKey[]> = {
   ICEBREAKERS: ['newGroup', 'coworkers'],
-  FUN: ['closeFriends'],
-  DEEP: ['family', 'diggers'],
+  FUN: ['closeFriends', 'apero'],
+  DEEP: ['family', 'longtimeFriends'],
 };
 
 // Dégradé diagonal (clair → couleur → foncé) des blocs illustrés d'une catégorie.

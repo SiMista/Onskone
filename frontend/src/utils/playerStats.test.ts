@@ -32,6 +32,8 @@ function makeRound(overrides: Partial<IRound> = {}): IRound {
     scores: {},
     revealedIndices: [],
     guessMyAnswerMode: false,
+    pendingSimilarityIndex: null,
+    similarityCorrections: [],
     ...overrides,
   };
 }

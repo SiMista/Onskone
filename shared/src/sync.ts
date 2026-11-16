@@ -21,6 +21,10 @@ export interface GameFingerprintSource {
     phase: RoundPhase;
     /** Réponses déjà révélées en REVEAL : un spectateur qui les a ratées doit resynchroniser. */
     revealedIndices?: number[];
+    /** Similarité en attente d'arbitrage : une popup / un écran allumé raté se rattrape. */
+    pendingSimilarityIndex?: number | null;
+    /** Similarités validées : une carte restée rouge à tort se rattrape. */
+    similarityCorrections?: number[];
   } | null;
 }
 
@@ -29,7 +33,14 @@ export const gameFingerprint = (game: GameFingerprintSource | null | undefined):
   if (!game) return 'none';
   const round = game.currentRound;
   if (!round) return `${game.status}:-`;
-  return `${game.status}:${round.roundNumber}:${round.phase}:${round.revealedIndices?.length ?? 0}`;
+  const base = `${game.status}:${round.roundNumber}:${round.phase}:${round.revealedIndices?.length ?? 0}`;
+  // Le segment similarité n'existe que lorsqu'il y a quelque chose à arbitrer ou d'arbitré :
+  // le reste du temps l'empreinte reste celle des versions précédentes (une vieille appli
+  // n'est resynchronisée que pendant un reveal à similarité, sans effet visible).
+  const pending = round.pendingSimilarityIndex ?? null;
+  const corrected = round.similarityCorrections?.length ?? 0;
+  if (pending === null && corrected === 0) return base;
+  return `${base}:sim${pending ?? '-'}/${corrected}`;
 };
 
 /** Période des `syncCheck` envoyés par un client en partie. */

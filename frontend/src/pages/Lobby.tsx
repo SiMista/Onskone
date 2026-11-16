@@ -31,7 +31,8 @@ import { useToast } from '../components/Toast';
 import { useLocale } from '../i18n';
 import { GAME_CONFIG, DEBUG_GAME_SPEED, estimateGameMinutes } from '../constants/game';
 import { STICKER_FILTER } from '../constants/icons';
-import { studioStorage, isStudioFrame, getStudioBotFlag } from '../utils/studioStorage';
+import { studioStorage, isStudioFrame, getStudioBotFlag, getStudioScenarioRun } from '../utils/studioStorage';
+import { findStudioScenario } from '../utils/studioScenarios';
 import { getCurrentPlayerFromStorage, storeReconnectToken, getReconnectToken } from '../utils/playerHelpers';
 
 // En dessous, « Démarrer » demande confirmation (la partie reste jouable dès MIN_PLAYERS).
@@ -188,19 +189,32 @@ const Lobby = () => {
 
     // Studio : si cette iframe est le bot hôte ET qu'on a atteint le nombre de
     // joueurs recommandé, démarre la partie automatiquement. Réarmé une fois par visite du lobby.
+    // Scénario de Régie : attend TOUS ses joueurs (sinon un slot arrivé en retard
+    // trouverait la partie lancée) et pose ses réglages (« Devine ma réponse ») avant.
     const studioAutoStartedRef = useRef(false);
     useEffect(() => {
         if (!isStudioFrame) return;
         if (studioAutoStartedRef.current) return;
         if (!getStudioBotFlag()) return;
         if (!currentPlayer?.isHost) return;
+        const run = getStudioScenarioRun();
+        const scenario = run ? findStudioScenario(run.id) : null;
         const activeCount = players.filter(p => p.isActive).length;
-        if (activeCount < GAME_CONFIG.MIN_PLAYERS) return;
+        if (activeCount < Math.max(GAME_CONFIG.MIN_PLAYERS, scenario?.players ?? 0)) return;
+        if (scenario && !!scenario.guessMyAnswerMode !== guessMyAnswerMode) {
+            socket.emit('updateGuessMyAnswerMode', { lobbyCode: lobbyCode!, guessMyAnswerMode: !!scenario.guessMyAnswerMode });
+            return; // attend la maj d'état, réessaiera au prochain run de l'effet
+        }
         // Il faut un thème sélectionné : si rien n'est présélectionné, on prend
-        // le premier thème disponible du catalogue.
+        // le premier thème du catalogue que l'hôte a le droit de cocher. Un thème
+        // premium serait refusé par le serveur (hôte non premium) et l'auto-départ
+        // tournerait en rond (cas réel : un thème premium ajouté en tête de catalogue).
         if (Object.values(selectedDecks).reduce((acc, arr) => acc + arr.length, 0) === 0) {
-            const firstCat = Object.keys(decksCatalog)[0];
-            const firstCode = firstCat ? decksCatalog[firstCat]?.[0] : undefined;
+            const hostPremium = !!currentPlayer?.isPremium;
+            const pick = Object.entries(decksCatalog).flatMap(([cat, codes]) => codes.map(code => ({ cat, code })))
+                .find(({ cat, code }) => hostPremium || !decksCatalogMeta[cat]?.find(t => t.code === code)?.premium);
+            const firstCat = pick?.cat;
+            const firstCode = pick?.code;
             if (firstCat && firstCode) {
                 socket.emit('updateSelectedDecks', {
                     lobbyCode: lobbyCode!,
@@ -215,7 +229,7 @@ const Lobby = () => {
             socket.emit('startGame', { lobbyCode: lobbyCode! });
         }, 1200);
         return () => clearTimeout(timer);
-    }, [currentPlayer?.isHost, players, selectedDecks, decksCatalog, lobbyCode]);
+    }, [currentPlayer?.isHost, currentPlayer?.isPremium, players, selectedDecks, decksCatalog, decksCatalogMeta, lobbyCode, guessMyAnswerMode]);
 
     // Mode debug (DEV + `?debug=1`) : l'hôte pousse UNE fois la vitesse de debug
     // (phases d'1h) au lobby, pour pouvoir bosser sur un écran sans se faire couper.

@@ -17,7 +17,10 @@ import RevealPilierLocalView from './reveal/RevealPilierLocalView';
  *  3. pilier + carte "deviné"  → RevealPilierGuessedView (mode "Devine ma réponse")
  *  4. sinon (pilier local)     → RevealPilierLocalView
  */
-const RevealPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, isGameOver, results, revealOrder, serverRevealedIndices, gameMode }: {
+const RevealPhase = ({
+  lobbyCode, isLeader, leader, currentPlayerId, isGameOver, results, revealOrder, serverRevealedIndices,
+  pendingSimilarityIndex, similarityCorrections, gameMode,
+}: {
   lobbyCode: string;
   isLeader: boolean;
   leader: Pick<IPlayer, 'id' | 'name' | 'avatarId' | 'isPremium'>;
@@ -27,10 +30,14 @@ const RevealPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, isGameOver,
   /** Ordre du reveal (indices de results, tour de table), fixé par le serveur. */
   revealOrder: readonly number[];
   serverRevealedIndices?: number[];
+  /** Similarité en attente d'arbitrage (index de la carte jugée), état serveur. */
+  pendingSimilarityIndex: number | null;
+  /** Cartes validées « même réponse » par le pilier, état serveur. */
+  similarityCorrections: readonly number[];
   gameMode: GameMode;
 }) => {
   const leaderId = leader.id;
-  const reveal = useRevealCursor(
+  const reveal = useRevealCursor({
     results,
     leaderId,
     isLeader,
@@ -38,7 +45,9 @@ const RevealPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, isGameOver,
     lobbyCode,
     revealOrder,
     serverRevealedIndices,
-  );
+    pendingSimilarityIndex,
+    similarityCorrections,
+  });
 
   // 1) VUE JOUEUR (non-pilier) en mode local - carte unique de la réponse attribuée
   if (!isLeader && gameMode === 'local') {
@@ -74,6 +83,7 @@ const RevealPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, isGameOver,
     return (
       <RevealPilierGuessedView
         reveal={reveal}
+        leaderId={leaderId}
         isGameOver={isGameOver}
       />
     );
@@ -83,6 +93,7 @@ const RevealPhase = ({ lobbyCode, isLeader, leader, currentPlayerId, isGameOver,
   return (
     <RevealPilierLocalView
       reveal={reveal}
+      leaderId={leaderId}
       isLeader={isLeader}
       isGameOver={isGameOver}
     />

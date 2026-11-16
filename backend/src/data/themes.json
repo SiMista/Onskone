@@ -1,4 +1,14 @@
 {
+  "WYD": {
+    "category": "ICEBREAKERS",
+    "emoji": "fluent-emoji-flat:performing-arts",
+    "premium": true,
+    "labels": { "fr": "MISE EN SITUATION", "en": "WWYD?" },
+    "descriptions": {
+      "fr": "On te met dans un contexte, et on juge ce que ça donne !",
+      "en": "What would you do ? We put you in a scenario, show us how you act."
+    }
+  },
   "ABOUT_YOU": {
     "category": "ICEBREAKERS",
     "emoji": "fluent-emoji-flat:dna",
@@ -35,16 +45,6 @@
       "en": "What you listen to, what you watch, what it says about you!"
     }
   },
-  "WYD": {
-    "category": "ICEBREAKERS",
-    "emoji": "fluent-emoji-flat:performing-arts",
-    "premium": true,
-    "labels": { "fr": "MISE EN SITUATION", "en": "WWYD?" },
-    "descriptions": {
-      "fr": "On te met dans un contexte, et on juge ce que ça donne !",
-      "en": "What would you do ? We put you in a scenario, show us how you act."
-    }
-  },
   "TRAVEL": {
     "category": "ICEBREAKERS",
     "emoji": "fluent-emoji-flat:globe-showing-europe-africa",
@@ -52,6 +52,28 @@
     "descriptions": {
       "fr": "Où est-ce que tu vas ? Où est-ce que tu sors ?",
       "en": "Where do you travel? Where do you go out?"
+    }
+  },
+  "SPICY": {
+    "category": "FUN",
+    "emoji": "fluent-emoji-flat:no-one-under-eighteen",
+    "mature": true,
+    "premium": true,
+    "labels": { "fr": "HOT", "en": "SPICYYY" },
+    "descriptions": {
+      "fr": "En dehors des regards ! Pour les adultes uniquement.",
+      "en": "Adults only. No audience, no filter, no limits."
+    }
+  },
+  "HOT_TAKES": {
+    "category": "FUN",
+    "emoji": "fluent-emoji-flat:speaking-head",
+    "mature": true,
+    "premium": true,
+    "labels": { "fr": "MES OPINIONS", "en": "HOT TAKES" },
+    "descriptions": {
+      "fr": "Ce que tu penses à voix haute, sur plusieurs sujets... particuliers !",
+      "en": "Your opinions, out loud, on everything, on some ... subjects."
     }
   },
   "BETWEEN_US": {
@@ -81,26 +103,14 @@
       "en": "Sharp opinions, awkward confessions. We see you."
     }
   },
-  "SPICY": {
-    "category": "FUN",
-    "emoji": "fluent-emoji-flat:no-one-under-eighteen",
-    "mature": true,
+  "AMBITIONS": {
+    "category": "DEEP",
+    "emoji": "fluent-emoji-flat:rocket",
     "premium": true,
-    "labels": { "fr": "HOT", "en": "SPICYYY" },
+    "labels": { "fr": "AMBITIONS", "en": "AMBITIONS" },
     "descriptions": {
-      "fr": "En dehors des regards ! Pour les adultes uniquement.",
-      "en": "Adults only. No audience, no filter, no limits."
-    }
-  },
-  "HOT_TAKES": {
-    "category": "FUN",
-    "emoji": "fluent-emoji-flat:speaking-head",
-    "mature": true,
-    "premium": true,
-    "labels": { "fr": "MES OPINIONS", "en": "HOT TAKES" },
-    "descriptions": {
-      "fr": "Ce que tu penses à voix haute, sur plusieurs sujets... particuliers !",
-      "en": "Your opinions, out loud, on everything, on some ... subjects."
+      "fr": "Tes rêves, ton argent, ta vision ! Que veux-tu vraiment construire ?",
+      "en": "Your dreams, your money, your vision. What are you actually building?"
     }
   },
   "THROWBACK": {
@@ -110,16 +120,6 @@
     "descriptions": {
       "fr": "L'enfance, les regrets, les tournants. Tout ce qui t'a construit !",
       "en": "Childhood, regrets, turning points. Everything that made you who you are."
-    }
-  },
-  "AMBITIONS": {
-    "category": "DEEP",
-    "emoji": "fluent-emoji-flat:rocket",
-    "premium": true,
-    "labels": { "fr": "AMBITIONS", "en": "AMBITIONS" },
-    "descriptions": {
-      "fr": "Tes rêves, ton argent, ta vision ! Que veux-tu vraiment construire ?",
-      "en": "Your dreams, your money, your vision. What are you actually building?"
     }
   },
   "FEELINGS": {

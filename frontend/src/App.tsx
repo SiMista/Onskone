@@ -25,6 +25,7 @@ const Game = lazy(() => import('./pages/Game'));
 const EndGame = lazy(() => import('./pages/EndGame'));
 const Admin = lazy(() => import('./pages/Admin'));
 const Studio = lazy(() => import('./pages/Studio'));
+const ScreenPreview = lazy(() => import('./pages/studio/ScreenPreview'));
 
 /* Le body est figé en h:100dvh + overflow:hidden côté CSS. Studio (multi-iframes
    dev only) et Admin ont besoin de scroll global - on libère les contraintes
@@ -171,6 +172,8 @@ const App = () => {
               <Route path="/cgu" element={<Legal kind="cgu" />} />
               <Route path="/support" element={<Legal kind="support" />} />
               {import.meta.env.DEV && <Route path="/studio" element={<Studio />} />}
+              {/* Téléphone de l'aperçu d'écrans du Studio (iframe, sans serveur : cf. utils/socket.ts). */}
+              {import.meta.env.DEV && <Route path="/studio/screen" element={<ScreenPreview />} />}
               <Route
                 path="/admin"
                 element={

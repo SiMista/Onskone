@@ -8,15 +8,17 @@ import PremiumName from '../PremiumName';
 
 /**
  * Vue pilier en mode local : une seule carte à la fois (avatar du joueur ciblé),
- * la popover de similarité flottant sous la carte, et le bouton d'action unique
- * (RevealPrimaryButton). Affichée au pilier hors carte "pilier deviné".
+ * et le bouton d'action unique (RevealPrimaryButton), remplacé par la popup Oui/Non
+ * pendant l'arbitrage d'une similarité. Affichée au pilier hors carte "pilier deviné".
  */
 const RevealPilierLocalView = ({
   reveal,
+  leaderId,
   isLeader,
   isGameOver,
 }: {
   reveal: RevealCursorState;
+  leaderId: string;
   isLeader: boolean;
   isGameOver: boolean;
 }) => {
@@ -78,18 +80,6 @@ const RevealPilierLocalView = ({
                   </div>
                 </div>
 
-                {/* Popover similarité - flotte sous la carte, ne pousse rien */}
-                {showSimilarity && (
-                  <div className="absolute left-1/2 -translate-x-1/2 top-full z-30 pt-2">
-                    <SimilarityPopover
-                      guessedPlayerName={similarityModal!.guessedPlayerName}
-                      playerName={similarityModal!.playerName}
-                      isLeader={true}
-                      onConfirm={onConfirmSimilarity}
-                      onDismiss={onDismissSimilarity}
-                    />
-                  </div>
-                )}
               </div>
 
               <div className="text-center px-2 mt-1 md:mt-2 short-landscape:mt-0">
@@ -102,14 +92,29 @@ const RevealPilierLocalView = ({
               </div>
             </div>
 
-            {/* Bouton unique, toujours au même endroit : Révéler → Suivant → Manche suivante */}
-            {isLeader && (
+            {/* Bouton unique, toujours au même endroit : Révéler → Suivant → Manche suivante.
+                Pendant l'arbitrage d'une similarité, Oui/Non prennent sa place (sous le pouce
+                du pilier, dans le flux) : flottante sous la carte, la popup sortait de l'écran
+                en paysage et la table restait bloquée. */}
+            {isLeader && (showSimilarity ? (
+              <SimilarityPopover
+                comparison={similarityModal!.comparison}
+                leaderId={leaderId}
+                remote={false}
+                // L'écran du pilier ne montre que l'avatar du désigné : on cite aussi sa carte.
+                cardAnswer={currentResult.answer}
+                isLeader={true}
+                arrow={false}
+                onConfirm={onConfirmSimilarity}
+                onDismiss={onDismissSimilarity}
+              />
+            ) : (
               <RevealPrimaryButton
                 reveal={reveal}
                 isGameOver={isGameOver}
                 revealLabel={t.phases.reveal.revealOnPhone}
               />
-            )}
+            ))}
           </>
         ) : (
           <div className="flex flex-col items-center gap-2 md:gap-3">

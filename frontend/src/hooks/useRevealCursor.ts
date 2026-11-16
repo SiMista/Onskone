@@ -1,13 +1,32 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import socket from '../utils/socket';
 import { useSocketEvent } from './useSocketEvent';
-import { GAME_CONSTANTS, isPersonneGuess, type RevealResult, type GameMode } from '@onskone/shared';
+import {
+  GAME_CONSTANTS, isPersonneGuess, getSimilarityComparison,
+  type RevealResult, type GameMode, type SimilarityComparison,
+} from '@onskone/shared';
 
-/** État de similarité en attente de décision du pilier. */
+/** Similarité en attente de l'arbitrage du pilier (état serveur). */
 export interface SimilarityModalState {
+  /** Carte jugée (index de results) : celle posée devant le joueur désigné. */
   answerIndex: number;
-  guessedPlayerName: string;
-  playerName: string;
+  /** Carte à laquelle elle se compare et téléphone où elle est posée (null : introuvable). */
+  comparison: SimilarityComparison | null;
+}
+
+interface UseRevealCursorArgs {
+  results: RevealResult[];
+  leaderId: string;
+  isLeader: boolean;
+  gameMode: GameMode;
+  lobbyCode: string;
+  /** Ordre du reveal (indices de results), fixé par le serveur, le même pour tous. */
+  revealOrder: readonly number[];
+  serverRevealedIndices?: number[];
+  /** Similarité en attente (index de la carte jugée), état serveur suivi par useGameState. */
+  pendingSimilarityIndex: number | null;
+  /** Cartes validées « même réponse », état serveur suivi par useGameState. */
+  similarityCorrections: readonly number[];
 }
 
 /**
@@ -20,31 +39,42 @@ export interface SimilarityModalState {
  *  - l'ordre d'affichage `revealOrder`, fixé par le serveur (tour de table : la
  *    carte de chaque joueur place par place en partant de la gauche du pilier ;
  *    "pilier deviné" en dernier ; sans les ciblages "Personne", révélés en silence) ;
- *  - les 5 listeners socket (answerRevealed, similarityDetected/Confirmed/Dismissed,
- *    revealCursorAdvanced) abonnés via useSocketEvent (ref-based, nettoyage ciblé,
- *    pas de réabonnement à chaque render — chaque handler voit l'état courant) ;
+ *  - l'arbitrage des similarités, DÉDUIT de l'état serveur (`pendingSimilarityIndex`,
+ *    `similarityCorrections`) : rien de local à perdre, une reconnexion ou une
+ *    resynchro rouvre la popup telle que le serveur l'attend ;
+ *  - les listeners socket du curseur (answerRevealed, revealCursorAdvanced) abonnés
+ *    via useSocketEvent (ref-based, pas de réabonnement à chaque render) ;
  *  - l'auto-reveal silencieux des réponses "Personne" (pilier uniquement) ;
  *  - le délai d'apparition du bouton "Suivant" (1s après révélation).
  */
-export function useRevealCursor(
-  results: RevealResult[],
-  leaderId: string,
-  isLeader: boolean,
-  gameMode: GameMode,
-  lobbyCode: string,
-  /** Ordre du reveal (indices de results), fixé par le serveur, le même pour tous. */
-  revealOrder: readonly number[],
-  serverRevealedIndices?: number[],
-) {
+export function useRevealCursor({
+  results,
+  leaderId,
+  isLeader,
+  gameMode,
+  lobbyCode,
+  revealOrder,
+  serverRevealedIndices,
+  pendingSimilarityIndex,
+  similarityCorrections,
+}: UseRevealCursorArgs) {
   const [revealedIndices, setRevealedIndices] = useState<Set<number>>(
     new Set(serverRevealedIndices || []),
   );
-  const [similarityModal, setSimilarityModal] = useState<SimilarityModalState | null>(null);
-  const [correctedIndices, setCorrectedIndices] = useState<Set<number>>(new Set());
+
+  // Arbitrage en cours, avec ce à quoi la carte se compare (texte de la popup,
+  // téléphone mis en avant). Même calcul que le serveur (getSimilarityComparison).
+  const similarityModal = useMemo<SimilarityModalState | null>(
+    () => pendingSimilarityIndex === null
+      ? null
+      : { answerIndex: pendingSimilarityIndex, comparison: getSimilarityComparison(results, pendingSimilarityIndex) },
+    [pendingSimilarityIndex, results],
+  );
+  const correctedIndices = useMemo(() => new Set(similarityCorrections), [similarityCorrections]);
 
   // Convergence vers le serveur : une resynchronisation (`gameState`) peut apporter
   // des révélations ratées (évènements perdus). On les intègre sans remonter le
-  // composant, pour ne pas perdre le curseur, la modale de similarité ni les animations.
+  // composant, pour ne pas perdre le curseur ni les animations.
   useEffect(() => {
     if (!serverRevealedIndices?.length) return;
     setRevealedIndices(prev => {
@@ -78,10 +108,24 @@ export function useRevealCursor(
     [revealOrder],
   );
 
+  // Une similarité en attente au montage (reconnexion pendant la popup) : on reprend
+  // sur la carte jugée, déjà révélée, plutôt que de sauter à la suivante.
   const [pilierCursor, setPilierCursor] = useState<number>(() =>
-    findFirstDisplayable(0, new Set(serverRevealedIndices || [])),
+    pendingSimilarityIndex ?? findFirstDisplayable(0, new Set(serverRevealedIndices || [])),
   );
-  const [pilierPhase, setPilierPhase] = useState<'prompt' | 'revealed'>('prompt');
+  const [pilierPhase, setPilierPhase] = useState<'prompt' | 'revealed'>(
+    () => (pendingSimilarityIndex === null ? 'prompt' : 'revealed'),
+  );
+
+  // Similarité en attente : tout le monde regarde la carte jugée. Un curseur parti
+  // ailleurs (resynchro, évènement raté) y revient, sinon la popup resterait invisible
+  // et le bouton « Révéler » bloqué.
+  useEffect(() => {
+    if (pendingSimilarityIndex === null) return;
+    setPilierCursor(pendingSimilarityIndex);
+    setPilierPhase('revealed');
+  }, [pendingSimilarityIndex]);
+
   // Le bouton "Suivant" apparaît 1s après la révélation
   const [showNextButton, setShowNextButton] = useState(false);
 
@@ -100,30 +144,12 @@ export function useRevealCursor(
     return () => clearTimeout(t);
   }, [pilierPhase, pilierCursor, similarityPending, gameMode]);
 
-  // Listeners socket du reveal. Chaque handler voit toujours l'état courant sans
-  // réabonner : useSocketEvent rafraîchit le handler via une ref à chaque render.
+  // Listeners socket du reveal (la similarité est suivie par useGameState). Chaque
+  // handler voit toujours l'état courant sans réabonner : useSocketEvent rafraîchit
+  // le handler via une ref à chaque render.
   useSocketEvent('answerRevealed', (data: { revealedIndex: number; revealedIndices: number[] }) => {
     setRevealedIndices(new Set(data.revealedIndices));
     setPilierPhase(prev => (data.revealedIndex === pilierCursor ? 'revealed' : prev));
-  });
-
-  useSocketEvent('similarityDetected', (data: { answerIndex: number; guessedPlayerName: string; playerName: string }) => {
-    setSimilarityModal({
-      answerIndex: data.answerIndex,
-      guessedPlayerName: data.guessedPlayerName,
-      playerName: data.playerName,
-    });
-  });
-
-  // Le payload porte aussi correctedScore/leaderboard, ignorés ici : le score
-  // corrigé est répercuté via gameStateUpdate, on ne lit que answerIndex.
-  useSocketEvent('similarityConfirmed', (data: { answerIndex: number }) => {
-    setCorrectedIndices(prev => new Set(prev).add(data.answerIndex));
-    setSimilarityModal(null);
-  });
-
-  useSocketEvent('similarityDismissed', () => {
-    setSimilarityModal(null);
   });
 
   useSocketEvent('revealCursorAdvanced', (data: { nextIndex: number }) => {

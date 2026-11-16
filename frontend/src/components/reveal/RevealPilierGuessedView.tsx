@@ -14,9 +14,11 @@ import type { RevealCursorState } from '../../hooks/useRevealCursor';
  */
 const RevealPilierGuessedView = ({
   reveal,
+  leaderId,
   isGameOver,
 }: {
   reveal: RevealCursorState;
+  leaderId: string;
   isGameOver: boolean;
 }) => {
   const {
@@ -70,23 +72,28 @@ const RevealPilierGuessedView = ({
       rowKey={`pilier-big-${pilierCursor}`}
       footer={
         <>
-          {showSimilarity && (
+          {/* Pendant l'arbitrage, Oui/Non prennent la place du bouton (grisé de toute
+              façon) : empilés, popup + bouton écrasaient la carte en paysage. */}
+          {showSimilarity ? (
             <SimilarityPopover
-              guessedPlayerName={similarityModal!.guessedPlayerName}
-              playerName={similarityModal!.playerName}
+              comparison={similarityModal!.comparison}
+              leaderId={leaderId}
+              remote={false}
               isLeader={true}
               onConfirm={onConfirmSimilarity}
               onDismiss={onDismissSimilarity}
             />
+          ) : (
+            <>
+              <p className="text-gray-700 text-xs md:text-sm mt-1">
+                {displayablePosition}/{displayableTotal}
+              </p>
+
+              <div className="mt-3 md:mt-4 flex items-center justify-center">
+                <RevealPrimaryButton reveal={reveal} isGameOver={isGameOver} />
+              </div>
+            </>
           )}
-
-          <p className="text-gray-700 text-xs md:text-sm mt-1">
-            {displayablePosition}/{displayableTotal}
-          </p>
-
-          <div className="mt-3 md:mt-4 flex items-center justify-center">
-            <RevealPrimaryButton reveal={reveal} isGameOver={isGameOver} />
-          </div>
         </>
       }
     />

@@ -33,9 +33,19 @@ export const announcedVersion = (): string => getTestVersionOverride() || ACTUAL
 let announcedPremium = false;
 export const setAnnouncedPremium = (v: boolean): void => { announcedPremium = v; };
 
+/**
+ * Aperçu d'écrans du Studio (DEV uniquement, route /studio/screen) : les écrans y sont
+ * rendus avec des données figées, SANS serveur. La socket ne se connecte jamais et
+ * chaque envoi est relayé au Studio parent (journal + faux serveur de l'aperçu) au
+ * lieu de partir sur le réseau. Toujours faux en prod (éliminé au build).
+ */
+export const IS_SCREEN_PREVIEW = import.meta.env.DEV
+  && typeof window !== 'undefined'
+  && window.location.pathname.startsWith('/studio/screen');
+
 // Socket typé avec les événements serveur→client et client→serveur
 const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(SERVER_URL, {
-  autoConnect: true,
+  autoConnect: !IS_SCREEN_PREVIEW,
   reconnection: true,
   reconnectionDelay: 1000,
   reconnectionDelayMax: 5000,
@@ -47,5 +57,23 @@ const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(SERVER_URL
   // Fonction => réévaluée à chaque (re)connexion (prend en compte l'override de test).
   auth: (cb) => cb({ appVersion: announcedVersion(), premium: announcedPremium, versionPolicy: CLIENT_VERSION_POLICY }),
 });
+
+if (IS_SCREEN_PREVIEW) {
+  // Aucune (re)connexion possible depuis l'aperçu, même demandée (premium, retour au premier plan…).
+  socket.connect = () => socket;
+  socket.emit = ((event: string, ...args: unknown[]) => {
+    window.parent?.postMessage({ type: 'studio:screenEmit', event, payload: args[0] }, '*');
+    return socket;
+  }) as unknown as typeof socket.emit;
+}
+
+/**
+ * Aperçu d'écrans du Studio : simule un évènement diffusé par le serveur en appelant
+ * directement les écouteurs abonnés (la socket de l'aperçu n'est jamais connectée).
+ */
+export const dispatchPreviewServerEvent = (event: string, data: unknown): void => {
+  if (!IS_SCREEN_PREVIEW) return;
+  (socket.listeners(event as never) as ((d: unknown) => void)[]).forEach((fn) => fn(data));
+};
 
 export default socket;

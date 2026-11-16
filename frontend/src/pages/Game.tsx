@@ -1,6 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Icon } from '../components/Icon';
 import QuestionSelection from '../components/QuestionSelection';
 import AnswerPhase from '../components/AnswerPhase';
 import GuessingPhase from '../components/GuessingPhase';
@@ -16,7 +15,7 @@ import { StudioCrashProbe, clearStudioCrash } from '../utils/studioCrash';
 import SubstituteSelection from '../components/SubstituteSelection';
 import SubstituteAnsweringPhase from '../components/SubstituteAnsweringPhase';
 import HourglassTimer from '../components/HourglassTimer';
-import ScreenLogo from '../components/ScreenLogo';
+import GameFrame, { PHASE_AREA_CLASS } from '../components/GameFrame';
 import Spinner from '../components/Spinner';
 import Button from '../components/Button';
 import { getPhaseDuration } from '../constants/game';
@@ -25,11 +24,14 @@ import { useLeavePrompt, useKeepAwake, useSocketEvent } from '../hooks';
 import { useGameState } from '../hooks/useGameState';
 import { useLobbyExitEvents } from '../hooks/useLobbyExitEvents';
 import { RoundPhase, GameStatus, GAME_CONSTANTS, type TimerStatePayload } from '@onskone/shared';
-import { isStudioFrame, studioSlotIndex } from '../utils/studioStorage';
+import { isStudioFrame, studioSlotIndex, getStudioScenarioRun } from '../utils/studioStorage';
+import { findStudioScenario, scenarioRoleLabel } from '../utils/studioScenarios';
 import { useStudioBot } from '../hooks/useStudioBot';
 import { useLocale } from '../i18n';
 import { storeLastGame } from '../utils/playerHelpers';
-import { TOP_CONTROLS_CLASS } from '../utils/appBanner';
+
+/** Liste vide stable (identité constante : pas de recalcul du reveal à chaque rendu). */
+const NO_CORRECTIONS: readonly number[] = [];
 
 const GamePage: React.FC = () => {
   const { lobbyCode } = useParams<{ lobbyCode: string }>();
@@ -114,7 +116,15 @@ const GamePage: React.FC = () => {
   }, [lobbyCode, currentPlayer?.id, game?.status, game?.currentRound?.roundNumber]);
 
   // Studio : automatisation des bots + postMessage d'état pour surligner le pilier dans le parent.
-  useStudioBot({ game, currentPlayer, players, lobbyCode: lobbyCode ?? null });
+  useStudioBot({ game, currentPlayer, players, lobbyCode: lobbyCode ?? null, revealOrder });
+  // Rôle de ce slot dans le scénario de Régie (« Pilier », « A · Pizza »), affiché sur sa carte.
+  const studioRunId = isStudioFrame ? getStudioScenarioRun()?.id : undefined;
+  const studioLeaderId = game?.currentRound?.leader.id;
+  const studioRole = useMemo(() => {
+    const scenario = findStudioScenario(studioRunId);
+    if (!scenario || !studioLeaderId || !currentPlayer?.id) return null;
+    return scenarioRoleLabel(scenario, players, studioLeaderId, currentPlayer.id);
+  }, [studioRunId, studioLeaderId, currentPlayer?.id, players]);
   useEffect(() => {
     if (!isStudioFrame) return;
     if (typeof window === 'undefined' || window.parent === window) return;
@@ -126,6 +136,7 @@ const GamePage: React.FC = () => {
         currentPlayerId: currentPlayer?.id ?? null,
         phase: game?.currentRound?.phase ?? null,
         substitutePlayerId: game?.currentRound?.substitutePlayerId ?? null,
+        role: studioRole,
       }, '*');
     } catch { /* silent */ }
   }, [
@@ -133,6 +144,7 @@ const GamePage: React.FC = () => {
     game?.currentRound?.phase,
     game?.currentRound?.substitutePlayerId,
     currentPlayer?.id,
+    studioRole,
   ]);
 
   // Si le joueur est kické pendant la partie ou si le lobby ferme : toast + retour
@@ -263,6 +275,10 @@ const GamePage: React.FC = () => {
             // État serveur des révélations (suivi via answerRevealed + resync) : le
             // composant s'y aligne sans être remonté.
             serverRevealedIndices={game.currentRound.revealedIndices ?? reconnectionData?.revealedIndices}
+            // Arbitrage des similarités, suivi de la même façon (absent face à un
+            // serveur antérieur : aucune similarité, le reveal se déroule normalement).
+            pendingSimilarityIndex={game.currentRound.pendingSimilarityIndex ?? null}
+            similarityCorrections={game.currentRound.similarityCorrections ?? NO_CORRECTIONS}
             gameMode={gameMode}
           />
         );
@@ -273,93 +289,72 @@ const GamePage: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col items-center justify-center overflow-hidden px-2 tablet:px-0 safe-pt relative">
-      {/* Studio : crash simulé HORS boundary local -> écran global (AppErrorBoundary). */}
-      <StudioCrashProbe target="global" crashKey={screenKey} />
-      <ScreenLogo />
-      {/* Overlays purement décoratifs : s'ils plantent on les saute, la phase dessous continue. */}
-      {showGuessingIntro && (
-        <SectionErrorBoundary name="game.guessingIntro" fallback="silent">
-          <GuessingIntroOverlay isLeader={isLeader} />
-        </SectionErrorBoundary>
-      )}
-      {showQuestionSelectionIntro && (
-        <SectionErrorBoundary name="game.questionSelectionIntro" fallback="silent">
-          <QuestionSelectionIntroOverlay guessMyAnswerMode={!!game?.currentRound?.guessMyAnswerMode} />
-        </SectionErrorBoundary>
-      )}
-      {/* Réglages flottants en haut à droite (hors de la carte), comme sur l'accueil. */}
-      <div className={`absolute ${TOP_CONTROLS_CLASS} right-3 z-30 safe-pt transition-[top,translate] duration-200 short-landscape:top-1.5 short-landscape:[&_button]:!text-gray-600 short-landscape:[&_button]:hover:!bg-black/5`}>
+    <GameFrame
+      overlays={
+        <>
+          {/* Studio : crash simulé HORS boundary local -> écran global (AppErrorBoundary). */}
+          <StudioCrashProbe target="global" crashKey={screenKey} />
+          {/* Overlays purement décoratifs : s'ils plantent on les saute, la phase dessous continue. */}
+          {showGuessingIntro && (
+            <SectionErrorBoundary name="game.guessingIntro" fallback="silent">
+              <GuessingIntroOverlay isLeader={isLeader} />
+            </SectionErrorBoundary>
+          )}
+          {showQuestionSelectionIntro && (
+            <SectionErrorBoundary name="game.questionSelectionIntro" fallback="silent">
+              <QuestionSelectionIntroOverlay guessMyAnswerMode={!!game?.currentRound?.guessMyAnswerMode} />
+            </SectionErrorBoundary>
+          )}
+        </>
+      }
+      settings={
         <SettingsButton
           contentLocale={game?.lobby?.locale}
           lobbyCode={lobbyCode}
         />
-      </div>
-      {/* Main game area - sized to content, centré dans la fenêtre. La carte
-          interne a son propre cap dvh pour scroller si la phase dépasse.
-          Erreurs et notifs sont remontées via le Toast global (haut centré). */}
-      <div
-        className={`w-full max-w-4xl max-h-full min-h-0 mx-auto px-2 pt-14 tablet:pt-4 short-landscape:pt-1 flex flex-col safe-pb`}
-      >
-        <div className="min-h-0 max-h-[80dvh] phone-landscape:max-h-none phone-landscape:h-[90dvh] short-landscape:h-[calc(100dvh-0.5rem)] bg-white rounded-xl px-2 py-5 tablet:px-4 tablet:py-7 phone-landscape:!p-2 phone-landscape:tablet:!p-4 short-landscape:!p-1.5 flex flex-col overflow-hidden card-paper stack-shadow">
-          {/* Game info header : round + host à gauche, sablier à droite */}
-          <div className="shrink-0 flex items-center justify-between gap-3 mb-2 tablet:mb-4 pb-2 tablet:pb-3 short-landscape:mb-1 short-landscape:pb-1 short-landscape:pr-10 border-b-[2.5px] border-dashed border-black/30">
-            <div className="flex items-center gap-1.5 flex-wrap text-gray-800 text-left">
-              <span className="text-xs tablet:text-sm font-display font-bold tracking-wide">
-                Round {game?.currentRound?.roundNumber || 0}<span className="text-gray-500">/{game?.totalRounds ?? players.length}</span>
-              </span>
-              <span className="text-gray-400">•</span>
-              <Icon icon="fluent-emoji-flat:crown" width="1.1em" height="1.1em" aria-hidden />
-              <span className="text-xs tablet:text-sm font-display font-semibold tracking-wide truncate max-w-[140px] tablet:max-w-[220px]">
-                {game?.currentRound?.leader.name || '...'}
-              </span>
-            </div>
-            {(() => {
-              const phase = game?.currentRound?.phase;
-              const phaseDuration =
-                phase && phase !== RoundPhase.REVEAL
-                  ? getPhaseDuration(phase, game?.lobby?.gameSpeed ?? GAME_CONSTANTS.GAME_SPEED_DEFAULT, players.length)
-                  : null;
-              // Placeholder de la largeur réelle du sablier (size="sm") pour éviter
-              // qu'il y ait un grand vide à droite du header en phase REVEAL (sans
-              // timer). Sinon en paysage phone la zone faisait 56px alors que le
-              // sablier ne fait que 24px → décalage visuel marqué entre phases.
-              if (!phase || phaseDuration === null) return <div className="w-[24px] tablet:w-14" aria-hidden />;
-              return (
-                <SectionErrorBoundary name="game.timer" fallback="silent" resetKeys={[game?.currentRound?.roundNumber, phase]}>
-                  <StudioCrashProbe target="timer" crashKey={screenKey} />
-                  <HourglassTimer
-                    key={`top-timer-${game?.currentRound?.roundNumber}-${phase}`}
-                    duration={phaseDuration}
-                    phase={phase}
-                    lobbyCode={lobbyCode}
-                    size="sm"
-                  />
-                </SectionErrorBoundary>
-              );
-            })()}
-          </div>
-
-          {/* syncEpoch : une resynchronisation qui change l'écran remonte la phase
-              (les composants ne lisent les données de reconnexion qu'au montage). */}
-          <SectionErrorBoundary
-            name="game.phase"
-            fallback="card"
-            resetKeys={[game?.currentRound?.roundNumber, game?.currentRound?.phase, syncEpoch]}
-            onRetry={() => { clearStudioCrash(); retrySync(); }}
-          >
-            <div
-              key={`${game?.currentRound?.roundNumber ?? 0}-${game?.currentRound?.phase ?? 'none'}-${syncEpoch}`}
-              className="flex-1 min-h-0 flex flex-col overflow-y-auto overscroll-contain no-scrollbar animate-phase-enter"
-            >
-              <StudioCrashProbe target="phase" crashKey={screenKey} />
-              {renderPhase()}
-            </div>
+      }
+      roundNumber={game?.currentRound?.roundNumber || 0}
+      totalRounds={game?.totalRounds ?? players.length}
+      leaderName={game?.currentRound?.leader.name || '...'}
+      timer={(() => {
+        const phase = game?.currentRound?.phase;
+        const phaseDuration =
+          phase && phase !== RoundPhase.REVEAL
+            ? getPhaseDuration(phase, game?.lobby?.gameSpeed ?? GAME_CONSTANTS.GAME_SPEED_DEFAULT, players.length)
+            : null;
+        // Pas de timer (REVEAL) : GameFrame pose un placeholder de la largeur du sablier.
+        if (!phase || phaseDuration === null) return null;
+        return (
+          <SectionErrorBoundary name="game.timer" fallback="silent" resetKeys={[game?.currentRound?.roundNumber, phase]}>
+            <StudioCrashProbe target="timer" crashKey={screenKey} />
+            <HourglassTimer
+              key={`top-timer-${game?.currentRound?.roundNumber}-${phase}`}
+              duration={phaseDuration}
+              phase={phase}
+              lobbyCode={lobbyCode}
+              size="sm"
+            />
           </SectionErrorBoundary>
+        );
+      })()}
+    >
+      {/* syncEpoch : une resynchronisation qui change l'écran remonte la phase
+          (les composants ne lisent les données de reconnexion qu'au montage). */}
+      <SectionErrorBoundary
+        name="game.phase"
+        fallback="card"
+        resetKeys={[game?.currentRound?.roundNumber, game?.currentRound?.phase, syncEpoch]}
+        onRetry={() => { clearStudioCrash(); retrySync(); }}
+      >
+        <div
+          key={`${game?.currentRound?.roundNumber ?? 0}-${game?.currentRound?.phase ?? 'none'}-${syncEpoch}`}
+          className={`${PHASE_AREA_CLASS} animate-phase-enter`}
+        >
+          <StudioCrashProbe target="phase" crashKey={screenKey} />
+          {renderPhase()}
         </div>
-      </div>
-
-    </div>
+      </SectionErrorBoundary>
+    </GameFrame>
   );
 };
 

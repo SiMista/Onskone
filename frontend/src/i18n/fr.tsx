@@ -352,6 +352,12 @@ export const fr: Dictionary = {
     ariaButton: 'Comment jouer',
     firstTimeHint: 'Nouveau joueur ? Toutes les règles ici !',
     goToStep: (n) => `Aller à l'étape ${n}`,
+    ringLabel: 'Score de connaissance',
+    intro: () => (
+      <>
+        Bienvenue dans <b>Onskoné</b>, le jeu <b>collaboratif</b> qui teste si tu connais bien tes proches ! Retrouvez ensemble les réponses de chacun.
+      </>
+    ),
     steps: [
       ({ Pilier }) => (
         <>
@@ -374,6 +380,11 @@ export const fr: Dictionary = {
         </>
       ),
     ],
+    outro: ({ Joueurs }) => (
+      <>
+        Chaque manche rapporte des points au {Joueurs('groupe')}. À la fin, on a le score final. <b>Alors, Onskoné ?</b>
+      </>
+    ),
   },
 
   report: {
@@ -666,8 +677,9 @@ export const fr: Dictionary = {
       newGroup: 'Nouveau groupe',
       coworkers: 'Collègues',
       closeFriends: 'Bons amis',
+      apero: 'Apéro',
       family: 'Famille',
-      diggers: 'Groupe qui veut creuser',
+      longtimeFriends: 'Amis de longue date',
     },
   },
 
@@ -826,11 +838,19 @@ export const fr: Dictionary = {
       writtenBy: 'Écrit par',
       authorCorrect: 'Bien deviné !',
       authorWrong: 'Raté !',
+      spotlightNext: 'À toi ! Montre ton écran',
+      spotlightCompared: 'Le pilier compare avec ta carte !',
     },
     similarity: {
-      promptPrefix: '',
-      promptMiddle: 'a la même réponse que',
-      promptSuffix: ", c'est la même ?",
+      // « d'Alice », « de Bob » : élision devant une voyelle.
+      screenPrefix: (name) => (/^[aeiouàâäéèêëîïôöùûü]/i.test(name) ? "Même réponse que sur l'écran d'" : "Même réponse que sur l'écran de "),
+      screenSuffix: '\u00a0?',
+      remotePrefix: 'Même réponse que la carte donnée à ',
+      remoteSuffix: '\u00a0?',
+      leaderSelf: "Même réponse que la carte que tu t'es donnée\u00a0?",
+      unassigned: 'Même réponse que celle-ci\u00a0?',
+      fallback: "C'est la même réponse\u00a0?",
+      quote: (answer) => `« ${answer} »`,
       yes: 'Oui',
       no: 'Non',
       waitingLeader: 'En attente du pilier...',

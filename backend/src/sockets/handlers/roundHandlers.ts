@@ -4,11 +4,10 @@ import {
 } from '../../data/questionsRepository.js';
 import { Round } from '../../models/Round';
 import type { ReconnectionData } from '@onskone/shared';
-import { RoundPhase, ERROR_CODES, isNoResponse, gameFingerprint } from '@onskone/shared';
+import { RoundPhase, ERROR_CODES, isNoResponse, isPersonneGuess, gameFingerprint } from '@onskone/shared';
 import { validateAnswer, validatePlayerId, sanitizeInput } from '../../utils/validation.js';
 import { rateLimiters } from '../../utils/rateLimiter.js';
 import { errMessage } from '../../utils/helpers.js';
-import { isSimilarPair } from '../../utils/similarity.js';
 import logger from '../../utils/logger.js';
 import { recordCardsShown, recordQuestionPicked } from '../../utils/deckStats.js';
 import {
@@ -34,6 +33,7 @@ import {
     withLeaderGuards,
 } from './context.js';
 import { reconnectPlayerSlot, tokenMatches, revokeClaimIfProvenOwner } from './reconnection.js';
+import { onCardRevealed, resolveSimilarity } from '../similarityArbitration.js';
 
 /**
  * Tolérance pour un `submitAnswer` arrivé juste après la bascule de phase. Couvre
@@ -971,30 +971,32 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
                 return; // Déjà révélé, ignorer silencieusement
             }
 
-            // Ajouter l'index aux révélations
-            currentRound.revealedIndices.push(data.answerIndex);
-
-            // Détecter la similarité AVANT d'émettre answerRevealed afin que le
-            // client traite la similarité en premier (sinon la carte du joueur
-            // s'allume brièvement et perd son clignotement avant que le modal
-            // n'apparaisse).
-            let similarityPayload: { answerIndex: number; guessedPlayerName: string; playerName: string } | null = null;
             const results = buildRevealResults(lobby, currentRound);
             const result = results[data.answerIndex];
-            if (result && !result.correct) {
-                const guessedPlayerAnswer = results.find(r => r.playerId === result.guessedPlayerId)?.answer;
-                // isSimilarPair = gardes NO_RESPONSE_PREFIX + areAnswersSimilar (cf. confirmSimilarity).
-                if (guessedPlayerAnswer && isSimilarPair(result.answer, guessedPlayerAnswer)) {
-                    similarityPayload = {
+            const roundNumber = currentRound.roundNumber;
+
+            // Les ciblages "Personne" sont révélés en silence (souvent d'office par le
+            // client) : ils ne touchent pas à une similarité en attente.
+            if (result && isPersonneGuess(result)) {
+                currentRound.revealedIndices.push(data.answerIndex);
+            } else {
+                const { dropped, opened } = onCardRevealed(currentRound, results, data.answerIndex);
+                currentRound.revealedIndices.push(data.answerIndex);
+                if (dropped !== null) {
+                    io.to(data.lobbyCode).emit('similarityDismissed', { answerIndex: dropped, roundNumber });
+                }
+                // Détecter la similarité AVANT d'émettre answerRevealed afin que le
+                // client traite la similarité en premier (sinon la carte du joueur
+                // s'allume brièvement et perd son clignotement avant que la popup
+                // n'apparaisse).
+                if (opened && result) {
+                    io.to(data.lobbyCode).emit('similarityDetected', {
                         answerIndex: data.answerIndex,
                         guessedPlayerName: result.guessedPlayerName,
-                        playerName: result.playerName
-                    };
+                        playerName: result.playerName,
+                        roundNumber,
+                    });
                 }
-            }
-
-            if (similarityPayload) {
-                io.to(data.lobbyCode).emit('similarityDetected', similarityPayload);
             }
 
             io.to(data.lobbyCode).emit('answerRevealed', {
@@ -1028,77 +1030,79 @@ export function registerRoundHandlers(socket: AppSocket, ctx: HandlerContext): v
         });
     });
 
-    // Confirm Similarity (Le pilier confirme que deux réponses similaires sont identiques)
-    socket.on('confirmSimilarity', (data: { lobbyCode: string; answerIndex: number }) => {
-        withLeaderGuards(socket, data, {
-            limiter: rateLimiters.gameAction,
-            requireLeaderAction: 'confirmer la similarité',
-        }, ({ game, round: currentRound }, data) => {
-            // Vérifier que c'est la phase REVEAL
-            if (currentRound.phase !== RoundPhase.REVEAL) {
-                socket.emit('error', { message: 'Action non autorisée en dehors de la phase de révélation.', code: ERROR_CODES.WRONG_PHASE });
-                return;
-            }
+    // Arbitrage d'une similarité par le pilier (Oui = même réponse, Non = rejet).
+    // Ne s'applique qu'à la similarité réellement en attente côté serveur (cf.
+    // similarityArbitration) ; une décision périmée renvoie l'état complet au pilier,
+    // dont la popup se recale sur la vérité.
+    const decideSimilarity = (event: 'confirmSimilarity' | 'dismissSimilarity', accepted: boolean) => {
+        socket.on(event, (data: { lobbyCode: string; answerIndex: number }) => {
+            withLeaderGuards(socket, data, {
+                limiter: rateLimiters.gameAction,
+                requireLeaderAction: accepted ? 'confirmer la similarité' : 'rejeter la similarité',
+                requirePhase: RoundPhase.REVEAL,
+            }, ({ lobby, game, round: currentRound }, data) => {
+                if (typeof data.answerIndex !== 'number' || !Number.isInteger(data.answerIndex)) return;
+                const roundNumber = currentRound.roundNumber;
 
-            // Vérifier que l'index a été révélé
-            if (!currentRound.revealedIndices?.includes(data.answerIndex)) {
-                socket.emit('error', { message: 'Cette réponse n\'a pas encore été révélée.', code: ERROR_CODES.WRONG_PHASE });
-                return;
-            }
+                // SÉCURITÉ : ne pas faire confiance au client. La similarité est
+                // revérifiée côté serveur avant d'accorder le point (resolveSimilarity).
+                const results = buildRevealResults(lobby, currentRound);
+                const decision = resolveSimilarity(currentRound, results, data.answerIndex, accepted);
 
-            // Vérifier que l'index n'a pas déjà été corrigé
-            if (currentRound.similarityCorrections?.includes(data.answerIndex)) {
-                return; // Déjà corrigé, ignorer
-            }
+                if (decision === 'stale') {
+                    // La popup du pilier ne correspond plus au serveur (décision déjà
+                    // prise, évènement raté). On lui renvoie la vérité sous forme
+                    // d'évènements, que même une ANCIENNE appli comprend (elle ignore les
+                    // champs similarité du gameState et resterait sinon bloquée sur une
+                    // popup impossible à fermer) : on ferme la carte qu'il croit en
+                    // attente, puis on rouvre la vraie attente s'il y en a une.
+                    logger.info('Arbitrage de similarité périmé, état renvoyé au pilier', {
+                        lobbyCode: data.lobbyCode, answerIndex: data.answerIndex, pending: currentRound.pendingSimilarityIndex,
+                    });
+                    emitGameState(socket, lobby, game, currentRound.leader.id);
+                    if (currentRound.similarityCorrections.includes(data.answerIndex)) {
+                        socket.emit('similarityConfirmed', {
+                            answerIndex: data.answerIndex,
+                            correctedScore: currentRound.scores[currentRound.leader.id] || 0,
+                            leaderboard: game.getLeaderboard(),
+                            roundNumber,
+                        });
+                    } else {
+                        socket.emit('similarityDismissed', { answerIndex: data.answerIndex, roundNumber });
+                    }
+                    const pending = currentRound.pendingSimilarityIndex;
+                    const pendingResult = pending !== null ? results[pending] : undefined;
+                    if (pending !== null && pendingResult) {
+                        socket.emit('similarityDetected', {
+                            answerIndex: pending,
+                            guessedPlayerName: pendingResult.guessedPlayerName,
+                            playerName: pendingResult.playerName,
+                            roundNumber,
+                        });
+                    }
+                    return;
+                }
 
-            // Vérifier que la réponse était incorrecte
-            // Utiliser getGuessingAnswers() pour inclure l'entrée du pilier en mode "Devine ma réponse"
-            const answerEntries = Object.entries(currentRound.getGuessingAnswers());
-            if (data.answerIndex >= answerEntries.length) return;
-            const [playerId, playerAnswer] = answerEntries[data.answerIndex];
-            const guessedPlayerId = currentRound.guesses[playerId];
-            if (guessedPlayerId === playerId) return; // Déjà correcte
-
-            // SÉCURITÉ : ne pas faire confiance au client. Recalculer la
-            // similarité côté serveur avant d'accorder le point bonus via le prédicat
-            // partagé isSimilarPair (gardes NO_RESPONSE_PREFIX + areAnswersSimilar),
-            // identique à revealAnswer.
-            const guessedAnswer = guessedPlayerId ? answerEntries.find(([id]) => id === guessedPlayerId)?.[1] : undefined;
-            if (!guessedAnswer || !isSimilarPair(playerAnswer, guessedAnswer)) {
-                logger.warn('confirmSimilarity rejeté : paire non similaire côté serveur', { lobbyCode: data.lobbyCode, answerIndex: data.answerIndex });
-                return;
-            }
-
-            // Ajouter la correction et le point bonus
-            if (!currentRound.similarityCorrections) currentRound.similarityCorrections = [];
-            currentRound.similarityCorrections.push(data.answerIndex);
-            currentRound.addBonusScore(currentRound.leader.id, 1);
-
-            // Broadcaster la confirmation
-            io.to(data.lobbyCode).emit('similarityConfirmed', {
-                answerIndex: data.answerIndex,
-                correctedScore: currentRound.scores[currentRound.leader.id] || 0,
-                leaderboard: game.getLeaderboard()
+                if (decision === 'confirmed') {
+                    io.to(data.lobbyCode).emit('similarityConfirmed', {
+                        answerIndex: data.answerIndex,
+                        correctedScore: currentRound.scores[currentRound.leader.id] || 0,
+                        leaderboard: game.getLeaderboard(),
+                        roundNumber,
+                    });
+                    logger.info('Similarité confirmée', { lobbyCode: data.lobbyCode, answerIndex: data.answerIndex });
+                } else {
+                    if (accepted) {
+                        logger.warn('confirmSimilarity rejeté : paire non similaire côté serveur', { lobbyCode: data.lobbyCode, answerIndex: data.answerIndex });
+                    }
+                    // Ferme la popup et rallume les téléphones chez tout le monde.
+                    io.to(data.lobbyCode).emit('similarityDismissed', { answerIndex: data.answerIndex, roundNumber });
+                }
+                // Action du pilier pendant la révélation : le filet REVEAL repart de zéro.
+                armRevealBackstop(io, data.lobbyCode, lobby, game, currentRound);
             });
-
-            logger.info('Similarité confirmée', { lobbyCode: data.lobbyCode, answerIndex: data.answerIndex });
-            // Action du pilier pendant la révélation : le filet REVEAL repart de zéro.
-            const lobbyForBackstop = LobbyManager.getLobby(data.lobbyCode);
-            if (lobbyForBackstop) armRevealBackstop(io, data.lobbyCode, lobbyForBackstop, game, currentRound);
         });
-    });
-
-    // Dismiss Similarity (Le pilier rejette la similarité)
-    socket.on('dismissSimilarity', (data: { lobbyCode: string; answerIndex: number }) => {
-        withLeaderGuards(socket, data, {
-            limiter: rateLimiters.gameAction,
-            requireLeaderAction: 'rejeter la similarité',
-        }, ({ lobby, game, round: currentRound }, data) => {
-            // Broadcaster le rejet pour fermer le modal chez tout le monde
-            io.to(data.lobbyCode).emit('similarityDismissed', {
-                answerIndex: data.answerIndex
-            });
-            armRevealBackstop(io, data.lobbyCode, lobby, game, currentRound);
-        });
-    });
+    };
+    decideSimilarity('confirmSimilarity', true);
+    decideSimilarity('dismissSimilarity', false);
 }

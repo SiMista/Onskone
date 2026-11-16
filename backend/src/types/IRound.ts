@@ -41,6 +41,9 @@ export interface IRound extends IRoundData {
   /** Indices des réponses corrigées par similarité */
   similarityCorrections: number[];
 
+  /** Similarité en attente de l'arbitrage du pilier (index de la carte jugée), null sinon */
+  pendingSimilarityIndex: number | null;
+
   // ===== Méthodes métier =====
 
   /** Désarme le timeout serveur autoritatif de la phase courante, s'il est armé. */

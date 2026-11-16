@@ -273,15 +273,22 @@ export function useGameState(lobbyCode: string | undefined): UseGameStateResult 
   }, []);
 
   // Applique un patch partiel au round courant, UNIQUEMENT s'il concerne la manche
-  // affichée ; sinon resynchronisation (le client a raté une transition).
-  const patchRound = useCallback((roundNumber: number, patch: Partial<IRound>, event: string) => {
+  // affichée ; sinon resynchronisation (le client a raté une transition). Un patch qui
+  // dépend de l'état courant (ajout à une liste) se passe en fonction du round à jour.
+  const patchRound = useCallback((
+    roundNumber: number,
+    patch: Partial<IRound> | ((round: IRound) => Partial<IRound>),
+    event: string,
+  ) => {
     if (!deltaMatchesCurrentRound(gameRef.current, roundNumber)) {
       requestResync(`${event} pour la manche ${roundNumber} alors que la manche affichée est ${gameRef.current?.currentRound?.roundNumber ?? 'aucune'}`);
       return false;
     }
     setGame(prev => prev ? {
       ...prev,
-      currentRound: prev.currentRound ? { ...prev.currentRound, ...patch } : null
+      currentRound: prev.currentRound
+        ? { ...prev.currentRound, ...(typeof patch === 'function' ? patch(prev.currentRound) : patch) }
+        : null
     } : null);
     return true;
   }, [requestResync]);
@@ -317,6 +324,27 @@ export function useGameState(lobbyCode: string | undefined): UseGameStateResult 
   // resynchronisation complète chez tout le monde).
   const handleAnswerRevealed = useCallback((data: Parameters<ServerToClientEvents['answerRevealed']>[0]) => {
     patchRound(data.roundNumber, { revealedIndices: data.revealedIndices }, 'answerRevealed');
+  }, [patchRound]);
+
+  // Arbitrage des similarités : même principe (fait partie de l'empreinte). La popup
+  // du pilier et la mise en avant des téléphones s'en déduisent, donc une resynchro
+  // ou une reconnexion les restaure telles que le serveur les voit.
+  const handleSimilarityDetected = useCallback((data: Parameters<ServerToClientEvents['similarityDetected']>[0]) => {
+    patchRound(data.roundNumber, { pendingSimilarityIndex: data.answerIndex }, 'similarityDetected');
+  }, [patchRound]);
+
+  const handleSimilarityConfirmed = useCallback((data: Parameters<ServerToClientEvents['similarityConfirmed']>[0]) => {
+    patchRound(data.roundNumber, round => {
+      const corrections = round.similarityCorrections ?? [];
+      return {
+        pendingSimilarityIndex: null,
+        similarityCorrections: corrections.includes(data.answerIndex) ? corrections : [...corrections, data.answerIndex],
+      };
+    }, 'similarityConfirmed');
+  }, [patchRound]);
+
+  const handleSimilarityDismissed = useCallback((data: Parameters<ServerToClientEvents['similarityDismissed']>[0]) => {
+    patchRound(data.roundNumber, { pendingSimilarityIndex: null }, 'similarityDismissed');
   }, [patchRound]);
 
   const handleRoundSkipped = useCallback((data: { skippedLeaderName: string; reason: 'leader_disconnected' | 'leader_idle' }) => {
@@ -433,6 +461,9 @@ export function useGameState(lobbyCode: string | undefined): UseGameStateResult 
 
   useSocketEvent('gameState', handleGameState);
   useSocketEvent('answerRevealed', handleAnswerRevealed);
+  useSocketEvent('similarityDetected', handleSimilarityDetected);
+  useSocketEvent('similarityConfirmed', handleSimilarityConfirmed);
+  useSocketEvent('similarityDismissed', handleSimilarityDismissed);
   useSocketEvent('syncResult', handleSyncResult);
   useSocketEvent('gameStarted', handleGameStarted);
   useSocketEvent('questionSelected', handleQuestionSelected);

@@ -35,7 +35,8 @@ export type { GameFingerprintSource } from './sync.js';
 
 // Tour de table (ordre du reveal)
 export { tableTurnFrom, resolveSeatOrder } from './seating.js';
-export { isPersonneGuess, buildRevealOrder } from './reveal.js';
+export { isPersonneGuess, buildRevealOrder, getSimilarityComparison } from './reveal.js';
+export type { SimilarityComparison } from './reveal.js';
 
 // Player
 export { IPlayer } from './types/player.js';
