@@ -352,6 +352,8 @@ export const en: Dictionary = {
     ariaButton: 'How to play',
     firstTimeHint: 'New player? All the rules here!',
     goToStep: (n) => `Go to step ${n}`,
+    previousStep: 'Previous step',
+    nextStep: 'Next step',
     ringLabel: 'Knowledge score',
     intro: () => (
       <>
@@ -366,7 +368,7 @@ export const en: Dictionary = {
       ),
       ({ Joueurs }) => (
         <>
-          {Joueurs('Players')} get the question and write their answer, <b>anonymously</b>.
+          {Joueurs('Players')} answer it <b>in secret</b>: nobody knows who wrote what.
         </>
       ),
       ({ Pilier, Joueurs }) => (
@@ -382,7 +384,7 @@ export const en: Dictionary = {
     ],
     outro: ({ Joueurs }) => (
       <>
-        Every round scores points for the {Joueurs('group')}. At the end, you get the final score. <b>So, Onskoné?</b>
+        Every correct guess scores points for the {Joueurs('group')}. At the end, you get the final score. <b>So, Onskoné?</b>
       </>
     ),
   },

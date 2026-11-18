@@ -352,6 +352,8 @@ export const fr: Dictionary = {
     ariaButton: 'Comment jouer',
     firstTimeHint: 'Nouveau joueur ? Toutes les règles ici !',
     goToStep: (n) => `Aller à l'étape ${n}`,
+    previousStep: 'Étape précédente',
+    nextStep: 'Étape suivante',
     ringLabel: 'Score de connaissance',
     intro: () => (
       <>
@@ -366,7 +368,7 @@ export const fr: Dictionary = {
       ),
       ({ Joueurs }) => (
         <>
-          {Joueurs('Les joueurs')} reçoivent la question et écrivent leur réponse, <b>anonymement</b>.
+          {Joueurs('Les joueurs')} y répondent <b>en secret</b> : personne ne sait qui a écrit quoi.
         </>
       ),
       ({ Pilier, Joueurs }) => (
@@ -382,7 +384,7 @@ export const fr: Dictionary = {
     ],
     outro: ({ Joueurs }) => (
       <>
-        Chaque manche rapporte des points au {Joueurs('groupe')}. À la fin, on a le score final. <b>Alors, Onskoné ?</b>
+        Chaque bonne réponse rapporte des points au {Joueurs('groupe')}. À la fin, on a le score final. <b>Alors, Onskoné ?</b>
       </>
     ),
   },

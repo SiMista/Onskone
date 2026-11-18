@@ -94,7 +94,7 @@ export const GAME_CONSTANTS = {
   // Overlay d'intro plein écran à l'entrée en GUESSING (« Tu es PILIER / JOUEUR »).
   // Le serveur décale d'autant le départ du timer GUESSING : le sablier reste plein
   // pendant l'intro et ne coule qu'à sa fin (sinon le pilier perdait ce temps-là).
-  GUESSING_INTRO_MS: 4000,
+  GUESSING_INTRO_MS: 4500,
   // Overlay « À ton tour d'être PILIER » sur l'écran du pilier, au début de chaque
   // manche (QUESTION_SELECTION). Même principe : le serveur décale d'autant le départ
   // du timer de la phase, pour que le pilier ne perde pas ce temps-là.

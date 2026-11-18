@@ -339,6 +339,9 @@ export interface Dictionary {
     ariaButton: string;
     firstTimeHint: string; // bulle sous le bouton au tout premier passage
     goToStep: (n: number) => string;
+    /** Flèches précédent / suivant (desktop). */
+    previousStep: string;
+    nextStep: string;
     /** Bulle d'accueil (logo) : avant les étapes numérotées. */
     intro: (m: HowToPlayMarkers) => ReactNode;
     steps: Array<(m: HowToPlayMarkers) => ReactNode>;

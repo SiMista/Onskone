@@ -182,6 +182,47 @@ workflows:
           # --project explicite : le glob par defaut ne descend pas dans frontend/ios/...
           xcode-project use-profiles --project "$XCODE_PROJECT"
 
+      - name: Verifier que le profil porte Associated Domains
+        # Sans ca, l'archive plante avec un message obscur : "App requires a
+        # provisioning profile with the Associated Domains feature" (exit 65).
+        # fetch-signing-files ne compare JAMAIS les capabilities : il reprend le
+        # profil ACTIVE existant ou en cree un depuis les capabilities ACTUELLES de
+        # l'App ID. Profil sans associated-domains = case pas cochee sur l'App ID
+        # (ou profil cree avant qu'on la coche). N'echoue que si un profil
+        # com.onskone.app est trouve SANS la cle ; sinon on laisse passer.
+        script: |
+          set -e
+          FOUND=0
+          for DIR in "$HOME/Library/MobileDevice/Provisioning Profiles" "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"; do
+            [ -d "$DIR" ] || continue
+            for P in "$DIR"/*.mobileprovision; do
+              [ -f "$P" ] || continue
+              TMP=$(mktemp)
+              security cms -D -i "$P" > "$TMP" 2>/dev/null || { rm -f "$TMP"; continue; }
+              APP_ID=$(/usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" "$TMP" 2>/dev/null || true)
+              case "$APP_ID" in *.com.onskone.app) ;; *) rm -f "$TMP"; continue ;; esac
+              FOUND=1
+              NAME=$(/usr/libexec/PlistBuddy -c "Print :Name" "$TMP" 2>/dev/null || echo "?")
+              if /usr/libexec/PlistBuddy -c "Print :Entitlements:com.apple.developer.associated-domains" "$TMP" >/dev/null 2>&1; then
+                echo "OK : le profil \"$NAME\" porte Associated Domains"
+              else
+                echo "--- entitlements du profil \"$NAME\" ---"
+                /usr/libexec/PlistBuddy -c "Print :Entitlements" "$TMP" || true
+                rm -f "$TMP"
+                echo ""
+                echo "ERREUR : le profil \"$NAME\" n'a PAS la capability Associated Domains."
+                echo "A corriger UNE fois sur developer.apple.com > Certificates, Identifiers & Profiles :"
+                echo "  1. Identifiers > com.onskone.app : cocher 'Associated Domains' puis Save"
+                echo "     (Apple invalide alors le profil actuel, Codemagic en recree un au prochain build)."
+                echo "  2. Si c'etait DEJA coche : Profiles > supprimer le profil App Store de com.onskone.app."
+                echo "Puis relancer le build."
+                exit 1
+              fi
+              rm -f "$TMP"
+            done
+          done
+          [ "$FOUND" = 1 ] || echo "ATTENTION : aucun profil com.onskone.app trouve, verification sautee"
+
       - name: Construire l'IPA
         script: |
           # Diagnostic : doit afficher PROVISIONING_PROFILE_SPECIFIER + DEVELOPMENT_TEAM

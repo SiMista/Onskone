@@ -1012,6 +1012,82 @@ button {
 .animate-role-intro-img  { animation: role-intro-rise 0.45s ease-out 0.6s both; }
 .animate-role-intro-text { animation: role-intro-rise 0.45s ease-out 1s both; }
 
+/* Illustrations animées des étapes (StepIllustrations.tsx) et confettis du tuto. */
+@keyframes illu-confetti-burst {
+  from { left: 50%; top: 50%; opacity: 0; transform: translate(-50%, -50%) rotate(0deg) scale(0.3); }
+}
+@keyframes illu-card {
+  0%, 100% { transform: none; }
+  50% { transform: translateY(-4%) scale(1.15); }
+}
+@keyframes illu-pop {
+  0% { transform: scale(0); }
+  70% { transform: scale(1.12); }
+  100% { transform: none; }
+}
+@keyframes illu-typing {
+  0%, 60%, 100% { opacity: 0.3; transform: none; }
+  30% { opacity: 1; transform: translateY(-50%); }
+}
+@keyframes illu-wonder {
+  0%, 100% { transform: none; }
+  20% { transform: translateY(-20%) rotate(-14deg); }
+  45% { transform: rotate(0deg); }
+  65% { transform: translateY(-10%) rotate(10deg); }
+  85% { transform: rotate(0deg); }
+}
+@keyframes illu-screen-on {
+  0% { background-color: rgba(28, 28, 28, 0.94); }
+  25% { background-color: rgba(255, 255, 255, 0.9); }
+  100% { background-color: rgba(255, 255, 255, 0); }
+}
+@keyframes illu-lines {
+  0% { opacity: 0; transform: scale(0.4); }
+  30% { opacity: 1; transform: scale(1.05); }
+  75% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: none; }
+}
+@keyframes illu-receive {
+  0%, 100% { transform: none; }
+  40% { transform: scale(1.12); }
+}
+@keyframes illu-fly-x {
+  from { transform: none; }
+  to { transform: translateX(var(--tx)); }
+}
+@keyframes illu-fly-y {
+  0% { opacity: 0; transform: translateY(0) scale(0.4) rotate(0deg); animation-timing-function: ease-out; }
+  10% { opacity: 1; }
+  50% { transform: translateY(calc(var(--ty) * 0.5 + var(--arc))) scale(1) rotate(calc(var(--rot) * 0.5)); animation-timing-function: ease-in; }
+  85% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(var(--ty)) scale(0.5) rotate(var(--rot)); }
+}
+@keyframes illu-screen-hide {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@keyframes illu-screen-flash {
+  from { background-color: rgba(255, 255, 255, 0.9); }
+  to { background-color: rgba(255, 255, 255, 0); }
+}
+@keyframes illu-badge {
+  0% { opacity: 0; transform: scale(0) rotate(-25deg); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes illu-sparkle {
+  0% { opacity: 0; transform: scale(0) rotate(0deg); }
+  45% { opacity: 1; transform: scale(1.15) rotate(30deg); }
+  100% { opacity: 0; transform: scale(0.6) rotate(60deg); }
+}
+/* Mouvement réduit : chaque calque saute directement à son état final. */
+@media (prefers-reduced-motion: reduce) {
+  .illu-anim {
+    animation-duration: 1ms !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
 /* Clignotement jaune de la carte à révéler */
 @keyframes card-soft-pulse {
   0%, 100% { background-color: var(--color-warning-50); box-shadow: 4px 4px 0 #000; }

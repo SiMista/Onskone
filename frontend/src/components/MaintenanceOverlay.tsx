@@ -27,14 +27,13 @@ const MaintenanceOverlay = () => {
     : unreachable
       ? { title: t.maintenance.unreachableTitle, message: t.maintenance.unreachableMessage }
       : { title: t.maintenance.title, message: t.maintenance.message };
+  // Connexion impossible : pas de « pas besoin de recharger », seule la partie conservée est rappelée.
+  const resumeNote = serverDown || !unreachable ? t.maintenance.autoResume : '';
+  const note = [inGame ? t.maintenance.gameKept : '', resumeNote].filter(Boolean).join(' ');
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6 bg-brand-backdrop">
-      <MaintenanceCard
-        title={copy.title}
-        message={copy.message}
-        note={inGame ? `${t.maintenance.gameKept} ${t.maintenance.autoResume}` : t.maintenance.autoResume}
-      />
+      <MaintenanceCard title={copy.title} message={copy.message} note={note || undefined} />
     </div>
   );
 };

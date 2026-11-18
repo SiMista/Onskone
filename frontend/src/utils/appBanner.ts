@@ -5,7 +5,7 @@ import { Capacitor } from '@capacitor/core';
 // Affichée au lancement de l'appli web et en fin de partie, puis se retire seule
 // après APP_BANNER_DURATION_MS (la barre de durée du bandeau s'écoule sur ce délai).
 
-export const APP_BANNER_DURATION_MS = 7000;
+export const APP_BANNER_DURATION_MS = 10000;
 /** Délai avant la 1re apparition (laisser l'accueil se poser) et durée du fondu de sortie. */
 export const APP_BANNER_LAUNCH_DELAY_MS = 3000;
 export const APP_BANNER_EXIT_MS = 450;
