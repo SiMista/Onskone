@@ -1,4 +1,5 @@
 import type { Dictionary } from './dictionary';
+import { DRAWING_IDEAS } from './drawingIdeas';
 
 export const fr: Dictionary = {
   common: {
@@ -357,7 +358,7 @@ export const fr: Dictionary = {
     ringLabel: 'Score de connaissance',
     intro: () => (
       <>
-        Bienvenue dans <b>Onskoné</b>, le jeu <b>collaboratif</b> qui teste si tu connais bien tes proches ! Retrouvez ensemble les réponses de chacun.
+        Bienvenue dans <b>Onskoné</b>, le jeu <b>collaboratif</b> qui teste si tu connais bien tes proches !
       </>
     ),
     steps: [
@@ -373,7 +374,7 @@ export const fr: Dictionary = {
       ),
       ({ Pilier, Joueurs }) => (
         <>
-          {Pilier('Le pilier')} attribue chaque réponse au joueur qui l'a écrite selon lui. {Joueurs('Les joueurs')} montrent leur écran pour découvrir quelle réponse le pilier leur a attribuée.
+          {Pilier('Le pilier')} devine qui a écrit quoi et répartit les réponses. {Joueurs('Les joueurs')} montrent leur écran pour découvrir la réponse qu'ils ont reçue.
         </>
       ),
       ({ Pilier }) => (
@@ -647,18 +648,6 @@ export const fr: Dictionary = {
     },
   },
 
-  funFacts: [
-    "Onskoné a crée 10 couples. Incroyable ! (et en a détruit 35)",
-    "Le pilier de la manche qui arrive à 0 bonnes réponses a 50% d'être mauvais et 50% de chances d'être bourré.",
-    "Ton mari ou ta femme n'a pas trouvé tes réponses pendant toute la partie ? C'est un motif valide de rupture (Article 711 du Code Civil)",
-    "Si personne ne trouve tes réponses, deux hypothèses : tu es un génie incompris ou tu es juste extrêmement bizarre.",
-    "Onskoné est actuellement interdit dans 0 pays. Mais ça pourrait changer (on croise les doigts !) ",
-    "Onskoné est le seul jeu où tu peux te faire des amis et en perdre en même temps.",
-    'Pour répondre, pense à tout : travail, amis, famille, études, voyages…',
-    'SOIS SPONTANÉ sur Onskoné ! Les premières réponses qui te viennent en tête sont souvent les meilleures.',
-    "N'essaie pas de trouver THE PERFECT réponse : cherche plutôt celle que tu donnerais naturellement !",
-  ],
-
   decks: {
     instruction: 'Clique sur les thèmes pour les ajouter/retirer',
     all: 'Tout',
@@ -745,9 +734,17 @@ export const fr: Dictionary = {
 
   phases: {
     questionSelection: {
-      leaderIs: 'Pilier de la manche',
-      waitingSelection: 'Choisit sa question…',
-      didYouKnow: 'Le saviez-vous ?',
+      whiteboard: {
+        whilePrefix: 'Pendant que',
+        whileSuffix: 'choisit sa question,',
+        drawMeanwhile: 'tu peux dessiner avec tout le monde !',
+        ideaLabel: 'Idée de dessin :',
+        yourMarker: 'Ton feutre',
+        // Idées de dessin : toutes dans i18n/drawingIdeas.ts (FR et EN côte à côte).
+        ideas: DRAWING_IDEAS.map((idea) => idea.fr),
+        undo: 'Annuler mon dernier trait',
+        aria: 'Tableau blanc partagé',
+      },
       swipeHintMobile: 'swipe pour changer de carte',
       swipeOverlayTitle: 'Swipe',
       swipeOverlaySub: 'pour changer de carte',
@@ -770,15 +767,13 @@ export const fr: Dictionary = {
     answering: {
       questionAskedToOthers: 'Question posée aux autres joueurs',
       questionAskedBy: 'Question posée par',
+      placeholder: 'Ta réponse…',
       writeYourAnswer: 'Écris ta propre réponse',
-      placeholder: 'Écris ta réponse…',
       send: 'Envoyer',
       yourAnswer: 'Ta réponse',
       editAnswer: 'Modifier ma réponse',
       waitingForOthers: 'En attente des autres joueurs…',
       answersReceived: 'Réponses reçues',
-      tipTeaser: 'Besoin d\'aide ?',
-      tipLabel: 'Voir l\'astuce',
     },
     substituteSelection: {
       instructionLeader: 'Le joueur que tu choisis devra deviner la réponse que tu aurais donnée.',

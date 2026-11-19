@@ -123,7 +123,7 @@ export const formatRelative = (ms: number): string => {
 };
 
 // ---------- Navigation ----------
-export type AdminTab = 'overview' | 'tickets' | 'logs' | 'lobbies' | 'stats' | 'decks' | 'content' | 'danger';
+export type AdminTab = 'overview' | 'tickets' | 'logs' | 'lobbies' | 'stats' | 'decks' | 'content' | 'danger' | 'budget';
 export type TabGroup = 'pilotage' | 'inbox' | 'catalogue' | 'system';
 
 export interface TabDef {
@@ -145,6 +145,7 @@ export const TABS: TabDef[] = [
   { id: 'stats', icon: 'mdi:chart-bar', label: 'Stats', ariaLabel: 'Stats des thèmes et questions', hint: 'Thèmes et questions préférés', enabled: true, group: 'pilotage' },
   { id: 'decks', icon: 'mdi:cards-outline', label: 'Decks', ariaLabel: 'Decks : thèmes, sujets et questions', hint: 'Thèmes, sujets et questions', enabled: true, group: 'catalogue' },
   { id: 'content', icon: 'mdi:text-box-outline', label: 'Contenu', ariaLabel: 'Contenu du site', hint: 'Paliers, succès, avatars, pages légales…', enabled: true, group: 'catalogue' },
+  { id: 'budget', icon: 'mdi:cash-multiple', label: 'Budget', ariaLabel: 'Budget : frais et rentabilité', hint: 'Ce que coûte le jeu et quand le premium le rembourse', enabled: true, group: 'system' },
 ];
 
 export const GROUP_ORDER: TabGroup[] = ['pilotage', 'inbox', 'catalogue', 'system'];
@@ -167,6 +168,7 @@ export const MOBILE_TAB_META: Record<AdminTab, { icon: string; label: string }> 
   decks: { icon: 'mdi:cards-outline', label: 'Decks' },
   content: { icon: 'mdi:text-box-outline', label: 'Contenu' },
   danger: { icon: 'mdi:alert-octagon-outline', label: 'Accès' },
+  budget: { icon: 'mdi:cash-multiple', label: 'Budget' },
 };
 
 // Les 2 derniers slots de la barre mobile sont les menus (Catalogue, Système), rendus à part.

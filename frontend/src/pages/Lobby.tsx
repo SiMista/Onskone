@@ -187,6 +187,30 @@ const Lobby = () => {
 
     useReconnectOnVisible(joinLobbyFn);
 
+    // Studio : un salon créé par « ▶ Lancer » arrive avec un thème déjà coché, bot ou pas
+    // (sinon il fallait en cocher un à la main à chaque fois). On prend le premier thème
+    // que l'hôte a le droit de cocher : un premium serait refusé par le serveur à un hôte
+    // non premium et tournerait en rond (cas réel : premium ajouté en tête de catalogue) ;
+    // pas de 18+ non plus (il demande une confirmation en vrai). Une seule fois par salon :
+    // si on décoche tout ensuite, on ne le recoche pas.
+    const studioThemePickedRef = useRef(false);
+    useEffect(() => {
+        if (!import.meta.env.DEV || !isStudioFrame || studioThemePickedRef.current || !currentPlayer?.isHost) return;
+        if (Object.values(selectedDecks).some(arr => arr.length > 0)) {
+            studioThemePickedRef.current = true;
+            return;
+        }
+        const hostPremium = !!currentPlayer.isPremium;
+        const pick = Object.entries(decksCatalog).flatMap(([cat, codes]) => codes.map(code => ({ cat, code })))
+            .find(({ cat, code }) => {
+                const info = decksCatalogMeta[cat]?.find(t => t.code === code);
+                return !info?.mature && (hostPremium || !info?.premium);
+            });
+        if (!pick) return; // catalogue pas encore reçu
+        studioThemePickedRef.current = true;
+        socket.emit('updateSelectedDecks', { lobbyCode: lobbyCode!, selected: { [pick.cat]: [pick.code] } });
+    }, [currentPlayer?.isHost, currentPlayer?.isPremium, selectedDecks, decksCatalog, decksCatalogMeta, lobbyCode]);
+
     // Studio : si cette iframe est le bot hôte ET qu'on a atteint le nombre de
     // joueurs recommandé, démarre la partie automatiquement. Réarmé une fois par visite du lobby.
     // Scénario de Régie : attend TOUS ses joueurs (sinon un slot arrivé en retard
@@ -205,31 +229,15 @@ const Lobby = () => {
             socket.emit('updateGuessMyAnswerMode', { lobbyCode: lobbyCode!, guessMyAnswerMode: !!scenario.guessMyAnswerMode });
             return; // attend la maj d'état, réessaiera au prochain run de l'effet
         }
-        // Il faut un thème sélectionné : si rien n'est présélectionné, on prend
-        // le premier thème du catalogue que l'hôte a le droit de cocher. Un thème
-        // premium serait refusé par le serveur (hôte non premium) et l'auto-départ
-        // tournerait en rond (cas réel : un thème premium ajouté en tête de catalogue).
-        if (Object.values(selectedDecks).reduce((acc, arr) => acc + arr.length, 0) === 0) {
-            const hostPremium = !!currentPlayer?.isPremium;
-            const pick = Object.entries(decksCatalog).flatMap(([cat, codes]) => codes.map(code => ({ cat, code })))
-                .find(({ cat, code }) => hostPremium || !decksCatalogMeta[cat]?.find(t => t.code === code)?.premium);
-            const firstCat = pick?.cat;
-            const firstCode = pick?.code;
-            if (firstCat && firstCode) {
-                socket.emit('updateSelectedDecks', {
-                    lobbyCode: lobbyCode!,
-                    selected: { [firstCat]: [firstCode] },
-                });
-                return; // attend la maj d'état, réessaiera au prochain run de l'effet
-            }
-            return;
-        }
+        // Il faut un thème : l'effet du dessus en coche un, on attend la maj d'état
+        // (l'effet se relance quand `selectedDecks` change).
+        if (Object.values(selectedDecks).every(arr => arr.length === 0)) return;
         studioAutoStartedRef.current = true;
         const timer = setTimeout(() => {
             socket.emit('startGame', { lobbyCode: lobbyCode! });
         }, 1200);
         return () => clearTimeout(timer);
-    }, [currentPlayer?.isHost, currentPlayer?.isPremium, players, selectedDecks, decksCatalog, decksCatalogMeta, lobbyCode, guessMyAnswerMode]);
+    }, [currentPlayer?.isHost, players, selectedDecks, lobbyCode, guessMyAnswerMode]);
 
     // Mode debug (DEV + `?debug=1`) : l'hôte pousse UNE fois la vitesse de debug
     // (phases d'1h) au lobby, pour pouvoir bosser sur un écran sans se faire couper.
@@ -515,10 +523,19 @@ const Lobby = () => {
                         )}
 
                         {/* ===================== ACTION ROW ===================== */}
-                        {/* Salon : Démarrer (ouvre la préparation) + Partager l'invitation.
-                            Préparation : Lancer la partie. */}
+                        {/* Salon : Partager l'invitation puis Démarrer (ouvre la préparation) : on
+                            invite d'abord, on lance ensuite. Préparation : Lancer la partie. */}
                         <div className="shrink-0 flex flex-col items-center gap-1.5 mt-1 md:mt-2 safe-pb">
                             <div className="flex flex-row items-center justify-center gap-3 md:gap-4 w-full flex-wrap">
+                                {!preparing && (
+                                    <Button
+                                        text={t.lobby.shareInvite.button}
+                                        variant="warning"
+                                        size="sm"
+                                        className="!text-xs md:!text-sm whitespace-nowrap"
+                                        onClick={() => setShareSheetOpen(true)}
+                                    />
+                                )}
                                 {isHost ? (
                                     <Button
                                         text={preparing ? t.lobby.prepare.launch : t.lobby.start}
@@ -539,15 +556,6 @@ const Lobby = () => {
                                             {preparing ? t.lobby.prepare.hostPreparing(shortHostName) : t.lobby.startHostOnly(shortHostName)}
                                         </span>
                                     </div>
-                                )}
-                                {!preparing && (
-                                    <Button
-                                        text={t.lobby.shareInvite.button}
-                                        variant="warning"
-                                        size="sm"
-                                        className="!text-xs md:!text-sm whitespace-nowrap"
-                                        onClick={() => setShareSheetOpen(true)}
-                                    />
                                 )}
                             </div>
 

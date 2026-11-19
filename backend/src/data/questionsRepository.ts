@@ -165,8 +165,7 @@ export const getPremiumCodes = (): string[] => [...PREMIUM_CODES];
 
 /**
  * Sélection « tous les thèmes » (un salon, lui, démarre sans aucun thème coché) :
- * repli de startGame quand la sélection ne contenait que du premium perdu au
- * transfert d'host, et lobbies jouables des tests. Les thèmes mature sont toujours
+ * lobbies jouables des tests (TestHelper). Les thèmes mature sont toujours
  * exclus (avertissement 18+ à activer), les premium inclus SI `allowPremium`.
  */
 export const getDefaultSelectedDecks = (

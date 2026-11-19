@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto';
 import { IRound } from '../types/IRound';
 import { IPlayer, GameCard, RoundPhase, formatNoResponse, isNoResponse } from '@onskone/shared';
 import { shuffleArray } from '../utils/helpers.js';
+import { Whiteboard } from './Whiteboard.js';
 
 /** Une entrée du pool de devinette telle que diffusée aux clients (auteur anonymisé). */
 export interface PublicGuessAnswer {
@@ -61,6 +62,9 @@ export class Round implements IRound {
     // Nb de déclenchements du filet alors que le pilier était encore connecté : une
     // table vivante (débat devant le classement) a droit à un sursis avant le saut.
     revealBackstopStrikes: number;
+    // Tableau blanc des non-piliers pendant QUESTION_SELECTION (jamais sérialisé avec
+    // le round : servi à part par getWhiteboard). Vidé en quittant la phase.
+    readonly whiteboard = new Whiteboard();
 
     constructor(roundNumber: number, leader: IPlayer, gameCard: GameCard, guessMyAnswerMode: boolean = false) {
         this.roundNumber = roundNumber;
@@ -183,6 +187,9 @@ export class Round implements IRound {
             if (this.phase === RoundPhase.ANSWERING || this.phase === RoundPhase.SUBSTITUTE_ANSWERING) {
                 this.phaseEndedAt = Date.now();
             }
+            // Le tableau blanc ne s'affiche que pendant le choix de question : on libère
+            // ses traits (la manche reste en mémoire jusqu'à la fin de la partie).
+            if (this.phase === RoundPhase.QUESTION_SELECTION) this.whiteboard.clear();
             this.phase = phases[currentIndex + 1];
             // Réinitialiser le timer au changement de phase : sans ça, un client qui
             // reconnecte recevrait le compte à rebours périmé de la phase précédente.

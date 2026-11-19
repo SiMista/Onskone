@@ -46,6 +46,13 @@
           ]
         },
         {
+          "subject": "Gifts Given & Received",
+          "questions": [
+            "What's the typical last-minute gift you often give people?",
+            "What's the worst gift you've ever received?"
+          ]
+        },
+        {
           "subject": "Living Together",
           "questions": [
             "Who would you want to live with as a roommate?",
@@ -112,20 +119,6 @@
           ]
         },
         {
-          "subject": "Society Today",
-          "questions": [
-            "What current societal trend completely baffles you?",
-            "If you had to describe French society today in 3 words, what would they be?"
-          ]
-        },
-        {
-          "subject": "Reading Habits",
-          "questions": [
-            "What's the last book you read?",
-            "If you had to estimate the number of books you've read in your life, how many, honestly?"
-          ]
-        },
-        {
           "subject": "Home",
           "questions": [
             "What's the one thing in your current home you couldn't live without?",
@@ -158,6 +151,13 @@
           "questions": [
             "What's your most-used swear word?",
             "What's the most beautiful word in the French language, according to you?"
+          ]
+        },
+        {
+          "subject": "Insomnia",
+          "questions": [
+            "What do you do when you can't sleep at 3am?",
+            "What's your best all-nighter?"
           ]
         },
         {
@@ -241,24 +241,6 @@
           ]
         },
         {
-          "subject": "Transport",
-          "questions": [
-            "If you could own any car with no budget limit, which would you choose?",
-            "What mode of transport would you love to try at least once in your life?"
-          ]
-        },
-        {
-          "subject": "Trivia",
-          "questions": [
-            "What's your date of birth?",
-            "What are your favorite color and number?"
-          ],
-          "tips": {
-            "What's your date of birth?": "Day and month only, not the year.",
-            "What are your favorite color and number?": "Example answer: Blue / 7"
-          }
-        },
-        {
           "subject": "Habits",
           "questions": [
             "What daily habit contributes to your personal growth?",
@@ -274,13 +256,6 @@
           "tips": {
             "How many different activities do you pack into a typical day?": "For example: work, sport, errands, friends, going out…"
           }
-        },
-        {
-          "subject": "Jobs",
-          "questions": [
-            "If you could spend a day in someone else's job just to see, which one would it be?",
-            "What job could you absolutely never do?"
-          ]
         },
         {
           "subject": "Clothes",
@@ -403,6 +378,13 @@
           ]
         },
         {
+          "subject": "History & You",
+          "questions": [
+            "Which past era fascinates you the most, and why?",
+            "Which historical event changed your life?"
+          ]
+        },
+        {
           "subject": "Artificial Intelligence",
           "questions": [
             "What's the last thing you asked ChatGPT?",
@@ -456,6 +438,13 @@
           "questions": [
             "What sport do you have a shot at winning a medal in at the Olympics?",
             "What's the most unusual sport you've ever watched live?"
+          ]
+        },
+        {
+          "subject": "Reading Habits",
+          "questions": [
+            "What's the last book you read?",
+            "If you had to estimate the number of books you've read in your life, how many, honestly?"
           ]
         },
         {
@@ -569,6 +558,13 @@
             "What's your favorite TV show?",
             "How many hours a week do you spend in front of the TV on average?"
           ]
+        },
+        {
+          "subject": "Time Travel",
+          "questions": [
+            "What historical moment would you have loved to witness?",
+            "Which historical event impacted you the most ?"
+          ]
         }
       ]
     },
@@ -628,7 +624,7 @@
           "subject": "Fiction",
           "questions": [
             "If you could meet a fictional character, who would you choose?",
-            "Which movie would deserve a sequel?"
+            "Which movie would deserve a sequel ?"
           ]
         },
         {
@@ -656,7 +652,7 @@
           "subject": "Movie Scenes",
           "questions": [
             "What's your favorite movie scene?",
-            "What is the last movie scene that made you cry?"
+            "What is the last movie scene that made you cry ?"
           ]
         },
         {
@@ -671,13 +667,6 @@
           "questions": [
             "What's your binge-watching record for episodes watched in a row?",
             "What's a series you never finished?"
-          ]
-        },
-        {
-          "subject": "Superpowers",
-          "questions": [
-            "If you had to become a superhero, what would your name be?",
-            "If you could have one superpower, which one would you choose?"
           ]
         },
         {
@@ -755,13 +744,6 @@
           ]
         },
         {
-          "subject": "Historical",
-          "questions": [
-            "Which past era fascinates you?",
-            "Which historical event changed your life?"
-          ]
-        },
-        {
           "subject": "Language Skills",
           "questions": [
             "What foreign word do you use the most in everyday life?",
@@ -824,6 +806,13 @@
           ]
         },
         {
+          "subject": "Transport",
+          "questions": [
+            "If you could own any car with no budget limit, which would you choose?",
+            "What mode of transport would you love to try at least once in your life?"
+          ]
+        },
+        {
           "subject": "Vacations",
           "questions": [
             "What's the one essential item you always take on vacation?",
@@ -860,13 +849,6 @@
           "tips": {
             "Which fictional place would you be the most scared to visit?": "Movie, series, book, video game…"
           }
-        },
-        {
-          "subject": "Time Travel",
-          "questions": [
-            "What historical moment would you have loved to witness?",
-            "Which historical event impacted you the most?"
-          ]
         }
       ]
     },
@@ -928,7 +910,7 @@
         {
           "subject": "Costumes",
           "questions": [
-            "What was the last costume you wore?",
+            "What was the last costume you wore ?",
             "If you had to show up in costume tonight, what would you choose?"
           ]
         },
@@ -937,13 +919,6 @@
           "questions": [
             "What's your favorite conversation topic?",
             "What talent do you admire in others but don't have yourself?"
-          ]
-        },
-        {
-          "subject": "First Date",
-          "questions": [
-            "What's your ideal spot for a first date?",
-            "If you could live out a movie or TV love story, which one would you choose?"
           ]
         },
         {
@@ -982,6 +957,13 @@
           ]
         },
         {
+          "subject": "Superpowers",
+          "questions": [
+            "If you had to become a superhero, what would your name be?",
+            "If you could have one superpower, which one would you choose?"
+          ]
+        },
+        {
           "subject": "Nicknames",
           "questions": [
             "If you had to choose a nickname for yourself, what would it be?",
@@ -993,6 +975,24 @@
           "questions": [
             "What would you rate yourself out of 10 in terms of looks?",
             "What outfit or physical feature have you been complimented on the most?"
+          ]
+        },
+        {
+          "subject": "Trivia",
+          "questions": [
+            "What's your date of birth?",
+            "What are your favorite color and number?"
+          ],
+          "tips": {
+            "What's your date of birth?": "Day and month only, not the year.",
+            "What are your favorite color and number?": "Example answer: Blue / 7"
+          }
+        },
+        {
+          "subject": "Our body",
+          "questions": [
+            "What is your current height, in cm?",
+            "How old are you?"
           ]
         }
       ]
@@ -1081,10 +1081,11 @@
           "subject": "Best In Group",
           "questions": [
             "Who's the most intelligent person in the group?",
-            "Who's the strongest person in the group in a fight?"
+            "Who's the most beautiful person of the group ?"
           ],
           "tips": {
-            "Who's the most intelligent person in the group?": "Someone in the game!"
+            "Who's the most intelligent person in the group?": "Someone in the game!",
+            "Who's the most beautiful person of the group ?": "Someone in the game!"
           }
         },
         {
@@ -1197,11 +1198,11 @@
         {
           "subject": "Champion",
           "questions": [
-            "Who in the group would win in a fight?",
+            "Who's the strongest person in the group in a fight ?",
             "Who holds this group together the most?"
           ],
           "tips": {
-            "Who in the group would win in a fight?": "Someone in the game!",
+            "Who's the strongest person in the group in a fight ?": "Someone in the game!",
             "Who holds this group together the most?": "Someone in the game!"
           }
         },
@@ -1222,11 +1223,11 @@
         {
           "subject": "Group Revelations",
           "questions": [
-            "If you could steal an object from someone in the group, what would you choose?",
+            "If you could steal an object from someone in the group, what would you choose ?",
             "Who in the group would surprise you most if you learned they have a hidden artistic talent?"
           ],
           "tips": {
-            "If you could steal an object from someone in the group, what would you choose?": "Someone in the game!",
+            "If you could steal an object from someone in the group, what would you choose ?": "An object from someone in the game!",
             "Who in the group would surprise you most if you learned they have a hidden artistic talent?": "Someone in the game!"
           }
         },
@@ -1441,13 +1442,6 @@
           ]
         },
         {
-          "subject": "Changes",
-          "questions": [
-            "Is there a topic where you're clearly not objective?",
-            "What's the biggest change you'd like to see in the world in the next 10 years?"
-          ]
-        },
-        {
           "subject": "Communication",
           "questions": [
             "What phrase do you use to end a conversation that's going on too long?",
@@ -1476,13 +1470,6 @@
           ]
         },
         {
-          "subject": "Commitments",
-          "questions": [
-            "What cause or commitment have you been most involved in throughout your life?",
-            "Which petition, organization, or movement do you actively support?"
-          ]
-        },
-        {
           "subject": "Epic Fails",
           "questions": [
             "What do you waste the most time on?",
@@ -1501,13 +1488,6 @@
           "questions": [
             "In what area do you sometimes catch yourself feeling jealous of others?",
             "What success of someone close to you made you proud but also a little jealous?"
-          ]
-        },
-        {
-          "subject": "Justice",
-          "questions": [
-            "If you could change one law in your country, which one would it be?",
-            "What injustice in your personal life has outraged you the most?"
           ]
         },
         {
@@ -1556,13 +1536,6 @@
           }
         },
         {
-          "subject": "Politics",
-          "questions": [
-            "Who did you vote for in the last election?",
-            "Who would you vote for in the next election?"
-          ]
-        },
-        {
           "subject": "Thoughts",
           "questions": [
             "If you could read one person's mind, who would you choose?",
@@ -1572,7 +1545,8 @@
         {
           "subject": "Lies & Myths",
           "questions": [
-            "What was the worst excuse you have heard from someone?"
+            "What's the biggest lie you've told recently?",
+            "What was the worst excuse you have heard from someone ?"
           ]
         },
         {
@@ -1580,7 +1554,10 @@
           "questions": [
             "Who do you secretly dislike, and almost no one knows?",
             "What's the most embarrassing thing on your phone?"
-          ]
+          ],
+          "tips": {
+            "Who do you secretly dislike, and almost no one knows?": "It can be a celebrity, a family member, or someone from the group (!)."
+          }
         },
         {
           "subject": "Taboos",
@@ -1602,6 +1579,17 @@
             "What would the title of your reality show be if your life were filmed 24/7?",
             "If you were interviewed on a TV show about something dumb you did, what would it be?"
           ]
+        },
+        {
+          "subject": "Verification",
+          "questions": [
+            "How much money do you currently have in your bank account, in euros?",
+            "What is your average daily screen time?"
+          ],
+          "tips": {
+            "How much money do you currently have in your bank account, in euros?": "Check your phone and don't lie !",
+            "What is your average daily screen time?": "Check your phone and don't lie !"
+          }
         }
       ]
     },
@@ -1677,6 +1665,13 @@
       "description": "Your opinions, out loud, on everything, on some ... subjects.",
       "subjects": [
         {
+          "subject": "View of the World",
+          "questions": [
+            "Is there a topic where you're clearly not objective?",
+            "What's the biggest change you'd like to see in the world in the next 10 years?"
+          ]
+        },
+        {
           "subject": "Debates",
           "questions": [
             "What's a topic you've completely changed your mind on?",
@@ -1688,6 +1683,34 @@
           "questions": [
             "What do you think is the main problem in your country right now?",
             "What would be your first decision as President?"
+          ]
+        },
+        {
+          "subject": "Commitments",
+          "questions": [
+            "What cause or commitment have you been most involved in throughout your life?",
+            "Which petition, organization, or movement do you actively support?"
+          ]
+        },
+        {
+          "subject": "Justice",
+          "questions": [
+            "If you could change one law in your country, which one would it be?",
+            "What injustice in your personal life has outraged you the most?"
+          ]
+        },
+        {
+          "subject": "Society Today",
+          "questions": [
+            "What current societal trend completely baffles you?",
+            "If you had to describe French society today in 3 words, what would they be?"
+          ]
+        },
+        {
+          "subject": "Elections",
+          "questions": [
+            "Who did you vote for in the last election?",
+            "Who would you vote for in the next election?"
           ]
         },
         {
@@ -1750,7 +1773,7 @@
           "subject": "Tech & AI",
           "questions": [
             "What do you think about artificial intelligence?",
-            "What would be the technology that you would like to remove?"
+            "What would be the technology should we get rid of ?"
           ]
         },
         {
@@ -1772,6 +1795,60 @@
           "questions": [
             "What's your opinion on the Yellow Vests (gilets jaunes)?",
             "What's your opinion on immigration?"
+          ]
+        }
+      ]
+    },
+    "LOVE & SEDUCTION": {
+      "description": "Crushes, flirting, first dates. How you actually do love.",
+      "subjects": [
+        {
+          "subject": "Under the Spell",
+          "questions": [
+            "How do you behave when you're genuinely falling for someone?",
+            "What behavior would make you leave a date within 10 seconds?"
+          ]
+        },
+        {
+          "subject": "Love Advice",
+          "questions": [
+            "What love advice would you give to your younger self?",
+            "What's your personal motto when it comes to love?"
+          ]
+        },
+        {
+          "subject": "Flirting",
+          "questions": [
+            "What's your foolproof technique to seduce someone?",
+            "How would you describe your flirting style in 3 words?"
+          ]
+        },
+        {
+          "subject": "Romance",
+          "questions": [
+            "What's your favorite romantic song?",
+            "What romantic film always gets to you?"
+          ]
+        },
+        {
+          "subject": "First Date",
+          "questions": [
+            "What's your ideal spot for a first date?",
+            "If you could live out a movie or TV love story, which one would you choose?"
+          ]
+        },
+        {
+          "subject": "Acts of Love",
+          "questions": [
+            "What's a recent act of love you received that really touched you?",
+            "What's your love language?"
+          ]
+        },
+        {
+          "subject": "Seduction",
+          "questions": [
+            "What personality trait makes you fall for someone immediately?",
+            "What's a small gesture you appreciate when someone is genuinely interested in you?"
           ]
         }
       ]
@@ -1812,15 +1889,8 @@
         {
           "subject": "Younger Self",
           "questions": [
-            "What advice would you give to the younger generation?",
+            "What advice would you give to the younger generation ?",
             "What did you love doing as a kid that you stopped doing as an adult?"
-          ]
-        },
-        {
-          "subject": "Spending",
-          "questions": [
-            "What's the biggest pointless purchase you've ever made?",
-            "What's your biggest expense category each month?"
           ]
         },
         {
@@ -1880,13 +1950,6 @@
           ]
         },
         {
-          "subject": "Insomnia",
-          "questions": [
-            "What do you do when you can't sleep at 3am?",
-            "What's your best all-nighter?"
-          ]
-        },
-        {
           "subject": "Most Beautiful Moment",
           "questions": [
             "What's been the most beautiful moment of your life so far?",
@@ -1898,6 +1961,13 @@
           "questions": [
             "What job did you dream of having as a child?",
             "What was your number one life goal when you were a kid?"
+          ]
+        },
+        {
+          "subject": "Regrets",
+          "questions": [
+            "What's your biggest regret in life?",
+            "If you could erase one memory from your mind, which one would it be?"
           ]
         },
         {
@@ -1962,6 +2032,13 @@
           "questions": [
             "If you had €10,000 to spend in 24 hours without keeping any, how would you blow it?",
             "What expense do you always justify but deep down know is excessive?"
+          ]
+        },
+        {
+          "subject": "Spending",
+          "questions": [
+            "What's the biggest pointless purchase you've ever made?",
+            "What's your biggest expense category each month?"
           ]
         },
         {
@@ -2035,13 +2112,6 @@
           ]
         },
         {
-          "subject": "Forgiveness",
-          "questions": [
-            "What have you regretted doing recently?",
-            "What's something you never truly apologized for but should have?"
-          ]
-        },
-        {
           "subject": "Dream Jobs",
           "questions": [
             "What imaginary or fictional job would you have loved to do?",
@@ -2103,6 +2173,13 @@
             "If you could change one thing about your current work life, what would it be?",
             "In one word, what gives meaning to your work?"
           ]
+        },
+        {
+          "subject": "Jobs",
+          "questions": [
+            "If you could spend a day in someone else's job just to see, which one would it be?",
+            "What job could you absolutely never do?"
+          ]
         }
       ]
     },
@@ -2127,35 +2204,17 @@
           "subject": "Good Laughs",
           "questions": [
             "What supposedly funny topic actually doesn't make you laugh that much?",
-            "What video or meme makes you laugh every single time?"
-          ]
+            "What's something that makes you laugh every single time?"
+          ],
+          "tips": {
+            "What's something that makes you laugh every single time?": "A video, a meme …"
+          }
         },
         {
           "subject": "Compliments",
           "questions": [
             "What's the compliment that touched you the most in your life, and who gave it?",
             "What compliment do you often give others but can't seem to apply to yourself?"
-          ]
-        },
-        {
-          "subject": "Under the Spell",
-          "questions": [
-            "How do you behave when you're genuinely falling for someone?",
-            "What behavior would make you leave a date within 10 seconds?"
-          ]
-        },
-        {
-          "subject": "Love Advice",
-          "questions": [
-            "What love advice would you give to your younger self?",
-            "What's your personal motto when it comes to love?"
-          ]
-        },
-        {
-          "subject": "Flirting",
-          "questions": [
-            "What's your foolproof technique to seduce someone?",
-            "How would you describe your flirting style in 3 words?"
           ]
         },
         {
@@ -2166,24 +2225,10 @@
           ]
         },
         {
-          "subject": "Romance",
-          "questions": [
-            "What's your favorite romantic song?",
-            "What romantic film always gets to you?"
-          ]
-        },
-        {
           "subject": "Generosity",
           "questions": [
             "What's the most generous thing anyone has ever done for you?",
             "What do you do anonymously and generously, expecting nothing in return?"
-          ]
-        },
-        {
-          "subject": "Acts of Love",
-          "questions": [
-            "What's a recent act of love you received that really touched you?",
-            "What's your love language?"
           ]
         },
         {
@@ -2219,6 +2264,13 @@
           "questions": [
             "Tell us about a time your gut feeling saved you from a bad situation.",
             "In what area of your life do you follow your instincts the most?"
+          ]
+        },
+        {
+          "subject": "Forgiveness",
+          "questions": [
+            "What have you regretted doing recently?",
+            "What's something you never truly apologized for but should have?"
           ]
         },
         {
@@ -2285,13 +2337,6 @@
           ]
         },
         {
-          "subject": "Seduction",
-          "questions": [
-            "What personality trait makes you fall for someone immediately?",
-            "What small gesture shows you that someone is really interested in you?"
-          ]
-        },
-        {
           "subject": "Going Within",
           "questions": [
             "What's the best thing you've discovered about yourself when spending time alone?",
@@ -2310,13 +2355,6 @@
     "IN THE MIRROR": {
       "description": "Unfiltered questions about the truths you rarely say out loud.",
       "subjects": [
-        {
-          "subject": "Gifts Received",
-          "questions": [
-            "What's the typical last-minute gift you often give people?",
-            "What's the worst gift you've ever received?"
-          ]
-        },
         {
           "subject": "Luck & Bad Luck",
           "questions": [
@@ -2474,12 +2512,6 @@
           ]
         },
         {
-          "subject": "Lies & Myths",
-          "questions": [
-            "What's the biggest lie you've told recently?"
-          ]
-        },
-        {
           "subject": "Negotiation",
           "questions": [
             "What are you best at negotiating for?",
@@ -2519,13 +2551,6 @@
           "questions": [
             "What do you do purely because you want to, without needing to justify it to anyone?",
             "What have you done out of fear of judgment that you now regret?"
-          ]
-        },
-        {
-          "subject": "Regrets",
-          "questions": [
-            "What's your biggest regret in life?",
-            "If you could erase one memory from your mind, which one would it be?"
           ]
         },
         {

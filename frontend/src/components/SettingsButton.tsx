@@ -3,6 +3,7 @@ import { LuSettings } from 'react-icons/lu';
 import SettingsModal from './SettingsModal';
 import ReportModal from './ReportModal';
 import InfoModal from './InfoModal';
+import HowToPlayCarousel from './HowToPlayCarousel';
 import { useShareInvite } from '../hooks/useShareInvite';
 import { useLocale } from '../i18n';
 import type { Locale } from '@onskone/shared';
@@ -29,6 +30,7 @@ const SettingsButton = ({ contentLocale, lobbyCode }: SettingsButtonProps) => {
   const { t } = useLocale();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
+  const [isHowToPlayOpen, setIsHowToPlayOpen] = useState(false);
   // Même copie du code que la feuille d'invitation du lobby (avec son repli).
   const { copyCode, fallbackLink, clearFallbackLink } = useShareInvite(lobbyCode, t);
 
@@ -56,6 +58,14 @@ const SettingsButton = ({ contentLocale, lobbyCode }: SettingsButtonProps) => {
         contentLocale={contentLocale}
         lobbyCode={lobbyCode}
         onCopyCode={lobbyCode ? copyCode : undefined}
+        onHowToPlay={
+          lobbyCode
+            ? () => {
+                setIsSettingsOpen(false);
+                setIsHowToPlayOpen(true);
+              }
+            : undefined
+        }
         onReport={() => {
           setIsSettingsOpen(false);
           setIsReportOpen(true);
@@ -63,6 +73,16 @@ const SettingsButton = ({ contentLocale, lobbyCode }: SettingsButtonProps) => {
       />
       {isReportOpen && (
         <ReportModal isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} />
+      )}
+
+      {lobbyCode && (
+        <InfoModal
+          isOpen={isHowToPlayOpen}
+          onClose={() => setIsHowToPlayOpen(false)}
+          title={t.lobby.modals.howToPlay}
+        >
+          <HowToPlayCarousel />
+        </InfoModal>
       )}
 
       {/* Repli : affiche le code quand toutes les méthodes de copie ont échoué

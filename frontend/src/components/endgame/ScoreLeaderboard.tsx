@@ -75,11 +75,11 @@ const ScoreLeaderboard: React.FC<ScoreLeaderboardProps> = ({
     }
   }, [openPopoverFor, renderedPopoverFor]);
 
-  // Le popover s'ouvre SOUS la ligne, à l'intérieur de la liste scrollable : sans
-  // défilement il sortait en partie de la zone visible (bas coupé). On défile une
-  // fois l'animation d'ouverture TERMINÉE (transition de 220 ms dans EndGame) :
-  // mesuré plus tôt, il est encore réduit à scale(0.7) et le défilement « nearest »
-  // s'arrêtait 30 % trop court, laissant le bas de la bulle sous le bord.
+  // Le popover s'ouvre AU-DESSUS de la ligne (la page de fin défile, il y a toujours
+  // le score et les boutons au-dessus du classement) : sur les lignes du haut, il
+  // peut sortir par le haut de l'écran. On défile une fois l'animation d'ouverture
+  // TERMINÉE (transition de 220 ms dans EndGame) : mesuré plus tôt, il est encore
+  // réduit à scale(0.7) et le défilement « nearest » s'arrêtait 30 % trop court.
   useEffect(() => {
     if (!openPopoverFor || !popoverVisible) return;
     const timeout = setTimeout(() => {
@@ -151,9 +151,9 @@ const ScoreLeaderboard: React.FC<ScoreLeaderboardProps> = ({
               // `relative z-20` sur la ligne qui porte le popover : l'animation
               // `animate-player-pop` (fill-mode both) laisse un transform sur chaque
               // ligne, donc chacune est un contexte d'empilement et le `z-30` du
-              // popover reste enfermé dans la sienne. Ouvert vers le BAS, il passait
-              // derrière les lignes suivantes (peintes après). Remonter la ligne
-              // entière au-dessus de ses sœurs le fait repasser devant.
+              // popover reste enfermé dans la sienne. Il pourrait passer derrière
+              // les lignes voisines : remonter la ligne entière au-dessus de ses
+              // sœurs le garde toujours devant.
               className={`flex items-center justify-between p-2 md:p-3 rounded-xl border-[2.5px] border-black animate-player-pop ${isRendered ? 'relative z-20' : ''} ${isCurrentPlayer ? 'bg-warning-100 stack-shadow-sm' : 'bg-cream-player'}`}
               style={{ animationDelay: `${(showLeaderboard ? 0 : 99999) + index * 80}ms` }}
             >
@@ -204,7 +204,7 @@ const ScoreLeaderboard: React.FC<ScoreLeaderboardProps> = ({
                       <div
                         ref={isOpen ? popoverRef : undefined}
                         data-state={isOpen && popoverVisible ? 'open' : 'closed'}
-                        className="absolute right-0 top-full mt-2 scroll-mb-3 w-60 md:w-72 z-30 bg-white border-[2.5px] border-black rounded-xl stack-shadow p-3 md:p-3.5 popover-anim text-left"
+                        className="absolute right-0 bottom-full mb-2 scroll-mt-3 scroll-mb-3 w-60 md:w-72 z-30 bg-white border-[2.5px] border-black rounded-xl stack-shadow p-3 md:p-3.5 popover-anim text-left"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <p className="text-xs font-display font-bold uppercase tracking-wider text-gray-500 leading-tight">
@@ -218,7 +218,6 @@ const ScoreLeaderboard: React.FC<ScoreLeaderboardProps> = ({
                         </p>
                         {answerEntries.length > 0 && (
                           <>
-                            <p className="mt-1 text-xs text-gray-500 leading-tight">{t.endGame.answersHint}</p>
                             <div className="mt-1.5 flex flex-wrap gap-1.5">
                               {answerEntries.map(a => {
                                 const correct = correctIds.has(a.id);
@@ -243,11 +242,35 @@ const ScoreLeaderboard: React.FC<ScoreLeaderboardProps> = ({
                                 );
                               })}
                             </div>
-                            {shownEntry && (
-                              <div className="mt-2 rounded-lg border-2 border-black bg-cream-answer px-2.5 py-1.5">
-                                <AnswerText text={shownEntry.text} className="m-0 text-sm leading-snug break-words" />
+                            {/* Place RÉSERVÉE dès l'ouverture : l'indice et toutes les réponses
+                                sont empilés dans la même case de grille, seul l'élément choisi
+                                est visible. La case fait donc la hauteur du plus long et la
+                                bulle (ancrée par le bas sur sa ligne) ne grandit plus quand on
+                                touche un joueur : rien ne saute. Hauteur plafonnée pour qu'une
+                                réponse fleuve (MAX_ANSWER_LENGTH) ne fasse pas une bulle géante. */}
+                            <div
+                              // Remonté à chaque choix : une longue réponse défilée ne laisse
+                              // pas la suivante démarrer au milieu.
+                              key={shownEntry?.id ?? 'hint'}
+                              className={`mt-2 rounded-lg border-2 px-2.5 py-1.5 max-h-32 overflow-y-auto overscroll-contain ${shownEntry ? 'border-black bg-cream-answer' : 'border-dashed border-gray-300 bg-white'}`}
+                            >
+                              <div className="grid">
+                                <p
+                                  className={`[grid-area:1/1] m-0 text-xs text-gray-500 leading-snug ${shownEntry ? 'invisible' : ''}`}
+                                  aria-hidden={!!shownEntry}
+                                >
+                                  {t.endGame.answersHint}
+                                </p>
+                                {answerEntries.map(a => {
+                                  const shown = shownEntry?.id === a.id;
+                                  return (
+                                    <div key={a.id} className={`[grid-area:1/1] ${shown ? '' : 'invisible'}`} aria-hidden={!shown}>
+                                      <AnswerText text={a.text} className="m-0 text-sm leading-snug break-words" />
+                                    </div>
+                                  );
+                                })}
                               </div>
-                            )}
+                            </div>
                           </>
                         )}
                         <span className="popover-notch" aria-hidden />

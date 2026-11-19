@@ -1,4 +1,5 @@
 import type { Dictionary } from './dictionary';
+import { DRAWING_IDEAS } from './drawingIdeas';
 
 export const en: Dictionary = {
   common: {
@@ -357,7 +358,7 @@ export const en: Dictionary = {
     ringLabel: 'Knowledge score',
     intro: () => (
       <>
-        Welcome to <b>Onskoné</b>, the <b>collaborative</b> game that tests how well you know your friends and family! Find everyone's answers together.
+        Welcome to <b>Onskoné</b>, the <b>collaborative</b> game that tests how well you know your friends and family!
       </>
     ),
     steps: [
@@ -373,7 +374,7 @@ export const en: Dictionary = {
       ),
       ({ Pilier, Joueurs }) => (
         <>
-          {Pilier('The leader')} attributes each answer to the player they think wrote it. {Joueurs('Players')} show their screens to find out which answer the leader gave them.
+          {Pilier('The leader')} guesses who wrote what and hands out the answers. {Joueurs('Players')} show their screens to find out which answer they got.
         </>
       ),
       ({ Pilier }) => (
@@ -647,18 +648,6 @@ export const en: Dictionary = {
     },
   },
 
-  funFacts: [
-    "Onskoné has created 10 couples. Amazing! (and destroyed 35)",
-    "The round's pillar who ends with 0 correct answers has a 50% chance of being bad and a 50% chance of being drunk.",
-    "Your husband or wife didn't guess a single one of your answers the whole game? That's valid grounds for a breakup (Article 711 of the Civil Code)",
-    "If nobody guesses your answers, two theories: you're a misunderstood genius, or you're just extremely weird.",
-    "Onskoné is currently banned in 0 countries. But that could change (fingers crossed!)",
-    "Onskoné is the only game where you can make friends and lose some at the same time.",
-    'To answer, think about everything: work, friends, family, school, travel…',
-    'BE SPONTANEOUS on Onskoné! The first answers that pop into your head are often the best ones.',
-    "Don't try to find THE PERFECT answer: go for the one you'd naturally give!",
-  ],
-
   decks: {
     instruction: 'Tap themes to add/remove them',
     all: 'All',
@@ -746,9 +735,17 @@ export const en: Dictionary = {
 
   phases: {
     questionSelection: {
-      leaderIs: 'Leader this round',
-      waitingSelection: 'Picking a question…',
-      didYouKnow: 'Did you know?',
+      whiteboard: {
+        whilePrefix: 'While',
+        whileSuffix: 'picks a question,',
+        drawMeanwhile: 'doodle with everyone!',
+        ideaLabel: 'Drawing idea:',
+        yourMarker: 'Your marker',
+        // Idées de dessin : toutes dans i18n/drawingIdeas.ts (FR et EN côte à côte).
+        ideas: DRAWING_IDEAS.map((idea) => idea.en),
+        undo: 'Undo my last stroke',
+        aria: 'Shared whiteboard',
+      },
       swipeHintMobile: 'swipe to change card',
       swipeOverlayTitle: 'Swipe',
       swipeOverlaySub: 'to change card',
@@ -771,15 +768,13 @@ export const en: Dictionary = {
     answering: {
       questionAskedToOthers: 'Question asked to the other players',
       questionAskedBy: 'Question asked by',
+      placeholder: 'Your answer…',
       writeYourAnswer: 'Write your own answer',
-      placeholder: 'Write your answer…',
       send: 'Send',
       yourAnswer: 'Your answer',
       editAnswer: 'Edit my answer',
       waitingForOthers: 'Waiting for the other players…',
       answersReceived: 'Answers received',
-      tipTeaser: 'Need a hint?',
-      tipLabel: 'Show hint',
     },
     substituteSelection: {
       instructionLeader: 'The player you choose will have to guess the answer you would have given.',

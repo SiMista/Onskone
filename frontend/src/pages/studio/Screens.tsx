@@ -125,16 +125,25 @@ const ScreenStage = ({
       return;
     }
     if (data?.type !== 'studio:screenEmit' || typeof data.event !== 'string') return;
-    const { state, events, log: note } = applyScreenEmit(scenario, tableRef.current, data.event, data.payload);
+    const { state, events, log: note } = applyScreenEmit(scenario, tableRef.current, data.event, data.payload, who);
     tableRef.current = state;
     setTable(state);
-    frames.current.forEach((f) => post(f, { type: 'studio:screenUpdate', state, events }));
+    // Chaque téléphone reçoit les évènements qui lui sont destinés (réponse à une
+    // demande : `to` ; diffusion sans écho à l'auteur : `except`).
+    frames.current.forEach((f, id) => post(f, {
+      type: 'studio:screenUpdate',
+      state,
+      events: events.filter((ev) => (ev.to === undefined || ev.to === id) && ev.except !== id),
+    }));
+    // Les points ajoutés à un trait en cours (des dizaines par seconde) ne sont pas journalisés.
+    if (!note) return;
     setLog((prev) => [{
       id: Date.now() + Math.random(),
       at: new Date().toLocaleTimeString('fr-FR'),
       who: viewers.find((v) => v.id === who)?.name ?? who,
       event: data.event!,
-      payload: JSON.stringify(data.payload ?? {}).replace(/"lobbyCode":"APERCU",?/, ''),
+      // Tronqué : un trait du tableau blanc porte des dizaines de points.
+      payload: JSON.stringify(data.payload ?? {}).replace(/"lobbyCode":"APERCU",?/, '').replace(/^(.{160}).+$/, '$1…'),
       note,
     }, ...prev].slice(0, 60));
   }, [scenario, viewers]);
@@ -233,12 +242,14 @@ const ScreenStage = ({
         <div className="flex items-center justify-between px-3 py-1.5 border-b border-white/[0.06]">
           <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/40">Faux serveur · journal</p>
           <p className="font-mono text-[10px] text-white/35">
-            révélées [{table.revealed.join(', ')}] · en attente {table.pending ?? '-'} · validées [{table.corrections.join(', ')}]
+            {scenario.screen === 'whiteboard'
+              ? `traits sur le tableau : ${table.board?.length ?? 0}`
+              : `révélées [${table.revealed.join(', ')}] · en attente ${table.pending ?? '-'} · validées [${table.corrections.join(', ')}]`}
           </p>
         </div>
         <div className="max-h-56 overflow-y-auto px-3 py-2 font-mono text-[11px] leading-relaxed">
           {log.length === 0 ? (
-            <p className="text-white/30">Aucune action pour l'instant : clique dans un téléphone (Révéler, Oui/Non, Suivant…).</p>
+            <p className="text-white/30">Aucune action pour l'instant : {scenario.screen === 'whiteboard' ? 'dessine dans un téléphone.' : 'clique dans un téléphone (Révéler, Oui/Non, Suivant…).'}</p>
           ) : log.map((l) => (
             <p key={l.id} className="text-white/70">
               <span className="text-white/30">{l.at}</span>{' '}

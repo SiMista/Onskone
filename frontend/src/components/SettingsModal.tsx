@@ -1,5 +1,5 @@
 import type { IconType } from 'react-icons';
-import { LuVolume2, LuVolumeX, LuVibrate, LuVibrateOff, LuTriangleAlert, LuShieldCheck } from 'react-icons/lu';
+import { LuVolume2, LuVolumeX, LuVibrate, LuVibrateOff, LuTriangleAlert, LuShieldCheck, LuCircleHelp } from 'react-icons/lu';
 import ModalShell from './ModalShell';
 import Dropdown from './Dropdown';
 import { CopyableLobbyCode } from './LobbyCode';
@@ -29,6 +29,11 @@ interface SettingsModalProps {
    */
   lobbyCode?: string;
   onCopyCode?: () => void;
+  /**
+   * « Comment jouer ? » : le parent ferme les Réglages et ouvre les règles. Fourni
+   * seulement en partie (accueil et lobby ont déjà leur propre bouton).
+   */
+  onHowToPlay?: () => void;
 }
 
 interface ToggleTileProps {
@@ -83,7 +88,7 @@ const ToggleTile = ({ on, onToggle, label, stateLabel, IconOn, IconOff, disabled
  * ("Indisponible") quand l'appareil ne sait pas vibrer (Safari iOS, Firefox
  * desktop) : la masquer laissait croire qu'elle manquait.
  */
-const SettingsModal = ({ isOpen, onClose, onReport, contentLocale, lobbyCode, onCopyCode }: SettingsModalProps) => {
+const SettingsModal = ({ isOpen, onClose, onReport, contentLocale, lobbyCode, onCopyCode, onHowToPlay }: SettingsModalProps) => {
   const { t, locale, setLocale } = useLocale();
   const { sound, vibration } = useSettings();
   const showLobby = !!lobbyCode && !!onCopyCode;
@@ -162,6 +167,16 @@ const SettingsModal = ({ isOpen, onClose, onReport, contentLocale, lobbyCode, on
       {/* Actions à part, sous les réglages : choix publicitaires (si requis) et
           signaler un problème, en rouge. */}
       <div className="flex flex-wrap justify-center gap-x-2 pt-3 pb-1">
+        {onHowToPlay && (
+          <button
+            type="button"
+            onClick={onHowToPlay}
+            className="inline-flex items-center gap-1.5 min-h-11 px-3 font-display text-sm font-bold uppercase tracking-tight text-black/60 hover:text-black transition-colors cursor-pointer"
+          >
+            <LuCircleHelp aria-hidden size={16} strokeWidth={2.5} />
+            {t.howToPlay.button}
+          </button>
+        )}
         {showAdChoices && (
           <button
             type="button"

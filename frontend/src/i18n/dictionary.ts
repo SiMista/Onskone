@@ -391,8 +391,6 @@ export interface Dictionary {
 
   achievements: Record<string, { title: string; description: string }>;
 
-  funFacts: string[];
-
   decks: {
     instruction: string;
     all: string;
@@ -475,9 +473,26 @@ export interface Dictionary {
 
   phases: {
     questionSelection: {
-      leaderIs: string;
-      waitingSelection: string;
-      didYouKnow: string;
+      /** Tableau blanc partagé des non-piliers pendant le choix de question. */
+      whiteboard: {
+        /** « Pendant que » [avatar + pseudo du pilier] « choisit sa question, ». */
+        whilePrefix: string;
+        whileSuffix: string;
+        drawMeanwhile: string;
+        /** « Idée de dessin : » devant l'idée de la manche. */
+        ideaLabel: string;
+        /** Infobulle du feutre (ta couleur) sur le rebord du tableau. */
+        yourMarker: string;
+        /**
+         * Idées de dessin, tirées par index : viennent toutes de i18n/drawingIdeas.ts (FR
+         * et EN sur la même ligne, donc même ordre et même nombre). Une fonction = idée
+         * « à nom » : pseudo d'un joueur (`(n) => …`) ou de deux pour un duo (`(a, b) => …`),
+         * les mêmes pour tout le salon (cf. resolveDrawingIdea).
+         */
+        ideas: (string | ((a: string, b: string) => string))[];
+        undo: string;
+        aria: string;
+      };
       swipeHintMobile: string;
       swipeOverlayTitle: string;
       swipeOverlaySub: string;
@@ -501,17 +516,14 @@ export interface Dictionary {
     answering: {
       questionAskedToOthers: string;
       questionAskedBy: string;
-      writeYourAnswer: string;
       placeholder: string;
+      /** Consigne sous l'astuce, tant que le joueur écrit. */
+      writeYourAnswer: string;
       send: string;
       yourAnswer: string;
       editAnswer: string;
       waitingForOthers: string;
       answersReceived: string;
-      /** Bulle d'appel temporaire à côté de la pastille d'astuce. */
-      tipTeaser: string;
-      /** Libellé accessible de la pastille d'astuce. */
-      tipLabel: string;
     };
     substituteSelection: {
       instructionLeader: string;

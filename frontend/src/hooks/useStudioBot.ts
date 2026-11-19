@@ -60,6 +60,12 @@ interface UseStudioBotArgs {
 
 export function useStudioBot({ game, currentPlayer, players, lobbyCode, revealOrder }: UseStudioBotArgs) {
   const enabledRef = useRef<boolean>(readInitialBotFlag());
+  // Le bot joue-t-il ? enabledRef ET le flag du slot (source de vérité, tenu à jour par
+  // l'écoute module-level de studioStorage, toute la vie de l'iframe). enabledRef seul ne
+  // suffit pas : une instance rendue juste avant un `studio:scenarioReached` le lit à true,
+  // et son écoute (posée dans un effet, APRÈS le rendu) rate le message. Vu en vrai : le
+  // pilier bot choisissait sa question malgré l'arrêt « Tableau de dessin ».
+  const botOn = () => enabledRef.current && getStudioBotFlag();
   // Tracks which phase-actions have already been emitted, keyed by
   // `${roundNumber}:${phase}`. Reset on round change.
   const firedRef = useRef<Set<string>>(new Set());
@@ -151,7 +157,7 @@ export function useStudioBot({ game, currentPlayer, players, lobbyCode, revealOr
     if (!isStudioFrame) return;
 
     const onQuestions = (data: { questions: GameCard[]; usedQuestions?: string[] }) => {
-      if (!enabledRef.current) return;
+      if (!botOn()) return;
       const g = gameRef.current;
       const cp = currentPlayerRef.current;
       const code = lobbyCodeRef.current;
@@ -170,7 +176,7 @@ export function useStudioBot({ game, currentPlayer, players, lobbyCode, revealOr
     };
 
     const onShuffled = (data: Parameters<ServerToClientEvents['shuffledAnswersReceived']>[0]) => {
-      if (!enabledRef.current) return;
+      if (!botOn()) return;
       const g = gameRef.current;
       const cp = currentPlayerRef.current;
       const code = lobbyCodeRef.current;
@@ -199,7 +205,7 @@ export function useStudioBot({ game, currentPlayer, players, lobbyCode, revealOr
         });
       }
       setTimeout(() => {
-        if (!enabledRef.current) return;
+        if (!botOn()) return;
         socket.emit('submitGuesses', { lobbyCode: code, guesses });
       }, 600);
     };
@@ -227,7 +233,7 @@ export function useStudioBot({ game, currentPlayer, players, lobbyCode, revealOr
   const mainSubstituteId = game?.currentRound?.substitutePlayerId;
   const mainPlayerId = currentPlayer?.id;
   useEffect(() => {
-    if (!isStudioFrame || !enabledRef.current) return;
+    if (!isStudioFrame || !botOn()) return;
     const round = gameRef.current?.currentRound;
     if (!round || mainRoundNumber == null || mainPhase == null || !mainPlayerId || !lobbyCode) return;
 
@@ -249,7 +255,7 @@ export function useStudioBot({ game, currentPlayer, players, lobbyCode, revealOr
       if (firedRef.current.has(key)) return;
       firedRef.current.add(key);
       setTimeout(() => {
-        if (!enabledRef.current) return;
+        if (!botOn()) return;
         try { fn(); } catch (err) { console.warn('[studio-bot] action failed', err); }
       }, delay);
     };
@@ -345,7 +351,7 @@ export function useStudioBot({ game, currentPlayer, players, lobbyCode, revealOr
       const step = sc ? SCENARIO_REVEAL_STEP_MS : 900;
 
       const revealNext = () => {
-        if (!enabledRef.current) return;
+        if (!botOn()) return;
         // Re-lire l'état courant : si le round a changé entre-temps, stop.
         const g = gameRef.current;
         if (!g?.currentRound || g.currentRound.roundNumber !== round.roundNumber) return;
@@ -365,7 +371,7 @@ export function useStudioBot({ game, currentPlayer, players, lobbyCode, revealOr
           decisions++;
           const confirm = now ? (scripted ?? 'confirm') === 'confirm' : Math.random() < 0.5;
           setTimeout(() => {
-            if (!enabledRef.current) return;
+            if (!botOn()) return;
             socket.emit(confirm ? 'confirmSimilarity' : 'dismissSimilarity', { lobbyCode, answerIndex: pending });
             setTimeout(revealNext, now ? step : 1500);
           }, now ? SCENARIO_DECISION_DELAY_MS : 0);
@@ -380,7 +386,7 @@ export function useStudioBot({ game, currentPlayer, players, lobbyCode, revealOr
             return;
           }
           setTimeout(() => {
-            if (!enabledRef.current) return;
+            if (!botOn()) return;
             const gg = gameRef.current;
             if (!gg?.currentRound || gg.currentRound.roundNumber !== round.roundNumber) return;
             socket.emit('nextRound', { lobbyCode });

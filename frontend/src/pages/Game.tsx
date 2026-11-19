@@ -189,6 +189,10 @@ const GamePage: React.FC = () => {
             lobbyCode={lobbyCode!}
             isLeader={isLeader}
             leader={game.currentRound.leader}
+            players={players}
+            drawingSeed={game.drawingSeed}
+            currentPlayerId={currentPlayer.id}
+            roundNumber={game.currentRound.roundNumber}
             gameSpeed={gameSpeed}
             intro={showQuestionSelectionIntro}
           />

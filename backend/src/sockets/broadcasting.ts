@@ -192,6 +192,7 @@ export function serializeGame(lobby: Lobby): IGame {
         status: game.status,
         rounds: serializeRounds(game.rounds),
         totalRounds: game.getMaxRounds(),
+        drawingSeed: game.drawingSeed,
     };
 }
 

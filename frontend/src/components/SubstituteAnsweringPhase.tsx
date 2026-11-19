@@ -42,6 +42,7 @@ const SubstituteAnsweringPhase = ({
   const substitute = players.find(p => p.id === substitutePlayerId);
   const isPilier = currentPlayerId === leaderId;
   const isSubstitute = !!substitutePlayerId && currentPlayerId === substitutePlayerId;
+  const tip = getQuestionTip(card, question);
 
   const [answer, setAnswer] = useState('');
   const [submitted, setSubmitted] = useState(false);
@@ -124,14 +125,9 @@ const SubstituteAnsweringPhase = ({
 
         <QuestionByline player={leader} />
 
-        {/* Le substitut écrit à la place du pilier : l'astuce l'aide autant qu'un joueur qui répond. */}
-        <QuestionCard
-          question={question}
-          card={card}
-          variant="compact"
-          tip={getQuestionTip(card, question)}
-          tipAttention={isSubstitute && !submitted}
-        />
+        {/* L'astuce pour tout le monde : le substitut écrit à la place du pilier (elle l'aide
+            autant qu'un joueur qui répond), le pilier et les autres l'ont vue en phase réponse. */}
+        <QuestionCard question={question} card={card} variant="compact" tip={tip} />
 
         {isSubstitute ? (
           <div className="flex-1 flex flex-col">

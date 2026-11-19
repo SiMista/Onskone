@@ -1,6 +1,6 @@
 import * as LobbyManager from '../../managers/LobbyManager';
 import { createGame } from '../../managers/GameManager.js';
-import { sanitizeSelectedDecks, getDefaultSelectedDecks } from '../../data/questionsRepository.js';
+import { sanitizeSelectedDecks } from '../../data/questionsRepository.js';
 import { readHandshakePremium } from '../../utils/premium.js';
 import { Player } from '../../models/Player';
 import { Lobby } from '../../models/Lobby';
@@ -738,12 +738,17 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
 
             // Les thèmes premium ne partent en partie que si l'host ACTUEL est premium :
             // ils ont pu être cochés par un host premium parti depuis (transfert d'host).
-            // Si la sélection ne contenait que du premium, retour à la sélection par défaut.
+            // Si la sélection ne contenait que du premium, elle est vidée et on ne lance pas :
+            // le nouvel host choisit ses thèmes (comme un salon neuf), on ne choisit pas pour lui.
             const countDecks = (d: typeof lobby.selectedDecks) => Object.values(d).reduce((acc, arr) => acc + arr.length, 0);
             const decks = sanitizeSelectedDecks(lobby.selectedDecks, lobby.locale, lobby.hostIsPremium);
             if (countDecks(decks) !== countDecks(lobby.selectedDecks)) {
-                lobby.selectedDecks = countDecks(decks) > 0 ? decks : getDefaultSelectedDecks(lobby.locale, lobby.hostIsPremium);
+                lobby.selectedDecks = decks;
                 emitLobbyDecksState(io, null, lobby);
+                if (countDecks(decks) === 0) {
+                    socket.emit('error', { message: 'Les thèmes choisis ne sont plus disponibles, choisis-en un autre', code: ERROR_CODES.INVALID });
+                    return;
+                }
             }
 
             const game = createGame(lobby);

@@ -2,7 +2,6 @@ import { fr } from '../../../i18n/fr';
 
 // Admin reste FR-only -> on lit directement les strings depuis le dico FR
 // sans passer par useLocale (qui suivrait la préférence UI globale).
-export const FUN_FACTS = fr.funFacts;
 export const TIER_TEXTS = fr.endGame.tiers;
 export const ACHIEVEMENT_TEXTS = fr.achievements;
 export const LEGAL_CONTENT = fr.legal;
@@ -13,11 +12,11 @@ export const PREVIEW_TOP_PLAYERS = [
   { name: 'Thomas', score: 5, avatarId: 16 },
 ];
 
-export type ContentSection = 'tiers' | 'funfacts' | 'achievements' | 'avatars' | 'legal' | 'constants';
+export type ContentSection = 'tiers' | 'drawingIdeas' | 'achievements' | 'avatars' | 'legal' | 'constants';
 
 export const CONTENT_SECTIONS: { id: ContentSection; label: string; hint: string }[] = [
   { id: 'tiers', label: 'Paliers de score', hint: 'Le verdict affiché en fin de partie' },
-  { id: 'funfacts', label: 'Le saviez-vous ?', hint: 'Les anecdotes affichées pendant les attentes' },
+  { id: 'drawingIdeas', label: 'Idées de dessin', hint: 'Les idées proposées sur le tableau blanc' },
   { id: 'achievements', label: 'Succès', hint: 'Les badges que les joueurs débloquent' },
   { id: 'avatars', label: 'Avatars', hint: 'Les images au choix des joueurs' },
   { id: 'legal', label: 'Pages légales', hint: 'Mentions, confidentialité, contact' },

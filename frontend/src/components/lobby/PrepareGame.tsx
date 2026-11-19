@@ -180,13 +180,13 @@ const PrepareGame = ({
                       « pourquoi » au-dessus se lit une fois, le « comment » est ce que l'hôte
                       revient chercher des yeux. Pas de fond : en pastille, ça passait pour des boutons. */}
                   {isHost && (
-                    <ul className="!my-0 !pl-0 list-none flex flex-col items-center gap-1 font-sans text-xs text-gray-700 leading-snug">
+                    <ul className="!my-0 !pl-0 list-none flex flex-col items-center gap-1 font-sans text-sm font-semibold text-gray-800 leading-snug [&_b]:!font-extrabold [&_b]:text-black">
                       <li className="flex items-center gap-1.5">
-                        <LuGrab size={14} strokeWidth={2.5} aria-hidden className="shrink-0" />
+                        <LuGrab size={16} strokeWidth={2.75} aria-hidden className="shrink-0" />
                         <span>{t.lobby.prepare.seatsGestures.drag}</span>
                       </li>
                       <li className="flex items-center gap-1.5">
-                        <LuPointer size={14} strokeWidth={2.5} aria-hidden className="shrink-0" />
+                        <LuPointer size={16} strokeWidth={2.75} aria-hidden className="shrink-0" />
                         <span>{t.lobby.prepare.seatsGestures.tap}</span>
                       </li>
                     </ul>

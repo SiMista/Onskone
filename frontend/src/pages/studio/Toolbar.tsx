@@ -1,7 +1,7 @@
 import { GameMode, GAME_CONSTANTS } from '@onskone/shared';
 import type { GameSpeed } from '@onskone/shared';
 import type { StudioCrashTarget } from '../../utils/studioCrash';
-import { STUDIO_SCENARIOS, STUDIO_STOPS, findStudioScenario, type StudioStop } from '../../utils/studioScenarios';
+import { STUDIO_STOPS, findStudioScenario, studioScenarioGroups, type StudioStop } from '../../utils/studioScenarios';
 import { Layout, SlotConfig, SELECT_CLS } from './shared';
 
 // Variants compacts (locaux) pour la Toolbar, plus denses que le PILL_ICON
@@ -270,7 +270,11 @@ export const Toolbar = ({
             className={`${SELECT_CLS} !px-1.5 !py-0.5 !text-[10px] disabled:opacity-40 disabled:cursor-not-allowed`}
           >
             <option value="">Partie libre</option>
-            {STUDIO_SCENARIOS.map((sc) => <option key={sc.id} value={sc.id}>{sc.label}</option>)}
+            {studioScenarioGroups().map(([group, list]) => (
+              <optgroup key={group} label={group}>
+                {list.map((sc) => <option key={sc.id} value={sc.id}>{sc.label}</option>)}
+              </optgroup>
+            ))}
           </select>
           {scenario && (
             <>

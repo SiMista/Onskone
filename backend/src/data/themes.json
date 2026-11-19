@@ -103,6 +103,15 @@
       "en": "Sharp opinions, awkward confessions. We see you."
     }
   },
+  "LOVE": {
+    "category": "FUN",
+    "emoji": "fluent-emoji-flat:heart-with-arrow",
+    "labels": { "fr": "AMOUR & SÉDUCTION", "en": "LOVE & SEDUCTION" },
+    "descriptions": {
+      "fr": "Coups de cœur, drague, premiers dates : ta façon d'aimer !",
+      "en": "Crushes, flirting, first dates. How you actually do love."
+    }
+  },
   "AMBITIONS": {
     "category": "DEEP",
     "emoji": "fluent-emoji-flat:rocket",

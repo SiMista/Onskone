@@ -13,9 +13,11 @@ const Fallback = ({ onHome, details }: { onHome: () => void; details: string }) 
   const { t } = useLocale();
   return (
     <div className="min-h-screen flex items-center justify-center p-6 text-center">
-      <div className="bg-white rounded-xl card-paper stack-shadow px-6 py-8 max-w-md w-full space-y-4">
-        <p className="text-display-lg text-gray-900">{t.app.crashTitle}</p>
-        <p className="text-sm text-gray-600">{t.app.crashBody}</p>
+      {/* Colonne centrée : le bouton et « Signaler » sont inline, en simple bloc ils
+          se mettaient côte à côte dès que la carte était assez large (PC). */}
+      <div className="bg-white rounded-xl card-paper stack-shadow px-6 py-8 max-w-md w-full flex flex-col items-center gap-4">
+        <p className="!m-0 text-display-lg text-gray-900">{t.app.crashTitle}</p>
+        <p className="!m-0 text-sm text-gray-600">{t.app.crashBody}</p>
         <Button text={t.app.crashHome} variant="primary" size="md" onClick={onHome} />
         {/* Le crash est exactement le moment où l'on veut un signalement : le contexte
             (message + composants) arrive pré-rempli dans le ticket. */}

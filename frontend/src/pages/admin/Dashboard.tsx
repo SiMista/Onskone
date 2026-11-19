@@ -12,6 +12,7 @@ import { LogsPanel } from './Logs';
 import { LobbiesPanel } from './Lobbies';
 import { DecksPanel } from './Decks';
 import { ContentPanel } from './Content';
+import { BudgetPanel } from './Budget';
 import { StatsPanel } from './Stats';
 import { DangerPanel, RestrictionsBanner, activeRestrictions } from './Danger';
 import { NavDropdown } from './NavDropdown';
@@ -256,6 +257,7 @@ export const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
         )}
         {activeTab === 'decks' && <DecksPanel active />}
         {activeTab === 'content' && <ContentPanel />}
+        {activeTab === 'budget' && <BudgetPanel />}
         {activeTab === 'danger' && (
           <DangerPanel
             playingCount={playingCount}

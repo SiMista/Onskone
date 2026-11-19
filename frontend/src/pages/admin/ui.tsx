@@ -55,6 +55,17 @@ export const BADGE_TONES: Record<BadgeTone, string> = {
 };
 export const badge = (tone: BadgeTone = 'neutral'): string => `${BADGE} ${BADGE_TONES[tone]}`;
 
+// Thème premium : couronne dorée, la même que dans le jeu (la famille premium-* est la seule
+// couleur du premium, jamais l'ambre de sélection de l'admin). `withLabel` : pastille « Premium ».
+export const PremiumCrown = ({ withLabel = false, size = 14 }: { withLabel?: boolean; size?: number }) => {
+  const crown = <Icon icon="fluent-emoji-flat:crown" width={size} height={size} className="shrink-0" aria-hidden />;
+  return withLabel ? (
+    <span className={`${BADGE} border-premium-300/40 bg-premium-300/10 text-premium-100`}>{crown}Premium</span>
+  ) : (
+    <span role="img" aria-label="Premium" title="Thème premium" className="inline-flex shrink-0">{crown}</span>
+  );
+};
+
 // ---------- Fond et marque ----------
 // La nuit d'Onskoné : bleu nuit profond, halo du bleu du logo en haut, pointe du jaune du logo
 // en bas à droite, et les « ? » du fond du jeu en filigrane, fondus vers le bas.
@@ -120,7 +131,7 @@ export const KpiCell = ({
 }: {
   label: string;
   value: number | string;
-  hint?: string;
+  hint?: ReactNode;
   onClick?: () => void;
   compact?: boolean;
 }) => {

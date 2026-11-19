@@ -35,6 +35,8 @@ export interface AdminDeckSummary {
   theme: string;
   /** Description du thème (depuis l'onglet "Noms Themes" de l'Excel source) */
   description: string;
+  /** Thème réservé au premium (flag de themes.json). Absent = gratuit. */
+  premium?: boolean;
   subjectCount: number;
   questionCount: number;
   subjects: AdminDeckSubject[];

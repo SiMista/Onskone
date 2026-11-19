@@ -412,33 +412,32 @@ const EndGame: React.FC = () => {
           animation: fall linear infinite;
         }
         .popover-anim {
-          /* Jaillit depuis le bouton, qui est au-dessus (popover ouvert vers le bas). */
-          transform-origin: top right;
+          /* Jaillit depuis le bouton, qui est en dessous (popover ouvert vers le haut). */
+          transform-origin: bottom right;
           transition: opacity 200ms ease-out, transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
         }
         .popover-anim[data-state="closed"] {
           opacity: 0;
-          transform: scale(0.7) translateY(-8px);
+          transform: scale(0.7) translateY(8px);
           pointer-events: none;
         }
         .popover-anim[data-state="open"] {
           opacity: 1;
           transform: scale(1) translateY(0);
         }
-        /* Le popover s'ouvre vers le BAS (la liste du classement scrolle, un
-           popover ouvert vers le haut en sortirait) : la pointe vise donc le
-           bouton situé au-dessus de lui. */
+        /* Le popover s'ouvre vers le HAUT (pas de scroll imbriqué : c'est toute la
+           page de fin qui défile) : la pointe vise donc le bouton situé sous lui. */
         .popover-notch {
           position: absolute;
           right: 14px;
-          top: -8px;
+          bottom: -8px;
           width: 14px;
           height: 14px;
           background: white;
-          border-left: 2.5px solid black;
-          border-top: 2.5px solid black;
+          border-right: 2.5px solid black;
+          border-bottom: 2.5px solid black;
           transform: rotate(45deg);
-          border-top-left-radius: 3px;
+          border-bottom-right-radius: 3px;
         }
       `}</style>
     </div>

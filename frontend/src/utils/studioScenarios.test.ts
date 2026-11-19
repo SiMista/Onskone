@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { RoundPhase } from '@onskone/shared';
 import {
   STUDIO_SCENARIOS, findStudioScenario, isPhaseStop, scenarioAuthorOf, scenarioGuesses,
-  scenarioRoleLabel, scenarioRolePlayers,
+  scenarioRoleLabel, scenarioRolePlayers, studioScenarioGroups,
 } from './studioScenarios';
 
 const players = [{ id: 'p0' }, { id: 'p1' }, { id: 'p2' }, { id: 'p3' }];
@@ -53,6 +53,25 @@ describe('scénarios de Régie : logique des bots', () => {
   it('une carte « à personne » reste sans attribution', () => {
     const un = findStudioScenario('unassigned')!;
     expect(scenarioGuesses(un, [{ id: 'b', text: 'Pizzas' }], scenarioRolePlayers(players, 'p0'), 'p0')).toEqual({});
+  });
+
+  it('arrêt « tableau de dessin » : dès le choix de la question', () => {
+    expect(isPhaseStop('questionSelection', RoundPhase.QUESTION_SELECTION)).toBe(true);
+    expect(isPhaseStop('questionSelection', RoundPhase.ANSWERING)).toBe(true);
+    expect(findStudioScenario('whiteboard')?.stops[0]).toBe('questionSelection');
+  });
+
+  it('menu rangé par phase de jeu, dans l’ordre du jeu, sans scénario perdu', () => {
+    const groups = studioScenarioGroups();
+    expect(groups[0][0]).toBe('Choix de la question');
+    expect(groups.flatMap(([, list]) => list)).toHaveLength(STUDIO_SCENARIOS.length);
+    // Scénarios d'une même phase côte à côte dans la liste : le menu suit l'ordre du jeu.
+    const seen = new Set<string>();
+    STUDIO_SCENARIOS.forEach((sc, i) => {
+      if (i > 0 && STUDIO_SCENARIOS[i - 1].group === sc.group) return;
+      expect(seen.has(sc.group)).toBe(false);
+      seen.add(sc.group);
+    });
   });
 
   it('points d’arrêt de phase atteints en arrivant dans la phase, ou après', () => {

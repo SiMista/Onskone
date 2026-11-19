@@ -15,6 +15,7 @@ import { getDeployedVersion } from '../utils/appVersion.js';
 import { getAppStoreVersion } from '../utils/appStoreVersion.js';
 import { getDeckStats } from '../utils/deckStats.js';
 import { getMaintenance, setMaintenance } from '../utils/maintenance.js';
+import { getDecksCatalogWithMeta } from '../data/questionsRepository.js';
 
 const router: Router = Router();
 
@@ -91,6 +92,11 @@ function loadDecks(locale: Locale): AdminDeckSummary[] {
   try {
     const raw = fs.readFileSync(questionsPath, 'utf-8');
     const data = JSON.parse(raw) as QuestionsFile;
+    // Les clés du JSON sont les libellés localisés ; le flag premium vient de themes.json,
+    // déjà résolu par libellé dans le catalogue de la même langue.
+    const premiumNames = new Set(
+      Object.values(getDecksCatalogWithMeta(locale)).flat().filter(t => t.premium).map(t => t.name),
+    );
     const out: AdminDeckSummary[] = [];
     for (const [category, themes] of Object.entries(data)) {
       for (const [theme, themeData] of Object.entries(themes)) {
@@ -104,6 +110,7 @@ function loadDecks(locale: Locale): AdminDeckSummary[] {
           category,
           theme,
           description: themeData.description ?? '',
+          ...(premiumNames.has(theme) ? { premium: true } : {}),
           subjectCount: subjectSummaries.length,
           questionCount,
           subjects: subjectSummaries,

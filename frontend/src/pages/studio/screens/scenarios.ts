@@ -1,4 +1,7 @@
-import { buildRevealOrder, isPersonneGuess, type GameMode, type RevealResult } from '@onskone/shared';
+import {
+  WHITEBOARD, buildRevealOrder, isPersonneGuess, isWhiteboardLocalId, whiteboardStrokeId,
+  type GameMode, type RevealResult, type WhiteboardStroke,
+} from '@onskone/shared';
 
 // =====================================================================
 // Aperçu d'écrans du Studio (DEV) : scénarios figés + faux serveur.
@@ -23,6 +26,8 @@ export interface RevealScreenState {
   revealed: number[];
   pending: number | null;
   corrections: number[];
+  /** Tableau blanc (scénarios `screen: 'whiteboard'`), dans l'ordre de dessin. */
+  board?: WhiteboardStroke[];
 }
 
 export interface ScreenScenario {
@@ -44,6 +49,8 @@ export interface ScreenScenario {
    */
   similarCards: number[];
   initial: RevealScreenState;
+  /** Écran montré : le reveal (défaut) ou l'attente du choix de question (tableau blanc). */
+  screen?: 'reveal' | 'whiteboard';
 }
 
 export const TABLE_VIEWER = 'table';
@@ -91,6 +98,45 @@ const LEADER_CARD_TABLE = [card(BOB, LEA, 'Pizzas'), card(LEA, ALICE, 'Pizza'), 
 const UNASSIGNED_TABLE = [card(ALICE, BOB, 'Pizza'), card(BOB, null, 'Pizzas'), card(CHARLIE, ALICE, 'Hamburger')];
 
 const PIZZA_CAST = { leader: LEA, players: [ALICE, BOB, CHARLIE], similarCards: [0] };
+
+// ----- Tableau blanc --------------------------------------------------------
+// Couleur de stylo fixe par joueur de l'aperçu (le vrai serveur la tire au hasard).
+const PREVIEW_CAST = [LEA, ALICE, BOB, CHARLIE];
+export const previewWhiteboardColor = (playerId: string): number =>
+  (Math.max(0, PREVIEW_CAST.findIndex((p) => p.id === playerId)) * 3 + 1) % WHITEBOARD.PRIMARY_COLOR_COUNT;
+
+/** Cercle (rond à l'écran : le tableau est 3:4, d'où l'axe y écrasé). */
+const ring = (cx: number, cy: number, r: number, from = 0, to = 2 * Math.PI, n = 32): number[] =>
+  Array.from({ length: n + 1 }, (_, i) => {
+    const a = from + ((to - from) * i) / n;
+    return [Math.round(cx + r * Math.cos(a)), Math.round(cy + r * 0.75 * Math.sin(a))];
+  }).flat();
+
+const drawn = (author: ScreenPlayer, localId: string, points: number[]): WhiteboardStroke => {
+  const color = previewWhiteboardColor(author.id);
+  return { id: whiteboardStrokeId(color, localId), color, points };
+};
+
+/** Un soleil (Alice), une maison (Charlie), un smiley (Bob). */
+function busyBoard(): WhiteboardStroke[] {
+  const rays = Array.from({ length: 8 }, (_, i) => {
+    const a = (i / 8) * 2 * Math.PI;
+    return drawn(ALICE, `ray${i}`, [
+      Math.round(250 + 120 * Math.cos(a)), Math.round(200 + 90 * Math.sin(a)),
+      Math.round(250 + 165 * Math.cos(a)), Math.round(200 + 124 * Math.sin(a)),
+    ]);
+  });
+  return [
+    drawn(ALICE, 'sun', ring(250, 200, 90)),
+    ...rays,
+    drawn(CHARLIE, 'house', [560, 760, 560, 560, 715, 450, 870, 560, 870, 760, 560, 760]),
+    drawn(CHARLIE, 'door', [680, 760, 680, 660, 750, 660, 750, 760]),
+    drawn(BOB, 'face', ring(300, 680, 130)),
+    drawn(BOB, 'eye1', [255, 640]),
+    drawn(BOB, 'eye2', [345, 640]),
+    drawn(BOB, 'smile', ring(300, 690, 70, 0.15 * Math.PI, 0.85 * Math.PI, 12)),
+  ];
+}
 
 export const SCREEN_SCENARIOS: ScreenScenario[] = [
   {
@@ -197,18 +243,46 @@ export const SCREEN_SCENARIOS: ScreenScenario[] = [
     mode: 'local',
     initial: state(UNASSIGNED_TABLE, { revealed: [1] }),
   },
+  {
+    id: 'whiteboard-intro',
+    group: 'Attente · tableau blanc',
+    title: 'Tableau vide (intro)',
+    note: "Léa choisit sa question. Chez les autres : la consigne s'affiche au centre, monte, puis le tableau apparaît. Dessine sur un téléphone, les autres le voient en direct ; « Annuler » retire ton dernier trait partout.",
+    ...PIZZA_CAST,
+    viewer: TABLE_VIEWER,
+    mode: 'local',
+    screen: 'whiteboard',
+    initial: state([], { board: [] }),
+  },
+  {
+    id: 'whiteboard-busy',
+    group: 'Attente · tableau blanc',
+    title: 'Tableau déjà rempli',
+    note: "Ce que retrouve un joueur qui revient en cours de route : le dessin de toute la table, chacun dans sa couleur. Ses propres traits restent annulables.",
+    ...PIZZA_CAST,
+    viewer: BOB.id,
+    mode: 'local',
+    screen: 'whiteboard',
+    initial: state([], { board: busyBoard() }),
+  },
 ];
 
 export const getScenario = (id: string | null): ScreenScenario =>
   SCREEN_SCENARIOS.find((s) => s.id === id) ?? SCREEN_SCENARIOS[0];
 
 /** Tous les spectateurs possibles d'un scénario : le pilier puis les joueurs. */
-export const scenarioViewers = (scenario: ScreenScenario): ScreenPlayer[] => [scenario.leader, ...scenario.players];
+export const scenarioViewers = (scenario: ScreenScenario): ScreenPlayer[] =>
+  // Tableau blanc : le pilier choisit sa question, son écran n'est pas celui-là.
+  scenario.screen === 'whiteboard' ? scenario.players : [scenario.leader, ...scenario.players];
 
 /** Évènement « serveur » à rejouer chez les téléphones de l'aperçu. */
 export interface PreviewServerEvent {
-  event: 'answerRevealed' | 'revealCursorAdvanced';
+  event: 'answerRevealed' | 'revealCursorAdvanced' | 'whiteboardState' | 'whiteboardStroke' | 'whiteboardStrokeRemoved';
   data: unknown;
+  /** Seul ce téléphone le reçoit (réponse à sa demande). */
+  to?: string;
+  /** Tous sauf ce téléphone (pas d'écho à l'auteur, comme le vrai serveur). */
+  except?: string;
 }
 
 /**
@@ -223,7 +297,12 @@ export const applyScreenEmit = (
   current: RevealScreenState,
   event: string,
   payload: unknown,
+  /** Téléphone (id du joueur) qui a envoyé l'évènement. */
+  from?: string,
 ): { state: RevealScreenState; events: PreviewServerEvent[]; log: string } => {
+  const board = applyWhiteboardEmit(current, event, payload, from);
+  if (board) return board;
+
   const index = (payload as { answerIndex?: unknown } | undefined)?.answerIndex;
   const nameOf = (i: number) => current.results[i]?.guessedPlayerName ?? `#${i}`;
 
@@ -269,5 +348,58 @@ export const applyScreenEmit = (
   }
 
   if (event === 'nextRound') return { state: current, events: [], log: 'manche suivante (hors aperçu)' };
+  // Sablier caché de l'attente : il redemande son état chaque seconde, rien à journaliser.
+  if (event === 'requestTimerState') return { state: current, events: [], log: '' };
   return { state: current, events: [], log: 'non simulé dans l’aperçu' };
+};
+
+/**
+ * Faux serveur du tableau blanc (mêmes règles que backend/src/sockets/handlers/
+ * whiteboardHandlers.ts, sans les limites d'encre). null = évènement d'un autre écran.
+ * Un ajout de points à un trait existant ne laisse pas de ligne de journal (log vide).
+ */
+const applyWhiteboardEmit = (
+  current: RevealScreenState,
+  event: string,
+  payload: unknown,
+  from?: string,
+): { state: RevealScreenState; events: PreviewServerEvent[]; log: string } | null => {
+  const data = (payload ?? {}) as { playerId?: unknown; strokeId?: unknown; strokeIds?: unknown; points?: unknown };
+  const playerId = typeof data.playerId === 'string' ? data.playerId : from ?? '';
+  const color = previewWhiteboardColor(playerId);
+  const board = current.board ?? [];
+
+  if (event === 'getWhiteboard') {
+    return {
+      state: current,
+      events: [{ event: 'whiteboardState', data: { roundNumber: 1, myColor: color, strokes: board }, to: from }],
+      log: `tableau envoyé (${board.length} traits)`,
+    };
+  }
+  if (event === 'whiteboardDraw') {
+    if (!isWhiteboardLocalId(data.strokeId) || !Array.isArray(data.points)) return { state: current, events: [], log: 'trait invalide : ignoré' };
+    const id = whiteboardStrokeId(color, data.strokeId);
+    const points = data.points as number[];
+    const known = board.some((st) => st.id === id);
+    const next = known
+      ? board.map((st) => (st.id === id ? { ...st, points: [...st.points, ...points] } : st))
+      : [...board, { id, color, points: [...points] }];
+    return {
+      state: { ...current, board: next },
+      events: [{ event: 'whiteboardStroke', data: { roundNumber: 1, stroke: { id, color, points } }, except: from }],
+      log: known ? '' : 'nouveau trait',
+    };
+  }
+  if (event === 'whiteboardUndo') {
+    const localIds = data.strokeIds;
+    if (!Array.isArray(localIds) || !localIds.every(isWhiteboardLocalId)) return { state: current, events: [], log: 'annulation invalide : ignorée' };
+    const strokeIds = localIds.map((localId) => whiteboardStrokeId(color, localId)).filter((id) => board.some((st) => st.id === id));
+    if (strokeIds.length === 0) return { state: current, events: [], log: 'trait inconnu : ignoré' };
+    return {
+      state: { ...current, board: board.filter((st) => !strokeIds.includes(st.id)) },
+      events: [{ event: 'whiteboardStrokeRemoved', data: { roundNumber: 1, strokeIds }, except: from }],
+      log: 'geste annulé',
+    };
+  }
+  return null;
 };

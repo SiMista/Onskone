@@ -12,9 +12,10 @@ import { RoundPhase, type IPlayer } from '@onskone/shared';
 // =====================================================================
 
 /** Moment où les bots rendent la main. */
-export type StudioStop = 'answering' | 'guessing' | 'reveal' | 'similarity' | 'roundEnd' | 'never';
+export type StudioStop = 'questionSelection' | 'answering' | 'guessing' | 'reveal' | 'similarity' | 'roundEnd' | 'never';
 
 export const STUDIO_STOPS: Record<StudioStop, string> = {
+  questionSelection: 'Tableau de dessin (le pilier choisit sa question)',
   answering: 'Pendant les réponses',
   guessing: 'Avant les attributions du pilier',
   reveal: 'Début du reveal',
@@ -28,6 +29,8 @@ export type ScenarioRole = number | 'leader';
 
 export interface StudioScenario {
   id: string;
+  /** Phase de jeu du cas testé : rubrique du menu de la Régie (scénarios rangés dans l'ordre du jeu). */
+  group: string;
   label: string;
   /** Ce qui se passe, en termes de rôles. */
   description: string;
@@ -49,7 +52,18 @@ export interface StudioScenario {
 
 export const STUDIO_SCENARIOS: StudioScenario[] = [
   {
+    id: 'whiteboard',
+    group: 'Choix de la question',
+    label: "Tableau de dessin d'attente",
+    description: "Le pilier (tiré au hasard) arrive sur ses cartes, les autres sur le tableau blanc partagé : les bots rendent la main tout de suite, dessine dans plusieurs téléphones. Astuce : vitesse debug, sinon le sablier choisit la question au bout de 45 s. Si tu relances les bots : A « Plage », B « Montagne », C « Ville », sans faute.",
+    players: 4,
+    answers: ['Plage', 'Montagne', 'Ville'],
+    guesses: [{ author: 0, holder: 0 }, { author: 1, holder: 1 }, { author: 2, holder: 2 }],
+    stops: ['questionSelection', 'answering', 'never'],
+  },
+  {
     id: 'similarity',
+    group: 'Reveal · similarités',
     label: 'Similarité simple',
     description: "A « Pizza », B « Pizzas », C « Hamburger ». Le pilier pose la carte de A devant B, celle de B devant C, celle de C devant A. En révélant B : raté, mais « Pizza » ressemble à « Pizzas » posé devant C → popup chez le pilier, écrans de B et C allumés.",
     players: 4,
@@ -60,6 +74,7 @@ export const STUDIO_SCENARIOS: StudioScenario[] = [
   },
   {
     id: 'similarity-swap',
+    group: 'Reveal · similarités',
     label: 'Deux similarités (échange)',
     description: "A « Chocolat », B « Du chocolat », C « Vanille ». Le pilier échange A et B, C est juste. Deux popups : le bot dit Oui à la première, Non à la seconde.",
     players: 4,
@@ -70,6 +85,7 @@ export const STUDIO_SCENARIOS: StudioScenario[] = [
   },
   {
     id: 'unassigned',
+    group: 'Reveal · similarités',
     label: 'Carte donnée à personne',
     description: "A « Pizza », B « Pizzas », C « Sushi ». Le pilier pose A devant B, ne donne la carte de B à personne, pose C devant A : C n'a aucune carte, et la popup sur B ne peut citer aucun écran (texte seul).",
     players: 4,
@@ -80,6 +96,7 @@ export const STUDIO_SCENARIOS: StudioScenario[] = [
   },
   {
     id: 'leader-card',
+    group: 'Reveal · similarités',
     label: 'Devine ma réponse : le pilier juge sa carte',
     description: "Mode « Devine ma réponse », A est substitut et écrit « Pizza » pour le pilier. Réponses : A « Sushi », B « Pizzas », C « Tacos ». Le pilier se donne la carte de B et pose la sienne devant C → popup en fin de tour, sur la carte du pilier, qui cite l'écran de C.",
     players: 4,
@@ -97,6 +114,7 @@ export const STUDIO_SCENARIOS: StudioScenario[] = [
   },
   {
     id: 'all-wrong',
+    group: 'Reveal · résultats',
     label: 'Tout faux, aucune ressemblance',
     description: 'A « Plage », B « Montagne », C « Ville », cartes tournées d\'un cran : que des écrans rouges, aucune popup.',
     players: 4,
@@ -106,6 +124,7 @@ export const STUDIO_SCENARIOS: StudioScenario[] = [
   },
   {
     id: 'all-right',
+    group: 'Reveal · résultats',
     label: 'Sans faute',
     description: 'A « Plage », B « Montagne », C « Ville », chaque carte devant son auteur : que des écrans verts et des confettis.',
     players: 4,
@@ -117,6 +136,13 @@ export const STUDIO_SCENARIOS: StudioScenario[] = [
 
 export const findStudioScenario = (id: string | null | undefined): StudioScenario | null =>
   STUDIO_SCENARIOS.find((s) => s.id === id) ?? null;
+
+/** Scénarios rangés par phase de jeu, dans l'ordre de la liste (= l'ordre du jeu). */
+export const studioScenarioGroups = (): [group: string, scenarios: StudioScenario[]][] => {
+  const groups = new Map<string, StudioScenario[]>();
+  STUDIO_SCENARIOS.forEach((sc) => groups.set(sc.group, [...(groups.get(sc.group) ?? []), sc]));
+  return [...groups.entries()];
+};
 
 /** Lettre d'un rôle : 0 → A, 1 → B… */
 export const roleLetter = (role: number): string => String.fromCharCode(65 + role);
@@ -149,6 +175,7 @@ const PHASE_RANK: Record<RoundPhase, number> = {
   [RoundPhase.REVEAL]: 5,
 };
 const STOP_PHASE: Partial<Record<StudioStop, RoundPhase>> = {
+  questionSelection: RoundPhase.QUESTION_SELECTION,
   answering: RoundPhase.ANSWERING,
   guessing: RoundPhase.GUESSING,
   reveal: RoundPhase.REVEAL,

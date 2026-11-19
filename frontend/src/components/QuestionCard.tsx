@@ -1,25 +1,18 @@
 import { GameCard } from '@onskone/shared';
 import { getCategoryColor } from '../constants/game';
-import { useLocale } from '../i18n';
 import PremiumCardBadge from './PremiumCardBadge';
-import HelpBubble from './HelpBubble';
 
-const QuestionCard = ({ question, card, variant = 'full', subtitle, subtitleBadge, tip, tipAttention = false }: {
+const QuestionCard = ({ question, card, variant = 'full', subtitle, subtitleBadge, tip }: {
   question: string;
   card?: GameCard;
   variant?: 'full' | 'compact';
   subtitle?: string;
   subtitleBadge?: React.ReactNode;
-  /** Astuce de la question (`getQuestionTip`) : pastille ⓘ en fin de question, bulle au tap. */
+  /** Astuce de la question (`getQuestionTip`), en italique sous la question, dans la carte. */
   tip?: string;
-  /** La pastille pulse + teaser « Besoin d'aide ? » tant que l'astuce n'a pas été ouverte (joueur qui répond). */
-  tipAttention?: boolean;
 }) => {
-  const { t } = useLocale();
   const color = card ? getCategoryColor(card.category) : 'var(--color-brand-400)';
   const isCompact = variant === 'compact';
-  // Pastille soudée au dernier mot (en FR, souvent le « ? ») : elle ne part jamais seule à la ligne.
-  const lastSpace = question.lastIndexOf(' ');
 
   return (
     <div className="w-full max-w-2xl mx-auto">
@@ -85,26 +78,13 @@ const QuestionCard = ({ question, card, variant = 'full', subtitle, subtitleBadg
               isCompact ? 'text-base md:text-lg' : 'text-lg md:text-2xl'
             }`}
           >
-            {tip ? (
-              <>
-                {question.slice(0, lastSpace + 1)}
-                <span className="whitespace-nowrap">
-                  {question.slice(lastSpace + 1)}
-                  {/* -my-1 : la pastille (24px) ne grandit pas la ligne de texte. */}
-                  <span className="inline-flex align-middle -my-1 ml-1.5">
-                    <HelpBubble
-                      label={t.phases.answering.tipLabel}
-                      attention={tipAttention}
-                      teaser={t.phases.answering.tipTeaser}
-                      keepFocus
-                    >
-                      {tip}
-                    </HelpBubble>
-                  </span>
-                </span>
-              </>
-            ) : question}
+            {question}
           </p>
+          {tip && (
+            <p className="text-center !mt-2.5 md:!mt-3 !mb-1 md:!mb-1.5 text-xs md:text-sm text-gray-700 italic leading-tight">
+              {tip}
+            </p>
+          )}
         </div>
       </div>
       {(subtitle || subtitleBadge) && (

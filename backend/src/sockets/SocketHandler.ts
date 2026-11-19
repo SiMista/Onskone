@@ -6,6 +6,7 @@ import { createHandlerContext } from './handlers/context.js';
 import { registerLobbyHandlers } from './handlers/lobbyHandlers.js';
 import { registerRoundHandlers } from './handlers/roundHandlers.js';
 import { registerTimerHandlers } from './handlers/timerHandlers.js';
+import { registerWhiteboardHandlers } from './handlers/whiteboardHandlers.js';
 import { registerDisconnectHandler, armLeaderSkipIfDisconnected } from './handlers/disconnectHandler.js';
 import { setRoundStartedHook, setQuestionPickedHook } from './broadcasting.js';
 import { recordQuestionPicked } from '../utils/deckStats.js';
@@ -43,6 +44,7 @@ export class SocketHandler {
             registerLobbyHandlers(socket, ctx);
             registerRoundHandlers(socket, ctx);
             registerTimerHandlers(socket, ctx);
+            registerWhiteboardHandlers(socket, ctx);
             registerDisconnectHandler(socket, ctx);
         });
     }

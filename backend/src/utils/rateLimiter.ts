@@ -143,6 +143,14 @@ export const rateLimiters = {
   // `general` (requestTimerState, requestShuffledAnswers…).
   syncCheck: new RateLimiter({ windowMs: 60000, maxRequests: 40 }),
 
+  // Tableau blanc : le client envoie ses points par paquets (~20/s max pendant qu'il
+  // dessine). Fenêtres courtes : un dessinateur ne doit jamais être coupé, un client
+  // qui spamme est simplement ignoré (silencieux, aucun toast).
+  whiteboardDraw: new RateLimiter({ windowMs: 10000, maxRequests: 300 }),
+  // Un envoi par geste annulé (tous ses traits d'un coup) : de quoi marteler « Annuler ».
+  whiteboardUndo: new RateLimiter({ windowMs: 10000, maxRequests: 60 }),
+  getWhiteboard: new RateLimiter({ windowMs: 60000, maxRequests: 30 }),
+
   // Lobby settings toggles (mode, decks, guessMyAnswer): 240 per minute
   // L'hôte peut spammer les sliders sans déclencher le rate limit
   lobbySettings: new RateLimiter({ windowMs: 60000, maxRequests: 240 }),

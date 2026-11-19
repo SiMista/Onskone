@@ -4,21 +4,23 @@ import Timer from './Timer';
 import { GameCard, IPlayer, RoundPhase } from '@onskone/shared';
 import type { GameSpeed } from '@onskone/shared';
 import { getPhaseDuration } from '../constants/game';
-import { getRandomFunFact, getNextFunFact } from '../constants/funFacts';
 import { playSound } from '../utils/sounds';
-import PlayerBadge from './PlayerBadge';
+import WhiteboardWaiting from './WhiteboardWaiting';
 import CardHand from './CardHand';
 import { useSwipe } from '../hooks/useSwipe';
 import { useSocketEvent } from '../hooks';
 import { useLocale } from '../i18n';
 
-// Assez long pour LIRE le fait avant qu'il ne change.
-const FUN_FACT_ROTATE_MS = 15000;
-
-const QuestionSelection = ({ lobbyCode, isLeader, leader, gameSpeed, intro = false }: {
+const QuestionSelection = ({ lobbyCode, isLeader, leader, players, drawingSeed, currentPlayerId, roundNumber, gameSpeed, intro = false }: {
   lobbyCode: string;
   isLeader: boolean;
+  currentPlayerId: string;
+  roundNumber: number;
   leader: Pick<IPlayer, 'id' | 'name' | 'avatarId' | 'isPremium'>;
+  /** Joueurs de la partie (idées de dessin « à nom » du tableau blanc). */
+  players?: readonly Pick<IPlayer, 'id' | 'name'>[];
+  /** Graine des idées de dessin de la partie (IGame.drawingSeed). */
+  drawingSeed?: number;
   gameSpeed: GameSpeed;
   /** « À ton tour d'être PILIER » affiché par-dessus : les cartes se retournent à sa fin. */
   intro?: boolean;
@@ -33,9 +35,6 @@ const QuestionSelection = ({ lobbyCode, isLeader, leader, gameSpeed, intro = fal
   // Questions déjà jouées dans la partie : grisées et non sélectionnables.
   const [usedQuestions, setUsedQuestions] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(isLeader);
-  const [funFact, setFunFact] = useState<string>(() => getRandomFunFact(t.funFacts));
-  const [factFading, setFactFading] = useState(false);
-  const factFadeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Ref pour éviter de démarrer le timer plusieurs fois (React Strict Mode, re-renders)
   const timerStartedRef = useRef(false);
 
@@ -51,30 +50,6 @@ const QuestionSelection = ({ lobbyCode, isLeader, leader, gameSpeed, intro = fal
   useEffect(() => {
     playSound('questionSelection');
   }, []);
-
-  // Effet pour changer les faits insolites toutes les FUN_FACT_ROTATE_MS (pour les non-leaders)
-  useEffect(() => {
-    if (isLeader) return;
-
-    const factInterval = setInterval(() => {
-      setFactFading(true);
-      // Annule un éventuel fondu en cours avant d'en programmer un nouveau
-      if (factFadeTimeoutRef.current) {
-        clearTimeout(factFadeTimeoutRef.current);
-      }
-      factFadeTimeoutRef.current = setTimeout(() => {
-        setFunFact(prev => getNextFunFact(t.funFacts, prev));
-        setFactFading(false);
-      }, 300); // Durée du fade out avant de changer
-    }, FUN_FACT_ROTATE_MS);
-
-    return () => {
-      clearInterval(factInterval);
-      if (factFadeTimeoutRef.current) {
-        clearTimeout(factFadeTimeoutRef.current);
-      }
-    };
-  }, [isLeader, t.funFacts]);
 
   useEffect(() => {
     // Petit délai pour laisser le temps aux listeners socket de s'initialiser sur tous les clients
@@ -220,26 +195,10 @@ const QuestionSelection = ({ lobbyCode, isLeader, leader, gameSpeed, intro = fal
 
   if (!isLeader) {
     return (
-      <div className="flex flex-col items-center justify-center h-full w-full gap-5 md:gap-8 px-3 overflow-hidden">
-        {/* Le pilier est la star : avatar + pseudo, une seule ligne d'état dessous. */}
-        <div className="flex flex-col items-center gap-2 text-center">
-          <p className="text-display-xs text-gray-600">{t.phases.questionSelection.leaderIs}</p>
-          <PlayerBadge player={leader} size="md" className="!max-w-[12rem]" />
-          <p className="text-sm md:text-base text-gray-700 font-semibold">{t.phases.questionSelection.waitingSelection}</p>
-          <Timer duration={phaseDuration} onExpire={handleTimerExpire} phase={RoundPhase.QUESTION_SELECTION} lobbyCode={lobbyCode} hidden />
-        </div>
-
-        {/* Fait insolite - simple texte italique. min-h figée pour que le changement
-            de fait ne décale rien. */}
-        <div className="w-full max-w-md text-center px-3 min-h-[88px] md:min-h-[104px] flex flex-col justify-start">
-          <p className="text-display-xs text-gray-600 mb-1.5">{t.phases.questionSelection.didYouKnow}</p>
-          <p
-            className={`text-gray-800 text-sm md:text-lg italic leading-snug transition-opacity duration-300 ${factFading ? 'opacity-0' : 'opacity-100'}`}
-          >
-            {funFact}
-          </p>
-        </div>
-      </div>
+      <>
+        <Timer duration={phaseDuration} onExpire={handleTimerExpire} phase={RoundPhase.QUESTION_SELECTION} lobbyCode={lobbyCode} hidden />
+        <WhiteboardWaiting lobbyCode={lobbyCode} playerId={currentPlayerId} roundNumber={roundNumber} leader={leader} players={players} drawingSeed={drawingSeed} />
+      </>
     );
   }
 

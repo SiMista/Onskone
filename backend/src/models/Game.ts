@@ -2,7 +2,7 @@ import { randomInt } from 'crypto';
 import { IGame } from '../types/IGame';
 import {IRound} from '../types/IRound';
 import {Round} from './Round';
-import { GameCard, ILobby, GameStatus, LeaderboardEntry } from '@onskone/shared';
+import { GameCard, ILobby, GameStatus, LeaderboardEntry, WHITEBOARD } from '@onskone/shared';
 
 export class Game implements IGame {
     lobby: ILobby;
@@ -20,6 +20,11 @@ export class Game implements IGame {
     // reviendrait en cours de partie (sinon il prendrait la manche d'un prévu, qui
     // finirait "hors classement" sans l'avoir demandé).
     private initialLeaderIds: Set<string> = new Set();
+    // Couleur de stylo du tableau blanc de chaque joueur, tirée à sa première demande
+    // et gardée toute la partie (il ne peut pas la changer).
+    private readonly whiteboardColors: Map<string, number> = new Map();
+    // Graine des idées de dessin (cf. IGame.drawingSeed) : une par partie.
+    readonly drawingSeed: number = randomInt(0, 0xffffffff);
 
     constructor(lobby: ILobby, questionsPool: GameCard[]) {
         this.lobby = lobby;
@@ -69,6 +74,27 @@ export class Game implements IGame {
 
         this.currentRound = new Round(roundNumber, leader, gameCard, this.lobby.guessMyAnswerMode === true);
         this.rounds.push(this.currentRound);
+    }
+
+    /**
+     * Couleur du joueur sur le tableau blanc : au hasard parmi celles que personne n'a
+     * encore (distinctes tant qu'il y a moins de joueurs que de couleurs, ce que
+     * MAX_PLAYERS garantit), puis fixe jusqu'à la fin de la partie. Les couleurs franches
+     * (PRIMARY_COLOR_COUNT premières) d'abord : sinon deux joueurs pouvaient tomber sur
+     * vert et turquoise alors que le bleu ou le violet étaient libres.
+     */
+    getWhiteboardColor(playerId: string): number {
+        const known = this.whiteboardColors.get(playerId);
+        if (known !== undefined) return known;
+        const taken = new Set(this.whiteboardColors.values());
+        const all = Array.from({ length: WHITEBOARD.COLOR_COUNT }, (_, i) => i).filter(i => !taken.has(i));
+        const primary = all.filter(i => i < WHITEBOARD.PRIMARY_COLOR_COUNT);
+        const free = primary.length > 0 ? primary : all;
+        const color = free.length > 0
+            ? free[randomInt(0, free.length)]
+            : randomInt(0, WHITEBOARD.COLOR_COUNT);
+        this.whiteboardColors.set(playerId, color);
+        return color;
     }
 
     getRandomGameCard(): GameCard {

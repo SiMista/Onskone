@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { GameMode } from '@onskone/shared';
 import GameFrame, { PHASE_AREA_CLASS } from '../../components/GameFrame';
 import RevealPhase from '../../components/RevealPhase';
+import QuestionSelection from '../../components/QuestionSelection';
 import SettingsButton from '../../components/SettingsButton';
 import { dispatchPreviewServerEvent } from '../../utils/socket';
 import { useDocumentMeta } from '../../hooks/useDocumentMeta';
@@ -61,19 +62,31 @@ const ScreenPreview = () => {
         leaderName={scenario.leader.name}
       >
         <div className={PHASE_AREA_CLASS}>
-          <RevealPhase
-            lobbyCode="APERCU"
-            isLeader={isLeader}
-            leader={scenario.leader}
-            currentPlayerId={viewer}
-            isGameOver={false}
-            results={table.results}
-            revealOrder={table.revealOrder}
-            serverRevealedIndices={table.revealed}
-            pendingSimilarityIndex={table.pending}
-            similarityCorrections={table.corrections}
-            gameMode={mode}
-          />
+          {scenario.screen === 'whiteboard' ? (
+            <QuestionSelection
+              lobbyCode="APERCU"
+              isLeader={false}
+              leader={scenario.leader}
+              players={[scenario.leader, ...scenario.players]}
+              currentPlayerId={viewer}
+              roundNumber={PREVIEW_ROUND}
+              gameSpeed="normal"
+            />
+          ) : (
+            <RevealPhase
+              lobbyCode="APERCU"
+              isLeader={isLeader}
+              leader={scenario.leader}
+              currentPlayerId={viewer}
+              isGameOver={false}
+              results={table.results}
+              revealOrder={table.revealOrder}
+              serverRevealedIndices={table.revealed}
+              pendingSimilarityIndex={table.pending}
+              similarityCorrections={table.corrections}
+              gameMode={mode}
+            />
+          )}
         </div>
       </GameFrame>
     </div>

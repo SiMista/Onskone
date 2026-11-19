@@ -6,6 +6,7 @@ import { GameMode, GameSpeed } from './lobby.js';
 import { Locale } from './locale.js';
 import type { VersionPolicy } from '../version.js';
 import type { MaintenanceState } from '../maintenance.js';
+import type { WhiteboardStroke } from '../whiteboard.js';
 
 /**
  * Données envoyées sur reconnexion pour restaurer l'état local du joueur
@@ -196,6 +197,27 @@ export interface ServerToClientEvents {
    * Empreinte différente : le serveur émet directement `gameState`.
    */
   syncResult: (data: { status: 'ok' | 'detached' }) => void;
+
+  // ===== TABLEAU BLANC (cf. shared/src/whiteboard.ts) =====
+
+  /** Tout le tableau de la manche + la couleur du joueur (au seul demandeur de `getWhiteboard`). */
+  whiteboardState: (data: {
+    roundNumber: number;
+    myColor: number;
+    strokes: WhiteboardStroke[];
+  }) => void;
+
+  /** Points ajoutés par un autre joueur (`stroke.points` = les NOUVEAUX points ; trait créé s'il est inconnu). */
+  whiteboardStroke: (data: {
+    roundNumber: number;
+    stroke: WhiteboardStroke;
+  }) => void;
+
+  /** Un joueur a annulé un geste : ses traits retirés. */
+  whiteboardStrokeRemoved: (data: {
+    roundNumber: number;
+    strokeIds: string[];
+  }) => void;
 
   // ===== GAME EVENTS =====
 
@@ -577,6 +599,35 @@ export interface ClientToServerEvents {
   setPendingQuestion: (data: {
     lobbyCode: string;
     question: string | null;
+  }) => void;
+
+  /**
+   * Tableau blanc (non-piliers, QUESTION_SELECTION seulement) : demander tout le
+   * tableau et sa couleur. Réponse : `whiteboardState`. Hors de ces conditions, rien.
+   */
+  getWhiteboard: (data: {
+    lobbyCode: string;
+    playerId: string;
+  }) => void;
+
+  /** Ajouter des points au trait `strokeId` (id local, créé s'il est nouveau). Silencieux. */
+  whiteboardDraw: (data: {
+    lobbyCode: string;
+    playerId: string;
+    roundNumber: number;
+    strokeId: string;
+    points: number[];
+  }) => void;
+
+  /**
+   * Annuler un de SES gestes : tous ses traits d'un coup (ids locaux, MAX_STROKES_PER_UNDO
+   * max). Un seul envoi par tap sur « Annuler ». Silencieux.
+   */
+  whiteboardUndo: (data: {
+    lobbyCode: string;
+    playerId: string;
+    roundNumber: number;
+    strokeIds: string[];
   }) => void;
 
   /** Soumettre une réponse */

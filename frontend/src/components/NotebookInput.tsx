@@ -80,7 +80,7 @@ const NotebookInput = ({
         />
       </div>
 
-      <div className="mt-3 md:mt-4 flex items-center justify-center">
+      <div className="mt-3 md:mt-4 mb-2 md:mb-3 flex items-center justify-center">
         <Button variant="success" size="lg" onClick={onSubmit} disabled={isSubmitDisabled}>
           {submitLabel}
         </Button>

@@ -230,17 +230,14 @@ const SeatCircle = ({ players, currentPlayerId, excludedLeaderIds, editable, onR
           style={{ inset: pct(CENTER - radius - 1.25) }}
         />
 
-        {/* Centre de la table : grosse flèche du sens du jeu + sous-titre. */}
+        {/* Centre de la table : flèche discrète du sens du jeu + sous-titre. */}
         <div
           aria-hidden
-          className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-0.5 pointer-events-none ${dense ? 'w-[21%]' : 'w-[26%]'}`}
+          className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-0.5 pointer-events-none ${dense ? 'w-[18%]' : 'w-[22%]'}`}
         >
-          {/* Contour noir en dessous, bleu par-dessus : la pointe recouvre le bout de l'arc sans trait parasite. */}
-          <svg viewBox="0 0 100 100" className="w-full h-auto [filter:drop-shadow(2px_2.5px_0_black)]">
-            <path d={TURN_ARC} fill="none" strokeWidth={15} strokeLinecap="round" className="stroke-black" />
-            <polygon points={TURN_HEAD} strokeWidth={6} strokeLinejoin="round" className="fill-black stroke-black" />
-            <path d={TURN_ARC} fill="none" strokeWidth={9} strokeLinecap="round" className="stroke-brand-500" />
-            <polygon points={TURN_HEAD} className="fill-brand-500" />
+          <svg viewBox="0 0 100 100" className="w-full h-auto">
+            <path d={TURN_ARC} fill="none" strokeWidth={9} strokeLinecap="round" className="stroke-black" />
+            <polygon points={TURN_HEAD} strokeWidth={3} strokeLinejoin="round" className="fill-black stroke-black" />
           </svg>
           <span
             className={`whitespace-nowrap text-black/55 ${

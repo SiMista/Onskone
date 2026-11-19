@@ -86,7 +86,7 @@ export const Catalog = () => {
               <textarea
                 value={answerValue}
                 onChange={(e) => setAnswerValue(e.target.value)}
-                placeholder="Écris ta réponse…"
+                placeholder="Ta réponse…"
                 className="w-full h-full bg-transparent resize-none outline-none text-gray-900 text-base leading-relaxed px-4 py-3 placeholder:text-gray-400"
               />
             </div>

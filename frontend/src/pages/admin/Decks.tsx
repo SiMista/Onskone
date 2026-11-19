@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { AdminDeckSummary } from '@onskone/shared';
 import { useAdminResource } from '../../hooks';
 import { fetchAdminDecks } from '../../utils/adminDataApi';
-import { EmptyState, KpiCell, LoadingState, PANEL, SearchField, Segmented } from './ui';
+import { EmptyState, KpiCell, LoadingState, PANEL, PremiumCrown, SearchField, Segmented } from './ui';
 import { categoryStyle, deckKey } from './decks/shared';
 import { DeckRailItem, DeckDetail } from './decks/DeckDetail';
 
@@ -31,6 +31,7 @@ export const DecksPanel = ({ active }: { active: boolean }) => {
     return {
       categories: categories.size,
       themes: decks.length,
+      premiumThemes: decks.filter((d) => d.premium).length,
       subjects,
       questions,
     };
@@ -102,7 +103,17 @@ export const DecksPanel = ({ active }: { active: boolean }) => {
     <div className="space-y-5">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <KpiCell compact label="Catégories" value={totals.categories} />
-        <KpiCell compact label="Thèmes" value={totals.themes} />
+        <KpiCell
+          compact
+          label="Thèmes"
+          value={totals.themes}
+          hint={totals.premiumThemes > 0 && (
+            <span className="inline-flex items-center gap-1">
+              <PremiumCrown size={12} />
+              <span className="tabular-nums">{totals.premiumThemes}</span> premium
+            </span>
+          )}
+        />
         <KpiCell compact label="Sujets" value={totals.subjects} />
         <KpiCell compact label="Questions" value={totals.questions} />
       </div>
@@ -179,6 +190,7 @@ export const DecksPanel = ({ active }: { active: boolean }) => {
                           <span className={`text-[13px] leading-tight truncate flex-1 ${selected ? 'text-white' : 'text-white/80'}`}>
                             {d.theme}
                           </span>
+                          {d.premium && <PremiumCrown />}
                           <span className="text-[12px] tabular-nums text-white/55 shrink-0" title={`${d.subjectCount} sujet${d.subjectCount > 1 ? 's' : ''}`}>
                             {d.subjectCount}
                           </span>

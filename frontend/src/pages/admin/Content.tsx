@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ContentSection, CONTENT_SECTIONS } from './content/shared';
 import { Tabs } from './ui';
 import { TiersSection } from './content/TiersSection';
-import { FunFactsSection } from './content/FunFactsSection';
+import { DrawingIdeasSection } from './content/DrawingIdeasSection';
 import { AchievementsSection } from './content/AchievementsSection';
 import { AvatarsSection } from './content/AvatarsSection';
 import { LegalSection } from './content/LegalSection';
@@ -22,7 +22,7 @@ export const ContentPanel = () => {
 
       <div>
         {section === 'tiers' && <TiersSection />}
-        {section === 'funfacts' && <FunFactsSection />}
+        {section === 'drawingIdeas' && <DrawingIdeasSection />}
         {section === 'achievements' && <AchievementsSection />}
         {section === 'avatars' && <AvatarsSection />}
         {section === 'legal' && <LegalSection />}

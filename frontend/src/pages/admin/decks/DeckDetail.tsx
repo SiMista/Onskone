@@ -2,7 +2,7 @@ import { Icon } from '../../../components/Icon';
 import type { AdminDeckSummary } from '@onskone/shared';
 import { categoryStyle, type CategoryStyle } from './shared';
 import { SubjectCard } from './SubjectCard';
-import { BADGE, PANEL, btn } from '../ui';
+import { BADGE, PANEL, PremiumCrown, btn } from '../ui';
 
 export const DeckRailItem = ({
   deck, palette, selected, onSelect,
@@ -25,6 +25,7 @@ export const DeckRailItem = ({
     <span className={`text-[13px] truncate flex-1 ${selected ? 'text-white' : 'text-white/75 group-hover:text-white/95'}`} title={deck.theme}>
       {deck.theme}
     </span>
+    {deck.premium && <PremiumCrown />}
     <span className="text-[12px] tabular-nums text-white/55" title={`${deck.subjectCount} sujet${deck.subjectCount > 1 ? 's' : ''}`}>
       {deck.subjectCount}
     </span>
@@ -49,6 +50,7 @@ export const DeckDetail = ({
           <h2 className="text-[16px] font-semibold tracking-tight text-white leading-tight">
             {deck.theme}
           </h2>
+          {deck.premium && <PremiumCrown withLabel />}
           <span className="text-[12px] text-white/55 ml-auto">
             <span className={palette.text}>{deck.subjectCount}</span> sujet{deck.subjectCount > 1 ? 's' : ''}
           </span>

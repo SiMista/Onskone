@@ -38,6 +38,10 @@ export { tableTurnFrom, resolveSeatOrder } from './seating.js';
 export { isPersonneGuess, buildRevealOrder, getSimilarityComparison } from './reveal.js';
 export type { SimilarityComparison } from './reveal.js';
 
+// Tableau blanc partagé (attente du choix de question)
+export { WHITEBOARD, isWhiteboardLocalId, whiteboardStrokeId } from './whiteboard.js';
+export type { WhiteboardStroke } from './whiteboard.js';
+
 // Player
 export { IPlayer } from './types/player.js';
 

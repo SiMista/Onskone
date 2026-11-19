@@ -302,24 +302,27 @@ const AnswerPhase = ({
 
         <QuestionByline player={leader} />
 
-        <QuestionCard question={question} card={card} variant="compact" tip={tip} tipAttention={showNotebook} />
-
-        <p className="text-center text-sm md:text-base text-gray-700 italic m-0">
-          {t.phases.answering.writeYourAnswer}
-        </p>
+        {/* L'astuce est dans la carte, toujours visible. */}
+        <QuestionCard question={question} card={card} variant="compact" tip={tip} />
 
         {showNotebook ? (
-          <NotebookInput
-            value={answer}
-            onChange={setAnswer}
-            onSubmit={handleSubmit}
-            placeholder={t.phases.answering.placeholder}
-            maxLength={maxLen}
-            submitLabel={t.phases.answering.send}
-            disabled={stage !== 'idle'}
-            submitDisabled={!answer.trim() || stage !== 'idle'}
-            shaking={stage === 'shaking'}
-          />
+          /* Consigne collée au carnet (titre du champ), pas flottante entre carte et carnet. */
+          <div className="flex-1 flex flex-col gap-1.5">
+            <p className="text-center text-sm md:text-base text-gray-700 m-0">
+              {t.phases.answering.writeYourAnswer}
+            </p>
+            <NotebookInput
+              value={answer}
+              onChange={setAnswer}
+              onSubmit={handleSubmit}
+              placeholder={t.phases.answering.placeholder}
+              maxLength={maxLen}
+              submitLabel={t.phases.answering.send}
+              disabled={stage !== 'idle'}
+              submitDisabled={!answer.trim() || stage !== 'idle'}
+              shaking={stage === 'shaking'}
+            />
+          </div>
         ) : (
           /* État « envoyé » - récap grisé + attente */
           <div className="flex-1 flex flex-col items-center justify-center gap-3 md:gap-4 animate-phase-enter">
