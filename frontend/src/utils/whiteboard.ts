@@ -1,4 +1,5 @@
-import { WHITEBOARD, type WhiteboardStroke } from '@onskone/shared';
+import { WHITEBOARD, type DrawingIdeaPick, type WhiteboardStroke } from '@onskone/shared';
+import type { DrawingIdeaText } from '../i18n/drawingIdeas';
 import { WHITEBOARD_LINE_WIDTH, WHITEBOARD_MIN_POINT_DISTANCE, whiteboardColor } from '../constants/whiteboard';
 
 // Logique pure du tableau blanc partagé (cf. shared/src/whiteboard.ts) : modèle des
@@ -156,87 +157,20 @@ export const fitBoard = (
   return { width, height: Math.floor(width / WHITEBOARD.ASPECT_RATIO) };
 };
 
-/** FNV-1a : même entrée, même nombre, sur tous les téléphones. */
-export const stableHash = (key: string): number => {
-  let hash = 0x811c9dc5;
-  for (const ch of key) {
-    hash ^= ch.charCodeAt(0);
-    hash = Math.imul(hash, 0x01000193) >>> 0;
-  }
-  return hash;
-};
-
-/** Générateur pseudo-aléatoire à graine (mulberry32) : même graine, même suite partout. */
-const seededRandom = (seed: number): (() => number) => {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-};
-
-/** Mélange de Fisher-Yates à graine (copie). */
-export const seededShuffle = <T>(items: readonly T[], seed: number): T[] => {
-  const out = [...items];
-  const rand = seededRandom(seed);
-  for (let i = out.length - 1; i > 0; i--) {
-    const j = Math.floor(rand() * (i + 1));
-    [out[i], out[j]] = [out[j], out[i]];
-  }
-  return out;
-};
-
-/** Idée de dessin : un texte, ou une fonction qui reçoit 1 ou 2 pseudos (cf. le dictionnaire). */
-export type DrawingIdea = string | ((a: string, b: string) => string);
-
-/** Nombre de joueurs mis en scène : 0 (classique), 1 ou 2 (duo), d'après les paramètres. */
-export const ideaArity = (idea: DrawingIdea): 0 | 1 | 2 =>
-  typeof idea === 'string' ? 0 : idea.length >= 2 ? 2 : 1;
-
 /**
- * Ordre des idées pour toute la partie : mélangé par la graine, pris dans l'ordre manche
- * après manche, donc aucune idée ne revient avant que toutes soient passées. La manche 1
- * met toujours un joueur en scène (première impression : « c'est moi ?! »).
- */
-export const drawingIdeaOrder = (arities: readonly number[], seed: number): number[] => {
-  const order = seededShuffle(arities.map((_, i) => i), seed);
-  const firstNamed = order.findIndex((i) => arities[i] > 0);
-  if (firstNamed > 0) [order[0], order[firstNamed]] = [order[firstNamed], order[0]];
-  return order;
-};
-
-/**
- * Idée de dessin de la manche, la même sur tous les téléphones du salon, sans
- * aller-retour serveur (graine de la partie + numéro de manche).
- *
- * Joueurs mis en scène : à tour de rôle, dans un ordre mélangé par la graine (triés par
- * id d'abord, pour ne pas dépendre de l'ordre de la liste). Chaque idée « à nom » prend
- * le(s) suivant(s) : tout le monde passe une fois avant que quelqu'un y repasse, et un
- * duo réunit toujours deux joueurs différents (dès qu'il y en a deux).
+ * Texte de l'idée de dessin tirée par le serveur pour la manche (`IRound.drawingIdea`),
+ * dans la langue du téléphone. null = rien à afficher : serveur d'avant (pas d'idée), id
+ * inconnu de cette version de l'appli, ou joueur du portrait introuvable.
  */
 export const resolveDrawingIdea = (
-  ideas: readonly DrawingIdea[],
-  seed: number,
-  roundNumber: number,
+  ideas: Readonly<Record<string, DrawingIdeaText | undefined>>,
+  pick: DrawingIdeaPick | null | undefined,
   players: readonly { id: string; name: string }[],
-): string => {
-  if (ideas.length === 0) return '';
-  const arities = ideas.map(ideaArity);
-  const order = drawingIdeaOrder(arities, seed);
-  const round = Math.max(0, roundNumber - 1);
-  const idea = ideas[order[round % order.length]];
+): string | null => {
+  if (!pick) return null;
+  const idea = Object.prototype.hasOwnProperty.call(ideas, pick.id) ? ideas[pick.id] : undefined;
+  if (idea === undefined) return null;
   if (typeof idea === 'string') return idea;
-
-  // Places de la rotation déjà prises par les manches d'avant.
-  let used = 0;
-  for (let r = 0; r < round; r++) used += arities[order[r % order.length]];
-  const sorted = [...players].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
-  const roster = seededShuffle(sorted, stableHash(`${seed}:players`));
-  if (roster.length === 0) return idea('?', '?');
-  const first = roster[used % roster.length].name;
-  const second = roster[(used + 1) % roster.length].name;
-  return idea(first, second);
+  const player = players.find((p) => p.id === pick.playerId);
+  return player ? idea(player.name) : null;
 };

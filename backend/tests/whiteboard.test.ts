@@ -146,15 +146,18 @@ type Handler = (data: unknown) => void;
 function fakeSocket(id: string, rooms: string[]) {
     const handlers = new Map<string, Handler>();
     const roomEmit = jest.fn();
+    const except = jest.fn();
+    const room = { emit: roomEmit, except };
+    except.mockReturnValue(room);
     const socket = {
         id,
         rooms: new Set([id, ...rooms]),
         on: (event: string, fn: Handler) => { handlers.set(event, fn); },
         emit: jest.fn(),
-        to: jest.fn(() => ({ emit: roomEmit })),
+        to: jest.fn(() => room),
     };
     registerWhiteboardHandlers(socket as unknown as AppSocket, {} as HandlerContext);
-    return { socket, roomEmit, send: (event: string, data: unknown) => handlers.get(event)!(data) };
+    return { socket, roomEmit, except, send: (event: string, data: unknown) => handlers.get(event)!(data) };
 }
 
 function gameInQuestionSelection(): { lobby: Lobby; game: Game; leaderId: string; drawerId: string; drawerSocket: string } {
@@ -179,13 +182,14 @@ describe('handlers du tableau blanc', () => {
         });
     });
 
-    it('diffuse un trait aux AUTRES (pas d’écho), puis son annulation', () => {
-        const { lobby, game, drawerId, drawerSocket } = gameInQuestionSelection();
-        const { socket, roomEmit, send } = fakeSocket(drawerSocket, [lobby.code]);
+    it('diffuse un trait aux AUTRES (pas d’écho ni pilier), puis son annulation', () => {
+        const { lobby, game, leaderId, drawerId, drawerSocket } = gameInQuestionSelection();
+        const { socket, roomEmit, except, send } = fakeSocket(drawerSocket, [lobby.code]);
         const color = game.getWhiteboardColor(drawerId);
 
         send('whiteboardDraw', { lobbyCode: lobby.code, playerId: drawerId, roundNumber: 1, strokeId: 'abc', points: [5, 6] });
         expect(socket.to).toHaveBeenCalledWith(lobby.code);
+        expect(except).toHaveBeenCalledWith(lobby.getPlayer(leaderId)!.socketId);
         expect(roomEmit).toHaveBeenCalledWith('whiteboardStroke', { roundNumber: 1, stroke: { id: `${color}.abc`, color, points: [5, 6] } });
         expect(socket.emit).not.toHaveBeenCalled();
 

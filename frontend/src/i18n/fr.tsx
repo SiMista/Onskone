@@ -1,5 +1,5 @@
 import type { Dictionary } from './dictionary';
-import { DRAWING_IDEAS } from './drawingIdeas';
+import { drawingIdeasFor } from './drawingIdeas';
 
 export const fr: Dictionary = {
   common: {
@@ -151,8 +151,8 @@ export const fr: Dictionary = {
       ),
       seatsGuestCheck: 'Vérifie que tu es au bon endroit, sinon dis-le-lui !',
       seatsGestures: {
-        drag: <><b className="font-bold">Glisse</b> pour déplacer</>,
-        tap: <><b className="font-bold">Touche</b> pour ajouter ou retirer un pilier</>,
+        drag: <><b>Glisse</b> pour déplacer</>,
+        tap: <><b>Touche</b> pour ajouter ou retirer un pilier</>,
       },
       turnDirection: 'sens du jeu',
       legendLeader: "sera pilier d'une manche",
@@ -215,6 +215,7 @@ export const fr: Dictionary = {
       kickedAnon: 'Tu as été expulsé du salon',
       closedInactive: 'Ce salon a été fermé pour inactivité',
       joinRefused: 'Ce pseudo est déjà pris dans ce salon, ou ta session a expiré.',
+      decksUnavailable: 'Les thèmes choisis ne sont plus disponibles, choisis-en un autre',
       playerJoined: (name) => `${name} a rejoint le salon`,
       playerLeft: (name) => `${name} a quitté le salon`,
       joinedDuringPrep: (name) => `${name} a rejoint : place-le où il se trouve`,
@@ -379,7 +380,7 @@ export const fr: Dictionary = {
       ),
       ({ Pilier }) => (
         <>
-          {Pilier('Le pilier')} dévoile qui a écrit quoi et il marque des points pour le groupe s'il a bien deviné.
+          {Pilier('Le pilier')} dévoile le vrai auteur et il marque des points pour le groupe s'il a bien deviné.
         </>
       ),
     ],
@@ -741,7 +742,7 @@ export const fr: Dictionary = {
         ideaLabel: 'Idée de dessin :',
         yourMarker: 'Ton feutre',
         // Idées de dessin : toutes dans i18n/drawingIdeas.ts (FR et EN côte à côte).
-        ideas: DRAWING_IDEAS.map((idea) => idea.fr),
+        ideas: drawingIdeasFor('fr'),
         undo: 'Annuler mon dernier trait',
         aria: 'Tableau blanc partagé',
       },

@@ -746,7 +746,7 @@ export function registerLobbyHandlers(socket: AppSocket, ctx: HandlerContext): v
                 lobby.selectedDecks = decks;
                 emitLobbyDecksState(io, null, lobby);
                 if (countDecks(decks) === 0) {
-                    socket.emit('error', { message: 'Les thèmes choisis ne sont plus disponibles, choisis-en un autre', code: ERROR_CODES.INVALID });
+                    socket.emit('error', { message: 'Les thèmes choisis ne sont plus disponibles, choisis-en un autre', code: ERROR_CODES.DECKS_UNAVAILABLE });
                     return;
                 }
             }

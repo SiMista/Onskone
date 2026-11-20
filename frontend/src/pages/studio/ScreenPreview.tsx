@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { GameMode } from '@onskone/shared';
+import { DRAWING_PORTRAIT_ID, type GameMode } from '@onskone/shared';
 import GameFrame, { PHASE_AREA_CLASS } from '../../components/GameFrame';
 import RevealPhase from '../../components/RevealPhase';
 import QuestionSelection from '../../components/QuestionSelection';
@@ -68,6 +68,8 @@ const ScreenPreview = () => {
               isLeader={false}
               leader={scenario.leader}
               players={[scenario.leader, ...scenario.players]}
+              // Le portrait : l'idée la plus longue (pseudo compris), c'est elle qu'on veut voir tenir.
+              drawingIdea={{ id: DRAWING_PORTRAIT_ID, playerId: scenario.players[0]?.id ?? scenario.leader.id }}
               currentPlayerId={viewer}
               roundNumber={PREVIEW_ROUND}
               gameSpeed="normal"

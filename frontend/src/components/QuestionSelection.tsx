@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import socket from '../utils/socket';
 import Timer from './Timer';
 import { GameCard, IPlayer, RoundPhase } from '@onskone/shared';
-import type { GameSpeed } from '@onskone/shared';
+import type { DrawingIdeaPick, GameSpeed } from '@onskone/shared';
 import { getPhaseDuration } from '../constants/game';
 import { playSound } from '../utils/sounds';
 import WhiteboardWaiting from './WhiteboardWaiting';
@@ -11,16 +11,16 @@ import { useSwipe } from '../hooks/useSwipe';
 import { useSocketEvent } from '../hooks';
 import { useLocale } from '../i18n';
 
-const QuestionSelection = ({ lobbyCode, isLeader, leader, players, drawingSeed, currentPlayerId, roundNumber, gameSpeed, intro = false }: {
+const QuestionSelection = ({ lobbyCode, isLeader, leader, players, drawingIdea, currentPlayerId, roundNumber, gameSpeed, intro = false }: {
   lobbyCode: string;
   isLeader: boolean;
   currentPlayerId: string;
   roundNumber: number;
   leader: Pick<IPlayer, 'id' | 'name' | 'avatarId' | 'isPremium'>;
-  /** Joueurs de la partie (idées de dessin « à nom » du tableau blanc). */
+  /** Joueurs de la partie (pseudo du portrait, idée de dessin du tableau blanc). */
   players?: readonly Pick<IPlayer, 'id' | 'name'>[];
-  /** Graine des idées de dessin de la partie (IGame.drawingSeed). */
-  drawingSeed?: number;
+  /** Idée de dessin de la manche, tirée par le serveur (IRound.drawingIdea). */
+  drawingIdea?: DrawingIdeaPick | null;
   gameSpeed: GameSpeed;
   /** « À ton tour d'être PILIER » affiché par-dessus : les cartes se retournent à sa fin. */
   intro?: boolean;
@@ -197,7 +197,7 @@ const QuestionSelection = ({ lobbyCode, isLeader, leader, players, drawingSeed, 
     return (
       <>
         <Timer duration={phaseDuration} onExpire={handleTimerExpire} phase={RoundPhase.QUESTION_SELECTION} lobbyCode={lobbyCode} hidden />
-        <WhiteboardWaiting lobbyCode={lobbyCode} playerId={currentPlayerId} roundNumber={roundNumber} leader={leader} players={players} drawingSeed={drawingSeed} />
+        <WhiteboardWaiting lobbyCode={lobbyCode} playerId={currentPlayerId} roundNumber={roundNumber} leader={leader} players={players} drawingIdea={drawingIdea} />
       </>
     );
   }

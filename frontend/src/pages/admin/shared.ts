@@ -124,7 +124,7 @@ export const formatRelative = (ms: number): string => {
 
 // ---------- Navigation ----------
 export type AdminTab = 'overview' | 'tickets' | 'logs' | 'lobbies' | 'stats' | 'decks' | 'content' | 'danger' | 'budget';
-export type TabGroup = 'pilotage' | 'inbox' | 'catalogue' | 'system';
+export type TabGroup = 'pilotage' | 'inbox' | 'metrics' | 'catalogue' | 'system';
 
 export interface TabDef {
   id: AdminTab;
@@ -142,17 +142,19 @@ export const TABS: TabDef[] = [
   { id: 'tickets', icon: 'mdi:ticket-outline', label: 'Tickets', ariaLabel: 'Tickets', hint: 'Retours des joueurs', enabled: true, group: 'inbox' },
   { id: 'logs', icon: 'mdi:bug-outline', label: 'Logs', ariaLabel: 'Logs : erreurs remontées par l\'app', hint: 'Plantages et erreurs sur les appareils', enabled: true, group: 'system' },
   { id: 'danger', icon: 'mdi:alert-octagon-outline', label: 'Accès joueurs', ariaLabel: 'Maintenance et mise à jour obligatoire', hint: 'Maintenance et mise à jour obligatoire', enabled: true, group: 'system' },
-  { id: 'stats', icon: 'mdi:chart-bar', label: 'Stats', ariaLabel: 'Stats des thèmes et questions', hint: 'Thèmes et questions préférés', enabled: true, group: 'pilotage' },
+  { id: 'stats', icon: 'mdi:chart-bar', label: 'Stats d\'utilisation', ariaLabel: 'Stats d\'utilisation des thèmes et questions', hint: 'Thèmes et questions préférés', enabled: true, group: 'metrics' },
   { id: 'decks', icon: 'mdi:cards-outline', label: 'Decks', ariaLabel: 'Decks : thèmes, sujets et questions', hint: 'Thèmes, sujets et questions', enabled: true, group: 'catalogue' },
   { id: 'content', icon: 'mdi:text-box-outline', label: 'Contenu', ariaLabel: 'Contenu du site', hint: 'Paliers, succès, avatars, pages légales…', enabled: true, group: 'catalogue' },
-  { id: 'budget', icon: 'mdi:cash-multiple', label: 'Budget', ariaLabel: 'Budget : frais et rentabilité', hint: 'Ce que coûte le jeu et quand le premium le rembourse', enabled: true, group: 'system' },
+  { id: 'budget', icon: 'mdi:cash-multiple', label: 'Budget', ariaLabel: 'Budget : frais et rentabilité', hint: 'Ce que coûte le jeu et quand le premium le rembourse', enabled: true, group: 'metrics' },
 ];
 
-export const GROUP_ORDER: TabGroup[] = ['pilotage', 'inbox', 'catalogue', 'system'];
+export const GROUP_ORDER: TabGroup[] = ['pilotage', 'inbox', 'metrics', 'catalogue', 'system'];
 
 // Groupes rendus en menu déroulant (dropdown desktop / bottom sheet mobile) : leurs
 // onglets ne sont pas des entrées de nav à part entière. Les autres groupes restent à plat.
+// « Chiffres » : Stats d'utilisation et Budget (le Budget n'a rien d'un réglage Système).
 export const NAV_MENUS: Partial<Record<TabGroup, { label: string; icon: string }>> = {
+  metrics: { label: 'Chiffres', icon: 'mdi:chart-line' },
   catalogue: { label: 'Catalogue', icon: 'mdi:cards-outline' },
   system: { label: 'Système', icon: 'mdi:shield-alert-outline' },
 };
@@ -164,12 +166,12 @@ export const MOBILE_TAB_META: Record<AdminTab, { icon: string; label: string }> 
   lobbies: { icon: 'mdi:broadcast', label: 'Salons' },
   tickets: { icon: 'mdi:ticket-outline', label: 'Tickets' },
   logs: { icon: 'mdi:bug-outline', label: 'Logs' },
-  stats: { icon: 'mdi:chart-bar', label: 'Stats' },
+  stats: { icon: 'mdi:chart-bar', label: 'Stats d\'utilisation' },
   decks: { icon: 'mdi:cards-outline', label: 'Decks' },
   content: { icon: 'mdi:text-box-outline', label: 'Contenu' },
   danger: { icon: 'mdi:alert-octagon-outline', label: 'Accès' },
   budget: { icon: 'mdi:cash-multiple', label: 'Budget' },
 };
 
-// Les 2 derniers slots de la barre mobile sont les menus (Catalogue, Système), rendus à part.
-export const MOBILE_TAB_ORDER: AdminTab[] = ['overview', 'lobbies', 'stats', 'tickets'];
+// Les 3 derniers slots de la barre mobile sont les menus (Chiffres, Catalogue, Système), rendus à part.
+export const MOBILE_TAB_ORDER: AdminTab[] = ['overview', 'lobbies', 'tickets'];

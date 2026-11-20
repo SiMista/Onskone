@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import type { PointerEvent as ReactPointerEvent, ReactNode, Ref } from 'react';
 import { LuUndo2 } from 'react-icons/lu';
 import { WHITEBOARD, whiteboardStrokeId } from '@onskone/shared';
-import socket from '../utils/socket';
+import socket, { IS_SCREEN_PREVIEW } from '../utils/socket';
 import { useSocketEvent } from '../hooks';
 import { useLocale } from '../i18n';
 import { WHITEBOARD_BOARD_WAIT_MS, WHITEBOARD_FLUSH_MS, WHITEBOARD_FRAME, whiteboardColor } from '../constants/whiteboard';
@@ -91,7 +91,11 @@ const Whiteboard = ({ lobbyCode, playerId, roundNumber, size, active = true, ide
       clearTimeout(flushTimerRef.current);
       flushTimerRef.current = null;
     }
-    if (pendingBoardRequestsRef.current > 0) return;
+    // Hors ligne : socket.io garderait les envois en tampon et les renverrait à la
+    // reconnexion AVANT getGameState, donc avant que ce socket soit rattaché à notre
+    // place : le serveur les jetterait. On garde la file, le requestBoard du gameState
+    // qui suit la videra. (L'aperçu Studio, lui, n'est jamais connecté : il relaie tout.)
+    if (pendingBoardRequestsRef.current > 0 || (!socket.connected && !IS_SCREEN_PREVIEW)) return;
     const queue = queueRef.current;
     const undos = undoQueueRef.current;
     queueRef.current = [];
@@ -353,7 +357,7 @@ const Whiteboard = ({ lobbyCode, playerId, roundNumber, size, active = true, ide
             <button
               type="button"
               onClick={undo}
-              disabled={!canUndo}
+              disabled={!canUndo || !active}
               aria-label={t.phases.questionSelection.whiteboard.undo}
               title={t.phases.questionSelection.whiteboard.undo}
               className="w-7 h-7 flex items-center justify-center rounded-full bg-white border-2 border-black text-black stack-shadow-sm cursor-pointer transition-[transform,opacity] duration-150 active:scale-90 disabled:opacity-40 disabled:cursor-default disabled:active:scale-100"

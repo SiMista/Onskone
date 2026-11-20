@@ -1,6 +1,7 @@
 import { GameCard } from '@onskone/shared';
 import { getCategoryColor } from '../constants/game';
 import PremiumCardBadge from './PremiumCardBadge';
+import { LuLightbulb } from 'react-icons/lu';
 
 const QuestionCard = ({ question, card, variant = 'full', subtitle, subtitleBadge, tip }: {
   question: string;
@@ -82,6 +83,8 @@ const QuestionCard = ({ question, card, variant = 'full', subtitle, subtitleBadg
           </p>
           {tip && (
             <p className="text-center !mt-2.5 md:!mt-3 !mb-1 md:!mb-1.5 text-xs md:text-sm text-gray-700 italic leading-tight">
+              {/* Mini ampoule au trait noir, même style que les gestes de la préparation (Lucide). */}
+              <LuLightbulb size="1.1em" strokeWidth={2.75} aria-hidden className="inline-block align-[-0.18em] mr-1 text-black" />
               {tip}
             </p>
           )}

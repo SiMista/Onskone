@@ -17,7 +17,7 @@ const QUESTIONS_LIMIT = 15;
 const LOW_DATA_SHOWN = 3;
 
 type Order = 'best' | 'worst';
-type StatsTab = 'themes' | 'questions';
+export type StatsTab = 'themes' | 'questions';
 
 const TABS: { value: StatsTab; label: string }[] = [
   { value: 'themes', label: 'Thèmes' },
@@ -72,13 +72,18 @@ const sortRows = (rows: AdminDeckStatRow[], order: Order): AdminDeckStatRow[] =>
     return diff || b.shown - a.shown;
   });
 
-export const StatsPanel = ({ active, refreshKey }: { active: boolean; refreshKey: number }) => {
+export const StatsPanel = ({ active, refreshKey, tab, onTabChange }: {
+  active: boolean;
+  refreshKey: number;
+  /** Classement affiché, dans l'URL (/admin/stats/questions). */
+  tab: StatsTab;
+  onTabChange: (tab: StatsTab) => void;
+}) => {
   const { data, isLoading } = useAdminResource<AdminDeckStats>({
     fetcher: fetchAdminDeckStats,
     active,
     refreshKey,
   });
-  const [tab, setTab] = useState<StatsTab>('themes');
   const [order, setOrder] = useState<Order>('best');
   const [search, setSearch] = useState('');
   const [openThemes, setOpenThemes] = useState<Set<string>>(new Set());
@@ -206,7 +211,7 @@ export const StatsPanel = ({ active, refreshKey }: { active: boolean; refreshKey
           </section>
 
           <div>
-            <Tabs value={tab} onChange={setTab} tabs={TABS} ariaLabel="Classement" />
+            <Tabs value={tab} onChange={onTabChange} tabs={TABS} ariaLabel="Classement" />
 
             <div className="flex flex-col md:flex-row md:flex-wrap md:items-center gap-2 mt-3 mb-3">
               <SearchField

@@ -48,12 +48,4 @@ export interface IGame {
    * des serveurs d'avant l'exclusion de piliers.
    */
   totalRounds?: number;
-
-  /**
-   * Graine de la partie (entier 32 bits, tiré par le serveur à la création) : ordre des
-   * idées de dessin du tableau blanc et des joueurs qu'elles mettent en scène. La même
-   * pour tout le salon, nouvelle à chaque partie (sinon une revanche redonnait les mêmes
-   * idées). Optionnel : absent des serveurs d'avant.
-   */
-  drawingSeed?: number;
 }

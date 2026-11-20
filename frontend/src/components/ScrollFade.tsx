@@ -1,4 +1,5 @@
 import { RefObject, useRef } from 'react';
+import { LuChevronDown } from 'react-icons/lu';
 import { useScrollFade } from '../hooks/useScrollFade';
 
 interface ScrollFadeProps {
@@ -14,7 +15,19 @@ interface ScrollFadeProps {
    * fond teinté par catégorie) : le fade s'y fond au lieu de laisser une bande blanche.
    */
   color?: string;
+  /**
+   * Chevron « vers le bas » au milieu du fade du bas, pour les listes où l'on ne
+   * devine pas qu'il y a de la suite (ex. sélecteur de thèmes). Décorative : elle apparaît
+   * et disparaît avec le fade, le scroll se fait au doigt.
+   */
+  arrow?: boolean;
 }
+
+/**
+ * Le chevron ne vient qu'avec une vraie suite (≈ une demi-carte de thème cachée) : pour
+ * quelques pixels sous le bord, le fade suffit, la flèche promettait du contenu qui n'y est pas.
+ */
+const ARROW_MIN_HIDDEN_PX = 64;
 
 const WHITE_GRADIENT = {
   top: 'bg-gradient-to-b from-white via-white/85 to-transparent',
@@ -27,10 +40,11 @@ const WHITE_GRADIENT = {
  * dès qu'on atteint son bord. À placer dans un parent `relative overflow-hidden`
  * qui épouse le scroll container (le fade du haut se cale sur le haut du parent).
  */
-const ScrollFade = ({ scrollRef, className = '', color }: ScrollFadeProps) => {
+const ScrollFade = ({ scrollRef, className = '', color, arrow = false }: ScrollFadeProps) => {
   const topRef = useRef<HTMLDivElement | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
-  useScrollFade(scrollRef, topRef, bottomRef);
+  const arrowRef = useRef<HTMLSpanElement | null>(null);
+  useScrollFade(scrollRef, topRef, bottomRef, arrowRef, ARROW_MIN_HIDDEN_PX);
   const base = 'pointer-events-none absolute inset-x-0 transition-opacity duration-150';
   // Même profil que le dégradé blanc : plein, 85 % (alpha d9) à mi-hauteur, transparent.
   const colorStyle = (direction: 'to top' | 'to bottom') =>
@@ -51,6 +65,18 @@ const ScrollFade = ({ scrollRef, className = '', color }: ScrollFadeProps) => {
         className={`${base} bottom-0 h-12 md:h-14 ${color ? '' : WHITE_GRADIENT.bottom} ${className}`}
         style={{ opacity: 0, ...colorStyle('to top') }}
       />
+      {arrow && (
+        // À part du fade (son propre seuil, cf. ARROW_MIN_HIDDEN_PX). Wrapper de centrage
+        // séparé : animate-float pose son propre transform.
+        <span
+          ref={arrowRef}
+          aria-hidden
+          className={`${base} bottom-4 flex justify-center`}
+          style={{ opacity: 0 }}
+        >
+          <LuChevronDown size={26} strokeWidth={3} className="animate-float text-black" />
+        </span>
+      )}
     </>
   );
 };

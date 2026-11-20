@@ -1,5 +1,7 @@
 import { useLayoutEffect, useRef, useState, type PointerEvent } from 'react';
-import { cumulativeCost, cumulativeRevenue, formatEuros, formatMonths } from './model';
+import {
+  calendarMonth, cumulativeCost, cumulativeRevenue, formatEuros, formatMonthShort, formatMonthYear, formatMonths,
+} from './model';
 import { FLOATING } from '../ui';
 
 // Palette sombre de l'admin (hors tokens, comme le reste de l'admin). Validée sur la surface
@@ -19,8 +21,28 @@ const niceStep = (max: number): number => {
   return step;
 };
 
-// « Début » plutôt que « Lancement » : sur téléphone, le mot long touchait « 1 an ».
-const yearLabel = (m: number): string => (m === 0 ? 'Début' : `${m / 12} an${m > 12 ? 's' : ''}`);
+/** Écart mini entre deux graduations du temps (px) : en dessous, les libellés se touchent. */
+const MIN_TICK_GAP = 36;
+
+/**
+ * Graduations de l'axe du temps, en vraies dates : jusqu'à 1 an, un mois sur un ou deux
+ * (« juil. », « août »… et l'année à chaque janvier) ; au-delà, chaque 1er janvier (« 2027 »).
+ */
+const timeTicks = (months: number): { m: number; label: string }[] => {
+  const yearOf = (m: number) => String(calendarMonth(m).year);
+  if (months <= 12) {
+    const every = months <= 6 ? 1 : 2;
+    return Array.from({ length: Math.floor(months / every) + 1 }, (_, i) => i * every)
+      .map((m) => ({ m, label: calendarMonth(m).month === 0 ? yearOf(m) : formatMonthShort(m) }));
+  }
+  const ticks = [{ m: 0, label: yearOf(0) }];
+  for (let m = 1; m <= months; m++) {
+    if (calendarMonth(m).month === 0) ticks.push({ m, label: yearOf(m) });
+  }
+  return ticks;
+};
+
+const capitalize = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 
 /**
  * Coûts cumulés (marches : un abonnement se paie chaque début d'année) contre revenus
@@ -70,7 +92,13 @@ export const CumulChart = ({
   const revenuePath = `M ${x(0)} ${y(0)} L ${x(months)} ${y(revenue(months))}`;
 
   const ticks = Array.from({ length: Math.round(yMax / step) + 1 }, (_, i) => i * step);
-  const yearTicks = Array.from({ length: Math.floor(months / 12) + 1 }, (_, i) => i * 12);
+  // Parcourues depuis la fin : en cas de chevauchement, c'est la plus ancienne qui saute
+  // (sur 5 ans, « 2026 » au lancement collerait à « 2027 » six mois plus loin).
+  const ticksX: { m: number; label: string }[] = [];
+  for (const tick of timeTicks(months).reverse()) {
+    const last = ticksX[0];
+    if (!last || x(last.m) - x(tick.m) >= MIN_TICK_GAP) ticksX.unshift(tick);
+  }
   const showBreakEven = breakEven !== null && breakEven <= months;
 
   // Valeur au bout de chaque courbe ; écartées si elles se chevauchent.
@@ -115,7 +143,7 @@ export const CumulChart = ({
           width={width}
           height={HEIGHT}
           role="img"
-          aria-label={`Sur ${formatMonths(months)} : ${formatEuros(cost(months))} de coûts pour ${formatEuros(revenue(months))} de revenus.`}
+          aria-label={`De ${formatMonthYear(0)} à ${formatMonthYear(months)} (${formatMonths(months)}) : ${formatEuros(cost(months))} de coûts pour ${formatEuros(revenue(months))} de revenus.`}
           className="block select-none"
         >
           {/* Grille horizontale : traits fins, en retrait. */}
@@ -127,7 +155,7 @@ export const CumulChart = ({
               </text>
             </g>
           ))}
-          {yearTicks.map((m) => (
+          {ticksX.map(({ m, label }) => (
             <text
               key={m}
               x={x(m)}
@@ -136,7 +164,7 @@ export const CumulChart = ({
               fontSize={11}
               fill="rgba(255,255,255,0.5)"
             >
-              {yearLabel(m)}
+              {label}
             </text>
           ))}
 
@@ -196,7 +224,8 @@ export const CumulChart = ({
             className={`${FLOATING} pointer-events-none absolute top-1 w-[180px] z-10 px-3 py-2 text-[12px]`}
             style={{ left: tooltipLeft }}
           >
-            <p className="font-semibold text-white">{hover === 0 ? 'Lancement' : `Après ${formatMonths(hover)}`}</p>
+            <p className="font-semibold text-white">{capitalize(formatMonthYear(hover))}</p>
+            <p className="text-white/50">{hover === 0 ? 'Lancement' : `Après ${formatMonths(hover)}`}</p>
             <p className="mt-1 flex items-center gap-1.5 text-white/70">
               <span aria-hidden className="w-2.5 h-[2px] rounded-full" style={{ background: COST_COLOR }} />
               Coûts <span className="ml-auto tabular-nums text-white">{formatEuros(cost(hover))}</span>

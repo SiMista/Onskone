@@ -50,8 +50,8 @@ interface CardHandProps {
  * Main de cartes du pilier en phase de sélection de question : éventail empilé,
  * overlay d'indice de swipe (mobile), flèches et dots de navigation.
  *
- * Purement présentationnel — l'orchestration (socket, timer, fun facts, état
- * de swipe-hint) reste dans QuestionSelection. Les seuils de swipe vivent dans
+ * Purement présentationnel — l'orchestration (socket, timer, état de swipe-hint)
+ * reste dans QuestionSelection. Les seuils de swipe vivent dans
  * `useSwipe` côté parent.
  */
 /** Durée du fondu de sortie du rappel de swipe (doit matcher `.animate-fade-out`). */

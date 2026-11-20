@@ -1,10 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
-import { WHITEBOARD, isWhiteboardLocalId } from '@onskone/shared';
+import { DRAWING_IDEA_IDS, DRAWING_PORTRAIT_ID, WHITEBOARD, isWhiteboardLocalId, type DrawingIdeaId } from '@onskone/shared';
 import { WHITEBOARD_COLORS } from '../constants/whiteboard';
 import { fr } from '../i18n/fr';
 import { en } from '../i18n/en';
 import {
-  BoardStrokes, chunkPoints, drawingIdeaOrder, farEnough, ideaArity, resolveDrawingIdea, fitBoard, newLocalStrokeId, paintStroke, toBoardPoint,
+  BoardStrokes, chunkPoints, farEnough, resolveDrawingIdea, fitBoard, newLocalStrokeId, paintStroke, toBoardPoint,
 } from './whiteboard';
 
 describe('BoardStrokes', () => {
@@ -73,68 +73,42 @@ describe('format fixe du tableau', () => {
 });
 
 describe('idée de dessin de la manche (resolveDrawingIdea)', () => {
-  const ideas = ['Pizza', 'Volcan', 'Zoo', (n: string) => `${n} en pirate`, (n: string) => `${n} en robot`, (a: string, b: string) => `${a} épouse ${b}`];
-  const players = [{ id: 'c', name: 'Charlie' }, { id: 'a', name: 'Alice' }, { id: 'b', name: 'Bob' }, { id: 'd', name: 'Dana' }];
-  const game = (seed: number, list = players) =>
-    Array.from({ length: ideas.length }, (_, r) => resolveDrawingIdea(ideas, seed, r + 1, list));
+  const ideas = fr.phases.questionSelection.whiteboard.ideas;
+  const players = [{ id: 'a', name: 'Alice' }, { id: 'b', name: 'Bob' }];
 
-  it("la même pour tout le salon, quel que soit l'ordre de la liste des joueurs", () => {
-    expect(game(42, [...players].reverse())).toEqual(game(42));
+  it("traduit l'id tiré par le serveur", () => {
+    expect(resolveDrawingIdea(ideas, { id: 'rainbow' }, players)).toBe('Un arc-en-ciel');
   });
 
-  it('aucune idée ne revient avant que toutes soient passées', () => {
-    for (const seed of [1, 42, 999, 123456]) {
-      const order = drawingIdeaOrder(ideas.map(ideaArity), seed);
-      expect([...order].sort()).toEqual(ideas.map((_, i) => i));
-    }
+  it('portrait : le pseudo du joueur désigné, avec élision', () => {
+    expect(resolveDrawingIdea(ideas, { id: DRAWING_PORTRAIT_ID, playerId: 'b' }, players)).toBe('Le portrait de Bob');
+    expect(resolveDrawingIdea(ideas, { id: DRAWING_PORTRAIT_ID, playerId: 'a' }, players)).toBe("Le portrait d'Alice");
   });
 
-  it('la manche 1 met toujours un joueur en scène', () => {
-    for (let seed = 0; seed < 50; seed++) {
-      expect(ideaArity(ideas[drawingIdeaOrder(ideas.map(ideaArity), seed)[0]])).toBeGreaterThan(0);
-    }
-  });
-
-  it('nouvelle partie (autre graine), autre suite', () => {
-    const runs = new Set(Array.from({ length: 10 }, (_, seed) => game(seed).join('|')));
-    expect(runs.size).toBeGreaterThan(1);
-  });
-
-  it('les joueurs passent à tour de rôle, et un duo réunit deux joueurs différents', () => {
-    // Que des idées à nom : 1 + 2 + 1 = 4 places = chacun des 4 joueurs une fois.
-    const named = [(n: string) => `solo:${n}`, (a: string, b: string) => `duo:${a}+${b}`, (n: string) => `solo:${n}`];
-    for (const seed of [3, 7, 2024]) {
-      const shown = Array.from({ length: 3 }, (_, r) => resolveDrawingIdea(named, seed, r + 1, players))
-        .flatMap((s) => s.split(':')[1].split('+'));
-      expect(new Set(shown).size).toBe(players.length);
-    }
+  it("rien à afficher plutôt qu'une idée fausse (vieux serveur, id inconnu, joueur absent)", () => {
+    expect(resolveDrawingIdea(ideas, undefined, players)).toBeNull();
+    expect(resolveDrawingIdea(ideas, { id: 'futureIdea' }, players)).toBeNull();
+    expect(resolveDrawingIdea(ideas, { id: 'toString' }, players)).toBeNull();
+    expect(resolveDrawingIdea(ideas, { id: DRAWING_PORTRAIT_ID, playerId: 'zz' }, players)).toBeNull();
   });
 });
 
 describe('idées de dessin', () => {
-  it("même nombre dans chaque langue : l'index tiré désigne la même idée pour tout le salon", () => {
-    expect(fr.phases.questionSelection.whiteboard.ideas.length).toBeGreaterThan(10);
-    expect(en.phases.questionSelection.whiteboard.ideas).toHaveLength(fr.phases.questionSelection.whiteboard.ideas.length);
-  });
-
-  it('même forme à chaque index : classique, solo ou duo dans toutes les langues', () => {
-    const frIdeas = fr.phases.questionSelection.whiteboard.ideas;
-    const enIdeas = en.phases.questionSelection.whiteboard.ideas;
-    frIdeas.forEach((idea, i) => expect(ideaArity(enIdeas[i]), String(i)).toBe(ideaArity(idea)));
+  it('chaque id tiré par le serveur a un texte dans chaque langue', () => {
+    const ids: DrawingIdeaId[] = [...DRAWING_IDEA_IDS, DRAWING_PORTRAIT_ID];
+    for (const dict of [fr, en]) {
+      for (const id of ids) expect(dict.phases.questionSelection.whiteboard.ideas[id], id).toBeTruthy();
+    }
   });
 
   it('chaque idée tient sur UNE ligne en haut du tableau (libellé compris)', () => {
-    // ~40 caractères = une ligne sur un tableau de téléphone en portrait. Pseudo de
-    // 8 lettres pour un solo ; pour un duo, deux pseudos courts (3 lettres) : choix
-    // assumé, avec deux pseudos longs un duo passe sur 2 lignes.
+    // ~40 caractères = une ligne sur un tableau de téléphone en portrait (pseudo de 8 lettres).
     for (const dict of [fr, en]) {
       const wb = dict.phases.questionSelection.whiteboard;
-      wb.ideas.forEach((idea) => {
-        const arity = ideaArity(idea);
-        const shown = typeof idea === 'string' ? idea : arity === 2 ? idea('Léa', 'Tom') : idea('Bérénice', '');
+      Object.values(wb.ideas).forEach((idea) => {
+        const shown = typeof idea === 'string' ? idea : idea('Bérénice');
         expect(`${wb.ideaLabel} ${shown}`.length, shown).toBeLessThanOrEqual(40);
-        if (arity >= 1) expect(shown).toContain(arity === 2 ? 'Léa' : 'Bérénice');
-        if (arity === 2) expect(shown).toContain('Tom');
+        if (typeof idea !== 'string') expect(shown).toContain('Bérénice');
       });
     }
   });

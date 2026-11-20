@@ -149,7 +149,10 @@ export const rateLimiters = {
   whiteboardDraw: new RateLimiter({ windowMs: 10000, maxRequests: 300 }),
   // Un envoi par geste annulé (tous ses traits d'un coup) : de quoi marteler « Annuler ».
   whiteboardUndo: new RateLimiter({ windowMs: 10000, maxRequests: 60 }),
-  getWhiteboard: new RateLimiter({ windowMs: 60000, maxRequests: 30 }),
+  // Le tableau complet peut peser plusieurs Mo : le client ne le demande qu'au montage et
+  // à chaque gameState (reconnexion, resynchro). Plus haut, quelques faux clients
+  // suffiraient à occuper le serveur à sérialiser des snapshots.
+  getWhiteboard: new RateLimiter({ windowMs: 60000, maxRequests: 10 }),
 
   // Lobby settings toggles (mode, decks, guessMyAnswer): 240 per minute
   // L'hôte peut spammer les sliders sans déclencher le rate limit

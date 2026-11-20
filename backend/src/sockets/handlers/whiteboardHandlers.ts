@@ -1,5 +1,5 @@
 import { RoundPhase, WHITEBOARD, isWhiteboardLocalId } from '@onskone/shared';
-import { Round } from '../../models/Round';
+import { Round } from '../../models/Round.js';
 import type { Lobby } from '../../models/Lobby';
 import type { Game } from '../../models/Game';
 import type { Player } from '../../models/Player';
@@ -44,6 +44,16 @@ function resolveDrawer(
     return { round, player, color: game.getWhiteboardColor(player.id) };
 }
 
+/**
+ * Destinataires d'un trait : la salle sauf l'auteur et le pilier (il ne voit pas le
+ * tableau, inutile de faire ramer son téléphone pendant qu'il choisit sa question).
+ */
+function othersExceptLeader(socket: AppSocket, lobby: Lobby, round: Round) {
+    const leaderSocketId = lobby.getPlayer(round.leader.id)?.socketId;
+    const others = socket.to(lobby.code);
+    return leaderSocketId ? others.except(leaderSocketId) : others;
+}
+
 export function registerWhiteboardHandlers(socket: AppSocket, _ctx: HandlerContext): void {
     socket.on('getWhiteboard', (data) => {
         withGuards(socket, data, {
@@ -77,7 +87,7 @@ export function registerWhiteboardHandlers(socket: AppSocket, _ctx: HandlerConte
             const stroke = drawer.round.whiteboard.draw(drawer.player.id, drawer.color, data.strokeId, points);
             if (!stroke) return;
             // Pas d'écho : l'auteur a déjà son trait à l'écran.
-            socket.to(lobby.code).emit('whiteboardStroke', { roundNumber: drawer.round.roundNumber, stroke });
+            othersExceptLeader(socket, lobby, drawer.round).emit('whiteboardStroke', { roundNumber: drawer.round.roundNumber, stroke });
         });
     });
 
@@ -97,7 +107,7 @@ export function registerWhiteboardHandlers(socket: AppSocket, _ctx: HandlerConte
                 .map(localId => drawer.round.whiteboard.undo(drawer.player.id, drawer.color, localId))
                 .filter((id): id is string => id !== null);
             if (strokeIds.length === 0) return;
-            socket.to(lobby.code).emit('whiteboardStrokeRemoved', { roundNumber: drawer.round.roundNumber, strokeIds });
+            othersExceptLeader(socket, lobby, drawer.round).emit('whiteboardStrokeRemoved', { roundNumber: drawer.round.roundNumber, strokeIds });
         });
     });
 }

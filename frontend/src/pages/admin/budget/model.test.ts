@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  COSTS, breakEvenMonth, cumulativeCost, cumulativeRevenue, formatEuros, formatMonths,
+  COSTS, breakEvenMonth, calendarMonth, cumulativeCost, formatMonthShort, formatMonthYear, cumulativeRevenue, formatEuros, formatMonths,
   formatRate, netPerSale, oneTimeCost, saleBreakdown, salesPerMonthNeeded, salesToCover, yearlyCost, type CostLine,
 } from './model';
 
@@ -85,5 +85,21 @@ describe('budget : affichage', () => {
     expect(formatMonths(5)).toBe('5 mois');
     expect(formatMonths(12)).toBe('1 an');
     expect(formatMonths(28)).toBe('2 ans et 4 mois');
+  });
+});
+
+describe('budget : vraies dates', () => {
+  const launch = { year: 2026, month: 5 };
+  it('compte les mois depuis le lancement, en changeant d\'année au bon moment', () => {
+    expect(calendarMonth(0, launch)).toEqual({ year: 2026, month: 5 });
+    expect(calendarMonth(6, launch)).toEqual({ year: 2026, month: 11 });
+    expect(calendarMonth(7, launch)).toEqual({ year: 2027, month: 0 });
+    expect(calendarMonth(36, launch)).toEqual({ year: 2029, month: 5 });
+  });
+
+  it('écrit le mois en français', () => {
+    expect(formatMonthYear(0, launch)).toBe('juin 2026');
+    expect(formatMonthYear(11, launch)).toBe('mai 2027');
+    expect(formatMonthShort(3, launch)).toBe('sept.');
   });
 });

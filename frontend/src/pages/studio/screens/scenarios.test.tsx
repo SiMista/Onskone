@@ -6,7 +6,7 @@ import { LocaleProvider } from '../../../i18n';
 const { fakeSocket } = vi.hoisted(() => ({
   fakeSocket: { on: () => {}, off: () => {}, emit: vi.fn(), listeners: () => [] },
 }));
-vi.mock('../../../utils/socket', () => ({ default: fakeSocket, dispatchPreviewServerEvent: () => {} }));
+vi.mock('../../../utils/socket', () => ({ default: fakeSocket, IS_SCREEN_PREVIEW: false, dispatchPreviewServerEvent: () => {} }));
 // jsdom : audio.play() ne renvoie pas de promesse (le choix de question joue un son au montage).
 vi.mock('../../../utils/sounds', () => ({ playSound: () => {} }));
 

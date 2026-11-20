@@ -40,7 +40,7 @@ export class Whiteboard {
     draw(ownerId: string, color: number, localId: string, points: number[]): WhiteboardStroke | null {
         const id = whiteboardStrokeId(color, localId);
         let stroke = this.byId.get(id);
-        // Même id, autre auteur (couleurs épuisées, cf. Game.getWhiteboardColor) : refusé.
+        // Même id, autre auteur : impossible en jeu (une couleur par joueur), garde défensive.
         if (stroke && stroke.ownerId !== ownerId) return null;
 
         const strokeCount = stroke ? stroke.points.length / 2 : 0;

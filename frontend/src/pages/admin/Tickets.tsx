@@ -11,7 +11,7 @@ import { EmptyState, LoadingState, PANEL, SearchField, Segmented, Tabs, badge, b
 
 export const TicketsPanel = ({
   tickets, isLoading, onChangeTickets,
-  initialStatusFilter, initialTypeFilter,
+  initialStatusFilter, initialTypeFilter, openTicketId, onOpenTicket,
 }: {
   tickets: Ticket[];
   isLoading: boolean;
@@ -22,12 +22,14 @@ export const TicketsPanel = ({
    */
   initialStatusFilter?: TicketStatus;
   initialTypeFilter?: TicketType;
+  /** Ticket ouvert, dans l'URL (/admin/tickets/<id>) : un lien ouvre directement sa fiche. */
+  openTicketId: number | null;
+  onOpenTicket: (id: number | null, opts?: { replace?: boolean }) => void;
 }) => {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<TicketType | ''>(initialTypeFilter ?? '');
   const [groupByLobby, setGroupByLobby] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
-  const [openTicketId, setOpenTicketId] = useState<number | null>(null);
   const [mobileStatus, setMobileStatus] = useState<TicketStatus>(initialStatusFilter ?? 'new');
   const [filtersOpen, setFiltersOpen] = useState(false);
 
@@ -49,8 +51,9 @@ export const TicketsPanel = ({
     });
   }, []);
   const handleDeleted = useCallback((ids: number[]) => {
-    setOpenTicketId((cur) => (cur !== null && ids.includes(cur) ? null : cur));
-  }, []);
+    // Fiche supprimée : on la ferme sans laisser son adresse morte dans l'historique.
+    if (openTicketId !== null && ids.includes(openTicketId)) onOpenTicket(null, { replace: true });
+  }, [openTicketId, onOpenTicket]);
 
   const {
     pendingDelete, cancelDelete, changeStatus,
@@ -365,7 +368,7 @@ export const TicketsPanel = ({
                             ticket={t}
                             isSelected={selected.has(t.id)}
                             isHot={!!t.lobby_code && (lobbyCounts[t.lobby_code] || 0) >= 2}
-                            onOpen={() => setOpenTicketId(t.id)}
+                            onOpen={() => onOpenTicket(t.id)}
                             onToggleSelect={() => toggleSelect(t.id)}
                             onStatusChange={(s) => changeStatus(t.id, s)}
                             onDelete={() => requestDelete(t.id)}
@@ -384,7 +387,7 @@ export const TicketsPanel = ({
       {openTicket && (
         <TicketDetailModal
           ticket={openTicket}
-          onClose={() => setOpenTicketId(null)}
+          onClose={() => onOpenTicket(null)}
           onStatusChange={(s) => changeStatus(openTicket.id, s)}
           onDelete={() => requestDelete(openTicket.id)}
         />

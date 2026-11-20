@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import db from '../db/database.js';
 import { requireAdmin, checkPassword, issueToken } from './admin.js';
 import { RateLimiter } from '../utils/rateLimiter.js';
+import { LoginGuard } from '../utils/loginGuard.js';
 import logger from '../utils/logger.js';
 
 const router: Router = Router();
@@ -16,8 +17,21 @@ const MAX_LOBBY = 20;
 
 // 5 tickets / 10 min par IP
 const ticketLimiter = new RateLimiter({ windowMs: 10 * 60 * 1000, maxRequests: 5 });
-// 10 essais login / 15 min par IP
+// 10 essais login / 15 min par IP (tous essais confondus : borne le martelage brut)
 const loginLimiter = new RateLimiter({ windowMs: 15 * 60 * 1000, maxRequests: 10 });
+// Échecs seulement : verrou progressif par IP + plafond global (cf. utils/loginGuard.ts).
+const loginGuard = new LoginGuard({
+  freeFailures: 5,
+  baseLockMs: 60 * 1000,
+  maxLockMs: 60 * 60 * 1000,
+  forgetAfterMs: 24 * 60 * 60 * 1000,
+  globalMaxFailures: 100,
+  globalWindowMs: 60 * 60 * 1000,
+});
+// Chaque mauvais mot de passe coûte au moins ça avant la réponse : un script séquentiel
+// rame, un humain qui s'est trompé ne le sent pas.
+const FAILED_LOGIN_DELAY_MS = 1000;
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 function clientIp(req: Request): string {
   // req.ip est résolu par Express selon `trust proxy` (= 1, cf. index.ts) : il prend
@@ -85,17 +99,30 @@ router.post('/tickets', (req: Request, res: Response) => {
 
 // --- ADMIN AUTH ---
 
-router.post('/admin/login', (req: Request, res: Response) => {
+router.post('/admin/login', async (req: Request, res: Response) => {
   const ip = clientIp(req);
+  // Verrou AVANT le test du mot de passe : pendant un verrou, même le bon est refusé
+  // (sinon le 429/401 servirait d'oracle pour continuer à deviner).
+  const gate = loginGuard.check(ip);
+  if (!gate.allowed) {
+    res.setHeader('Retry-After', String(Math.ceil(gate.retryAfterMs / 1000)));
+    res.status(429).json({ error: 'too_many_requests' });
+    return;
+  }
   if (!loginLimiter.isAllowed(ip)) {
     res.status(429).json({ error: 'too_many_requests' });
     return;
   }
   const { password } = req.body ?? {};
   if (typeof password !== 'string' || !checkPassword(password)) {
+    const failures = loginGuard.recordFailure(ip);
+    logger.warn('Admin login failed', { ipHash: hashIp(ip), failures });
+    await sleep(FAILED_LOGIN_DELAY_MS);
     res.status(401).json({ error: 'invalid_credentials' });
     return;
   }
+  loginGuard.recordSuccess(ip);
+  logger.info('Admin login OK', { ipHash: hashIp(ip) });
   res.json({ token: issueToken() });
 });
 

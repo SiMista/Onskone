@@ -316,8 +316,9 @@ const ThemePickerModal = ({ isOpen, onClose, catalog, selected, mode, hostName, 
                 })}
               </div>
               {/* Fond de la liste = teinte de la catégorie à ~15 % sur blanc (`${color}25`) :
-                  le fade reprend cette teinte, rendue opaque. */}
-              <ScrollFade scrollRef={listRef} color={lightenHex(activeColor, 1 - 0x25 / 0xff)} />
+                  le fade reprend cette teinte, rendue opaque. Flèche : sans elle, on ne
+                  devinait pas qu'il restait des thèmes sous la ligne de flottaison. */}
+              <ScrollFade scrollRef={listRef} color={lightenHex(activeColor, 1 - 0x25 / 0xff)} arrow />
             </div>
           </div>
         </div>

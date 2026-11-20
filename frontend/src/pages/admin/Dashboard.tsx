@@ -17,6 +17,8 @@ import { StatsPanel } from './Stats';
 import { DangerPanel, RestrictionsBanner, activeRestrictions } from './Danger';
 import { NavDropdown } from './NavDropdown';
 import { AdminBackdrop, AdminBrand, PAGE_BG } from './ui';
+import { useAdminRoute } from './routes';
+import type { ContentSection } from './content/shared';
 
 const LOBBY_COUNT_POLL_MS = 5000;
 // Maintenance / mise à jour obligatoire changent rarement, mais peuvent l'être depuis un autre appareil.
@@ -27,7 +29,15 @@ const countPlaying = (lobbies: AdminLobbySummary[]): number => lobbies.filter((l
 export const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<AdminTab>('overview');
+  // L'onglet (et sa sous-page) vit dans l'URL : un lien /admin/... ouvre le bon écran,
+  // « Retour » du navigateur revient à l'écran d'avant. Adresse inconnue : accueil.
+  const { route, go } = useAdminRoute();
+  const activeTab: AdminTab = route?.tab ?? 'overview';
+  const sub = route?.sub ?? null;
+  const setActiveTab = useCallback((tab: AdminTab) => go(tab), [go]);
+  useEffect(() => {
+    if (!route) go('overview', null, { replace: true });
+  }, [route, go]);
   const [lobbyCount, setLobbyCount] = useState<number | null>(null);
   const [playingCount, setPlayingCount] = useState<number | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -120,7 +130,7 @@ export const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
   const jumpToTickets = useCallback((status?: TicketStatus, type?: TicketType) => {
     setJumpFilter({ status, type });
     setActiveTab('tickets');
-  }, []);
+  }, [setActiveTab]);
 
   return (
     <div className={`min-h-screen text-white relative ${PAGE_BG}`}>
@@ -242,6 +252,8 @@ export const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
             tickets={tickets}
             isLoading={isLoading}
             onChangeTickets={setTickets}
+            openTicketId={sub && /^\d+$/.test(sub) ? Number(sub) : null}
+            onOpenTicket={(id, opts) => go('tickets', id === null ? null : String(id), opts)}
             initialStatusFilter={jumpFilter.status}
             initialTypeFilter={jumpFilter.type}
           />
@@ -253,10 +265,19 @@ export const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
           <LobbiesPanel active={activeTab === 'lobbies'} refreshKey={refreshKey} />
         )}
         {activeTab === 'stats' && (
-          <StatsPanel active={activeTab === 'stats'} refreshKey={refreshKey} />
+          <StatsPanel
+            active={activeTab === 'stats'}
+            refreshKey={refreshKey}
+            tab={sub === 'questions' ? 'questions' : 'themes'}
+            onTabChange={(t) => go('stats', t === 'themes' ? null : t)}
+          />
         )}
-        {activeTab === 'decks' && <DecksPanel active />}
-        {activeTab === 'content' && <ContentPanel />}
+        {activeTab === 'decks' && (
+          <DecksPanel active selectedSlug={sub} onSelect={(slug) => go('decks', slug, { replace: true })} />
+        )}
+        {activeTab === 'content' && (
+          <ContentPanel section={sub as ContentSection | null} onSectionChange={(s) => go('content', s)} />
+        )}
         {activeTab === 'budget' && <BudgetPanel />}
         {activeTab === 'danger' && (
           <DangerPanel

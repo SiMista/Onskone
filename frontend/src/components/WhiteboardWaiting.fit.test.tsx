@@ -6,7 +6,7 @@ import { WHITEBOARD_FRAME_Y, WHITEBOARD_SHADOW } from '../constants/whiteboard';
 const { fakeSocket } = vi.hoisted(() => ({
   fakeSocket: { on: () => {}, off: () => {}, emit: vi.fn(), listeners: () => [] },
 }));
-vi.mock('../utils/socket', () => ({ default: fakeSocket, dispatchPreviewServerEvent: () => {} }));
+vi.mock('../utils/socket', () => ({ default: fakeSocket, IS_SCREEN_PREVIEW: false, dispatchPreviewServerEvent: () => {} }));
 
 import WhiteboardWaiting from './WhiteboardWaiting';
 
@@ -59,7 +59,7 @@ describe('WhiteboardWaiting — place juste trop courte pour le bandeau', () => 
           lobbyCode="ABCDEF"
           playerId="p2"
           roundNumber={1}
-          drawingSeed={1}
+          drawingIdea={{ id: 'portrait', playerId: 'p1' }}
           leader={{ id: 'p1', name: 'Léa', avatarId: 0, isPremium: false }}
           players={[{ id: 'p1', name: 'Léa' }, { id: 'p2', name: 'Tom' }]}
         />

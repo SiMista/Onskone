@@ -157,6 +157,7 @@ export function serializeRound(round: IGame['currentRound'] | null): IRound | nu
         // Arbitrage des similarités : n'existe qu'en REVEAL (vide avant, par principe).
         pendingSimilarityIndex: round.phase === RoundPhase.REVEAL ? (round.pendingSimilarityIndex ?? null) : null,
         similarityCorrections: round.phase === RoundPhase.REVEAL ? [...(round.similarityCorrections ?? [])] : [],
+        drawingIdea: round.drawingIdea ?? null,
     };
 }
 
@@ -192,7 +193,6 @@ export function serializeGame(lobby: Lobby): IGame {
         status: game.status,
         rounds: serializeRounds(game.rounds),
         totalRounds: game.getMaxRounds(),
-        drawingSeed: game.drawingSeed,
     };
 }
 

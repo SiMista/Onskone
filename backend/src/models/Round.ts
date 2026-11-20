@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import { IRound } from '../types/IRound';
-import { IPlayer, GameCard, RoundPhase, formatNoResponse, isNoResponse } from '@onskone/shared';
+import { IPlayer, GameCard, RoundPhase, formatNoResponse, isNoResponse, type DrawingIdeaPick } from '@onskone/shared';
 import { shuffleArray } from '../utils/helpers.js';
 import { Whiteboard } from './Whiteboard.js';
 
@@ -44,6 +44,7 @@ export class Round implements IRound {
     revealedIndices: number[]; // Indices des réponses révélées en phase REVEAL
     revealOrder: number[]; // Ordre du reveal (tour de table), figé à l'entrée en REVEAL
     similarityCorrections: number[]; // Indices corrigés par similarité
+    drawingIdea?: DrawingIdeaPick | null; // Idée de dessin de la manche (tirée par Game.nextRound)
     // Similarité en attente de l'arbitrage du pilier (index de la carte jugée), null sinon.
     // Gérée par sockets/similarityArbitration.ts ; survit à la reconnexion du pilier.
     pendingSimilarityIndex: number | null;

@@ -175,7 +175,7 @@ const App = () => {
               {/* Téléphone de l'aperçu d'écrans du Studio (iframe, sans serveur : cf. utils/socket.ts). */}
               {import.meta.env.DEV && <Route path="/studio/screen" element={<ScreenPreview />} />}
               <Route
-                path="/admin"
+                path="/admin/*"
                 element={
                   <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-gray-500">Chargement…</div>}>
                     <Admin />

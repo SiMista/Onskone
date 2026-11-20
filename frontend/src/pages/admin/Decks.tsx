@@ -1,12 +1,21 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { AdminDeckSummary } from '@onskone/shared';
 import { useAdminResource } from '../../hooks';
 import { fetchAdminDecks } from '../../utils/adminDataApi';
 import { EmptyState, KpiCell, LoadingState, PANEL, PremiumCrown, SearchField, Segmented } from './ui';
 import { categoryStyle, deckKey } from './decks/shared';
 import { DeckRailItem, DeckDetail } from './decks/DeckDetail';
+import { slugify } from './routes';
 
-export const DecksPanel = ({ active }: { active: boolean }) => {
+/** Identifiant d'URL d'un thème (/admin/decks/qui-es-tu). */
+const deckSlug = (d: AdminDeckSummary) => slugify(d.theme);
+
+export const DecksPanel = ({ active, selectedSlug, onSelect }: {
+  active: boolean;
+  /** Thème ouvert, dans l'URL ; absent ou masqué par les filtres : le premier affiché. */
+  selectedSlug: string | null;
+  onSelect: (slug: string) => void;
+}) => {
   const { data, isLoading } = useAdminResource<AdminDeckSummary[]>({
     fetcher: fetchAdminDecks,
     active,
@@ -16,7 +25,6 @@ export const DecksPanel = ({ active }: { active: boolean }) => {
   const decks = useMemo(() => data ?? [], [data]);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('');
-  const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [questionsCollapsed, setQuestionsCollapsed] = useState(true);
 
   const totals = useMemo(() => {
@@ -83,21 +91,12 @@ export const DecksPanel = ({ active }: { active: boolean }) => {
     return Array.from(map.entries());
   }, [filtered]);
 
-  useEffect(() => {
-    if (filtered.length === 0) {
-      if (selectedKey !== null) setSelectedKey(null);
-      return;
-    }
-    const stillVisible = selectedKey && filtered.some((d) => deckKey(d) === selectedKey);
-    if (!stillVisible) {
-      setSelectedKey(deckKey(filtered[0]));
-    }
-  }, [filtered, selectedKey]);
-
+  // Dérivé (pas d'état) : le thème de l'URL s'il est affiché, sinon le premier de la liste.
   const selectedDeck = useMemo(
-    () => filtered.find((d) => deckKey(d) === selectedKey) ?? null,
-    [filtered, selectedKey],
+    () => filtered.find((d) => deckSlug(d) === selectedSlug) ?? filtered[0] ?? null,
+    [filtered, selectedSlug],
   );
+  const selectedKey = selectedDeck ? deckKey(selectedDeck) : null;
 
   return (
     <div className="space-y-5">
@@ -179,7 +178,7 @@ export const DecksPanel = ({ active }: { active: boolean }) => {
                         <button
                           key={k}
                           type="button"
-                          onClick={() => setSelectedKey(k)}
+                          onClick={() => onSelect(deckSlug(d))}
                           aria-pressed={selected}
                           className={`cursor-pointer relative overflow-hidden rounded-lg border text-left transition-colors flex items-center gap-1.5 px-2 py-2 pl-3 min-h-[40px] ${selected
                             ? 'bg-amber-400/10 border-amber-300/40'
@@ -227,7 +226,7 @@ export const DecksPanel = ({ active }: { active: boolean }) => {
                               deck={d}
                               palette={palette}
                               selected={k === selectedKey}
-                              onSelect={() => setSelectedKey(k)}
+                              onSelect={() => onSelect(deckSlug(d))}
                             />
                           );
                         })}

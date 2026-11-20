@@ -1,4 +1,5 @@
 import { IPlayer } from './player.js';
+import type { DrawingIdeaPick } from '../drawingIdeas.js';
 
 /**
  * Phases d'un round
@@ -123,4 +124,10 @@ export interface IRound {
 
   /** Cartes (indices de `revealResults`) validées « même réponse » par le pilier. REVEAL uniquement (vide avant). */
   similarityCorrections: number[];
+
+  /**
+   * Idée de dessin du tableau blanc de la manche, tirée par le serveur (la même pour tout
+   * le salon). Optionnel : absent des serveurs d'avant (le client n'affiche alors pas d'idée).
+   */
+  drawingIdea?: DrawingIdeaPick | null;
 }

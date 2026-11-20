@@ -4,27 +4,36 @@ import { INPUT_CLS } from './shared';
 import { BADGE_TONES, BADGE, KpiCell, PANEL, SectionLabel, Segmented } from './ui';
 import { CumulChart, REVENUE_COLOR } from './budget/CumulChart';
 import {
-  COSTS, DEFAULT_PRICE, PRICE_PRESETS, STORE_FEE, VAT_RATE, breakEvenMonth, cumulativeCost, formatEuros, formatMonths,
-  formatRate, netPerSale, saleBreakdown, salesPerMonthNeeded, salesToCover, yearlyCost,
+  COSTS, DEFAULT_PRICE, PRICE_PRESETS, STORE_FEE, VAT_RATE, breakEvenMonth, cumulativeCost, formatEuros, formatMonthYear,
+  formatMonths, formatRate, netPerSale, saleBreakdown, salesPerMonthNeeded, salesToCover, yearlyCost,
 } from './budget/model';
 
 const MAX_SALES_PER_MONTH = 40;
 const DEFAULT_SALES_PER_MONTH = 10;
 const HORIZONS = [1, 2, 3, 5];
+/** Durées proposées pour le graphique (en mois) : jusqu'à 1 an, l'axe passe en mois. */
+const CHART_MONTHS = [6, 12, 24, 36, 60];
+const DEFAULT_CHART_MONTHS = 36;
 
 // Réglages de la simulation, gardés d'une visite à l'autre sur ce navigateur (confort seulement).
 const STORAGE_KEY = 'onskone_admin_budget';
-const loadSettings = (): { price: number; salesPerMonth: number } => {
+type Settings = { price: number; salesPerMonth: number; chartMonths: number };
+const DEFAULT_SETTINGS: Settings = { price: DEFAULT_PRICE, salesPerMonth: DEFAULT_SALES_PER_MONTH, chartMonths: DEFAULT_CHART_MONTHS };
+const loadSettings = (): Settings => {
   try {
-    const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null') as { price?: unknown; salesPerMonth?: unknown } | null;
+    const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null') as Partial<Record<keyof Settings, unknown>> | null;
     const price = typeof raw?.price === 'number' && raw.price >= 0 ? raw.price : DEFAULT_PRICE;
     const sales = typeof raw?.salesPerMonth === 'number' && raw.salesPerMonth >= 0 && raw.salesPerMonth <= MAX_SALES_PER_MONTH
       ? raw.salesPerMonth : DEFAULT_SALES_PER_MONTH;
-    return { price, salesPerMonth: sales };
+    const chartMonths = typeof raw?.chartMonths === 'number' && CHART_MONTHS.includes(raw.chartMonths)
+      ? raw.chartMonths : DEFAULT_CHART_MONTHS;
+    return { price, salesPerMonth: sales, chartMonths };
   } catch {
-    return { price: DEFAULT_PRICE, salesPerMonth: DEFAULT_SALES_PER_MONTH };
+    return DEFAULT_SETTINGS;
   }
 };
+
+const chartMonthsLabel = (m: number): string => (m < 12 ? `${m} mois` : `${m / 12} an${m > 12 ? 's' : ''}`);
 
 /** Titre d'une des deux zones de la page, avec sa phrase d'explication. */
 const Zone = ({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) => (
@@ -46,10 +55,11 @@ export const BudgetPanel = () => {
   const [initial] = useState(loadSettings);
   const [price, setPrice] = useState(initial.price);
   const [salesPerMonth, setSalesPerMonth] = useState(initial.salesPerMonth);
+  const [chartMonths, setChartMonths] = useState(initial.chartMonths);
 
   useEffect(() => {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ price, salesPerMonth })); } catch { /* navigation privée */ }
-  }, [price, salesPerMonth]);
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ price, salesPerMonth, chartMonths })); } catch { /* navigation privée */ }
+  }, [price, salesPerMonth, chartMonths]);
 
   const yearly = yearlyCost();
   const net = netPerSale(price);
@@ -69,8 +79,8 @@ export const BudgetPanel = () => {
         <div className="col-span-2 md:col-span-1 grid">
           <KpiCell
             label="Rentable à partir de"
-            value={salesPerYear === null ? '—' : `${salesPerYear} ventes`}
-            hint={neededPerMonth === null ? 'à 0 €, une vente ne rapporte rien' : `par an, soit ${formatRate(neededPerMonth)} par mois`}
+            value={salesPerYear === null ? '—' : `${salesPerYear} ventes par an`}
+            hint={neededPerMonth === null ? 'à 0 €, une vente ne rapporte rien' : `soit ${formatRate(neededPerMonth)} par mois`}
           />
         </div>
       </div>
@@ -107,14 +117,19 @@ export const BudgetPanel = () => {
           <div className={`${PANEL} divide-y divide-white/[0.06]`}>
             {HORIZONS.map((years) => (
               <div key={years} className="px-4 py-3 flex items-center justify-between text-[14px]">
-                <span className="text-white/75">Après {years} an{years > 1 ? 's' : ''}</span>
+                {/* Fin du dernier mois de la période (années pleines depuis le lancement). */}
+                <span className="text-white/75">
+                  Fin {formatMonthYear(years * 12 - 1)}
+                  <span className="ml-2 text-[12px] text-white/45">{years} an{years > 1 ? 's' : ''}</span>
+                </span>
                 {/* Après `years` années pleines : la dernière est payée, pas la suivante. */}
                 <span className="font-semibold tabular-nums text-white">{formatEuros(cumulativeCost(years * 12 - 1))}</span>
               </div>
             ))}
           </div>
           <p className="mt-2 text-[12px] text-white/50 leading-snug">
-            Les abonnements se paient en début d'année : « après 2 ans » compte deux années payées.
+            Depuis le lancement ({formatMonthYear(0)}). Les abonnements se paient à chaque anniversaire :
+            « fin {formatMonthYear(23)} » compte deux années payées.
           </p>
         </div>
       </div>
@@ -174,7 +189,9 @@ export const BudgetPanel = () => {
             {breakEven !== null ? (
               <span>
                 À {salesPerMonth} vente{salesPerMonth > 1 ? 's' : ''} par mois, c'est rentable{' '}
-                {breakEven === 0 ? 'dès le début' : <>au bout de <b className="text-white">{formatMonths(breakEven)}</b></>}.
+                {breakEven === 0
+                  ? 'dès le lancement'
+                  : <>au bout de <b className="text-white">{formatMonths(breakEven)}</b>, en {formatMonthYear(breakEven)}</>}.
               </span>
             ) : (
               <span>
@@ -183,7 +200,19 @@ export const BudgetPanel = () => {
             )}
           </p>
 
-          <CumulChart salesPerMonth={salesPerMonth} price={price} breakEven={breakEven} />
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <span className="text-[13px] text-white/65">Durée du graphique</span>
+              <Segmented
+                ariaLabel="Durée du graphique"
+                value={String(chartMonths)}
+                onChange={(v) => setChartMonths(Number(v))}
+                options={CHART_MONTHS.map((m) => ({ value: String(m), label: chartMonthsLabel(m) }))}
+                className="flex-wrap"
+              />
+            </div>
+            <CumulChart salesPerMonth={salesPerMonth} price={price} breakEven={breakEven} months={chartMonths} />
+          </div>
         </div>
 
         <div>

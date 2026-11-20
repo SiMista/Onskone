@@ -125,7 +125,7 @@ export const SectionLabel = ({ children, right }: { children: ReactNode; right?:
 );
 
 // Chiffre clé. Cliquable si `onClick` : il mène alors à la liste filtrée correspondante.
-// `compact` : tuile basse pour un simple libellé + chiffre (sans hint).
+// `compact` : tuile basse (libellé + chiffre, hint facultatif), padding et chiffre réduits.
 export const KpiCell = ({
   label, value, hint, onClick, compact = false,
 }: {

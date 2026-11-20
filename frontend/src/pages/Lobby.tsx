@@ -37,6 +37,8 @@ import { getCurrentPlayerFromStorage, storeReconnectToken, getReconnectToken } f
 
 // En dessous, « Démarrer » demande confirmation (la partie reste jouable dès MIN_PLAYERS).
 const RECOMMENDED_PLAYERS = 4;
+/** Thème coché d'office sur un salon lancé depuis le Studio (dev). */
+const STUDIO_DEFAULT_THEME = 'BETWEEN_US';
 // Helper texts sous l'action row : texte blanc posé sur le fond clair,
 // ombre nette + halo sombre pour rester lisible.
 const HELPER_TEXT_CLASS = 'mt-2 text-[11px] md:text-xs text-white italic text-center [text-shadow:0_1px_2px_rgba(0,0,0,0.85),0_0_8px_rgba(0,0,0,0.6)]';
@@ -188,7 +190,8 @@ const Lobby = () => {
     useReconnectOnVisible(joinLobbyFn);
 
     // Studio : un salon créé par « ▶ Lancer » arrive avec un thème déjà coché, bot ou pas
-    // (sinon il fallait en cocher un à la main à chaque fois). On prend le premier thème
+    // (sinon il fallait en cocher un à la main à chaque fois). « Entre nous » s'il est
+    // permis, sinon le premier thème
     // que l'hôte a le droit de cocher : un premium serait refusé par le serveur à un hôte
     // non premium et tournerait en rond (cas réel : premium ajouté en tête de catalogue) ;
     // pas de 18+ non plus (il demande une confirmation en vrai). Une seule fois par salon :
@@ -201,11 +204,13 @@ const Lobby = () => {
             return;
         }
         const hostPremium = !!currentPlayer.isPremium;
-        const pick = Object.entries(decksCatalog).flatMap(([cat, codes]) => codes.map(code => ({ cat, code })))
-            .find(({ cat, code }) => {
+        const allowed = Object.entries(decksCatalog).flatMap(([cat, codes]) => codes.map(code => ({ cat, code })))
+            .filter(({ cat, code }) => {
                 const info = decksCatalogMeta[cat]?.find(t => t.code === code);
                 return !info?.mature && (hostPremium || !info?.premium);
             });
+        // « Entre nous » de préférence (le thème qu'on teste le plus), sinon le premier permis.
+        const pick = allowed.find(({ code }) => code === STUDIO_DEFAULT_THEME) ?? allowed[0];
         if (!pick) return; // catalogue pas encore reçu
         studioThemePickedRef.current = true;
         socket.emit('updateSelectedDecks', { lobbyCode: lobbyCode!, selected: { [pick.cat]: [pick.code] } });
@@ -332,6 +337,10 @@ const Lobby = () => {
         // avec le code pour que l'accueil propose de reprendre sa place. Uniquement
         // sur `sessionLost` : un simple CONFLICT (ex. promotePlayer « déjà l'hôte »)
         // est une action refusée, pas une session morte — l'hôte se faisait éjecter.
+        if (data.code === ERROR_CODES.DECKS_UNAVAILABLE) {
+            showToast(t.lobby.toasts.decksUnavailable, 'error', 5000);
+            return;
+        }
         if (data.sessionLost) {
             showToast(t.lobby.toasts.joinRefused, 'error', 5000);
             navigate(`/?lobbyCode=${lobbyCode}`, { replace: true });

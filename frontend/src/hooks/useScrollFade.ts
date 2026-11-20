@@ -16,15 +16,20 @@ export const useScrollFade = (
   ref: RefObject<HTMLElement | null>,
   topRef: RefObject<HTMLElement | null>,
   bottomRef: RefObject<HTMLElement | null>,
+  /** Indice « il y a de la suite » (chevron) : visible seulement au-delà de `arrowMinHidden` px cachés. */
+  arrowRef?: RefObject<HTMLElement | null>,
+  arrowMinHidden = 0,
 ): void => {
   const recompute = () => {
     const el = ref.current;
     if (!el) return;
     const { scrollTop, scrollHeight, clientHeight } = el;
+    const hiddenBelow = scrollHeight - clientHeight - scrollTop;
     const top = scrollTop > 4;
-    const bottom = scrollHeight - clientHeight - scrollTop > 4;
+    const bottom = hiddenBelow > 4;
     if (topRef.current) topRef.current.style.opacity = top ? '1' : '0';
     if (bottomRef.current) bottomRef.current.style.opacity = bottom ? '1' : '0';
+    if (arrowRef?.current) arrowRef.current.style.opacity = hiddenBelow > arrowMinHidden ? '1' : '0';
   };
 
   // Après chaque rendu (changement d'onglet, de contenu) : sans état, aucun risque de boucle.

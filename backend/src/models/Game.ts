@@ -3,6 +3,7 @@ import { IGame } from '../types/IGame';
 import {IRound} from '../types/IRound';
 import {Round} from './Round';
 import { GameCard, ILobby, GameStatus, LeaderboardEntry, WHITEBOARD } from '@onskone/shared';
+import { DrawingIdeaPicker } from '../utils/drawingIdeas.js';
 
 export class Game implements IGame {
     lobby: ILobby;
@@ -23,8 +24,9 @@ export class Game implements IGame {
     // Couleur de stylo du tableau blanc de chaque joueur, tirée à sa première demande
     // et gardée toute la partie (il ne peut pas la changer).
     private readonly whiteboardColors: Map<string, number> = new Map();
-    // Graine des idées de dessin (cf. IGame.drawingSeed) : une par partie.
-    readonly drawingSeed: number = randomInt(0, 0xffffffff);
+    // Idées de dessin du tableau blanc, tirées ici (une par manche, cf. IRound.drawingIdea) :
+    // nouvelle pioche à chaque partie, donc une revanche ne redonne pas les mêmes.
+    private readonly drawingIdeas = new DrawingIdeaPicker();
 
     constructor(lobby: ILobby, questionsPool: GameCard[]) {
         this.lobby = lobby;
@@ -73,6 +75,7 @@ export class Game implements IGame {
         this.currentRound?.clearServerTimer();
 
         this.currentRound = new Round(roundNumber, leader, gameCard, this.lobby.guessMyAnswerMode === true);
+        this.currentRound.drawingIdea = this.drawingIdeas.pick(roundNumber, this.getActivePlayers().map(p => p.id), this.getMaxRounds());
         this.rounds.push(this.currentRound);
     }
 

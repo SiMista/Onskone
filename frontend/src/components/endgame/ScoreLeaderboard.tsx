@@ -104,8 +104,11 @@ const ScoreLeaderboard: React.FC<ScoreLeaderboardProps> = ({
   }, [openPopoverFor]);
 
   return (
+    // `relative z-30` : la bulle « Question reçue » s'ouvre vers le haut et déborde sur le
+    // score d'équipe, dont le contenu est en `z-20` (VerdictRing). Sans z-index ici, la carte
+    // (contexte d'empilement à cause du translate) passait dessous, quel que soit le z interne.
     <div
-      className={`bg-white card-paper rounded-2xl stack-shadow p-3 md:p-5 transition-all duration-500 ${showLeaderboard ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+      className={`relative z-30 bg-white card-paper rounded-2xl stack-shadow p-3 md:p-5 transition-all duration-500 ${showLeaderboard ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
     >
       <h2 className="text-base md:text-xl font-display font-bold text-gray-900 mb-2 md:mb-3 text-center uppercase tracking-wider m-0">
         {t.endGame.individualScores}

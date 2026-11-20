@@ -41,6 +41,8 @@ export type { SimilarityComparison } from './reveal.js';
 // Tableau blanc partagé (attente du choix de question)
 export { WHITEBOARD, isWhiteboardLocalId, whiteboardStrokeId } from './whiteboard.js';
 export type { WhiteboardStroke } from './whiteboard.js';
+export { DRAWING_IDEA_IDS, DRAWING_PORTRAIT_ID, DRAWING_PORTRAIT_EVERY } from './drawingIdeas.js';
+export type { DrawingIdeaId, DrawingIdeaPick } from './drawingIdeas.js';
 
 // Player
 export { IPlayer } from './types/player.js';

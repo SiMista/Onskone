@@ -9,7 +9,13 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
 const TOKEN_SECRET = process.env.ADMIN_TOKEN_SECRET || ADMIN_PASSWORD || '';
 const TOKEN_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 jours
 
+// En dessous, un mot de passe reste à portée d'un bruteforce lent et distribué, même bridé.
+const MIN_ADMIN_PASSWORD_LENGTH = 16;
+
 if (process.env.NODE_ENV === 'production') {
+  if (ADMIN_PASSWORD && ADMIN_PASSWORD.length < MIN_ADMIN_PASSWORD_LENGTH) {
+    logger.warn(`SECURITY: ADMIN_PASSWORD fait moins de ${MIN_ADMIN_PASSWORD_LENGTH} caractères. Prends une phrase de passe longue et unique.`);
+  }
   if (!TOKEN_SECRET) {
     logger.warn('SECURITY: ni ADMIN_TOKEN_SECRET ni ADMIN_PASSWORD ne sont définis en production — auth admin DÉSACTIVÉE (fail-closed).');
   } else if (!process.env.ADMIN_TOKEN_SECRET) {
@@ -45,12 +51,13 @@ export function verifyToken(token: string | undefined): boolean {
   }
 }
 
+// Comparaison sur des empreintes de taille fixe : comparer les mots de passe bruts
+// sortait plus vite quand la longueur différait (fuite de la longueur du mot de passe).
+const digest = (s: string): Buffer => crypto.createHash('sha256').update(s, 'utf8').digest();
+
 export function checkPassword(password: string): boolean {
   if (!ADMIN_PASSWORD) return false;
-  const a = Buffer.from(password);
-  const b = Buffer.from(ADMIN_PASSWORD);
-  if (a.length !== b.length) return false;
-  return crypto.timingSafeEqual(a, b);
+  return crypto.timingSafeEqual(digest(password), digest(ADMIN_PASSWORD));
 }
 
 export function requireAdmin(req: Request, res: Response, next: NextFunction): void {

@@ -38,15 +38,17 @@ const LobbyThemesPanel = ({ isHost, hostName, selectedDecks, decksCatalogMeta, o
         // Hôte : la consigne au-dessus des fiches, le « ? » au bout de sa ligne. pl-3.5 =
         // le retrait du contenu des fiches (étiquette left-3.5, texte px-3 + bordure).
         // Consigne secondaire (petite, grise) et courte : elle doit tenir sur une ligne
-        // dès 360px de large.
+        // dès 360px de large. mr-3 : le « i » s'aligne sur les chevrons des fiches (px-3 +
+        // bordure) au lieu de coller au bord du panneau.
         <div className="flex items-center gap-2">
           <p className="!my-0 flex-1 min-w-0 pl-3.5 font-display font-semibold text-xs leading-snug text-gray-600">{t.lobby.themesHostHint}</p>
-          <CategoriesHelp categories={categories} />
+          <CategoriesHelp categories={categories} className="mr-3" />
         </div>
       ) : (
         // Dans le coin haut-droit du panneau, au-dessus des fiches (celle d'Icebreakers
-        // porte son étiquette à gauche : le coin droit est libre).
-        <CategoriesHelp categories={categories} className="absolute top-0 right-0" />
+        // porte son étiquette à gauche : le coin droit est libre). right-3 : aligné sur les
+        // chevrons des fiches, comme côté hôte.
+        <CategoriesHelp categories={categories} className="absolute top-0 right-3" />
       )}
       {!isHost && (
         <div className="flex justify-center pt-2">

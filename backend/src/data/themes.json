@@ -85,13 +85,14 @@
       "en": "Questions about the group itself. Let's get into it."
     }
   },
-  "FAMILY": {
+  "LOVE": {
     "category": "FUN",
-    "emoji": "fluent-emoji-flat:people-hugging",
-    "labels": { "fr": "AMIS & FAMILLE", "en": "FAMILY & FRIENDS" },
+    "emoji": "fluent-emoji-flat:heart-with-arrow",
+    "premium": true,
+    "labels": { "fr": "AMOUR & SÉDUCTION", "en": "LOVE & SEDUCTION" },
     "descriptions": {
-      "fr": "Des questions sur tes liens avec ceux qui comptent vraiment !",
-      "en": "Questions about the people who matter most. No sugarcoating."
+      "fr": "Coups de cœur, drague, premiers dates : ta façon d'aimer !",
+      "en": "Crushes, flirting, first dates. How you actually do love."
     }
   },
   "RECEIPTS": {
@@ -103,14 +104,13 @@
       "en": "Sharp opinions, awkward confessions. We see you."
     }
   },
-  "LOVE": {
+  "FAMILY": {
     "category": "FUN",
-    "emoji": "fluent-emoji-flat:heart-with-arrow",
-    "premium": true,
-    "labels": { "fr": "AMOUR & SÉDUCTION", "en": "LOVE & SEDUCTION" },
+    "emoji": "fluent-emoji-flat:people-hugging",
+    "labels": { "fr": "AMIS & FAMILLE", "en": "FAMILY & FRIENDS" },
     "descriptions": {
-      "fr": "Coups de cœur, drague, premiers dates : ta façon d'aimer !",
-      "en": "Crushes, flirting, first dates. How you actually do love."
+      "fr": "Des questions sur tes liens avec ceux qui comptent vraiment !",
+      "en": "Questions about the people who matter most. No sugarcoating."
     }
   },
   "AMBITIONS": {

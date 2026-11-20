@@ -417,6 +417,8 @@ export const ERROR_CODES = {
   MAINTENANCE: 'MAINTENANCE',
   /** Salon plein (GAME_CONSTANTS.MAX_PLAYERS joueurs) : nouveau joueur refusé */
   LOBBY_FULL: 'LOBBY_FULL',
+  /** Lancement refusé : les thèmes cochés sont tous premium et l'hôte actuel ne l'est pas */
+  DECKS_UNAVAILABLE: 'DECKS_UNAVAILABLE',
   /** Erreur serveur inattendue */
   INTERNAL: 'INTERNAL',
 } as const;

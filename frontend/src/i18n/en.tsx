@@ -1,5 +1,5 @@
 import type { Dictionary } from './dictionary';
-import { DRAWING_IDEAS } from './drawingIdeas';
+import { drawingIdeasFor } from './drawingIdeas';
 
 export const en: Dictionary = {
   common: {
@@ -151,8 +151,8 @@ export const en: Dictionary = {
       ),
       seatsGuestCheck: "Check you're in the right spot, or tell them!",
       seatsGestures: {
-        drag: <><b className="font-bold">Drag</b> to move</>,
-        tap: <><b className="font-bold">Tap</b> to add or remove a leader</>,
+        drag: <><b>Drag</b> to move</>,
+        tap: <><b>Tap</b> to add or remove a leader</>,
       },
       turnDirection: 'turn order',
       legendLeader: 'will lead a round',
@@ -215,6 +215,7 @@ export const en: Dictionary = {
       kickedAnon: 'You were kicked from the lobby',
       closedInactive: 'This lobby was closed due to inactivity',
       joinRefused: 'This name is already taken in this lobby, or your session expired.',
+      decksUnavailable: 'The selected themes are no longer available, pick another one',
       playerJoined: (name) => `${name} joined the lobby`,
       playerLeft: (name) => `${name} left the lobby`,
       joinedDuringPrep: (name) => `${name} joined: place them where they are`,
@@ -379,7 +380,7 @@ export const en: Dictionary = {
       ),
       ({ Pilier }) => (
         <>
-          {Pilier('The leader')} reveals who wrote what and scores points for the group on each correct guess.
+          {Pilier('The leader')} reveals the real author and scores points for the group on each correct guess.
         </>
       ),
     ],
@@ -742,7 +743,7 @@ export const en: Dictionary = {
         ideaLabel: 'Drawing idea:',
         yourMarker: 'Your marker',
         // Idées de dessin : toutes dans i18n/drawingIdeas.ts (FR et EN côte à côte).
-        ideas: DRAWING_IDEAS.map((idea) => idea.en),
+        ideas: drawingIdeasFor('en'),
         undo: 'Undo my last stroke',
         aria: 'Shared whiteboard',
       },

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { ContentSection, CONTENT_SECTIONS } from './content/shared';
 import { Tabs } from './ui';
 import { TiersSection } from './content/TiersSection';
@@ -8,14 +7,18 @@ import { AvatarsSection } from './content/AvatarsSection';
 import { LegalSection } from './content/LegalSection';
 import { ConstantsSection } from './content/ConstantsSection';
 
-export const ContentPanel = () => {
-  const [section, setSection] = useState<ContentSection>('tiers');
+/** Section dans l'URL (/admin/content/<section>) ; absente ou inconnue : la première. */
+export const ContentPanel = ({ section: requested, onSectionChange }: {
+  section: ContentSection | null;
+  onSectionChange: (section: ContentSection) => void;
+}) => {
+  const section: ContentSection = CONTENT_SECTIONS.some((s) => s.id === requested) ? requested! : CONTENT_SECTIONS[0].id;
 
   return (
     <div className="space-y-5">
       <Tabs
         value={section}
-        onChange={setSection}
+        onChange={onSectionChange}
         ariaLabel="Sections du contenu"
         tabs={CONTENT_SECTIONS.map((s) => ({ value: s.id, label: s.label, title: s.hint }))}
       />

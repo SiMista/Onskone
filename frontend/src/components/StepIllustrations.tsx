@@ -420,7 +420,8 @@ const RevealOverlay = () => (
   </>
 );
 
-export const STEP_ILLUSTRATIONS: StepIllustration[] = [
+/** Une par étape de t.howToPlay.steps (même index, 4 des deux côtés : vérifié par le typage). */
+export const STEP_ILLUSTRATIONS: readonly [StepIllustration, StepIllustration, StepIllustration, StepIllustration] = [
   { image: step1Img, size: [1400, 1100], Overlay: ChoosingOverlay },
   {
     image: step2Img,

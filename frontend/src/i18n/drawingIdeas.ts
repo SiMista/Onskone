@@ -1,63 +1,69 @@
 /**
- * Idées de dessin du tableau blanc (attente du choix de question), FR et EN côte à côte.
- * Fichier fait pour être lu et édité à la main : une ligne = une idée.
+ * Textes des idées de dessin du tableau blanc (attente du choix de question), FR et EN
+ * côte à côte. C'est le SERVEUR qui tire l'idée de la manche (`IRound.drawingIdea`) parmi
+ * les ids de `@onskone/shared` (DRAWING_IDEA_IDS) : ce fichier ne fait que les traduire.
+ * Typé sur ces ids : un id sans texte ici ne compile pas.
  *
- * - Texte simple : idée classique.
- * - `(n) => …` : idée « à nom », n = le pseudo d'un joueur de la partie.
- * - `(a, b) => …` : duo, a et b = deux joueurs différents.
- * Les joueurs sont tirés à tour de rôle, les mêmes pour tout le salon (resolveDrawingIdea).
- *
- * Contraintes (vérifiées en test, utils/whiteboard.test.ts) :
- * - une ligne en haut du tableau : « Idée de dessin : » + l'idée ≤ 40 caractères
- *   (avec un pseudo de 8 lettres en solo, deux de 3 en duo) ;
- * - même forme dans les deux langues (classique, solo ou duo).
- * Ajouter / retirer une idée : n'importe où dans la liste, l'ordre n'a pas d'importance
- * (elles sont mélangées à chaque partie).
+ * Idées volontairement simples (dessinables en 15 s par n'importe qui) + le portrait d'un
+ * joueur de la partie. Contrainte vérifiée en test (utils/whiteboard.test.ts) : une ligne
+ * en haut du tableau, « Idée de dessin : » + l'idée ≤ 40 caractères (pseudo de 8 lettres).
  */
-import type { DrawingIdea } from '../utils/whiteboard';
+import type { DrawingIdeaId } from '@onskone/shared';
+
+/** Une idée : un texte, ou (portrait) une fonction du pseudo du joueur à dessiner. */
+export type DrawingIdeaText = string | ((name: string) => string);
 
 /** « de Bob » / « d'Alice » : élision devant une voyelle. */
 const de = (name: string): string => (/^[aeiouyàâäéèêëîïôöùûüœ]/i.test(name) ? `d'${name}` : `de ${name}`);
 
-export const DRAWING_IDEAS: readonly { fr: DrawingIdea; en: DrawingIdea }[] = [
-  // ----- Classiques -----
-  // Absurdes : un truc banal + un détail qui part en vrille, dessinable en 15 s.
-  { fr: 'Un dragon qui pue', en: 'A stinky dragon' },
-  { fr: 'Un canard armé', en: 'An armed duck' },
-  { fr: 'Un dinosaure en skate', en: 'A skateboarding dinosaur' },
-  { fr: 'Une pizza géante', en: 'A giant pizza' },
-  { fr: 'Un requin en tutu', en: 'A shark in a tutu' },
-  { fr: 'Un pigeon en costard', en: 'A pigeon in a suit' },
-  { fr: 'Une mamie en jetpack', en: 'A granny with a jetpack' },
-  { fr: 'Un gorille en survêt', en: 'A gorilla in a tracksuit' },
-  { fr: 'Un crocodile qui dab', en: 'A dabbing crocodile' },
-  { fr: 'Un Minion bourré', en: 'A drunk Minion' },
-  { fr: 'Un papy catcheur', en: 'A wrestling grandpa' },
-  { fr: 'Un papy en jetski', en: 'A grandpa on a jet ski' },
-  { fr: 'Le pire tatouage', en: 'The worst tattoo' },
-  { fr: 'Spider-Man en tongs', en: 'Spider-Man in flip-flops' },
+export const DRAWING_IDEAS: Readonly<Record<DrawingIdeaId, { fr: DrawingIdeaText; en: DrawingIdeaText }>> = {
+  // ----- Animaux -----
+  cat: { fr: 'Un chat', en: 'A cat' },
+  dog: { fr: 'Un chien', en: 'A dog' },
+  fish: { fr: 'Un poisson', en: 'A fish' },
+  bird: { fr: 'Un oiseau', en: 'A bird' },
+  elephant: { fr: 'Un éléphant', en: 'An elephant' },
+  giraffe: { fr: 'Une girafe', en: 'A giraffe' },
+  snail: { fr: 'Un escargot', en: 'A snail' },
+  turtle: { fr: 'Une tortue', en: 'A turtle' },
+  pig: { fr: 'Un cochon', en: 'A pig' },
+  rabbit: { fr: 'Un lapin', en: 'A rabbit' },
+  snake: { fr: 'Un serpent', en: 'A snake' },
+  octopus: { fr: 'Une pieuvre', en: 'An octopus' },
+  butterfly: { fr: 'Un papillon', en: 'A butterfly' },
+  lion: { fr: 'Un lion', en: 'A lion' },
 
-  // ----- Un joueur (n = son pseudo) -----
-  { fr: (n) => `${n} en vacances`, en: (n) => `${n} on holiday` },
-  { fr: (n) => `${n} à 80 ans`, en: (n) => `${n} at 80` },
-  { fr: (n) => `${n} version bébé`, en: (n) => `Baby ${n}` },
-  { fr: (n) => `${n} au réveil`, en: (n) => `${n} waking up` },
-  { fr: (n) => `${n} sur un dragon`, en: (n) => `${n} riding a dragon` },
-  { fr: (n) => `${n}, star du rock`, en: (n) => `${n} the rock star` },
-  { fr: (n) => `Le chien ${de(n)}`, en: (n) => `${n}'s dog` },
-  { fr: (n) => `${n} en sumo`, en: (n) => `${n} doing sumo` },
-  { fr: (n) => `Le frigo ${de(n)}`, en: (n) => `${n}'s fridge` },
-  { fr: (n) => `${n} en sirène`, en: (n) => `${n} as a mermaid` },
-  { fr: (n) => `${n} à la muscu`, en: (n) => `${n} at the gym` },
-  { fr: (n) => `La voiture ${de(n)}`, en: (n) => `${n}'s car` },
-  { fr: (n) => `Le portrait ${de(n)}`, en: (n) => `${n}'s portrait` },
+  // ----- Objets -----
+  house: { fr: 'Une maison', en: 'A house' },
+  car: { fr: 'Une voiture', en: 'A car' },
+  bike: { fr: 'Un vélo', en: 'A bike' },
+  boat: { fr: 'Un bateau', en: 'A boat' },
+  plane: { fr: 'Un avion', en: 'A plane' },
+  rocket: { fr: 'Une fusée', en: 'A rocket' },
+  umbrella: { fr: 'Un parapluie', en: 'An umbrella' },
+  glasses: { fr: 'Des lunettes', en: 'Glasses' },
+  guitar: { fr: 'Une guitare', en: 'A guitar' },
+  robot: { fr: 'Un robot', en: 'A robot' },
+  castle: { fr: 'Un château', en: 'A castle' },
 
-  // ----- Duos (a et b = deux joueurs différents) -----
-  { fr: (a, b) => `La fusion ${de(a)} et ${b}`, en: (a, b) => `The fusion of ${a} & ${b}` },
-  { fr: (a, b) => `${a} qui combat ${b}`, en: (a, b) => `${a} fighting ${b}` },
-  { fr: (a, b) => `${a} et ${b} en prison`, en: (a, b) => `${a} & ${b} in jail` },
-  { fr: (a, b) => `${a} et ${b} à vélo`, en: (a, b) => `${a} & ${b} on a bike` },
-  { fr: (a, b) => `${a} qui dessine ${b}`, en: (a, b) => `${a} drawing ${b}` },
-  { fr: (a, b) => `${a} qui boxe ${b}`, en: (a, b) => `${a} boxing ${b}` },
-  { fr: (a, b) => `${a} et ${b} au resto`, en: (a, b) => `${a} & ${b} at dinner` },
-];
+  // ----- À manger -----
+  cake: { fr: 'Un gâteau', en: 'A cake' },
+  iceCream: { fr: 'Une glace', en: 'An ice cream' },
+  pizza: { fr: 'Une pizza', en: 'A pizza' },
+
+  // ----- Nature et ciel -----
+  tree: { fr: 'Un arbre', en: 'A tree' },
+  flower: { fr: 'Une fleur', en: 'A flower' },
+  rainbow: { fr: 'Un arc-en-ciel', en: 'A rainbow' },
+  cloud: { fr: 'Un nuage', en: 'A cloud' },
+  star: { fr: 'Une étoile', en: 'A star' },
+  heart: { fr: 'Un cœur', en: 'A heart' },
+  snowman: { fr: 'Un bonhomme de neige', en: 'A snowman' },
+
+  // ----- Un joueur de la partie (tiré à tour de rôle par le serveur) -----
+  portrait: { fr: (n) => `Le portrait ${de(n)}`, en: (n) => `A portrait of ${n}` },
+};
+
+/** Les textes d'une langue, par id (pour le dictionnaire). */
+export const drawingIdeasFor = (lang: 'fr' | 'en'): Readonly<Record<DrawingIdeaId, DrawingIdeaText>> =>
+  Object.fromEntries(Object.entries(DRAWING_IDEAS).map(([id, t]) => [id, t[lang]])) as Record<DrawingIdeaId, DrawingIdeaText>;

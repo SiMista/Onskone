@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import type { Locale } from '@onskone/shared';
+import type { DrawingIdeaId, Locale } from '@onskone/shared';
+import type { DrawingIdeaText } from './drawingIdeas';
 import type { AudienceKey } from '../constants/game';
 
 /**
@@ -34,6 +35,8 @@ export type HowToPlayMarkers = {
   Pilier: (children: ReactNode) => ReactNode;
   Joueurs: (children: ReactNode) => ReactNode;
 };
+
+type HowToPlayStep = (m: HowToPlayMarkers) => ReactNode;
 
 export interface TierTexts {
   title: string;
@@ -251,6 +254,8 @@ export interface Dictionary {
       closedInactive: string;
       /** Slot refusé à l'entrée du salon (session perdue, pseudo déjà pris). */
       joinRefused: string;
+      /** Lancement refusé : les thèmes cochés (premium) ne sont plus accessibles à l'hôte actuel. */
+      decksUnavailable: string;
       playerJoined: (name: string) => string;
       playerLeft: (name: string) => string;
       /** Pour l'hôte : un joueur arrive pendant la préparation, il prend la dernière place. */
@@ -344,7 +349,8 @@ export interface Dictionary {
     nextStep: string;
     /** Bulle d'accueil (logo) : avant les étapes numérotées. */
     intro: (m: HowToPlayMarkers) => ReactNode;
-    steps: Array<(m: HowToPlayMarkers) => ReactNode>;
+    /** 4 étapes, longueur FIGÉE en tuple : une par illustration (STEP_ILLUSTRATIONS, même index). */
+    steps: readonly [HowToPlayStep, HowToPlayStep, HowToPlayStep, HowToPlayStep];
     /** Bulle de fin (anneau de score) : après les étapes numérotées. */
     outro: (m: HowToPlayMarkers) => ReactNode;
     /** Légende sous l'anneau de score de la bulle de fin. */
@@ -484,12 +490,10 @@ export interface Dictionary {
         /** Infobulle du feutre (ta couleur) sur le rebord du tableau. */
         yourMarker: string;
         /**
-         * Idées de dessin, tirées par index : viennent toutes de i18n/drawingIdeas.ts (FR
-         * et EN sur la même ligne, donc même ordre et même nombre). Une fonction = idée
-         * « à nom » : pseudo d'un joueur (`(n) => …`) ou de deux pour un duo (`(a, b) => …`),
-         * les mêmes pour tout le salon (cf. resolveDrawingIdea).
+         * Textes des idées de dessin, par id (le serveur tire l'id : IRound.drawingIdea).
+         * Viennent tous de i18n/drawingIdeas.ts. Une fonction = portrait (pseudo du joueur).
          */
-        ideas: (string | ((a: string, b: string) => string))[];
+        ideas: Readonly<Record<DrawingIdeaId, DrawingIdeaText>>;
         undo: string;
         aria: string;
       };

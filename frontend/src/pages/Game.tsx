@@ -190,7 +190,7 @@ const GamePage: React.FC = () => {
             isLeader={isLeader}
             leader={game.currentRound.leader}
             players={players}
-            drawingSeed={game.drawingSeed}
+            drawingIdea={game.currentRound.drawingIdea}
             currentPlayerId={currentPlayer.id}
             roundNumber={game.currentRound.roundNumber}
             gameSpeed={gameSpeed}

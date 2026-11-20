@@ -21,6 +21,29 @@ export const COSTS: CostLine[] = [
   { id: 'google', label: 'Compte Google Play', detail: 'Développeur, pour publier sur le Play Store', amount: 25, period: 'once', icon: 'mdi:google-play' },
 ];
 
+/**
+ * Mise en ligne sur les stores (comptes développeur payés), point de départ de la simulation :
+ * les abonnements se renouvellent à chaque anniversaire de cette date. Mois de 0 (janvier) à 11.
+ */
+export const LAUNCH = { year: 2025, month: 11 }; // décembre 2025
+
+/** Année et mois calendaires (0-11), `m` mois après le lancement. */
+export const calendarMonth = (m: number, launch = LAUNCH): { year: number; month: number } => {
+  const total = launch.year * 12 + launch.month + m;
+  return { year: Math.floor(total / 12), month: total % 12 };
+};
+
+const MONTH_YEAR = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' });
+const MONTH_SHORT = new Intl.DateTimeFormat('fr-FR', { month: 'short' });
+const toDate = (m: number, launch = LAUNCH): Date => {
+  const { year, month } = calendarMonth(m, launch);
+  return new Date(year, month, 1);
+};
+/** « juin 2026 » : le mois calendaire, `m` mois après le lancement. */
+export const formatMonthYear = (m: number, launch = LAUNCH): string => MONTH_YEAR.format(toDate(m, launch));
+/** « juin », « sept. » : pour les graduations courtes. */
+export const formatMonthShort = (m: number, launch = LAUNCH): string => MONTH_SHORT.format(toDate(m, launch));
+
 /** TVA française, comprise dans le prix affiché par les stores. */
 export const VAT_RATE = 0.2;
 /**

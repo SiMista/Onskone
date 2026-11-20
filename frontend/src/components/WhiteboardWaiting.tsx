@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import type { IPlayer } from '@onskone/shared';
+import type { DrawingIdeaPick, IPlayer } from '@onskone/shared';
 import { Icon } from './Icon';
 import Avatar from './Avatar';
 import PremiumName from './PremiumName';
@@ -10,7 +10,7 @@ import { STICKER_FILTER } from '../constants/icons';
 import {
   WHITEBOARD_FRAME_X, WHITEBOARD_FRAME_Y, WHITEBOARD_INTRO_MOVE_MS, WHITEBOARD_INTRO_READ_MS, WHITEBOARD_SHADOW,
 } from '../constants/whiteboard';
-import { fitBoard, resolveDrawingIdea, stableHash } from '../utils/whiteboard';
+import { fitBoard, resolveDrawingIdea } from '../utils/whiteboard';
 
 type Stage = 'center' | 'top' | 'board';
 type Size = { width: number; height: number };
@@ -26,14 +26,14 @@ type Size = { width: number; height: number };
  * bandeau de l'idée) : consigne + tableau forment un bloc centré, la place en trop se
  * répartit à égalité en haut et en bas.
  */
-const WhiteboardWaiting = ({ lobbyCode, playerId, roundNumber, leader, players, drawingSeed }: {
+const WhiteboardWaiting = ({ lobbyCode, playerId, roundNumber, leader, players, drawingIdea }: {
   lobbyCode: string;
   playerId: string;
   roundNumber: number;
-  /** Graine de la partie (IGame.drawingSeed). Absente (vieux serveur) : dérivée du code du salon. */
-  drawingSeed?: number;
+  /** Idée de dessin de la manche, tirée par le serveur (IRound.drawingIdea). Absente : pas de bandeau. */
+  drawingIdea?: DrawingIdeaPick | null;
   leader: Pick<IPlayer, 'id' | 'name' | 'avatarId' | 'isPremium'>;
-  /** Joueurs de la partie, pour les idées « à nom ». Absent : le pilier seul. */
+  /** Joueurs de la partie, pour le pseudo du portrait. Absent : le pilier seul. */
   players?: readonly Pick<IPlayer, 'id' | 'name'>[];
 }) => {
   const { t } = useLocale();
@@ -50,12 +50,7 @@ const WhiteboardWaiting = ({ lobbyCode, playerId, roundNumber, leader, players, 
   // Décalage qui pose la consigne au centre de l'écran pendant l'intro.
   const [centerOffset, setCenterOffset] = useState(0);
   const wb = t.phases.questionSelection.whiteboard;
-  const idea = resolveDrawingIdea(
-    wb.ideas,
-    drawingSeed ?? stableHash(lobbyCode),
-    roundNumber,
-    players?.length ? players : [leader],
-  );
+  const idea = resolveDrawingIdea(wb.ideas, drawingIdea, players?.length ? players : [leader]);
   const drawText = wb.drawMeanwhile;
   const drawLastSpace = drawText.lastIndexOf(' ');
 
@@ -163,7 +158,7 @@ const WhiteboardWaiting = ({ lobbyCode, playerId, roundNumber, leader, players, 
             roundNumber={roundNumber}
             size={boardSize}
             active={stage === 'board'}
-            idea={<><span className="font-bold whitespace-nowrap">{wb.ideaLabel}</span> {idea}</>}
+            idea={idea ? <><span className="font-bold whitespace-nowrap">{wb.ideaLabel}</span> {idea}</> : undefined}
             ideaRef={setIdeaBanner}
           />
         </SectionErrorBoundary>
