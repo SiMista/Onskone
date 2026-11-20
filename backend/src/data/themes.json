@@ -106,6 +106,7 @@
   "LOVE": {
     "category": "FUN",
     "emoji": "fluent-emoji-flat:heart-with-arrow",
+    "premium": true,
     "labels": { "fr": "AMOUR & SÉDUCTION", "en": "LOVE & SEDUCTION" },
     "descriptions": {
       "fr": "Coups de cœur, drague, premiers dates : ta façon d'aimer !",
